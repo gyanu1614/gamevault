@@ -35,10 +35,10 @@ const VOCAB: Record<string, HowToGetVocab> = {
     earn: { unit: 'Bucks', hint: 'Earned by caring for pets and from paychecks' },
     craft: null,
   },
-  // Brainrots are bought off the conveyor with in-game cash; an unobtainable one no longer spawns.
+  // Brainrots walk the Red Carpet and are bought there with in-game cash (the wiki's name for it).
   'steal-a-brainrot': {
-    shop: 'the conveyor',
-    gone: 'It no longer spawns in the game',
+    shop: 'the Red Carpet',
+    gone: 'It no longer spawns on the Red Carpet',
     earn: null,
     craft: null,
   },

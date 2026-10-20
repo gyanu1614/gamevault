@@ -7199,7 +7199,7 @@ export type Database = {
           origin: string | null
           popularity_rank: number | null
           rarity: string | null
-          release_year: number | null
+          released_at: string | null
           slug: string
           source_name: string | null
           source_page_id: number | null
@@ -7228,7 +7228,7 @@ export type Database = {
           origin?: string | null
           popularity_rank?: number | null
           rarity?: string | null
-          release_year?: number | null
+          released_at?: string | null
           slug: string
           source_name?: string | null
           source_page_id?: number | null
@@ -7257,7 +7257,7 @@ export type Database = {
           origin?: string | null
           popularity_rank?: number | null
           rarity?: string | null
-          release_year?: number | null
+          released_at?: string | null
           slug?: string
           source_name?: string | null
           source_page_id?: number | null

@@ -22,9 +22,9 @@ const OWN_TABLES: Record<string, { table: string; columns: string; toFacts: (r: 
   },
   'steal-a-brainrot': {
     table: 'sab_brainrots',
-    columns: 'release_year,origin,how_to_get',
+    columns: 'released_at,origin,how_to_get',
     toFacts: (r) => ({
-      released: releasedLabel({ year: typeof r.release_year === 'number' ? r.release_year : null }),
+      released: releasedLabel({ date: text(r.released_at) }),
       origin: text(r.origin),
       howToGet: parseHowToGet(r.how_to_get),
     }),
