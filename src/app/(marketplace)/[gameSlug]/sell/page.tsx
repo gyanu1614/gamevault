@@ -179,7 +179,7 @@ export default async function SellLandingPage({ params }: PageProps) {
     },
     {
       q: `What does it cost to sell?`,
-      a: `There's no listing fee — you only pay ${rate != null ? `a ${rate}% commission` : 'a commission'} when an item sells. Founding sellers (the first 100) get a discounted rate for their first year, applied automatically to every sale.`,
+      a: `There's no listing fee — you only pay ${rate != null ? `a ${rate}% commission` : 'a commission'} when an item sells, and it drops as your seller rank goes up. Founding sellers (the first 100) get a discounted rate for their first year, applied automatically to every sale.`,
     },
     {
       q: `Is it safe to sell here?`,

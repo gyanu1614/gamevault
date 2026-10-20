@@ -101,9 +101,9 @@ Publish your listing
 - **List more than one item.** Sellers with more listings get more views.
 
 ## DropMarket Seller Fees
-There's **no fee to list**. You pay a **10% commission** only when your item sells.
+There's **no fee to list**. You pay a **10% commission** only when your item sells, and it gets **lower as your seller rank goes up**.
 
-| Sale price | Fee (10%) | You get |
+| Sale price | Fee (10%, standard rate) | You get |
 | --- | --- | --- |
 | $10 | $1.00 | **$9.00** |
 | $50 | $5.00 | **$45.00** |
@@ -144,7 +144,7 @@ Right now it's the **Chroma Traveler's Gun**, at about **$3,225** from establish
 It depends on the item. Common Chromas sell for **$1 to $3**, and the rarest sell for **hundreds or thousands** of dollars.
 
 ### How much does DropMarket charge to sell MM2 items?
-Listing is free. You pay a **10% commission** only when your item sells.
+Listing is free. You pay a **10% commission** only when your item sells, and less as your seller rank goes up.
 
 ### How long does it take to get paid?
 The money goes to your Seller Balance as soon as the buyer confirms delivery, and you can withdraw it any time after that.
@@ -163,6 +163,6 @@ Your old godlies are worth more than you think. **Listing is free**, and you onl
 :::takeaways
 - **Yes, You Can Sell MM2 Items for Real Money.** Top Chromas sell for **$500 to $3,000+**.
 - **What Sells Best:** Chromas, ancients from past events and popular godlies.
-- **Listing is Free** on DropMarket. You pay a **10% commission** only when an item sells.
+- **Listing is Free** on DropMarket. You pay a **10% commission** only when an item sells, and less at higher seller ranks.
 - **You Get Paid** after the buyer confirms they got the item in game.
 :::
