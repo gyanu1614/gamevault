@@ -27,7 +27,7 @@ describe('itemFactsGame', () => {
   })
   it('a game without its own words gets copy that names no place or currency it may not have', () => {
     const v = itemFactsGame('some-new-game').vocab
-    expect(v.gone).toBe('It can’t be obtained in-game any more')
+    expect(v.gone).toBe('It can’t be obtained in-game anymore')
     expect([v.earn, v.craft]).toEqual([null, null])
   })
 })
@@ -61,7 +61,7 @@ describe('factFaqs', () => {
     }
     const qs = factFaqs({ name: 'T-Rex', game: am, facts, cheapestUsd: 12 })
     expect(qs.map((f) => f.q)).toEqual(['How do you get T-Rex in Adopt Me?', 'Can you get T-Rex for free in Adopt Me?'])
-    expect(qs[1].a).toContain('It isn’t sold in the Nursery or for Robux any more, so buying it from another player from $12.00')
+    expect(qs[1].a).toContain('It isn’t sold in the Nursery or for Robux anymore, so buying it from another player from $12.00')
     expect(qs[1].a).not.toMatch(/Shop/)
   })
   it('without one, the release date and origin answer "when did it come out"', () => {
@@ -86,6 +86,11 @@ describe('mergeFaqs', () => {
     const merged = mergeFaqs(base, [{ q: 'How do you get X in Steal a Brainrot?', a: 'verified' }])
     expect(merged.map((f) => f.a)).toEqual(['worth', 'verified', 'good'])
     expect(mergeFaqs(base, [])).toBe(base)
+  })
+  it('the verified answer keeps the replaced entry’s place, even when that was first', () => {
+    const base = [{ q: 'How do you get X?', a: 'old' }, { q: 'Where to buy X?', a: 'buy' }]
+    expect(mergeFaqs(base, [{ q: 'How do you get X?', a: 'new' }, { q: 'Free?', a: 'free' }]).map((f) => f.a)).toEqual(['new', 'free', 'buy'])
+    expect(mergeFaqs([], [{ q: 'Q', a: 'a' }]).map((f) => f.a)).toEqual(['a'])
   })
 })
 

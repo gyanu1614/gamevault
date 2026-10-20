@@ -21,7 +21,7 @@ export interface ItemFactsGame {
 /** A game with no words of its own: nothing that names a place or currency it may not have. */
 const GENERIC_VOCAB: HowToGetVocab = {
   shop: 'the in-game shop',
-  gone: 'It can’t be obtained in-game any more',
+  gone: 'It can’t be obtained in-game anymore',
   earn: null,
   craft: null,
 }
@@ -31,7 +31,7 @@ const VOCAB: Record<string, HowToGetVocab> = {
   // Eggs are bought in the Nursery with Bucks; retired pets leave the Nursery and Robux sales.
   'adopt-me': {
     shop: 'the Nursery',
-    gone: 'It isn’t sold in the Nursery or for Robux any more',
+    gone: 'It isn’t sold in the Nursery or for Robux anymore',
     earn: { unit: 'Bucks', hint: 'Earned by caring for pets and from paychecks' },
     craft: null,
   },

@@ -80,7 +80,7 @@ export function ItemHowToGet({
   const rgb = hexRgb(accent) ?? '255,255,255'
 
   return (
-    <section aria-labelledby="how-to-get-title" className={cn(VALUE_SURFACE, 'relative isolate overflow-hidden')}>
+    <section aria-labelledby="how-to-get-title" className={cn(VALUE_SURFACE, 'relative isolate overflow-clip')}>
       {/* Atmosphere: the item's rarity colour glowing in from the top corner,
           and its art, large and faint, behind the header. Decorative only. */}
       <div

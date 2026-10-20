@@ -77,13 +77,16 @@ export function factFaqs(i: { name: string; game: ItemFactsGame; facts: ItemFact
 }
 
 /**
- * One FAQ list per page: the facts' entries go in after the first `after`
- * entries (the "how much is it worth" answer leads), and a base entry asking
- * the same question is dropped — the verified answer wins.
+ * One FAQ list per page. A base entry asking the same question as a fact is
+ * dropped — the verified answer wins — and the facts take its place; with no
+ * such entry they go in after the first `after` entries (the "how much is it
+ * worth" answer leads).
  */
 export function mergeFaqs(base: Faq[], facts: Faq[], after = 1): Faq[] {
   if (facts.length === 0) return base
   const asked = new Set(facts.map((f) => f.q.toLowerCase()))
+  const replaced = base.findIndex((f) => asked.has(f.q.toLowerCase()))
   const rest = base.filter((f) => !asked.has(f.q.toLowerCase()))
-  return [...rest.slice(0, after), ...facts, ...rest.slice(after)]
+  const at = replaced >= 0 ? replaced : Math.min(after, rest.length)
+  return [...rest.slice(0, at), ...facts, ...rest.slice(at)]
 }
