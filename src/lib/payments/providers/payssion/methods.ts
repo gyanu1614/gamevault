@@ -340,14 +340,14 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     coverage: 'South Korea',
     countries: ['KR'],
   },
-  // ── Worldwide wallets/vouchers last: a buyer sees their own country's rails
-  //    before them. ──────────────────────────────────────────────────────────
+  // ── Multi-country wallets/vouchers last: a buyer sees their own country's
+  //    rails before them. ───────────────────────────────────────────────────
   skrill: {
     pmId: 'skrill',
     label: 'Skrill',
     kind: 'instant', // e-wallet; Payssion holds a 10% / 180-day reserve (docs/checkout.md §7)
     expiryMinutes: INSTANT_MINUTES,
-    coverage: 'Worldwide',
+    coverage: 'Europe, UK & Switzerland',
     countries: SKRILL_COUNTRIES,
   },
   paysafecard: {

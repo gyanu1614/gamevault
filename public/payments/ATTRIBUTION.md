@@ -17,3 +17,5 @@ Brand marks belong to their owners and are shown only to identify the payment me
 | vietqr_vn.svg | Wikimedia Commons "VietQR Logo.svg" | CC0; mark © NAPAS |
 
 Added 2026-10-15; each file was rendered and checked by eye before use (no scripts, no embedded rasters). PayNow has no clean vector (the published "SVG" wraps a PNG), so its row keeps an icon.
+
+`ondark/` (added 2026-10-19): the same marks redrawn for the checkout's dark glass rows — the white or black card behind each mark removed, near-black and grey ink set white (Grab: its brand green), the canvas trimmed to the mark; brands whose own coloured tile is the mark (KakaoPay, Satispay, OXXO, Touch 'n Go, PayU) keep it. Same sources and terms as the originals above.

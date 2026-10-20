@@ -165,17 +165,18 @@ describe('payssion: checkout region filter', () => {
 
   it('matches the buyer country (case-insensitive) and folds the rest', () => {
     const br = splitPayssionMethodsByCountry('br')
-    expect(ids(br.matched)).toEqual(['pix_br', 'creditcard_br', 'boleto_br', 'skrill'])
+    expect(ids(br.matched)).toEqual(['pix_br', 'creditcard_br', 'boleto_br'])
     expect(ids(br.other)).not.toContain('pix_br')
     const ph = splitPayssionMethodsByCountry('PH')
-    expect(ids(ph.matched)).toEqual(['gcash_ph', 'maya_ph', 'qr_ph', 'skrill'])
+    expect(ids(ph.matched)).toEqual(['gcash_ph', 'maya_ph', 'qr_ph'])
   })
 
-  it('a country with no local rail matches nothing (crypto still renders); the US gets Skrill only', () => {
-    const jp = splitPayssionMethodsByCountry('JP')
-    expect(jp.matched).toEqual([])
-    expect(jp.other.length).toBeGreaterThan(0)
-    expect(ids(splitPayssionMethodsByCountry('US').matched)).toEqual(['skrill'])
+  it('a country with no local rail matches nothing (crypto still renders)', () => {
+    for (const cc of ['JP', 'US']) {
+      const s = splitPayssionMethodsByCountry(cc)
+      expect(s.matched, cc).toEqual([])
+      expect(s.other.length).toBeGreaterThan(0)
+    }
   })
 
   it('unknown/garbage country shows everything up front — never strand a buyer', () => {
@@ -449,5 +450,22 @@ describe('payssion: createCharge 402 handling', () => {
     const h = harness({ result_code: 402, transaction: { transaction_id: 't1' } })
     await expect(h.provider.createCharge(input)).rejects.toThrow(/t1/)
     expect(h.calls()).toBe(1)
+  })
+})
+
+describe('payssion: PAYSSION_BASE_URL (local mock only)', () => {
+  it('points the adapter at a local Payssion stand-in outside production, never in production', async () => {
+    const { payssionBase } = await import('./env')
+    const prev = { url: process.env.PAYSSION_BASE_URL, env: process.env.NODE_ENV }
+    try {
+      process.env.PAYSSION_BASE_URL = 'http://localhost:3047/'
+      expect(payssionBase()).toBe('http://localhost:3047')
+      ;(process.env as any).NODE_ENV = 'production'
+      expect(payssionBase()).toBe('https://www.payssion.com')
+    } finally {
+      ;(process.env as any).NODE_ENV = prev.env
+      if (prev.url === undefined) delete process.env.PAYSSION_BASE_URL
+      else process.env.PAYSSION_BASE_URL = prev.url
+    }
   })
 })
