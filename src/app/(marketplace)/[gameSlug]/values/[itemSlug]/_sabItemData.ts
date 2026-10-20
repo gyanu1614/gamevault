@@ -301,12 +301,12 @@ export async function getPriceHistory(
   return bySlug
 }
 
-export async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]> {
+export async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<Array<BrainrotRow & { compare_usd?: number | null }>> {
   // Read on this item's page → this item's tags, never the game list tag.
   const supabase = createValueItemReadClient(SAB_GAME, brainrot.slug)
   const { data } = await (supabase as any)
     .from('sab_brainrot_market_catalog')
-    .select('id,name,slug,rarity,image_url,display_price_usd,display_price_label')
+    .select('id,name,slug,rarity,image_url,display_price_usd,display_price_label,base_income_per_second,ingame_cost')
     .eq('rarity', brainrot.rarity)
     .neq('id', brainrot.id)
     .order('name', { ascending: true })
@@ -320,24 +320,58 @@ export async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<Brainr
   // price instead of "pending", matching what the item page displays.
   const { data: prices } = await (supabase as any)
     .from('sab_price_display')
-    .select('brainrot_id,market_value_usd')
+    .select('brainrot_id,market_value_usd,average_usd')
     .eq('mutation_slug', 'default')
     .in(
       'brainrot_id',
       rows.map((r) => r.id),
     )
 
-  const priceById = new Map<string, number | string | null>(
-    ((prices ?? []) as Array<{ brainrot_id: string; market_value_usd: number | string | null }>).map(
-      (p) => [p.brainrot_id, p.market_value_usd],
-    ),
-  )
+  const priceRows = (prices ?? []) as Array<{ brainrot_id: string; market_value_usd: number | string | null; average_usd: number | string | null }>
+  const priceById = new Map<string, number | string | null>(priceRows.map((p) => [p.brainrot_id, p.market_value_usd]))
+  // The compare section's price: the reputable average first, like the page's own headline.
+  const compareById = new Map<string, number | null>(priceRows.map((p) => [p.brainrot_id, asNumber(p.average_usd) ?? asNumber(p.market_value_usd)]))
 
   return rows
-    .map((r) => ({ ...r, display_price_usd: priceById.get(r.id) ?? r.display_price_usd }))
+    .map((r) => ({ ...r, display_price_usd: priceById.get(r.id) ?? r.display_price_usd, compare_usd: compareById.get(r.id) ?? null }))
     .sort((a, b) => (asNumber(b.display_price_usd) ?? 0) - (asNumber(a.display_price_usd) ?? 0))
     // 20 sibling links (was 12): a denser related-items block is the strongest
     // internal-link-mesh lever competitors (Rolimons) use — every item page
     // feeds keyword-rich links to 20 others, spreading crawl + equity.
     .slice(0, 20)
+}
+
+/** A brainrot with the price the compare section uses: the reputable average, else the market value. */
+export type ComparableBrainrot = Pick<BrainrotRow, 'id' | 'name' | 'slug' | 'rarity' | 'image_url' | 'base_income_per_second' | 'ingame_cost'> & {
+  compare_usd: number | null
+}
+
+/**
+ * Brainrots priced near `refUsd` (within 1.6×, any rarity) for "Worth About
+ * the Same". Two small reads under THIS item's tags: the default-mutation
+ * prices in the band, then those brainrots' catalogue rows.
+ */
+export async function getBrainrotsNearValue(brainrot: BrainrotRow, refUsd: number | null): Promise<ComparableBrainrot[]> {
+  if (refUsd == null || !(refUsd > 0)) return []
+  const supabase = createValueItemReadClient(SAB_GAME, brainrot.slug)
+  const { data: prices, error } = await (supabase as any)
+    .from('sab_price_display')
+    .select('brainrot_id,market_value_usd,average_usd')
+    .eq('mutation_slug', 'default')
+    .neq('brainrot_id', brainrot.id)
+    .gte('market_value_usd', refUsd / 1.6)
+    .lte('market_value_usd', refUsd * 1.6)
+    .limit(40)
+  if (error || !prices?.length) return []
+  const priceById = new Map<string, number | null>(
+    (prices as Array<{ brainrot_id: string; market_value_usd: number | string | null; average_usd: number | string | null }>).map((p) => [
+      p.brainrot_id,
+      asNumber(p.average_usd) ?? asNumber(p.market_value_usd),
+    ]),
+  )
+  const { data: rows } = await (supabase as any)
+    .from('sab_brainrot_market_catalog')
+    .select('id,name,slug,rarity,image_url,base_income_per_second,ingame_cost')
+    .in('id', [...priceById.keys()])
+  return ((rows ?? []) as ComparableBrainrot[]).map((r) => ({ ...r, compare_usd: priceById.get(r.id) ?? null }))
 }

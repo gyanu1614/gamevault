@@ -172,6 +172,9 @@ export interface SimilarPet {
   name: string
   imageUrl: string | null
   frCashUsd: number | null
+  rarity: string
+  /** Our Fly Ride trade points (Frost Dragon FR = 100). */
+  frTradeValue: number | null
 }
 
 /**
@@ -186,13 +189,15 @@ export interface SimilarPet {
  * @param excludeSlug the current pet (never shown as its own "similar")
  * @param refFrUsd    the current pet's FR cash value, for value-proximity ranking
  * @param limit       how many to return (default 14 — a scrollable rail)
+ * @returns           the rail, plus every page-having pet (`pool`) for the
+ *                    "How it compares" section — one read serves both.
  */
 export async function getSimilarPets(
   rarity: string,
   excludeSlug: string,
   refFrUsd: number | null,
   limit = 14,
-): Promise<SimilarPet[]> {
+): Promise<{ similar: SimilarPet[]; pool: SimilarPet[] }> {
   // Read ON the current pet's page, so under ITS tags (never the game price
   // tag — see lib/values/revalidation.ts): sibling prices in the rail refresh
   // when this pet's page is republished or on a full refresh.
@@ -216,30 +221,31 @@ export async function getSimilarPets(
     image_url: string | null
     rarity: string
   }>
-  if (!pets.length) return []
+  if (!pets.length) return { similar: [], pool: [] }
 
   // Every FR row, paged, matched in memory: an `.in('pet_id', …)` over the
   // whole catalog (~800 uuids) would overflow the request URL.
   const { data: frRows } = await fetchAllRows<any>((from, to) =>
     (supabase as any)
       .from('adopt_me_pet_values')
-      .select('pet_id,cheapest_usd,cash_value_usd')
+      .select('pet_id,cheapest_usd,cash_value_usd,trade_value')
       .eq('variant', 'FR')
       .order('pet_id', { ascending: true })
       .range(from, to),
   )
   // Prefer the cheapest real listing, else the legacy cash value — same headline
   // the rest of the hub uses.
-  const frByPet = new Map<string, number | null>(
-    ((frRows ?? []) as any[]).map((r) => [r.pet_id, num(r.cheapest_usd) ?? num(r.cash_value_usd)]),
+  const frByPet = new Map<string, { usd: number | null; trade: number | null }>(
+    ((frRows ?? []) as any[]).map((r) => [r.pet_id, { usd: num(r.cheapest_usd) ?? num(r.cash_value_usd), trade: num(r.trade_value) }]),
   )
 
-  const enriched = pets.map((p) => ({
+  const enriched: SimilarPet[] = pets.map((p) => ({
     slug: p.slug,
     name: p.name,
     imageUrl: p.image_url,
-    frCashUsd: frByPet.get(p.id) ?? null,
+    frCashUsd: frByPet.get(p.id)?.usd ?? null,
     rarity: p.rarity,
+    frTradeValue: frByPet.get(p.id)?.trade ?? null,
   }))
 
   // Rank: same rarity first; then priced before unpriced; then nearest in value
@@ -257,8 +263,5 @@ export async function getSimilarPets(
     return (b.frCashUsd ?? 0) - (a.frCashUsd ?? 0)
   }
 
-  return enriched
-    .sort(sameRarityFirst)
-    .slice(0, limit)
-    .map(({ slug, name, imageUrl, frCashUsd }) => ({ slug, name, imageUrl, frCashUsd }))
+  return { similar: [...enriched].sort(sameRarityFirst).slice(0, limit), pool: enriched }
 }
