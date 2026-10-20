@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildSabFacts, parseObtainment, parseSource, parseUpdateLog, plainText, statusOf, templateBody, templateParams } from './wiki-facts'
+import { buildSabFacts, parseObtainment, parseSource, parseUpdateLog, statusOf } from './wiki-facts'
+import { plainText, templateBody, templateParams } from '../wiki/markup'
 
 // Trimmed from the live wiki pages (stealabrainrot.fandom.com, CC BY-SA), 2026-10-19.
 const LA_GRANDE = `{{Tabs}}{{Brainrot Infobox|status=Obtainable|income=10M|cost=1B|image1=<gallery>
