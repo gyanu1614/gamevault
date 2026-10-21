@@ -1,33 +1,39 @@
 'use server'
 
 /**
- * Cancel – Not Delivered (owner 2026-10-16/19). The buyer reports an overdue
- * order; the seller has the grace window (60 min) to reply in the order chat
- * or start delivery; with no response the order cancels and refunds itself
- * as a seller fault. Every state change is ONE service-role RPC
- * (order_not_delivered_open / _withdraw / _finalize); these actions only
- * check the session, compute the due time the order page shows, and send
- * the comms.
+ * Cancel – Not Delivered (owner 2026-10-16/19/20). The buyer reports an
+ * overdue order; the seller has a response window = the listing's delivery
+ * time (15 min .. 24 h) to reply in the order chat or start delivery. With
+ * no response nothing cancels automatically: the buyer can request
+ * cancellation, which lands in Admin → Orders → Cancellation Requests (with
+ * an alert) for an admin to approve or reject. Every state change is ONE
+ * service-role RPC (order_not_delivered_open / _withdraw / _sync /
+ * _request_cancel), none of which moves money; these actions only check the
+ * session, compute the due time + window the order page shows, and send the
+ * seller's email.
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { revalidatePath } from 'next/cache'
 import { checkRateLimit } from '@/lib/security/rate-limit'
-import { notDeliveredEligibility } from '@/lib/orders/not-delivered'
-import { finalizeNotDelivered } from '@/lib/orders/not-delivered-finalize'
+import { notDeliveredEligibility, responseWindowMinutes } from '@/lib/orders/not-delivered'
+import { syncNotDelivered } from '@/lib/orders/not-delivered-sync'
 
 export type NotDeliveredClaimStatus =
   | 'open'
   | 'withdrawn'
   | 'seller_responded'
+  | 'expired'
+  | 'cancel_requested'
   | 'delivered'
   | 'disputed'
   | 'cancelled'
-  | 'auto_cancelled'
 
 export interface NotDeliveredClaim {
   status: NotDeliveredClaimStatus
   graceEndsAt: string
+  windowMinutes: number
 }
 
 async function sessionUserId(): Promise<string | null> {
@@ -58,7 +64,7 @@ async function orderFor(orderId: string) {
   } | null
 }
 
-/** Buyer: report an overdue order. The seller is told to respond within the grace window. */
+/** Buyer: report an overdue order. The seller is told to respond within the window. */
 export async function openNotDeliveredClaim(orderId: string): Promise<{ success: boolean; error?: string; graceEndsAt?: string }> {
   try {
     const userId = await sessionUserId()
@@ -77,11 +83,16 @@ export async function openNotDeliveredClaim(orderId: string): Promise<{ success:
     if (!elig.eligible) {
       return {
         success: false,
-        error: elig.reason === 'not_overdue' ? 'The delivery time has not passed yet.' : 'This order can no longer be cancelled this way.',
+        error: elig.reason === 'not_overdue' ? 'The delivery time has not passed yet.' : 'This order can no longer be reported this way.',
       }
     }
     const svc = createServiceRoleClient() as any
-    const { data, error } = await svc.rpc('order_not_delivered_open', { p_order_id: orderId, p_buyer_id: userId, p_due_at: elig.dueAt })
+    const { data, error } = await svc.rpc('order_not_delivered_open', {
+      p_order_id: orderId,
+      p_buyer_id: userId,
+      p_due_at: elig.dueAt,
+      p_window_minutes: responseWindowMinutes(o.listing?.delivery_time),
+    })
     if (error) throw new Error(error.message)
     if (!data?.ok) {
       return {
@@ -103,7 +114,7 @@ export async function openNotDeliveredClaim(orderId: string): Promise<{ success:
             name: seller.full_name || seller.username || 'Seller',
             orderNumber: o.order_number || orderId.slice(0, 8).toUpperCase(),
             orderUrl: `${EMAIL_TOKENS.APP_URL}/account/orders/${orderId}`,
-            graceMinutes: Number(data.grace_minutes ?? 60),
+            windowMinutes: Number(data.window_minutes ?? 60),
           })
         }
       } catch (e) {
@@ -126,29 +137,71 @@ export async function withdrawNotDeliveredClaim(orderId: string): Promise<{ succ
 }
 
 /** Buyer or seller of the order, when the countdown ends on their screen. The SQL re-checks the clock. */
-export async function finalizeNotDeliveredClaim(orderId: string): Promise<{ outcome: string | null }> {
+export async function syncNotDeliveredClaim(orderId: string): Promise<{ outcome: string | null }> {
   const userId = await sessionUserId()
   if (!userId) return { outcome: null }
   const o = await orderFor(orderId)
   if (!o || (o.buyer_id !== userId && o.seller_id !== userId)) return { outcome: null }
   try {
-    const r = await finalizeNotDelivered(orderId)
+    const r = await syncNotDelivered(orderId)
     return { outcome: r.outcome }
   } catch (e) {
-    console.error('[NotDelivered] finalize failed:', e)
+    console.error('[NotDelivered] sync failed:', e)
     return { outcome: null }
   }
 }
 
-/** The order's report, for its buyer or seller (the table is service-role only). */
+const REQUEST_REFUSALS: Record<string, string> = {
+  not_owner: 'Order not found',
+  no_claim: 'Report the order as not delivered first.',
+  not_expired: 'The seller still has time to respond.',
+  exists: 'A cancellation request is already waiting for review.',
+  closed: 'This order can no longer be cancelled this way.',
+}
+
+/** Buyer: the seller's window ran out — ask DropMarket to cancel. An admin reviews it. */
+export async function requestNotDeliveredCancel(orderId: string, note?: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await sessionUserId()
+    if (!userId) return { success: false, error: 'Not authenticated' }
+    const limit = await checkRateLimit('orderReport', `user:${userId}`)
+    if (limit.limited) return { success: false, error: 'Too many attempts. Please try again in a minute.' }
+    const { data, error } = await (createServiceRoleClient() as any).rpc('order_not_delivered_request_cancel', {
+      p_order_id: orderId,
+      p_buyer_id: userId,
+      p_note: note?.trim() ? note.trim().slice(0, 500) : null,
+    })
+    if (error) throw new Error(error.message)
+    if (!data?.ok) return { success: false, error: REQUEST_REFUSALS[String(data?.reason)] ?? 'Could not send the request. Please try again.' }
+    revalidatePath(`/account/orders/${orderId}`)
+    revalidatePath('/admin/orders')
+    return { success: true }
+  } catch (e: any) {
+    console.error('[NotDelivered] request cancel failed:', e)
+    return { success: false, error: 'Could not send the request. Please try again.' }
+  }
+}
+
+/**
+ * The order's report, for its buyer or seller (the table is service-role
+ * only). A live report is synced first, so the page shows an expiry, a
+ * seller response or a delivery without waiting for the sweep.
+ */
 export async function getNotDeliveredClaim(orderId: string): Promise<NotDeliveredClaim | null> {
   const userId = await sessionUserId()
   if (!userId) return null
-  const { data } = await (createServiceRoleClient() as any)
-    .from('order_not_delivered_claims')
-    .select('status, grace_ends_at, buyer_id, seller_id')
-    .eq('order_id', orderId)
-    .maybeSingle()
-  if (!data || (data.buyer_id !== userId && data.seller_id !== userId)) return null
-  return { status: data.status, graceEndsAt: data.grace_ends_at }
+  const svc = createServiceRoleClient() as any
+  const read = async () =>
+    (await svc
+      .from('order_not_delivered_claims')
+      .select('status, grace_ends_at, window_minutes, buyer_id, seller_id')
+      .eq('order_id', orderId)
+      .maybeSingle()).data as any
+  let row = await read()
+  if (!row || (row.buyer_id !== userId && row.seller_id !== userId)) return null
+  if (['open', 'expired', 'cancel_requested'].includes(row.status)) {
+    const synced = await syncNotDelivered(orderId).catch(() => ({ outcome: null }))
+    if (synced.outcome) row = await read()
+  }
+  return { status: row.status, graceEndsAt: row.grace_ends_at, windowMinutes: Number(row.window_minutes) }
 }

@@ -4862,8 +4862,8 @@ export type Database = {
       order_not_delivered_claims: {
         Row: {
           buyer_id: string
+          cancellation_request_id: string | null
           closed_at: string | null
-          credited_minor: number | null
           due_at: string
           grace_ends_at: string
           opened_at: string
@@ -4872,11 +4872,12 @@ export type Database = {
           response_kind: string | null
           seller_id: string
           status: string
+          window_minutes: number
         }
         Insert: {
           buyer_id: string
+          cancellation_request_id?: string | null
           closed_at?: string | null
-          credited_minor?: number | null
           due_at: string
           grace_ends_at: string
           opened_at?: string
@@ -4885,11 +4886,12 @@ export type Database = {
           response_kind?: string | null
           seller_id: string
           status?: string
+          window_minutes: number
         }
         Update: {
           buyer_id?: string
+          cancellation_request_id?: string | null
           closed_at?: string | null
-          credited_minor?: number | null
           due_at?: string
           grace_ends_at?: string
           opened_at?: string
@@ -4898,6 +4900,7 @@ export type Database = {
           response_kind?: string | null
           seller_id?: string
           status?: string
+          window_minutes?: number
         }
         Relationships: [
           {
@@ -4941,6 +4944,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_cancellation_request_id_fkey"
+            columns: ["cancellation_request_id"]
+            isOneToOne: false
+            referencedRelation: "order_cancellation_requests"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "order_not_delivered_claims_order_id_fkey"
@@ -5736,7 +5746,6 @@ export type Database = {
           founding_discount_pct: number
           founding_months: number
           id: boolean
-          not_delivered_grace_minutes: number
           payout_details_freeze_hours: number
           rank_floor_pct: number
           seller_fault_fee_threshold: number
@@ -5755,7 +5764,6 @@ export type Database = {
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
-          not_delivered_grace_minutes?: number
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
           seller_fault_fee_threshold?: number
@@ -5774,7 +5782,6 @@ export type Database = {
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
-          not_delivered_grace_minutes?: number
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
           seller_fault_fee_threshold?: number
@@ -14653,18 +14660,25 @@ export type Database = {
         Returns: Json
       }
       order_not_delivered_due: { Args: { p_limit?: number }; Returns: string[] }
-      order_not_delivered_finalize: {
-        Args: { p_order_id: string }
-        Returns: Json
-      }
       order_not_delivered_mark_responded: {
         Args: { p_at: string; p_kind: string; p_order_id: string }
         Returns: boolean
       }
       order_not_delivered_open: {
-        Args: { p_buyer_id: string; p_due_at: string; p_order_id: string }
+        Args: {
+          p_buyer_id: string
+          p_due_at: string
+          p_order_id: string
+          p_window_minutes: number
+        }
         Returns: Json
       }
+      order_not_delivered_request_cancel: {
+        Args: { p_buyer_id: string; p_note?: string; p_order_id: string }
+        Returns: Json
+      }
+      order_not_delivered_span: { Args: { p_minutes: number }; Returns: string }
+      order_not_delivered_sync: { Args: { p_order_id: string }; Returns: Json }
       order_not_delivered_withdraw: {
         Args: { p_buyer_id: string; p_order_id: string }
         Returns: Json

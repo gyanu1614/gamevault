@@ -25,6 +25,8 @@ interface CancellationRequest {
   reason: string
   status: string
   created_at: string
+  /** Filed by Cancel – Not Delivered: the seller did not respond in time. */
+  not_delivered?: boolean
   order?: any
 }
 
@@ -35,6 +37,15 @@ interface CancellationRequestsTableProps {
 
 const orderRef = (r: CancellationRequest) => `#${r.order?.order_number || r.order_id.substring(0, 8)}`
 const ago = (iso: string) => formatDistanceToNow(new Date(iso), { addSuffix: true })
+
+/** The seller did not reply or start delivery inside the response window. */
+function NotDeliveredTag() {
+  return (
+    <span className="inline-flex w-fit items-center rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">
+      Not Delivered
+    </span>
+  )
+}
 
 export function CancellationRequestsTable({ requests, isLoading }: CancellationRequestsTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -47,10 +58,19 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
   const [sellerFault, setSellerFault] = useState(false)
   const queryClient = useQueryClient()
 
-  const handleProcess = async (requestId: string, action: 'approve' | 'reject') => {
+  // Not Delivered requests are the seller's fault by default (they did not
+  // respond in time); the box in the dialog can still change it.
+  const openModal = (request: CancellationRequest) => {
+    setSellerFault(!!request.not_delivered)
+    setShowReasonModal(request)
+  }
+
+  const handleProcess = async (request: CancellationRequest, action: 'approve' | 'reject') => {
+    const requestId = request.id
+    const fault = showReasonModal?.id === requestId ? sellerFault : !!request.not_delivered
     setProcessingId(requestId)
     try {
-      const { data, error } = await processCancellationRequest(requestId, action, adminNotes || undefined, sellerFault ? 'seller' : 'buyer')
+      const { data, error } = await processCancellationRequest(requestId, action, adminNotes || undefined, fault ? 'seller' : 'buyer')
 
       if (error) {
         toast.error(error.message)
@@ -84,7 +104,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
     <div className={cn('flex items-center gap-2', full ? 'w-full' : 'justify-end')}>
       <button
         type="button"
-        onClick={() => setShowReasonModal(request)}
+        onClick={() => openModal(request)}
         disabled={processingId === request.id}
         className={cn(adminBtnSm.danger, full && 'flex-1')}
       >
@@ -93,7 +113,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
       </button>
       <button
         type="button"
-        onClick={() => handleProcess(request.id, 'approve')}
+        onClick={() => handleProcess(request, 'approve')}
         disabled={processingId === request.id}
         className={cn(adminBtnSm.primary, full && 'flex-1')}
       >
@@ -115,7 +135,10 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
           <li key={request.id} className="rounded-lg bg-bg-raised p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[14px] font-semibold text-text-primary">{orderRef(request)}</p>
+                <p className="flex flex-wrap items-center gap-2 text-[14px] font-semibold text-text-primary">
+                  {orderRef(request)}
+                  {request.not_delivered && <NotDeliveredTag />}
+                </p>
                 <p className="mt-0.5 truncate text-[12.5px] text-text-tertiary">
                   {request.order?.buyer?.username || 'Unknown'} · {ago(request.created_at)}
                 </p>
@@ -126,7 +149,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
             </div>
             <button
               type="button"
-              onClick={() => setShowReasonModal(request)}
+              onClick={() => openModal(request)}
               className="mt-3 block w-full rounded-md bg-bg-overlay px-3 py-2.5 text-left text-[13px] leading-relaxed text-text-secondary"
             >
               <span className="line-clamp-3">{request.reason}</span>
@@ -155,6 +178,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                   <td className={TABLE.tdPrimary}>
                     <div className="flex flex-col">
                       <span className="text-[13.5px] font-semibold text-text-primary">{orderRef(request)}</span>
+                      {request.not_delivered && <NotDeliveredTag />}
                       <span className="text-[12px] tabular-nums text-text-tertiary">
                         ${request.order?.total_amount?.toFixed(2) || '0.00'}
                       </span>
@@ -171,7 +195,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                       <p className="line-clamp-2 text-[13px] text-text-secondary">{request.reason}</p>
                       <button
                         type="button"
-                        onClick={() => setShowReasonModal(request)}
+                        onClick={() => openModal(request)}
                         className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
                         aria-label="View full reason"
                       >
@@ -255,7 +279,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleProcess(showReasonModal.id, 'reject')}
+                    onClick={() => handleProcess(showReasonModal, 'reject')}
                     disabled={processingId === showReasonModal.id}
                     className={cn(adminBtn.danger, 'sm:flex-1')}
                   >
@@ -268,7 +292,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleProcess(showReasonModal.id, 'approve')}
+                    onClick={() => handleProcess(showReasonModal, 'approve')}
                     disabled={processingId === showReasonModal.id}
                     className={cn(adminBtn.primary, 'sm:flex-[1.4]')}
                   >

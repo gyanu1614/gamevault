@@ -4,6 +4,8 @@
 
 > **STATUS: PLAN ONLY — owner said "don't build yet".** Both migrations below are DRAFTS shown for the owner's OK (CLAUDE.md + memory `prod-money-extra-careful`: flag every migration before writing it). Nothing here exists in the repo yet.
 
+> **2026-10-20 change (owner):** PR 2 no longer auto-cancels. The seller's response window = the listing's delivery time (15 min .. 24 h); with no response the report expires and the buyer requests cancellation, which an admin reviews in Orders → Cancellation Requests (alert per request; Seller At Fault on by default; delivery before the decision closes it). M2 (`20261020151249`) was rewritten in place before reaching prod; `finalize` became `sync` (no money) and `request_cancel` was added. The PR 2 tasks below describe the first (auto-cancel) version.
+
 **Goal:** (1) Every refund lands in the Wallet as store credit for the **item price**. The full amount, service fee included, goes back to the original payment method only when the buyer requests it from the Wallet. (2) On an overdue order the buyer presses **Cancel – Not Delivered**. The seller is notified and gets 1 hour to reply in the order chat or start delivery. A response keeps the order open; no response and it cancels and refunds itself.
 
 **Architecture:** Two PRs, each with one migration, built in order in their own worktrees.

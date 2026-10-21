@@ -33,3 +33,24 @@ describe('notDeliveredEligibility', () => {
       .toEqual({ eligible: true, dueAt: '2026-10-16T11:00:00.000Z' })
   })
 })
+
+describe('responseWindowMinutes / windowSpan', () => {
+  it('is the listing delivery time, never under 15 minutes or over 24 hours', async () => {
+    const { responseWindowMinutes } = await import('./not-delivered')
+    expect(responseWindowMinutes('20min')).toBe(20)
+    expect(responseWindowMinutes('instant')).toBe(15) // parses to 5
+    expect(responseWindowMinutes('5min')).toBe(15)
+    expect(responseWindowMinutes('1hr')).toBe(60)
+    expect(responseWindowMinutes('3 days')).toBe(1440)
+    expect(responseWindowMinutes('1-24 hours')).toBe(1440)
+    expect(responseWindowMinutes(null)).toBe(60) // the order page's 60-minute fallback
+  })
+
+  it('reads as minutes or whole hours', async () => {
+    const { windowSpan } = await import('./not-delivered')
+    expect(windowSpan(20)).toBe('20 minutes')
+    expect(windowSpan(60)).toBe('1 hour')
+    expect(windowSpan(90)).toBe('90 minutes')
+    expect(windowSpan(1440)).toBe('24 hours')
+  })
+})
