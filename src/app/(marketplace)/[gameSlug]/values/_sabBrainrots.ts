@@ -44,10 +44,8 @@ async function selectAllRows<T>(
   for (let page = 0; ; page += 1) {
     const from = page * PAGE
     const { data, error } = await build(from, from + PAGE - 1)
-    if (error) {
-      console.error('selectAllRows:', error)
-      break
-    }
+    // Throw, never a partial list: the list page and rows.json would cache it (2026-10-20 outage cached []).
+    if (error) throw new Error(`SAB directory read failed: ${error.message ?? String(error)}`)
     if (!data?.length) break
     rows.push(...(data as T[]))
     if (data.length < PAGE) break
@@ -107,13 +105,9 @@ export async function getSabBrainrots(): Promise<BrainrotDirectoryItem[]> {
   const { defaults: defaultPriceRows, mutations: mutationPriceRows } =
     await gridPricesPromise
 
-  if (brainrotResult.error) {
-    console.error(
-      'Unable to load SAB values directory:',
-      brainrotResult.error,
-    )
-    return []
-  }
+  // A read error throws: returning [] made the list page and rows.json cache an
+  // empty list ("0 Brainrots") for an hour after the 2026-10-20 outage.
+  if (brainrotResult.error) throw new Error(`sab_brainrot_market_catalog read failed: ${brainrotResult.error.message ?? String(brainrotResult.error)}`)
 
   const priceByBrainrot = new Map(
     (defaultPriceRows as DirectoryTradePriceRow[])

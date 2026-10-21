@@ -1,162 +1,105 @@
 /**
- * /blog — the site-wide guide index.
+ * /blog: the site-wide guide index.
  *
- * Two jobs, in this order:
- *   1. Route readers into the per-game content hubs (/[game]/blog), which is
- *      where every post actually lives now. That also sculpts internal links
- *      from one crawlable page into each hub.
- *   2. Show the newest posts across every game underneath, so the page still
- *      answers "what's new" without a click.
- *
- * Stays in the marketplace chrome (site navbar, lime accent) rather than the
- * forest hub theme — it spans every game, so it belongs to the marketplace, not
- * to one game's hub. Square edges on this page's own chrome; BlogCard is a
- * shared site-wide component and keeps its existing geometry.
- *
- * Game rows are data-gated: a game appears only if it has published posts, so
- * this never links to an empty hub.
+ * Two jobs: route readers into each game's blog home (/[game]/blog), where
+ * every post lives, and show what's new across every game. Redesigned
+ * 2026-10-15 (owner: the old look): the blog's own wallpaper and fonts (the
+ * same as the game blog homes), the new hero, a game switcher, the newest
+ * guide featured, then a row of guide cards per game. Data-gated: a game
+ * appears only with published posts, and links to its blog home only when
+ * that hub is switched on.
  */
-
 import type { Metadata } from 'next'
-import Link from '@/components/navigation/AppLink'
-import { ArrowRight } from 'lucide-react'
+import { BookOpenTextIcon } from '@phosphor-icons/react/dist/ssr/BookOpenText'
+import { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
+import { BlogBackdrop } from '@/components/blog/BlogBackdrop'
+import { FeaturedGuide } from '@/components/blog/FeaturedGuide'
+import { GUIDE_TYPE_LABEL } from '@/components/blog/GuideCard'
+import { InfoCtaBand, InfoHero } from '@/components/info'
+import { VALUE_SURFACE } from '@/components/values/styles'
+import { SITE_URL } from '@/config/site'
 import { getAllPublishedPosts } from '@/lib/blog/db'
-import { createAnonClient } from '@/lib/supabase/anon'
-import { BlogCard } from '@/components/blog/BlogCard'
-import { seoMeta } from '@/lib/seo/fit'
+import { getBlogHubGameSlugs } from '@/lib/blog/hub-params'
 import { postHref } from '@/lib/blog/post-url'
+import { blogFont } from '@/lib/fonts/blog'
+import { JsonLd, blogCollection, breadcrumbList } from '@/lib/seo/jsonld'
+import { seoMeta } from '@/lib/seo/fit'
+import { getAllGames } from '@/lib/utils/games'
+import { groupGuides } from './_guides'
+import { GameSwitch } from './_GameSwitch'
+import { GameSection } from './_GameSection'
 
 export const revalidate = 3600
 
 export const metadata: Metadata = seoMeta({
-  title: 'Blog — Trading Guides & Safety Tips',
-  description:
-    'Trading guides, item value breakdowns, and marketplace safety tips from the DropMarket team.',
+  title: 'Game Trading Guides & Safety Tips',
+  description: 'Value guides, trading tips and selling help for Roblox games, plus marketplace safety advice from the DropMarket team.',
   alternates: { canonical: '/blog' },
 })
 
-
-interface GameRow {
-  name: string
-  slug: string
-  image_url: string | null
-}
-
-/** Names + art for the games that actually have posts. */
-async function getGames(slugs: string[]): Promise<Map<string, GameRow>> {
-  if (slugs.length === 0) return new Map()
-  const supabase = createAnonClient()
-  const { data } = await (supabase as any)
-    .from('games')
-    .select('name, slug, image_url')
-    .in('slug', slugs)
-    .eq('is_active', true)
-  return new Map(((data as GameRow[] | null) ?? []).map((g) => [g.slug, g]))
+function listSentence(names: string[]): string {
+  return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
 export default async function BlogIndexPage() {
-  const posts = await getAllPublishedPosts()
-
-  // Group posts by game (newest-first within each — getAllPublishedPosts already
-  // returns newest-first). Posts with no game fall under a "General" bucket.
-  const GENERAL = '__general__'
-  const byGame = new Map<string, typeof posts>()
-  for (const post of posts) {
-    const key = post.primaryGameSlug ?? GENERAL
-    const list = byGame.get(key)
-    if (list) list.push(post)
-    else byGame.set(key, [post])
-  }
-  const games = await getGames([...byGame.keys()].filter((k) => k !== GENERAL))
-
-  // Build a section per game, ordered by that game's NEWEST post (so the most
-  // recently updated game leads). General goes last.
-  const sections = [...byGame.entries()]
-    .map(([slug, list]) => ({
-      slug,
-      game: slug === GENERAL ? null : games.get(slug) ?? null,
-      posts: list,
-      newest: list[0]?.publishedAt ?? '',
-    }))
-    // Drop game sections whose game row is missing (inactive), keep General.
-    .filter((s) => s.slug === GENERAL || s.game)
-    .sort((a, b) => {
-      if (a.slug === GENERAL) return 1
-      if (b.slug === GENERAL) return -1
-      return b.newest.localeCompare(a.newest)
-    })
+  const [posts, allGames, hubSlugs] = await Promise.all([getAllPublishedPosts(), getAllGames(), getBlogHubGameSlugs()])
+  const games = new Map(allGames.map((g) => [g.slug, { slug: g.slug, name: g.name, imageUrl: g.image_url ?? null }]))
+  const { featured, games: gameGroups, sections } = groupGuides(posts, games, hubSlugs)
+  const lead = gameGroups.length
+    ? `Values, trading tips and selling guides for ${listSentence(gameGroups.map((g) => g.name))}.`
+    : 'Values, trading tips and selling guides from the DropMarket team.'
 
   return (
-    <main className="min-h-screen pb-24">
-      <div className="mx-auto w-full max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8">
-        <div className="text-center">
-          <div className="text-label font-bold uppercase tracking-[0.18em] text-lime-text">
-            — Blog —
-          </div>
-          <h1 className="mt-1 text-[30px] font-extrabold leading-[1.05] tracking-tight text-text-primary sm:text-[40px]">
-            Guides From The <span className="text-lime-text">Drop</span>
-          </h1>
-          <p className="mx-auto mt-3 max-w-xl text-body text-text-tertiary sm:text-body-lg">
-            Trading guides, safety tips, and marketplace know-how from the team.
-          </p>
-        </div>
+    // The blog's shared night wallpaper behind everything (`isolate` keeps
+    // its -z-10 layer above the ground; BlogBackdrop).
+    <main className={`relative isolate min-h-screen bg-bg-base pb-20 ${blogFont.variable}`}>
+      <BlogBackdrop />
+      <JsonLd data={breadcrumbList([{ name: 'Home', path: '/' }, { name: 'Guides', path: '/blog' }])} />
+      {posts.length > 0 && (
+        <JsonLd
+          data={blogCollection({
+            name: 'DropMarket Guides',
+            url: `${SITE_URL}/blog`,
+            posts: posts.map((p) => ({ title: p.title, path: postHref(p), datePublished: p.publishedAt, description: p.excerpt })),
+          })}
+        />
+      )}
 
-        {posts.length === 0 ? (
-          <div className="mt-12 border border-border-subtle bg-[#1D1E23] px-6 py-14 text-center backdrop-blur-md">
-            <p className="text-body font-semibold text-text-primary">No guides yet</p>
-            <p className="mt-2 text-body-sm text-text-tertiary">
-              New guides land here as we publish them.
-            </p>
+      <InfoHero icon={BookOpenTextIcon} tone="lime" title="Game Trading Guides" lead={lead} />
+
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <GameSwitch games={gameGroups} />
+
+        {featured ? (
+          <div className="mt-10 sm:mt-12">
+            <FeaturedGuide
+              href={postHref(featured)}
+              category={GUIDE_TYPE_LABEL[featured.postType] ?? 'Guide'}
+              readMinutes={featured.readMinutes}
+              title={featured.title}
+              excerpt={featured.excerpt}
+              publishedAt={featured.publishedAt}
+              cover={featured.cover}
+            />
           </div>
         ) : (
-          <div className="mt-12 flex flex-col gap-12 sm:mt-14 sm:gap-14">
-            {sections.map(({ slug, game, posts: gamePosts }) => {
-              const name = game?.name ?? 'General'
-              const hubHref = game ? `/${game.slug}/blog` : null
-              // Show the newest 3 per game; "View all" links to the game hub.
-              const shown = gamePosts.slice(0, 3)
-              return (
-                <section key={slug}>
-                  {/* ── Section header: game icon + name + count · View all ── */}
-                  <div className="mb-4 flex items-center justify-between gap-3 border-b border-border-default pb-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md bg-white/[0.04] text-body-sm font-bold text-text-tertiary">
-                        {game?.image_url ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={game.image_url} alt={`${name} logo`} aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-                        ) : (
-                          name.charAt(0).toUpperCase()
-                        )}
-                      </span>
-                      <h2 className="text-[17px] font-bold tracking-tight text-text-primary sm:text-[19px]">
-                        {name}
-                      </h2>
-                      <span className="text-caption text-text-tertiary">
-                        {gamePosts.length} {gamePosts.length === 1 ? 'guide' : 'guides'}
-                      </span>
-                    </div>
-                    {hubHref && (
-                      <Link
-                        href={hubHref}
-                        className="group inline-flex items-center gap-1 text-body-sm font-semibold text-lime-text transition hover:opacity-80"
-                      >
-                        View all
-                        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                      </Link>
-                    )}
-                  </div>
-
-                  {/* ── Uniform card grid (fixed via BlogCard) ── */}
-                  <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-                    {shown.map((post, i) => (
-                      <BlogCard key={post.id} post={post} index={i} href={postHref(post)} />
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
+          <div className={`${VALUE_SURFACE} mt-12 px-6 py-14 text-center`}>
+            <p className="text-body font-semibold text-text-primary">No guides yet</p>
+            <p className="mt-2 text-body-sm text-text-tertiary">New guides land here as we publish them.</p>
           </div>
         )}
+
+        {sections.map((g) => (
+          <GameSection key={g.key} group={g} />
+        ))}
+
+        <InfoCtaBand
+          icon={ShieldCheckIcon}
+          tone="lime"
+          title="Ready to Trade?"
+          body="Every order on DropMarket is covered by SafeDrop Protection."
+          action={{ href: '/browse', label: 'Browse the Marketplace' }}
+        />
       </div>
     </main>
   )

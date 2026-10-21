@@ -7,6 +7,10 @@
 #   /api/cron/reconcile-payments
 #     · drains provider_cancel_outbox (void charges we closed) with backoff
 #     · re-runs webhook events stuck `received` > 15 min (PAY-010)
+#   /api/cron/not-delivered-sweep (same job — no extra Actions minutes)
+#     · marks "Cancel – Not Delivered" reports whose response window ran out
+#       as expired and sends the notices — never cancels or refunds
+#       (vercel.json carries a daily backstop for it)
 #
 # Secrets: CRON_SECRET (existing — the same bearer expire-pending-payments
 # uses). Nothing else.
@@ -27,3 +31,11 @@ jobs:
             https://dropmarket.gg/api/cron/reconcile-payments)
           cat /tmp/out; echo
           [ "$code" = "200" ] || { echo "::error::reconcile failed (HTTP $code)"; exit 1; }
+      - name: Call not-delivered sweep
+        if: always()
+        run: |
+          code=$(curl -s -o /tmp/out2 -w "%{http_code}" -m 90 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://dropmarket.gg/api/cron/not-delivered-sweep)
+          cat /tmp/out2; echo
+          [ "$code" = "200" ] || { echo "::error::not-delivered sweep failed (HTTP $code)"; exit 1; }

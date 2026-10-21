@@ -10,10 +10,12 @@ import { eligibleMethods, toClientMethods } from '@/lib/payments/eligibility'
 import { round2 } from '@/lib/fees'
 import { clampCheckoutQty } from './qty'
 import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
+import { PAID_LIFECYCLE } from '@/lib/payments/return-destination'
+import { loadPaidOrderSummary } from '../_components/paid-order'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ qty?: string; country?: string }>
+  searchParams: Promise<{ qty?: string; country?: string; order?: string }>
 }
 
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
@@ -21,7 +23,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // V14j — Read qty hint from URL so deep-linked Buy now (e.g. from the
   // currency page) pre-fills the buyer's chosen quantity. Falls back to
   // the listing's min_quantity inside CheckoutForm if absent or invalid.
-  const { qty, country: countryOverride } = await searchParams
+  const { qty, country: countryOverride, order: priorOrderId } = await searchParams
   const parsedQty = qty ? Math.max(1, parseInt(qty, 10) || 0) : undefined
   // ROUTE-009 — a malformed id is a guaranteed miss, so short-circuit before
   // the query rather than relying on Postgres rejecting the cast. Mirrors this
@@ -46,11 +48,35 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     .single() as any
 
   if (error || !listing) redirect('/browse')
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Same-tab pay (owner 2026-10-16): leaving for the provider page stamps
+  // ?order=<id> on this URL, so Back lands here knowing which order it was.
+  // Paid (or Payssion says paid while the webhook is in flight) → the one
+  // Order Paid page, never a fresh Pay button (no accidental second purchase,
+  // no back-trap; owner 2026-10-19: same design everywhere). Still unpaid →
+  // the form, with a "not finished" note; Pay again reuses or replaces that
+  // order server-side. Checked before the sold-out redirect: the buyer may
+  // have bought the last one.
+  let unfinishedPayment = false
+  if (user && priorOrderId && isUuid(priorOrderId)) {
+    const prior = await loadPaidOrderSummary(supabase, priorOrderId, user.id)
+    if (prior && prior.listingId === listing.id) {
+      let paid = PAID_LIFECYCLE.has(prior.status)
+      if (!paid && prior.status === 'pending') {
+        const { openAttemptForOrder } = await import('@/lib/payments/attempts')
+        const { payssionPaidAtProvider } = await import('@/lib/payments/provider-paid-probe')
+        paid = await payssionPaidAtProvider(await openAttemptForOrder(prior.id), prior.id)
+        unfinishedPayment = !paid
+      }
+      if (paid) redirect(`/checkout/paid/${prior.id}`)
+    }
+  }
+
   if (listing.status !== 'active') {
     redirect(`/${listing.game.slug}/${listing.category.slug}/${listing.slug}`)
   }
-
-  const { data: { user } } = await supabase.auth.getUser()
 
   // Buyer country from Vercel's geo header (absent on localhost → the
   // selector shows every local method). Drives the region filter only —
@@ -186,6 +212,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         bundleSummary={bundleSummary}
         buyerCountry={buyerCountry}
         deliveryMethod={deliveryMethod}
+        unfinishedPayment={unfinishedPayment}
       />
       </HeroBackdrop>
     </main>

@@ -66,13 +66,10 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
     ),
   ])
 
-  if (petsRes.error) {
-    console.error('Unable to load Adopt Me pets:', petsRes.error)
-    return []
-  }
-  if (valuesRes.error) {
-    console.error('Unable to load Adopt Me values:', valuesRes.error)
-  }
+  // Read errors throw: [] (or pets with no prices) would be cached by the list
+  // page and rows.json for their whole window (2026-10-20 outage).
+  if (petsRes.error) throw new Error(`adopt_me_pets read failed: ${(petsRes.error as { message?: string }).message ?? String(petsRes.error)}`)
+  if (valuesRes.error) throw new Error(`adopt_me_pet_values read failed: ${(valuesRes.error as { message?: string }).message ?? String(valuesRes.error)}`)
 
   const valuesByPet = new Map<string, ValueRow[]>()
   for (const row of valuesRes.data ?? []) {

@@ -26,6 +26,7 @@ import { displayOrderRef } from '@/lib/orders/order-number'
 import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
 import { orderPaymentMethodLabel } from '@/lib/orders/payment-method-label'
 import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
+import { responseWindowMinutes } from '@/lib/orders/not-delivered'
 import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
@@ -310,9 +311,10 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // (platform_fee is not in the buyer's column grant).
   const round2 = (n: number) => Math.round(n * 100) / 100
   const PAID_STATUSES = ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded']
-  // Refund policy (2026-09-30): what actually came back to the buyer. A
-  // buyer-fault cancel credits the item price and keeps the service fee
-  // (ledger key fee_kept:<order>); every other refund credits the total.
+  // Refund rule (2026-10-16): what actually came back to the buyer. A refund
+  // credits the item price as store credit and keeps the service fee (ledger
+  // key fee_kept:<order>); a refund to the payment method pays the total.
+  // Orders paid fully with store credit carry no fee, so they credit it all.
   // Read once here (service role: the ledger is not in the buyer's grant)
   // so the SafeDrop card can show the right amount and say why.
   const buyerRefund =
@@ -330,12 +332,12 @@ export default async function OrderDetailPage({ params }: PageProps) {
           const itemPrice = Number((order as any).subtotal ?? 0)
           const promoDiscount = Number((order as any).promo_discount ?? 0)
           const total = Number((order as any).total_amount ?? 0)
-          return { credited: round2(feeKept ? Math.max(0, itemPrice - promoDiscount) : total), feeKept }
+          return { credited: round2(feeKept ? Math.max(0, itemPrice - promoDiscount) : total), feeKept, total: round2(total) }
         })()
       : null
   // Refund to the original payment method: the buyer's existing request, and
-  // whether one can be made (a provider charge was paid; the RPC re-checks
-  // the rail and the unspent credit when they click).
+  // whether one can be made (a provider charge was paid on a rail that
+  // refunds; the RPC re-checks both and the unspent credit when they click).
   const refundToSource =
     buyerRefund && userRole === 'buyer'
       ? await (async () => {
@@ -344,16 +346,24 @@ export default async function OrderDetailPage({ params }: PageProps) {
             getMyRefundToSourceRequest(order.id),
             (createServiceRoleClient() as any)
               .from('payment_attempts')
-              .select('id')
+              .select('provider, pm_id')
               .eq('order_id', order.id)
               .eq('status', 'paid')
               .not('provider_charge_id', 'is', null)
+              .order('created_at', { ascending: false })
               .limit(1)
               .maybeSingle(),
           ])
+          const { data: rail } = paidAttempt
+            ? await (createServiceRoleClient() as any)
+                .from('payment_method_fees')
+                .select('refundable')
+                .eq('method', (paidAttempt as any).pm_id ?? (paidAttempt as any).provider)
+                .maybeSingle()
+            : { data: null }
           return {
             request: request ? { status: request.status, adminNotes: request.admin_notes, amount: Number(request.amount_minor) / 100 } : null,
-            canRequest: !request && !!paidAttempt,
+            canRequest: !request && !!paidAttempt && (rail as any)?.refundable === true,
           }
         })()
       : null
@@ -394,6 +404,15 @@ export default async function OrderDetailPage({ params }: PageProps) {
       pending: !!pendingRequest,
     }
   }
+  // Cancel – Not Delivered: the order's report (buyer + seller), read only
+  // while the seller still owes the delivery.
+  const notDelivered =
+    (userRole === 'buyer' || userRole === 'seller') && ['paid', 'delivering'].includes(order.status)
+      ? await (async () => {
+          const { getNotDeliveredClaim } = await import('@/lib/actions/not-delivered')
+          return getNotDeliveredClaim(order.id)
+        })()
+      : null
   const itemImageUrl = orderItemImage({
     categoryType: category?.type,
     currencyConfig: currencyCfg as any,
@@ -529,6 +548,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
         buyerRefund={buyerRefund}
         refundToSource={refundToSource}
         cancelRequest={cancelRequest}
+        notDelivered={notDelivered}
+        notDeliveredWindowMinutes={responseWindowMinutes(order.listing?.delivery_time)}
         itemTitle={listingTitle ?? 'Order Details'}
         deliveryMethod={deliveryMethod}
         gameName={gameName ?? null}

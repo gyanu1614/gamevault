@@ -78,14 +78,14 @@ describe('B4: registry ⇒ recorded probe 200', () => {
       expect(new Set(m.countries).size, `${pm}: duplicate country`).toBe(m.countries.length)
     }
     const ids = (ms: Array<{ pmId: string }>) => ms.map((m) => m.pmId)
-    // Skrill (wired 2026-10-15) lists every one of these; it sits after the country's own rails.
+    // Skrill (EU/EEA, UK, CH) sits after the country's own rails.
     expect(ids(splitPayssionMethodsByCountry('PL').matched)).toEqual(['trustly', 'blik_pl', 'p24_pl', 'skrill', 'paysafecard'])
     expect(ids(splitPayssionMethodsByCountry('AT').matched)).toEqual(['trustly', 'eps_at', 'skrill', 'paysafecard'])
     expect(ids(splitPayssionMethodsByCountry('PT').matched)).toEqual(['trustly', 'mbway_pt', 'mybank', 'skrill', 'paysafecard'])
     expect(ids(splitPayssionMethodsByCountry('IT').matched)).toEqual(['trustly', 'bancomatpay_it', 'satispay', 'mybank', 'skrill', 'paysafecard'])
     expect(ids(splitPayssionMethodsByCountry('CZ').matched)).toEqual(['trustly', 'payu_cz', 'skrill', 'paysafecard'])
-    expect(ids(splitPayssionMethodsByCountry('CA').matched)).toEqual(['skrill', 'paysafecard'])
-    expect(ids(splitPayssionMethodsByCountry('BR').matched)).toEqual(['pix_br', 'creditcard_br', 'boleto_br', 'skrill'])
+    expect(ids(splitPayssionMethodsByCountry('CA').matched)).toEqual(['paysafecard'])
+    expect(ids(splitPayssionMethodsByCountry('BR').matched)).toEqual(['pix_br', 'creditcard_br', 'boleto_br'])
   })
 })
 

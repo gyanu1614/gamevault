@@ -67,6 +67,9 @@ export async function getCachedGridPrices(): Promise<{
       .select('brainrot_id,mutation_slug,cheapest_usd,average_usd')
       .not('cheapest_usd', 'is', null),
   ])
+  // A read error throws: empty grids would be cached as "every brainrot unpriced" (2026-10-20 outage).
+  if (defaultsResult.error) throw new Error(`sab_price_display (defaults) read failed: ${defaultsResult.error.message}`)
+  if (mutationsResult.error) throw new Error(`sab_price_display (mutations) read failed: ${mutationsResult.error.message}`)
   return {
     defaults: (defaultsResult.data as DefaultPriceRow[] | null) ?? [],
     mutations: (mutationsResult.data as MutationPriceRow[] | null) ?? [],
