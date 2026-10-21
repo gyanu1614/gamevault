@@ -28,9 +28,9 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { spawn } from "node:child_process";
 import dotenv from "dotenv";
 import { catalogueGapSummary } from "./lib/catalogue-new-only.mjs";
+import { runSabImporter } from "./lib/sab-importer.mjs";
 
 dotenv.config({ path: ".env.local", quiet: true });
 dotenv.config({ quiet: true });
@@ -639,21 +639,6 @@ function selectTargets(queue, progress, options) {
   return { eligible, usePanelRefresh };
 }
 
-function runImporter(outputPath) {
-  return new Promise((resolveImport, rejectImport) => {
-    const child = spawn(
-      process.execPath,
-      ["scripts/import-sab-market-json.mjs", outputPath, "--send"],
-      { cwd: process.cwd(), env: process.env, stdio: "inherit" },
-    );
-    child.once("error", rejectImport);
-    child.once("exit", (code) => {
-      if (code === 0) resolveImport();
-      else rejectImport(new Error(`Bulk importer exited with code ${code}`));
-    });
-  });
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const observedAt = new Date().toISOString();
@@ -784,7 +769,7 @@ async function main() {
   if (!process.env.SAB_MARKET_IMPORT_SECRET) {
     throw new Error("SAB_MARKET_IMPORT_SECRET is required with --send");
   }
-  await runImporter(options.outputPath);
+  await runSabImporter(options.outputPath);
 }
 
 // ROUTE-016: only run when invoked as a script, so the queue-ordering helpers

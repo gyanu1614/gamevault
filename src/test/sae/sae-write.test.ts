@@ -30,7 +30,9 @@ describe('Steal an Egg raw listing write', () => {
     const body = src.slice(src.indexOf(fn))
     expect(body).toContain('dedupeOffers(')
     expect(body.indexOf(".insert(")).toBeGreaterThan(-1)
-    expect(body.indexOf(".insert(")).toBeLessThan(body.indexOf(".update({ is_active: false })"))
+    // The retire is the shared retireUnseenRawListings (scripts/lib/values-raw.mjs).
+    expect(body.indexOf('retireUnseenRawListings(')).toBeGreaterThan(-1)
+    expect(body.indexOf(".insert(")).toBeLessThan(body.indexOf('retireUnseenRawListings('))
   })
 })
 
