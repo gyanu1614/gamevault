@@ -105,17 +105,19 @@ const num = (v: number | string | null | undefined): number | null => {
   return Number.isFinite(n) ? n : null
 }
 
-/** PostgREST caps a select at 1000 rows; page through so nothing is truncated. */
+/**
+ * PostgREST caps a select at 1000 rows; page through so nothing is truncated.
+ * A read error THROWS (2026-10-20 outage): returning what we have would let an
+ * ISR page cache an empty or partial list — or a 404 for every item — for its
+ * whole revalidate window. A throw keeps the last good page served instead.
+ */
 async function selectAll<T>(build: (from: number, to: number) => any): Promise<T[]> {
   const PAGE = 1000
   const out: T[] = []
   for (let page = 0; ; page += 1) {
     const from = page * PAGE
     const { data, error } = await build(from, from + PAGE - 1)
-    if (error) {
-      console.error('values selectAll:', error)
-      break
-    }
+    if (error) throw new Error(`values read failed: ${error.message ?? String(error)}`)
     if (!data?.length) break
     out.push(...(data as T[]))
     if (data.length < PAGE) break
@@ -125,12 +127,14 @@ async function selectAll<T>(build: (from: number, to: number) => any): Promise<T
 
 type ReadClient = ReturnType<typeof createValuesReadClient>
 
+/** The game's id; null only when the game truly doesn't exist. A read error throws (see selectAll). */
 async function gameIdFor(supabase: ReadClient, slug: string): Promise<string | null> {
-  const { data } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from('games')
     .select('id')
     .eq('slug', slug)
     .maybeSingle()
+  if (error) throw new Error(`games read failed: ${error.message ?? String(error)}`)
   return data?.id ?? null
 }
 
