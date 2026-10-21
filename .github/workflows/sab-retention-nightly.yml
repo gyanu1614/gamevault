@@ -7,7 +7,10 @@ name: SAB Raw Listing Retention (nightly)
 # Repricing has since moved to the runner and reads only active+matched rows,
 # but the table still grows without bound and every scan over it pays for that.
 # So raw detail older than 30 days is rolled into a per-day summary
-# (sab_raw_listing_daily) and the rows are pruned.
+# (sab_raw_listing_daily) and the rows are pruned. The same step then runs
+# raw_market_prune: values_raw_listings rows inactive 3+ days and Adopt Me
+# raw rows ended 7+ days ago (2026-10-20: the two tables were 267 MB of a
+# 793 MB database on a 500 MB plan; pricing reads only active rows).
 #
 # Runs at 10:40 UTC (2026-10-09; was 04:40). GitHub starts this repo's
 # schedules 5–7 h late by about the same amount for every workflow on a day,

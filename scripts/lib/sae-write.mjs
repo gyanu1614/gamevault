@@ -11,6 +11,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { dedupeOffers } from './offers.mjs'
+import { retireUnseenRawListings } from './values-raw.mjs'
 
 const GAME_SLUG = 'steal-an-egg'
 
@@ -170,12 +171,7 @@ export async function writeListings(crawled) {
   // Only now, with this crawl saved: listings not seen in it are no longer
   // active and their prices stop counting. (Done first, a failed insert left
   // the game with no active listings that day.) History rows are untouched.
-  const { error: retireError } = await db
-    .from('values_raw_listings')
-    .update({ is_active: false })
-    .eq('game_id', game.id)
-    .lt('observed_at', now)
-  if (retireError) throw new Error(`values_raw_listings retire: ${retireError.message}`)
+  await retireUnseenRawListings(db, game.id, now)
 
   const total = rows.length
   console.log(`  matched   : ${stats.matched} (${((stats.matched / total) * 100).toFixed(1)}%)`)

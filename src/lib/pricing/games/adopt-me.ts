@@ -18,7 +18,7 @@ import {
   type StoredAdoptMePrice,
 } from '@/lib/pricing/adopt-me-correction'
 import type { RawListing } from '@/lib/pricing/reputable-adapter'
-import { fetchAllRows } from '@/lib/db/fetch-all'
+import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import type { PublishedPrice } from '@/lib/pricing/change-rule'
 import { OBSERVED_PRICE_TTL_DAYS, evidenceSince, staleObservedKeys } from '@/lib/pricing/adopt-me-expiry'
 import { writeOwnTradeValues } from '@/lib/pricing/games/adopt-me-trade'
@@ -53,25 +53,13 @@ export async function runAdoptMeCorrection(
 
   // Only ACTIVE raw listings feed the price. Ended (vanished) listings stay for
   // history but must not set today's value.
-  // Paged with a UNIQUE order (id): paging without ORDER BY lets Postgres
-  // return rows in any order, so page seams skip and duplicate rows — the
-  // same bug that made SAB reprice differently on identical runs.
-  const { data: rawData, error: rawError } = await fetchAllRows<RawRow>(
-    (from, to) =>
-      (admin as any)
-        .from('adopt_me_market_raw_listings')
-        .select('pet_id,variant,price_usd,reviews,listing_status')
-        .eq('listing_status', 'active')
-        .order('id', { ascending: true })
-        .range(from, to),
-    PAGE_SIZE,
-  )
-  if (rawError) {
-    throw new Error(
-      `adopt_me_market_raw_listings: ${(rawError as { message?: string }).message ?? String(rawError)}`,
-    )
-  }
-  const rawRows = rawData ?? []
+  // Keyset on the unique id (never OFFSET: the table keeps growing).
+  const rawRows = await selectAllByKey<RawRow>(admin, {
+    table: 'adopt_me_market_raw_listings',
+    columns: 'pet_id,variant,price_usd,reviews,listing_status',
+    key: 'id',
+    filter: (q) => q.eq('listing_status', 'active'),
+  })
 
   const listings: RawListing[] = rawRows.map((row) => ({
     itemId: row.pet_id,
@@ -83,25 +71,14 @@ export async function runAdoptMeCorrection(
   // What the pages show today, so only rows that actually moved are written
   // (T1). A crawl that re-confirms the same price must not rewrite the row —
   // it used to UPDATE every priced pet-variant, one request each, every run.
-  const { data: existingData, error: existingError } = await fetchAllRows<ValueRow>(
-    (from, to) =>
-      (admin as any)
-        .from('adopt_me_pet_values')
-        .select(
-          'pet_id,variant,cash_value_usd,cheapest_usd,average_usd,reputable_count,listings_tracked,confidence,is_estimated',
-        )
-        .order('pet_id', { ascending: true })
-        .order('variant', { ascending: true })
-        .range(from, to),
-    PAGE_SIZE,
-  )
-  if (existingError) {
-    throw new Error(
-      `adopt_me_pet_values: ${(existingError as { message?: string }).message ?? String(existingError)}`,
-    )
-  }
+  const existingData = await selectAllByKey<ValueRow>(admin, {
+    table: 'adopt_me_pet_values',
+    columns:
+      'pet_id,variant,cash_value_usd,cheapest_usd,average_usd,reputable_count,listings_tracked,confidence,is_estimated',
+    key: ['pet_id', 'variant'],
+  })
   const existing = new Map<string, ValueRow>()
-  for (const row of existingData ?? []) existing.set(`${row.pet_id}:${row.variant}`, row)
+  for (const row of existingData) existing.set(`${row.pet_id}:${row.variant}`, row)
 
   // The pet's whole published ladder goes into the sanity check: this run's
   // prices plus every OBSERVED price already on a page. A stored value that
@@ -256,26 +233,21 @@ async function expireStaleObserved(
   existing: Map<string, ValueRow>,
   startedAt: string,
 ): Promise<number> {
-  const { data: recent, error } = await fetchAllRows<{ pet_id: string; variant: string }>(
-    (from, to) =>
-      (admin as any)
-        .from('adopt_me_price_history')
-        .select('pet_id,variant')
-        .eq('is_estimated', false)
-        .gte('history_date', evidenceSince(startedAt))
-        .order('pet_id', { ascending: true })
-        .order('variant', { ascending: true })
-        .order('history_date', { ascending: true })
-        .range(from, to),
-    PAGE_SIZE,
-  )
-  if (error) {
-    console.error('Adopt Me expiry: price history read failed, nothing expired:', (error as { message?: string }).message ?? error)
+  let recent: { pet_id: string; variant: string }[]
+  try {
+    recent = await selectAllByKey<{ pet_id: string; variant: string }>(admin, {
+      table: 'adopt_me_price_history',
+      columns: 'pet_id,variant',
+      key: 'id',
+      filter: (q) => q.eq('is_estimated', false).gte('history_date', evidenceSince(startedAt)),
+    })
+  } catch (error) {
+    console.error('Adopt Me expiry: price history read failed, nothing expired:', (error as Error).message)
     return 0
   }
   const evidence = new Set([
     ...corrections.map((c) => `${c.petId}:${c.variant}`),
-    ...(recent ?? []).map((r) => `${r.pet_id}:${r.variant}`),
+    ...recent.map((r) => `${r.pet_id}:${r.variant}`),
   ])
   let expired = 0
   for (const key of staleObservedKeys(existing.values(), evidence)) {
@@ -394,19 +366,12 @@ async function adoptMePublishedPrices(
   admin: ReturnType<typeof createServiceRoleClient>,
   values: Map<string, ValueRow>,
 ): Promise<PublishedPrice[]> {
-  const { data: pets, error } = await fetchAllRows<{ id: string; slug: string | null }>(
-    (from, to) =>
-      (admin as any)
-        .from('adopt_me_pets')
-        .select('id,slug')
-        .order('id', { ascending: true })
-        .range(from, to),
-    PAGE_SIZE,
-  )
-  if (error) {
-    throw new Error(`adopt_me_pets: ${(error as { message?: string }).message ?? String(error)}`)
-  }
-  const slugById = new Map((pets ?? []).filter((p) => p.slug).map((p) => [p.id, p.slug as string]))
+  const pets = await selectAllByKey<{ id: string; slug: string | null }>(admin, {
+    table: 'adopt_me_pets',
+    columns: 'id,slug',
+    key: 'id',
+  })
+  const slugById = new Map(pets.filter((p) => p.slug).map((p) => [p.id, p.slug as string]))
   const out: PublishedPrice[] = []
   for (const row of values.values()) {
     const slug = slugById.get(row.pet_id)

@@ -68,6 +68,10 @@ describe('db-backup.yml — weekly, without the rebuildable bulk', () => {
       'public.adopt_me_market_raw_listings',
       'public.value_funnel_events',
       'public.rate_limits',
+      // 2026-10-20 usage audit (A10): rebuilt by the next reprice, or logs.
+      'public.sab_price_corrections',
+      'public.sab_external_market_observations',
+      'public.sab_import_runs',
     ]) {
       expect(excluded, `${table} should be excluded`).toContain(table)
     }

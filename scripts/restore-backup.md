@@ -150,7 +150,9 @@ must be reconfigured on the new project:
 Some tables restore **empty by design** — their data is skipped (the `exclude=`
 list in `db-backup.yml`) because a re-crawl rebuilds it: `sab_market_raw_listings`,
 `sab_market_evidence_display`, `values_raw_listings`, `adopt_me_market_raw_listings`,
-`value_funnel_events`, `rate_limits`. Their tables, indexes and policies are in the
+`value_funnel_events`, `rate_limits`, `sab_price_corrections` (the next SAB reprice
+rewrites it), `sab_external_market_observations` (48 h expiry) and `sab_import_runs`
+(crawler run log). Their tables, indexes and policies are in the
 schema pass. Run **Values Pricing Daily** by hand after the restore to refill them;
 published prices (`sab_price_display`, `values_prices`, price history) are in the
 dump and keep serving until then. Do not run `sab_refresh_*` before that crawl —

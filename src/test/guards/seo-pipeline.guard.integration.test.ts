@@ -94,6 +94,11 @@ describe.skipIf(!hasEnv)('SEO pipeline tables (integration)', () => {
     }
     const { error } = await anon.rpc('seo_value_series', { p_source: 'pipeline', p_game_slug: GAME })
     expect(error).not.toBeNull()
+    // The cheap history reads (2026-10-20) are service-role only too.
+    const summary = await anon.rpc('seo_value_history_summary', { p_source: 'pipeline', p_game_slug: GAME })
+    expect(summary.error).not.toBeNull()
+    const seriesFor = await anon.rpc('seo_value_series_for', { p_source: 'pipeline', p_game_slug: GAME, p_item_slugs: [] })
+    expect(seriesFor.error).not.toBeNull()
   })
 
   it('ships report-only, with the five no-price Brainrot pages hidden by the owner', async () => {

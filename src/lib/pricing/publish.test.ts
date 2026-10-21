@@ -9,7 +9,7 @@ import { httpRevalidator, publishPriceChanges, type RevalidateRequest } from './
 
 type Row = { game_slug: string; item_slug: string; variant: string; prices: Record<string, number | null> }
 
-/** In-memory values_published_prices: select/eq/order/range, upsert, delete. */
+/** In-memory values_published_prices: select/eq/order/limit (keyset)/range, upsert, delete. */
 function fakeSnapshotClient(initial: Row[] = [], opts: { missing?: boolean } = {}) {
   const rows = [...initial]
   const writes: string[] = []
@@ -24,6 +24,17 @@ function fakeSnapshotClient(initial: Row[] = [], opts: { missing?: boolean } = {
         eq: (col: string, val: unknown) => {
           filters.push([col, val])
           return builder
+        },
+        // Keyset read (loadPublishedSnapshot): fixtures stay under one page, so
+        // the first `limit` returns everything and no cursor filter follows.
+        gt: () => builder,
+        or: () => builder,
+        limit: async (n: number) => {
+          if (opts.missing) {
+            return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.values_published_prices' in the schema cache" } }
+          }
+          const hit = rows.filter((r) => filters.every(([c, v]) => (r as any)[c] === v))
+          return { data: hit.slice(0, n), error: null }
         },
         range: async (from: number, to: number) => {
           if (opts.missing) {

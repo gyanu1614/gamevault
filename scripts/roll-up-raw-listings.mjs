@@ -1,6 +1,8 @@
 /**
  * Nightly retention: roll SAB raw listings older than 30 days into the daily
- * summary, then prune them.
+ * summary, then prune them. Then raw_market_prune drops values rows inactive
+ * for 3+ days and Adopt Me rows ended 7+ days ago (pricing reads only active
+ * rows; both tables grew without bound, 2026-10-20 usage audit).
  *
  *   pnpm retention:sab                # 30-day default
  *   pnpm retention:sab --retain-days 60
@@ -94,6 +96,25 @@ async function main() {
   console.log(
     `✅ rolled ${summary?.days_rolled ?? 0} day(s), ` +
       `pruned ${summary?.rows_pruned ?? 0} row(s) in ${seconds}s`,
+  )
+
+  await pruneRawMarketHistory(admin)
+}
+
+/** values_raw_listings + adopt_me_market_raw_listings history (one RPC). */
+async function pruneRawMarketHistory(admin) {
+  const startedAt = Date.now()
+  const { data, error } = await admin.rpc('raw_market_prune')
+  if (error) {
+    console.error(`raw_market_prune failed: ${error.message}`)
+    process.exitCode = 1
+    return
+  }
+  const pruned = Array.isArray(data) ? data[0] : data
+  const seconds = ((Date.now() - startedAt) / 1000).toFixed(1)
+  console.log(
+    `✅ pruned ${pruned?.values_rows_pruned ?? 0} values row(s), ` +
+      `${pruned?.adopt_me_rows_pruned ?? 0} Adopt Me row(s) in ${seconds}s`,
   )
 }
 

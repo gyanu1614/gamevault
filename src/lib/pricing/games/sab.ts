@@ -12,6 +12,8 @@
  */
 
 import { publishSabMarketEstimates } from './sab-publish'
+import { loadSabRepriceInputs } from './sab-inputs'
+import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import type { RepriceOptions, RepriceResult } from '@/lib/pricing/registry'
 import type { PublishedPrice } from '@/lib/pricing/change-rule'
@@ -47,207 +49,15 @@ const PAGE_SIZE = 1000
  */
 const COSMETIC_TRAIT_RE = /\btaco\b/i
 
-type CatalogRow = {
-  brainrot_id: string
-  mutation_id: string
-  mutation_slug: string
-  market_value_usd: number | string | null
-  market_low_usd: number | string | null
-  market_high_usd: number | string | null
-  confidence_label: string | null
-  external_sample_size: number | null
-  source_count: number | null
-}
-
-type BrainrotRow = {
-  id: string
-  rarity: string | null
-  ingame_cost: number | string | null
-  base_income_per_second: number | string | null
-  obtainability: string | null
-}
-
-type EvidenceRow = {
-  brainrot_id: string
-  mutation_id: string
-  unit_price_usd: number | string | null
-  source_slug: string | null
-}
-
-type ReputableRow = {
-  brainrot_id: string
-  mutation_id: string
-  unit_price_usd: number | string | null
-  /**
-   * ROUTE-010: these four arrive as server-side JSONB extractions of raw_payload
-   * rather than the whole blob (see the select in runSabCorrection). raw_payload
-   * is a large document per row; shipping 110k of them repeatedly tripped the
-   * Postgres statement timeout (57014) and killed the correction run, which is
-   * the ONLY writer of sab_price_display. `->>` always yields text, so every one
-   * of these is a string (or null) even when the underlying JSON value is a
-   * number or a boolean — parse accordingly, never compare identity.
-   */
-  /** raw_payload->>'seller_sales_count' */
-  payload_sales: string | null
-  /** raw_payload->>'title' */
-  payload_title: string | null
-  /** False when the collector tagged the listing OUTSIDE the item's canonical
-   * income tier. Kept for when the import preserves it, but the correction ALSO
-   * derives the tier itself from income_band below (import currently strips it).
-   * raw_payload->>'is_canonical_band' — the TEXT 'false', not a boolean. */
-  payload_canonical_band: string | null
-  /** The listing's income tier upper bound, compared against the mutation's
-   * canonical income to gate cheapest.
-   * raw_payload->'income_band'->>'upper' */
-  payload_band_upper: string | null
-  listing_status: string | null
-  parse_status: string | null
-  /** When the crawl last saw this listing — the incremental signal. */
-  observed_at: string | null
-  is_bundle: boolean | null
-  is_account_listing: boolean | null
-  is_inventory_listing: boolean | null
-  is_duplicate: boolean | null
-  is_outlier: boolean | null
-  rejection_reason: string | null
-}
-
-/** One previously-written correction: just enough to decide skip vs rewrite. */
-type ExistingCorrectionRow = {
-  brainrot_id: string
-  mutation_id: string
-  computed_at: string | null
-}
-
-type MutationRow = {
-  slug: string
-  income_multiplier: number | string | null
-}
-
-type CalculatorRow = {
-  brainrot_id: string
-  mutation_id: string
-  calculated_income_per_second: number | string | null
-}
-
 function toNumber(value: number | string | null | undefined): number | null {
   if (value == null) return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-/**
- * Page through an entire table/view with a STABLE order.
- *
- * `orderBy` is mandatory and must be a unique (or composite-unique) key. Without
- * a deterministic ORDER BY, Postgres does not guarantee row order across
- * `.range()` pages, so pagination silently SKIPS and DUPLICATES rows at page
- * seams — differently on every call. That made the whole correction
- * non-deterministic: the same Cyber Dragon Cannelloni repriced at $59 / $41.99 /
- * $44.99 on back-to-back runs because the real $34 cheapest listing fell on a
- * shifting page boundary and was sometimes read, sometimes lost. Ordering by a
- * unique key makes every page a clean, gap-free, duplicate-free slice.
- */
-/**
- * ROUTE-011: how many times to attempt a single page before giving up. Deep
- * pages over large tables intermittently exceed the Postgres statement timeout
- * (57014) depending on cache warmth; a page that fails is very likely to succeed
- * moments later. Mirrors the collector's supabasePage() backoff
- * (scripts/collect-eldorado-sab-api-v6.mjs), which has carried the crawl's READ
- * path for months — the correction's read path never got the same treatment, so
- * one unlucky page aborted the entire run and left sab_price_display unrefreshed.
- */
-const PAGE_MAX_ATTEMPTS = 4
-
-/** Transient classes worth retrying: statement timeout + upstream 5xx. */
-export function isRetryableReadError(error: {
-  message?: string
-  code?: string
-}): boolean {
-  const code = error.code ?? ''
-  const message = error.message ?? ''
-  return (
-    code === '57014' ||
-    message.includes('57014') ||
-    /statement timeout/i.test(message) ||
-    /timeout|fetch failed|socket|ECONNRESET|EAI_AGAIN/i.test(message)
-  )
-}
-
-const delay = (ms: number) => new Promise((done) => setTimeout(done, ms))
-
-/**
- * Read one bounded page, retrying the transient failures with linear backoff.
- * Anything non-transient (a bad column, a missing relation) still throws
- * immediately — a retry could not help and would only delay the real error.
- */
-/**
- * Equality filters pushed into the query rather than applied in JS after the
- * fact. This is not a micro-optimisation: the correction only ever prices
- * `active` + `matched` listings, but it used to read ALL of
- * sab_market_raw_listings and drop three quarters of it in a loop. At 136k rows
- * that is 137 sequential pages, which is what pushed the run past the Vercel
- * function budget and froze prices for five days. Filtering server-side reads
- * ~34k rows instead — the same rows the loop would have kept.
- */
-export type ColumnFilters = Record<string, string | boolean>
-
-async function selectPage<T>(
-  client: ReturnType<typeof createServiceRoleClient>,
-  table: string,
-  columns: string,
-  orderBy: string[],
-  from: number,
-  filters?: ColumnFilters,
-): Promise<T[]> {
-  let lastError: { message?: string; code?: string } | null = null
-
-  for (let attempt = 1; attempt <= PAGE_MAX_ATTEMPTS; attempt += 1) {
-    let query = (client as any).from(table).select(columns)
-    for (const [col, value] of Object.entries(filters ?? {})) {
-      query = query.eq(col, value)
-    }
-    for (const col of orderBy) query = query.order(col, { ascending: true })
-    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
-
-    if (!error) return (data ?? []) as T[]
-
-    lastError = error
-    if (!isRetryableReadError(error) || attempt === PAGE_MAX_ATTEMPTS) break
-
-    console.warn(
-      `${table}: page ${from}+ failed (attempt ${attempt}/${PAGE_MAX_ATTEMPTS}: ` +
-        `${error.message}) — retrying…`,
-    )
-    await delay(1000 * attempt)
-  }
-
-  throw new Error(`${table}: ${lastError?.message ?? 'unknown read error'}`)
-}
-
-async function selectAll<T>(
-  client: ReturnType<typeof createServiceRoleClient>,
-  table: string,
-  columns: string,
-  orderBy: string[],
-  filters?: ColumnFilters,
-): Promise<T[]> {
-  const rows: T[] = []
-  for (let page = 0; ; page += 1) {
-    const data = await selectPage<T>(
-      client,
-      table,
-      columns,
-      orderBy,
-      page * PAGE_SIZE,
-      filters,
-    )
-    if (!data.length) break
-    rows.push(...data)
-    if (data.length < PAGE_SIZE) break
-  }
-  return rows
-}
+// isRetryableReadError moved to the shared keyset reader; re-exported for
+// existing callers (src/lib/sab/expire-listings.ts).
+export { isRetryableReadError } from '@/lib/db/select-all-by-key'
 
 /**
  * A manual full reprice took 18 minutes from the owner's machine on 2026-09-19
@@ -320,7 +130,7 @@ async function runSabCorrectionUnlocked(
   // evidence it just refreshed. Non-fatal by design — see sab-publish.ts.
   await publishSabMarketEstimates(admin as any)
 
-  const [
+  const {
     catalog,
     mutations,
     calculator,
@@ -328,77 +138,7 @@ async function runSabCorrectionUnlocked(
     evidence,
     rawListings,
     existingCorrections,
-  ] = await Promise.all([
-      // The catalog is a VIEW without an `id`; (brainrot_id, mutation_id) is its
-      // composite unique key. Every other table has a unique `id`.
-      selectAll<CatalogRow>(
-        admin,
-        'sab_public_price_catalog',
-        'brainrot_id,mutation_id,mutation_slug,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,source_count',
-        ['brainrot_id', 'mutation_id'],
-      ),
-      selectAll<MutationRow>(admin, 'sab_mutations', 'slug,income_multiplier', [
-        'slug',
-      ]),
-      // Canonical income per brainrot+mutation — the tier a listing must be in to
-      // count for cheapest. A "Cyber Dragon" at 0.75 B/s is a weaker mislabeled
-      // item vs the real 2.6 B/s Cyber; excluding it keeps cheapest comparable.
-      selectAll<CalculatorRow>(
-        admin,
-        'sab_brainrot_mutation_calculator',
-        'brainrot_id,mutation_id,calculated_income_per_second',
-        ['brainrot_id', 'mutation_id'],
-      ),
-      selectAll<BrainrotRow>(
-        admin,
-        'sab_brainrots',
-        'id,rarity,ingame_cost,base_income_per_second,obtainability',
-        ['id'],
-      ),
-      // ROUTE-014: read the materialized snapshot, not the live view. The view
-      // Seq Scans every raw listing twice (rows + the quartile `bounds` CTE) and
-      // spills to disk; at the projected 6-month size that is 2.65s and climbing,
-      // which is what pushed this run past the statement timeout. The snapshot is
-      // the same rows from an indexed table — measured 2654ms -> 332ms with an
-      // identical 653,704-row result. It is refreshed at the end of every crawl
-      // and again by this cron before the correction runs, so it is at most one
-      // crawl cycle (~3h) behind.
-      selectAll<EvidenceRow>(
-        admin,
-        'sab_market_evidence_display',
-        'brainrot_id,mutation_id,unit_price_usd,source_slug',
-        ['id'],
-      ),
-      selectAll<ReputableRow>(
-        admin,
-        'sab_market_raw_listings',
-        // ROUTE-010: extract ONLY the four raw_payload fields this function reads,
-        // server-side, instead of transferring the entire JSONB document. Reading
-        // the whole blob for all ~110k rows made deep pages take 8s+ and fail
-        // ~40% of the time with statement timeout (57014); selectAll then threw
-        // and aborted the run, so sab_price_display stopped being refreshed.
-        'brainrot_id,mutation_id,unit_price_usd,listing_status,parse_status,' +
-          'observed_at,' +
-          'is_bundle,is_account_listing,is_inventory_listing,is_duplicate,' +
-          'is_outlier,rejection_reason,' +
-          'payload_title:raw_payload->>title,' +
-          'payload_sales:raw_payload->>seller_sales_count,' +
-          'payload_canonical_band:raw_payload->>is_canonical_band,' +
-          'payload_band_upper:raw_payload->income_band->>upper',
-        ['id'],
-        // Only these two ever survive the filter loop below, so let Postgres do
-        // the dropping: ~34k rows read instead of ~136k.
-        { listing_status: 'active', parse_status: 'matched' },
-      ),
-      // What we last wrote, so we can skip items whose evidence has not moved
-      // and prune keys that have left the catalogue.
-      selectAll<ExistingCorrectionRow>(
-        admin,
-        'sab_price_corrections',
-        'brainrot_id,mutation_id,computed_at',
-        ['brainrot_id', 'mutation_id'],
-      ),
-    ])
+  } = await loadSabRepriceInputs(admin)
 
   const multiplierBySlug = new Map<string, number>()
   for (const row of mutations) {
@@ -756,31 +496,24 @@ const displayNumber = (v: number | string | null): number | null => {
 async function sabPublishedPrices(
   admin: ReturnType<typeof createServiceRoleClient>,
 ): Promise<PublishedPrice[]> {
+  // Keyset on the primary key (brainrot_id, mutation_slug), not OFFSET.
+  const rows = await selectAllByKey<DisplayRow>(admin, {
+    table: 'sab_price_display',
+    columns: 'brainrot_slug,mutation_slug,market_value_usd,cheapest_usd,average_usd',
+    key: ['brainrot_id', 'mutation_slug'],
+  })
   const out: PublishedPrice[] = []
-  for (let page = 0; ; page += 1) {
-    const from = page * PAGE_SIZE
-    const { data, error } = await (admin as any)
-      .from('sab_price_display')
-      .select('brainrot_slug,mutation_slug,market_value_usd,cheapest_usd,average_usd')
-      // Unique order, so page seams neither skip nor repeat rows.
-      .order('brainrot_slug', { ascending: true })
-      .order('mutation_slug', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1)
-    if (error) throw new Error(`sab_price_display read: ${error.message}`)
-    const rows = (data ?? []) as DisplayRow[]
-    for (const r of rows) {
-      if (!r.brainrot_slug) continue
-      const market = displayNumber(r.market_value_usd)
-      const cheapest = displayNumber(r.cheapest_usd)
-      const average = displayNumber(r.average_usd)
-      if (market == null && cheapest == null && average == null) continue
-      out.push({
-        itemSlug: r.brainrot_slug,
-        variant: r.mutation_slug ?? 'default',
-        prices: { market, cheapest, average },
-      })
-    }
-    if (rows.length < PAGE_SIZE) break
+  for (const r of rows) {
+    if (!r.brainrot_slug) continue
+    const market = displayNumber(r.market_value_usd)
+    const cheapest = displayNumber(r.cheapest_usd)
+    const average = displayNumber(r.average_usd)
+    if (market == null && cheapest == null && average == null) continue
+    out.push({
+      itemSlug: r.brainrot_slug,
+      variant: r.mutation_slug ?? 'default',
+      prices: { market, cheapest, average },
+    })
   }
   return out
 }

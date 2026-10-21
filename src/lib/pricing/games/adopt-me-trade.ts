@@ -7,7 +7,7 @@
  * column: a trade value is estimated exactly when its form has no observed
  * cash price, which the page already knows (tradeIsEstimated in the pet data).
  */
-import { fetchAllRows } from '@/lib/db/fetch-all'
+import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import type { createServiceRoleClient } from '@/lib/supabase/service'
 import { TRADE_BENCHMARK, computeAdoptMeTradeValues, type ObservedPrice } from '@/lib/pricing/adopt-me-trade-value'
 
@@ -26,18 +26,12 @@ const num = (v: unknown) => (v == null ? null : Number.isFinite(Number(v)) ? Num
 const CHUNK = 500
 
 export async function writeOwnTradeValues(admin: Admin): Promise<{ written: number; skipped?: string }> {
-  const { data, error } = await fetchAllRows<Row>(
-    (from, to) =>
-      (admin as any)
-        .from('adopt_me_pet_values')
-        .select('pet_id,variant,average_usd,cheapest_usd,is_estimated,trade_value,adopt_me_pets!inner(slug,rarity)')
-        .order('pet_id', { ascending: true })
-        .order('variant', { ascending: true })
-        .range(from, to),
-    1000,
-  )
-  if (error) throw new Error(`adopt_me_pet_values (trade): ${(error as { message?: string }).message ?? String(error)}`)
-  const rows = data ?? []
+  // Keyset on (pet_id, variant), the table's unique key; never OFFSET.
+  const rows = await selectAllByKey<Row>(admin, {
+    table: 'adopt_me_pet_values',
+    columns: 'pet_id,variant,average_usd,cheapest_usd,is_estimated,trade_value,adopt_me_pets!inner(slug,rarity)',
+    key: ['pet_id', 'variant'],
+  })
 
   const benchmark = rows.find((r) => r.adopt_me_pets?.slug === TRADE_BENCHMARK.petSlug)
   // Observed prices only: the market price, else the cheapest reputable listing.

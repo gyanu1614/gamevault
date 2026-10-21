@@ -14,6 +14,7 @@
  * allowPartial: it would retire listings the crawl simply did not reach.
  */
 import { dedupeOffers } from './offers.mjs'
+import { retireUnseenRawListings } from './values-raw.mjs'
 import fs from 'node:fs'
 
 import { normaliseStructuredListing } from '../../src/lib/values/normalisers/eldorado-structured.ts'
@@ -169,8 +170,7 @@ export async function importEldoradoFeed({ game, feed, env, yes = false, write =
     // Only now, with this crawl saved: listings not seen in it stop counting
     // (done first, a failed insert left the game with no active listings).
     // History is untouched.
-    const { error } = await db.from('values_raw_listings').update({ is_active: false }).eq('game_id', game_.id).eq('is_active', true).lt('observed_at', observedAt)
-    if (error) throw new Error(`retire: ${error.message}`)
+    await retireUnseenRawListings(db, game_.id, observedAt)
   }
   return plan
 }

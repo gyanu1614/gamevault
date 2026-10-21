@@ -32,6 +32,14 @@ export function walkAnchor(points: SeriesPoint[]): { anchor: number | null; move
   return { anchor, movedOn }
 }
 
+/** Per-item history facts the gate needs, computed in SQL (seo_value_history_summary). */
+export interface HistorySummary {
+  /** Distinct days with a price, across every series of the item. */
+  days: number
+  /** The earliest priced day (YYYY-MM-DD), or null. */
+  firstPricedDay: string | null
+}
+
 export function historyDayCount(series: ItemSeries): number {
   const days = new Set<string>()
   for (const points of Object.values(series)) for (const p of points) if (p.value != null) days.add(p.day)
@@ -71,12 +79,16 @@ const later = (a: string | null, b: string | null) => (!a ? b : !b ? a : a > b ?
 
 export function nextEvidence(input: {
   current: ItemCurrent
+  /** The full daily series. Needed only on a first run (no `stored`), to replay
+   *  the anchors; a stored page passes `history` instead. */
   series: ItemSeries
+  /** When given, the history facts come from here rather than from `series`. */
+  history?: HistorySummary
   stored: StoredEvidence | null
   now: string
   isProtected: boolean
 }): { row: EvidenceRow; priceMoved: boolean; gateFlipped: boolean; isNewPage: boolean } {
-  const { current, series, stored, now } = input
+  const { current, series, history, stored, now } = input
   const anchors: Record<string, number | null> = {}
   let movedAt: string | null
 
@@ -110,13 +122,15 @@ export function nextEvidence(input: {
   }
   if (priceMoved) movedAt = now
 
-  const historyDays = historyDayCount(series)
+  const historyDays = history ? history.days : historyDayCount(series)
   // First seen: kept once known; else the earliest priced history day; else now
   // for a page priced for the first time. An unpriced page has not been seen.
-  const firstPriced = Object.values(series)
-    .flat()
-    .filter((p) => p.value != null)
-    .reduce<string | null>((m, p) => (!m || p.day < m ? p.day : m), null)
+  const firstPriced = history
+    ? history.firstPricedDay
+    : Object.values(series)
+        .flat()
+        .filter((p) => p.value != null)
+        .reduce<string | null>((m, p) => (!m || p.day < m ? p.day : m), null)
   const firstSeenAt = stored?.firstSeenAt ?? (firstPriced ? dayStart(firstPriced) : current.valueUsd != null ? now : null)
   const passesGate = passesValueDataGate({ valueUsd: current.valueUsd, observations: current.observations, historyDays, firstSeenAt, now })
   const gateFlipped = !!stored && stored.passesGate !== passesGate

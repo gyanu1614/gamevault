@@ -105,6 +105,9 @@ jobs:
             public.adopt_me_market_raw_listings  # Adopt Me crawl rows
             public.value_funnel_events           # analytics clicks, not business records
             public.rate_limits                   # short-lived rate-limit counters
+            public.sab_price_corrections         # rewritten by every SAB reprice
+            public.sab_external_market_observations  # 48 h expiry, refilled by the next publish
+            public.sab_import_runs               # crawler run log, not business data
           )
           args=()
           for t in "${exclude[@]}"; do args+=(--exclude "$t"); done

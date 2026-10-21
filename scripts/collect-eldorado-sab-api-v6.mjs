@@ -3,9 +3,9 @@ import { pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { spawn } from "node:child_process";
 import { hostname } from "node:os";
 import dotenv from "dotenv";
+import { runSabImporter } from "./lib/sab-importer.mjs";
 
 dotenv.config({ path: ".env.local", quiet: true });
 dotenv.config({ quiet: true });
@@ -1800,22 +1800,6 @@ async function withImportLock(work) {
   }
 }
 
-function runImporter(outputPath) {
-  return new Promise((resolveImport, rejectImport) => {
-    const child = spawn(
-      process.execPath,
-      // --no-publish: the runner's reprice publishes (see the importer).
-      ["scripts/import-sab-market-json.mjs", outputPath, "--send", "--no-publish"],
-      { cwd: process.cwd(), env: process.env, stdio: "inherit" },
-    );
-    child.once("error", rejectImport);
-    child.once("exit", (code) => {
-      if (code === 0) resolveImport();
-      else rejectImport(new Error(`Bulk importer exited with code ${code}`));
-    });
-  });
-}
-
 /**
  * ROUTE-017. Classify a crawl that produced no listings.
  *
@@ -2080,7 +2064,7 @@ async function main() {
   if (!process.env.SAB_MARKET_IMPORT_SECRET) {
     throw new Error("SAB_MARKET_IMPORT_SECRET is required with --send");
   }
-  await withImportLock(() => runImporter(options.outputPath));
+  await withImportLock(() => runSabImporter(options.outputPath));
 
   // Nothing is triggered from here any more. Expire and reprice both run as
   // their own workflow steps straight after this script, on the runner

@@ -98,12 +98,13 @@ describe('values_prices schema contract', () => {
 
 describe('paginated reads order by a column that exists', () => {
   /**
-   * Every `selectAll(admin, '<table>', '<columns>', '<orderBy>')` call: the
-   * order key must be a real column of that table. This is the assertion that
-   * would have caught the production failure.
+   * Every `selectAllByKey(admin, { table, columns, key })` call (keyset paging,
+   * 2026-10-20; was `selectAll(admin, table, columns, orderBy)`): the key is
+   * also the ORDER BY, so it must be a real column of that table. This is the
+   * assertion that would have caught the production failure.
    */
   const CALLS = [...moduleSource.matchAll(
-    /selectAll<[\s\S]*?>\(\s*admin,\s*'([a-z_]+)',\s*'([^']*)',\s*(?:\/\/[^\n]*\n\s*)?'([a-z_]+)'/g,
+    /selectAllByKey<[\s\S]*?>\(\s*admin,\s*\{\s*table:\s*'([a-z_]+)',\s*columns:\s*'([^']*)',\s*(?:\/\/[^\n]*\n\s*)?key:\s*'([a-z_]+)'/g,
   )].map((m) => ({ table: m[1], columns: m[2], orderBy: m[3] }))
 
   const COLUMNS: Record<string, string[]> = {

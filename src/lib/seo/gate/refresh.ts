@@ -5,13 +5,14 @@ import { valuePageUrls } from '@/lib/seo/indexnow/value-changes'
 import { logUrlEvents } from '@/lib/seo/indexnow/log-events'
 import type { SubmitFn } from '@/lib/seo/indexnow/submit'
 
-import { nextEvidence, type ItemCurrent, type ItemSeries, type StoredEvidence } from './evidence'
+import { nextEvidence, type HistorySummary, type ItemCurrent, type ItemSeries, type StoredEvidence } from './evidence'
 import { readGateMode } from './settings'
 
 /**
  * Refresh seo_value_evidence for one game after its prices were published (and
  * nightly as a backstop): read the current prices + offer counts, the daily
- * history (seo_value_series) and the stored anchors, compute each page's
+ * history (seo_value_history_summary; the full series via seo_value_series_for
+ * only for pages seen for the first time) and the stored anchors, compute each page's
  * evidence (./evidence), write it, then
  *  - log `value-new:<game>` for a page priced for the first time (a new game's
  *    or item's page reaches IndexNow on day one);
@@ -126,19 +127,32 @@ async function loadCurrent(db: Db, source: ValueSource, gameSlug: string): Promi
   return out
 }
 
-async function loadSeries(db: Db, source: ValueSource, gameSlug: string): Promise<Map<string, ItemSeries>> {
-  const rows = await fetchAllRows<{ item_slug: string; series_key: string; days: string[]; vals: (number | string | null)[] }>((f, t) =>
-    db
-      .rpc('seo_value_series', { p_source: source, p_game_slug: gameSlug })
-      .order('item_slug')
-      .order('series_key')
-      .range(f, t),
-  )
+/** Per-item history facts for every page of the game, from ONE rpc (a jsonb
+ *  array, so PostgREST's 1000-row cap does not apply and it is computed once). */
+async function loadHistorySummary(db: Db, source: ValueSource, gameSlug: string): Promise<Map<string, HistorySummary>> {
+  const { data, error } = await db.rpc('seo_value_history_summary', { p_source: source, p_game_slug: gameSlug })
+  if (error) throw new Error(`seo_value_history_summary: ${error.message}`)
+  const rows = (data ?? []) as { item_slug: string; history_days: number; first_priced_day: string | null }[]
+  return new Map(rows.map((r) => [r.item_slug, { days: Number(r.history_days) || 0, firstPricedDay: r.first_priced_day }]))
+}
+
+/** The full daily series, only for the given items (pages seen for the first
+ *  time replay it once; afterwards the stored anchors carry the state). */
+const SERIES_SLUGS_PER_CALL = 200
+async function loadSeriesFor(db: Db, source: ValueSource, gameSlug: string, slugs: string[]): Promise<Map<string, ItemSeries>> {
   const out = new Map<string, ItemSeries>()
-  for (const r of rows) {
-    const series = out.get(r.item_slug) ?? {}
-    series[r.series_key] = r.days.map((day, i) => ({ day, value: num(r.vals[i]) }))
-    out.set(r.item_slug, series)
+  for (let i = 0; i < slugs.length; i += SERIES_SLUGS_PER_CALL) {
+    const { data, error } = await db.rpc('seo_value_series_for', {
+      p_source: source,
+      p_game_slug: gameSlug,
+      p_item_slugs: slugs.slice(i, i + SERIES_SLUGS_PER_CALL),
+    })
+    if (error) throw new Error(`seo_value_series_for: ${error.message}`)
+    for (const r of (data ?? []) as { item_slug: string; series_key: string; days: string[]; vals: (number | string | null)[] }[]) {
+      const series = out.get(r.item_slug) ?? {}
+      series[r.series_key] = r.days.map((day, j) => ({ day, value: num(r.vals[j]) }))
+      out.set(r.item_slug, series)
+    }
   }
   return out
 }
@@ -162,9 +176,9 @@ export async function refreshValueEvidence(
   const siteUrl = deps.siteUrl ?? SITE_URL
   const valuesPrefix = `${siteUrl}/${gameSlug}/values/`
 
-  const [current, series, stored, inspections, mode] = await Promise.all([
+  const [current, history, stored, inspections, mode] = await Promise.all([
     loadCurrent(db, source, gameSlug),
-    loadSeries(db, source, gameSlug),
+    loadHistorySummary(db, source, gameSlug),
     fetchAllRows<{ item_slug: string; anchors: Record<string, number | null> | null; price_moved_at: string | null; passes_gate: boolean; passes_changed_at: string | null; first_seen_at: string | null }>(
       (f, t) =>
         db
@@ -185,6 +199,9 @@ export async function refreshValueEvidence(
       { anchors: s.anchors ?? {}, priceMovedAt: s.price_moved_at, passesGate: s.passes_gate, passesChangedAt: s.passes_changed_at, firstSeenAt: s.first_seen_at },
     ]),
   )
+  // Only pages with no stored evidence need their full series (the replay).
+  const firstRunSlugs = [...current.keys()].filter((slug) => !storedBySlug.has(slug))
+  const series = firstRunSlugs.length > 0 ? await loadSeriesFor(db, source, gameSlug, firstRunSlugs) : new Map<string, ItemSeries>()
   const protectedSlugs = new Set(
     inspections.filter((i) => i.verdict === 'PASS' || (i.clicks_90d ?? 0) > 0).map((i) => i.url.slice(valuesPrefix.length)),
   )
@@ -194,7 +211,14 @@ export async function refreshValueEvidence(
   const fresh: string[] = []
   const flipped: { slug: string; passes: boolean }[] = []
   for (const [slug, cur] of current) {
-    const r = nextEvidence({ current: cur, series: series.get(slug) ?? {}, stored: storedBySlug.get(slug) ?? null, now, isProtected: protectedSlugs.has(slug) })
+    const r = nextEvidence({
+      current: cur,
+      series: series.get(slug) ?? {},
+      history: history.get(slug) ?? { days: 0, firstPricedDay: null },
+      stored: storedBySlug.get(slug) ?? null,
+      now,
+      isProtected: protectedSlugs.has(slug),
+    })
     if (r.priceMoved) moved.push(slug)
     // A brand-new priced page: announce it now (it used to wait for its first price move).
     if (r.isNewPage && (mode === 'report' || r.row.passesGate)) fresh.push(slug)
