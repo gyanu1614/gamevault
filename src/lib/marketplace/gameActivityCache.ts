@@ -11,8 +11,9 @@ import { GAME_DIRECTORY_TAG as ADMIN_GAME_DIRECTORY_TAG } from './gameDirectoryC
  * (footerGameRanking.ts). Renders on EVERY page via the root layout, so:
  *   - cookie-free: a service-role client (orders are not anon-readable), only
  *     aggregate counts leave this function — no row is ever rendered;
- *   - unstable_cache'd for a day under the game-directory tags (the nightly
- *     /api/cron/revalidate-listing-pages revalidates GAME_DIRECTORY_TAG);
+ *   - unstable_cache'd for a day under the game-directory tags (refreshed by
+ *     its own 24 h window and by admin game edits; never by a nightly sweep,
+ *     because every page carries these tags through the footer);
  *   - fails open: any error (or no service key, e.g. a local build) returns
  *     empty signals and the footer keeps its curated sort_order.
  * Test sellers (profiles.is_test) are excluded from both counts.

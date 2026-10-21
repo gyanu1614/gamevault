@@ -340,7 +340,9 @@ const getAllGameCategories = unstable_cache(
     return withCurrencyNavLabel((data || []) as GameCategory[], currencyCfg?.config?.unit_label)
   },
   ['game-categories-nav'],
-  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+  // Admin category edits revalidate GAME_DIRECTORY_TAG; daily is the backstop
+  // (hourly capped every category page at one hour).
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 86400 },
 )
 
 // V21/P7.ae — Apply an "exclude offline sellers" filter to a listings

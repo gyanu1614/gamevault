@@ -22,7 +22,9 @@ const SAB_GAME = 'steal-a-brainrot'
 function gridPricesClient() {
   return createTaggedAnonClient({
     tags: [PRICE_CACHE_TAG, ...valueListReadTags(SAB_GAME)],
-    revalidate: 3600,
+    // The publish step revalidates these tags on every moved price; the window
+    // is a backstop (hourly capped the SAB values pages at one hour).
+    revalidate: 86400,
   })
 }
 

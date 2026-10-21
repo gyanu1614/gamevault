@@ -25,9 +25,10 @@ export async function getTestSellerIds(): Promise<string[]> {
   return memoTestSellerIds()
 }
 
-// Step 7b — identical on every prerendered category page: one tagged cache
-// entry per build/hour instead of one read per page. Test flags change rarely
-// (admin); the nightly full revalidate covers the rest.
+// Step 7b — identical on every prerendered page: one tagged cache entry instead
+// of one read per page. Test flags change only in admin, which revalidates
+// TEST_SELLERS_TAG (admin-sellers.ts). The footer reads this on EVERY page, so
+// its window is every page's window: daily, not hourly (2026-10-20 usage audit).
 const readTestSellerIds = unstable_cache(
   async (): Promise<string[]> => {
     try {
@@ -46,7 +47,7 @@ const readTestSellerIds = unstable_cache(
     }
   },
   ['test-seller-ids'],
-  { tags: [TEST_SELLERS_TAG], revalidate: 3600 },
+  { tags: [TEST_SELLERS_TAG], revalidate: 86400 },
 )
 const memoTestSellerIds = requestMemo(() => readTestSellerIds())
 

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import {
-  GAME_DIRECTORY_TAG,
-  HOME_LISTINGS_TAG,
-  PAUSED_SELLERS_TAG,
-  TEST_SELLERS_TAG,
-} from '@/lib/revalidation/tags'
+import { HOME_LISTINGS_TAG, PAUSED_SELLERS_TAG } from '@/lib/revalidation/tags'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 /**
@@ -17,7 +12,8 @@ import { isCronAuthorized } from '@/lib/security/cron-auth'
  * without a mutation path: a DB-side status change, an admin toggling a game
  * or category, a revalidateTag that failed. Once a night every category page
  * and game hub is marked stale by ROUTE PATTERN (the only form Next matches
- * for a dynamic route), along with the shared reads and the homepage rails.
+ * for a dynamic route), along with the paused-seller read and the homepage
+ * rails. Never a tag that every page carries (see below).
  * Lazy: a page re-renders on its next visit, so the cost is bounded by the
  * traffic those pages get anyway.
  *
@@ -43,7 +39,11 @@ export async function GET(request: NextRequest) {
   revalidatePath('/(marketplace)/[gameSlug]/[categorySlug]', 'page')
   revalidatePath('/(marketplace)/[gameSlug]', 'page')
   const paths = ['/(marketplace)/[gameSlug]/[categorySlug]', '/(marketplace)/[gameSlug]']
-  const tags = [PAUSED_SELLERS_TAG, TEST_SELLERS_TAG, GAME_DIRECTORY_TAG, HOME_LISTINGS_TAG]
+  // NOT GAME_DIRECTORY_TAG / TEST_SELLERS_TAG: the footer reads both on every
+  // page and unstable_cache adds its tags to the render, so revalidating them
+  // here marked the whole site stale every night (2026-10-20 usage audit). The
+  // admin actions that change them revalidate them on the spot.
+  const tags = [PAUSED_SELLERS_TAG, HOME_LISTINGS_TAG]
   for (const tag of tags) revalidateTag(tag)
 
   return NextResponse.json({
