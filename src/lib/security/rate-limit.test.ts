@@ -143,6 +143,8 @@ describe('budget boundaries', () => {
       listingView: { limit: 1, windowSeconds: 21_600 },
       // Bundle 2 — value-page funnel beacons, per IP.
       valueEvent: { limit: 60, windowSeconds: 60 },
+      // Cancel – Not Delivered reports — each one notifies + emails the seller.
+      orderReport: { limit: 5, windowSeconds: 60 },
     })
   })
 })

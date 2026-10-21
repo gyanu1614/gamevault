@@ -81,6 +81,11 @@ export interface ComboboxProps {
   sheetTitle?: string
   /** Type straight into the field; the list opens attached under it (desktop). */
   searchInTrigger?: boolean
+  /**
+   * Your own trigger instead of the field (e.g. a "Change" text link): it
+   * gets the open wiring and the panel opens at least 280px wide.
+   */
+  renderTrigger?: (state: { open: boolean; selected: ComboboxOption | null }) => React.ReactElement
 }
 
 
@@ -104,6 +109,7 @@ export function Combobox({
   sheetOnTouch = false,
   sheetTitle,
   searchInTrigger = false,
+  renderTrigger,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   // Phones: open on the list, not the keyboard (see useCoarsePointer).
@@ -127,7 +133,7 @@ export function Combobox({
     setOpen(false)
   }
 
-  if (searchInTrigger && !asSheet) {
+  if (searchInTrigger && !asSheet && !renderTrigger) {
     return (
       <InlineCombobox
         open={open}
@@ -152,7 +158,14 @@ export function Combobox({
     )
   }
 
-  const trigger = (
+  const trigger = renderTrigger ? (
+    React.cloneElement(renderTrigger({ open, selected }) as React.ReactElement<Record<string, unknown>>, {
+      'aria-haspopup': 'listbox',
+      'aria-expanded': open,
+      'aria-controls': listboxId,
+      ...(asSheet && !disabled ? { onClick: () => setOpen(true) } : {}),
+    })
+  ) : (
     <div
       role="combobox"
       aria-controls={listboxId}
@@ -238,7 +251,7 @@ export function Combobox({
           align="start"
           sideOffset={6}
           // Match the trigger's width so the panel is the same size as the box above it.
-          style={{ width: 'var(--radix-popover-trigger-width)' }}
+          style={{ width: renderTrigger ? 'max(var(--radix-popover-trigger-width), 280px)' : 'var(--radix-popover-trigger-width)' }}
           className={cn(
             'z-50 overflow-hidden',
             s.panel,

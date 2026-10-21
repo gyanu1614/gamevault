@@ -108,7 +108,9 @@ const TRUST: Array<{ title: string; body: string; href?: string; icon: React.Rea
   },
   {
     title: 'Verified Sellers',
-    body: 'Every seller completes identity verification before they can list anything.',
+    // Sellers list first and pass an ID check before their first withdrawal
+    // (open seller signup, 2026-10-07): never "before they can list".
+    body: 'Every seller passes an ID check before their first payout.',
     icon: <SealCheckIcon size={18} weight="bold" />,
   },
   {

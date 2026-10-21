@@ -4862,9 +4862,161 @@ export type Database = {
           },
         ]
       }
+      order_not_delivered_claims: {
+        Row: {
+          buyer_id: string
+          cancellation_request_id: string | null
+          closed_at: string | null
+          due_at: string
+          grace_ends_at: string
+          opened_at: string
+          order_id: string
+          responded_at: string | null
+          response_kind: string | null
+          seller_id: string
+          status: string
+          window_minutes: number
+        }
+        Insert: {
+          buyer_id: string
+          cancellation_request_id?: string | null
+          closed_at?: string | null
+          due_at: string
+          grace_ends_at: string
+          opened_at?: string
+          order_id: string
+          responded_at?: string | null
+          response_kind?: string | null
+          seller_id: string
+          status?: string
+          window_minutes: number
+        }
+        Update: {
+          buyer_id?: string
+          cancellation_request_id?: string | null
+          closed_at?: string | null
+          due_at?: string
+          grace_ends_at?: string
+          opened_at?: string
+          order_id?: string
+          responded_at?: string | null
+          response_kind?: string | null
+          seller_id?: string
+          status?: string
+          window_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_cancellation_request_id_fkey"
+            columns: ["cancellation_request_id"]
+            isOneToOne: false
+            referencedRelation: "order_cancellation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "fee_resolution_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       order_seller_faults: {
         Row: {
           fee_charged_minor: number
+          fee_due_minor: number
           fee_txn_id: string | null
           occurred_at: string
           order_id: string
@@ -4873,6 +5025,7 @@ export type Database = {
         }
         Insert: {
           fee_charged_minor?: number
+          fee_due_minor?: number
           fee_txn_id?: string | null
           occurred_at?: string
           order_id: string
@@ -4881,6 +5034,7 @@ export type Database = {
         }
         Update: {
           fee_charged_minor?: number
+          fee_due_minor?: number
           fee_txn_id?: string | null
           occurred_at?: string
           order_id?: string
@@ -6527,6 +6681,7 @@ export type Database = {
           currency: string
           decided_at: string | null
           failure_reason: string | null
+          fee_minor: number
           id: string
           order_id: string
           outbox_id: string | null
@@ -6546,6 +6701,7 @@ export type Database = {
           currency: string
           decided_at?: string | null
           failure_reason?: string | null
+          fee_minor?: number
           id?: string
           order_id: string
           outbox_id?: string | null
@@ -6565,6 +6721,7 @@ export type Database = {
           currency?: string
           decided_at?: string | null
           failure_reason?: string | null
+          fee_minor?: number
           id?: string
           order_id?: string
           outbox_id?: string | null
@@ -14514,6 +14671,30 @@ export type Database = {
         Args: { p_order_id: string; p_seller_id: string }
         Returns: Json
       }
+      order_not_delivered_due: { Args: { p_limit?: number }; Returns: string[] }
+      order_not_delivered_mark_responded: {
+        Args: { p_at: string; p_kind: string; p_order_id: string }
+        Returns: boolean
+      }
+      order_not_delivered_open: {
+        Args: {
+          p_buyer_id: string
+          p_due_at: string
+          p_order_id: string
+          p_window_minutes: number
+        }
+        Returns: Json
+      }
+      order_not_delivered_request_cancel: {
+        Args: { p_buyer_id: string; p_note?: string; p_order_id: string }
+        Returns: Json
+      }
+      order_not_delivered_span: { Args: { p_minutes: number }; Returns: string }
+      order_not_delivered_sync: { Args: { p_order_id: string }; Returns: Json }
+      order_not_delivered_withdraw: {
+        Args: { p_buyer_id: string; p_order_id: string }
+        Returns: Json
+      }
       order_refund_buyer_credit: {
         Args: {
           p_amount_minor: number
@@ -14532,6 +14713,7 @@ export type Database = {
         }
         Returns: Json
       }
+      order_seller_fault_charge: { Args: { p_order_id: string }; Returns: Json }
       order_seller_fault_record: {
         Args: { p_order_id: string; p_source: string }
         Returns: Json
@@ -14705,6 +14887,21 @@ export type Database = {
       refund_to_source_fail: {
         Args: { p_error: string; p_request_id: string }
         Returns: Json
+      }
+      refund_to_source_quotes: {
+        Args: { p_buyer_id: string }
+        Returns: {
+          credit_minor: number
+          currency: string
+          fee_minor: number
+          method_label: string
+          order_id: string
+          order_number: string
+          refundable: boolean
+          refunded_at: string
+          request_status: string
+          total_minor: number
+        }[]
       }
       refund_to_source_reject: {
         Args: { p_admin_id: string; p_notes?: string; p_request_id: string }

@@ -14,6 +14,11 @@
  */
 
 export function payssionBase(): string {
+  // A local Payssion stand-in for exercising the same-tab pay flow end to end
+  // (create → hosted page → notify → return) without money. Ignored in
+  // production builds whatever the env says.
+  const mock = process.env.PAYSSION_BASE_URL
+  if (mock && process.env.NODE_ENV !== 'production') return mock.replace(/\/+$/, '')
   const test = (process.env.PAYSSION_TESTMODE ?? '').toLowerCase()
   return test === '1' || test === 'true'
     ? 'http://sandbox.payssion.com'

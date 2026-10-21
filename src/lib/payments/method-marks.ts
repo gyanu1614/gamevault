@@ -38,6 +38,45 @@ export const PAYMENT_METHOD_LOGOS: Record<string, string> = {
   mybank: '/payments/mybank.svg',
 }
 
+/**
+ * On-dark marks for the checkout's glass payment rows (owner 2026-10-19:
+ * the logo itself, no white tile, every one the same size). Made from the
+ * files above: the white or black card behind the mark removed, near-black
+ * and grey ink set white (Grab: its green), the canvas trimmed to the mark.
+ * A brand whose own coloured tile is the mark (KakaoPay, Satispay, OXXO,
+ * Touch 'n Go, PayU) keeps it. `aspect` is the trimmed width ÷ height, so
+ * the row can draw each mark at one optical size.
+ */
+export const PAYMENT_METHOD_ONDARK: Record<string, { logo: string; aspect: number }> = {
+  pix_br: { logo: '/payments/ondark/pix_br.svg', aspect: 2.72 },
+  gcash_ph: { logo: '/payments/ondark/gcash_ph.svg', aspect: 4.02 },
+  maya_ph: { logo: '/payments/ondark/maya_ph.svg', aspect: 3.32 },
+  qr_ph: { logo: '/payments/ondark/qr_ph.svg', aspect: 3.97 },
+  qris_id: { logo: '/payments/ondark/qris_id.svg', aspect: 5.65 },
+  oxxo_mx: { logo: '/payments/ondark/oxxo_mx.svg', aspect: 1.94 },
+  trustly: { logo: '/payments/ondark/trustly.svg', aspect: 3.24 },
+  blik_pl: { logo: '/payments/ondark/blik_pl.svg', aspect: 1.96 },
+  p24_pl: { logo: '/payments/ondark/p24_pl.svg', aspect: 2.85 },
+  eps_at: { logo: '/payments/ondark/eps_at.svg', aspect: 1.59 },
+  mbway_pt: { logo: '/payments/ondark/mbway_pt.svg', aspect: 2.02 },
+  bancomatpay_it: { logo: '/payments/ondark/bancomatpay_it.svg', aspect: 1.0 },
+  payu_cz: { logo: '/payments/ondark/payu_cz.svg', aspect: 1.97 },
+  paysafecard: { logo: '/payments/ondark/paysafecard.svg', aspect: 5.29 },
+  skrill: { logo: '/payments/ondark/skrill.svg', aspect: 2.85 },
+  kakaopay_kr: { logo: '/payments/ondark/kakaopay_kr.svg', aspect: 1.59 },
+  grabpay_sg: { logo: '/payments/ondark/grabpay_sg.svg', aspect: 2.72 },
+  fpx_my: { logo: '/payments/ondark/fpx_my.svg', aspect: 2.88 },
+  touchngo_my: { logo: '/payments/ondark/touchngo_my.svg', aspect: 1.0 },
+  vietqr_vn: { logo: '/payments/ondark/vietqr_vn.svg', aspect: 3.33 },
+  mada_sa: { logo: '/payments/ondark/mada_sa.svg', aspect: 2.89 },
+  applepay_sa: { logo: '/payments/ondark/applepay_sa.svg', aspect: 2.3 },
+  bcp_pe: { logo: '/payments/ondark/bcp_pe.svg', aspect: 3.75 },
+  twint_ch: { logo: '/payments/ondark/twint_ch.svg', aspect: 2.91 },
+  bancontact_be: { logo: '/payments/ondark/bancontact_be.svg', aspect: 1.57 },
+  satispay: { logo: '/payments/ondark/satispay.svg', aspect: 1.32 },
+  mybank: { logo: '/payments/ondark/mybank.svg', aspect: 1.75 },
+}
+
 /** The crypto card's coins, as the checkout lists them. */
 export const CHECKOUT_COINS = [
   { key: 'usdt', label: 'USDT', icon: '/crypto/usdt.svg' },

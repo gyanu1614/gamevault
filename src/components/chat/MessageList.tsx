@@ -303,7 +303,12 @@ export default function MessageList({
                 }
                 if (notice?.type === 'order_cancelled') {
                   return (
-                    <ChatNotice key={message.id} icon={XCircle} tone="neutral" title="Order Cancelled By The Seller">
+                    <ChatNotice
+                      key={message.id}
+                      icon={XCircle}
+                      tone="neutral"
+                      title={notice.by === 'system' ? 'Order Cancelled — Not Delivered' : 'Order Cancelled By The Seller'}
+                    >
                       {notice.reason && <p>Reason: {notice.reason}</p>}
                       {notice.note && <p className="line-clamp-2 text-text-tertiary">{notice.note}</p>}
                       <p>The buyer was refunded to their Store Balance.</p>

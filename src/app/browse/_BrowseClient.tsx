@@ -4,17 +4,21 @@
  * /browse — universal marketplace browse.
  *
  * V3 reskin: GV tokens, Combobox for game/category/sort, NumberField for
- * price range, Tabs for category quick-switch, ListingCard reused. Mobile
- * filters slide in from the side via Dialog. Filter chip row shows active
- * filters with one-click clear.
+ * price range, ListingCard reused. Mobile filters open in a Dialog. Filter
+ * chip row shows active filters with one-click clear. 2026-10-15: Phosphor
+ * icons, Title Case labels, plain names (no emoji prefixes).
  */
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
-import { Search, SlidersHorizontal, X, Loader2, Package } from 'lucide-react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
+import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/csr/SlidersHorizontal'
+import { XIcon } from '@phosphor-icons/react/dist/csr/X'
+import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package'
 
 import { getListings, getGames, getCategories } from '@/lib/api/listings'
+import { LISTINGS_PAGE_SIZE } from '@/lib/api/listings-query'
 import { ListingCard, ListingCardSkeleton } from '@/components/listing-card'
 import { Button } from '@/components/ui/button'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
@@ -23,13 +27,15 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { BrowseLoadingFallback, EmptyState, FilterChip } from './_BrowseBits'
+import { MARKET_CARD } from '@/lib/ui/surfaces'
 
 type SortBy = 'created_at' | 'price' | 'sales'
 
 const SORT_OPTIONS: ComboboxOption[] = [
-  { value: 'created_at', label: 'Newest first' },
-  { value: 'price', label: 'Price: low to high' },
-  { value: 'sales', label: 'Most popular' },
+  { value: 'created_at', label: 'Newest First' },
+  { value: 'price', label: 'Price: Low to High' },
+  { value: 'sales', label: 'Most Popular' },
 ]
 
 function BrowseContent() {
@@ -52,23 +58,36 @@ function BrowseContent() {
 
   const { data: gamesData } = useQuery({ queryKey: ['games'], queryFn: getGames })
   const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: getCategories })
-  const { data: listingsData, isLoading } = useQuery({
-    queryKey: ['listings', { search, gameId, categoryId, minPrice, maxPrice, sortBy }],
-    queryFn: () =>
+  // The search box queries 300 ms after typing stops, not on every key.
+  const [query, setQuery] = useState(search)
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // One page of listings at a time (it used to load every live listing).
+  const listingsQuery = useInfiniteQuery({
+    queryKey: ['listings', { query, gameId, categoryId, minPrice, maxPrice, sortBy }],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
       getListings({
-        search: search || undefined,
+        search: query || undefined,
         gameId: gameId || undefined,
         categoryId: categoryId || undefined,
         minPrice: minPrice > 0 ? minPrice : undefined,
         maxPrice: maxPrice > 0 ? maxPrice : undefined,
         sortBy,
-        sortOrder: 'desc',
+        limit: LISTINGS_PAGE_SIZE,
+        offset: pageParam,
       }),
+    getNextPageParam: (last, all) =>
+      (last.data?.length ?? 0) === LISTINGS_PAGE_SIZE ? all.length * LISTINGS_PAGE_SIZE : undefined,
   })
+  const isLoading = listingsQuery.isLoading
 
-  const games = gamesData?.data ?? []
-  const categories = categoriesData?.data ?? []
-  const listings = listingsData?.data ?? []
+  const games = useMemo(() => gamesData?.data ?? [], [gamesData])
+  const categories = useMemo(() => categoriesData?.data ?? [], [categoriesData])
+  const listings = useMemo(() => listingsQuery.data?.pages.flatMap((p) => p.data ?? []) ?? [], [listingsQuery.data])
 
   // URL sync
   useEffect(() => {
@@ -85,22 +104,16 @@ function BrowseContent() {
 
   const gameOptions: ComboboxOption[] = useMemo(
     () => [
-      { value: '', label: 'All games' },
-      ...games.map((g: any) => ({
-        value: g.id,
-        label: g.emoji ? `${g.emoji}  ${g.name}` : g.name,
-      })),
+      { value: '', label: 'All Games' },
+      ...games.map((g: any) => ({ value: g.id, label: g.name })),
     ],
     [games],
   )
 
   const categoryOptions: ComboboxOption[] = useMemo(
     () => [
-      { value: '', label: 'All categories' },
-      ...categories.map((c: any) => ({
-        value: c.id,
-        label: c.icon ? `${c.icon}  ${c.name}` : c.name,
-      })),
+      { value: '', label: 'All Categories' },
+      ...categories.map((c: any) => ({ value: c.id, label: c.name })),
     ],
     [categories],
   )
@@ -140,7 +153,7 @@ function BrowseContent() {
 
       <div className="space-y-1.5">
         <label className="block text-[13px] font-semibold text-text-secondary">
-          Price range
+          Price Range
         </label>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
@@ -176,7 +189,7 @@ function BrowseContent() {
           onClick={clearAll}
           className="w-full justify-center text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
         >
-          Clear all filters
+          Clear All Filters
         </Button>
       )}
     </div>
@@ -187,10 +200,11 @@ function BrowseContent() {
       {/* Search + sort + mobile filters */}
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+          <MagnifyingGlassIcon size={16} weight="bold" aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
           <input
             type="text"
-            placeholder="Search listings…"
+            placeholder="Search Listings"
+            aria-label="Search listings"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-11 w-full rounded-md bg-bg-raised pl-9 pr-9 text-[16px] text-text-primary placeholder:text-text-tertiary transition-[background-color,box-shadow] hover:bg-bg-raised-hover focus:outline-none focus:ring-1 focus:ring-white/15 focus-visible:shadow-none sm:text-sm"
@@ -202,7 +216,7 @@ function BrowseContent() {
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:bg-bg-raised-hover hover:text-text-primary"
               aria-label="Clear search"
             >
-              <X className="h-3.5 w-3.5" />
+              <XIcon size={14} weight="bold" />
             </button>
           )}
         </div>
@@ -225,7 +239,7 @@ function BrowseContent() {
             onClick={() => setFiltersOpen(true)}
             className="h-11 gap-1.5 rounded-md border-0 bg-bg-raised text-text-primary hover:bg-bg-raised-hover lg:hidden"
           >
-            <SlidersHorizontal className="h-4 w-4" />
+            <SlidersHorizontalIcon size={16} weight="bold" aria-hidden />
             Filters
             {activeFilterCount > 0 && (
               <span className="rounded-full bg-white/[0.12] px-1.5 text-[11px] font-bold text-text-primary">
@@ -268,7 +282,7 @@ function BrowseContent() {
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         {/* Sidebar */}
         <aside className="hidden lg:block">
-          <div className="sticky top-32 rounded-lg bg-bg-raised p-4">
+          <div className={cn('sticky top-32 rounded-lg p-4', MARKET_CARD)}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-[14px] font-bold text-text-primary">Filters</h2>
               {activeFilterCount > 0 && (
@@ -284,10 +298,10 @@ function BrowseContent() {
         {/* Listings */}
         <section>
           <div className="mb-3 flex items-center justify-between text-xs text-text-tertiary">
-            <span>
+            <span aria-live="polite">
               {isLoading
                 ? 'Loading…'
-                : `${listings.length} ${listings.length === 1 ? 'listing' : 'listings'}`}
+                : `Showing ${listings.length}${listingsQuery.hasNextPage ? '+' : ''} ${listings.length === 1 ? 'listing' : 'listings'}`}
             </span>
           </div>
 
@@ -300,11 +314,25 @@ function BrowseContent() {
           ) : listings.length === 0 ? (
             <EmptyState onClear={clearAll} hasActiveFilters={hasActiveFilters} />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+              {listingsQuery.hasNextPage && (
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => listingsQuery.fetchNextPage()}
+                    disabled={listingsQuery.isFetchingNextPage}
+                    className="h-11 min-w-[200px] rounded-md border-0 bg-bg-overlay px-5 font-semibold text-text-primary hover:bg-bg-overlay-2"
+                  >
+                    {listingsQuery.isFetchingNextPage ? 'Loading…' : 'Show More Listings'}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>
@@ -340,63 +368,6 @@ function BrowseContent() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
-  return (
-    <span className="inline-flex h-7 items-center gap-1 rounded-md bg-white/[0.06] pl-2.5 pr-1 text-[12.5px] font-medium text-text-secondary">
-      {label}
-      <button
-        type="button"
-        onClick={onClear}
-        className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
-        aria-label={`Remove filter ${label}`}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </span>
-  )
-}
-
-function EmptyState({ onClear, hasActiveFilters }: { onClear: () => void; hasActiveFilters: boolean }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-bg-raised p-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.05]">
-        <Package className="h-5 w-5 text-text-tertiary" />
-      </div>
-      <div>
-        <h3 className="text-base font-semibold text-text-primary">No listings found</h3>
-        <p className="mt-1 text-sm text-text-secondary">
-          Try adjusting your filters or search.
-        </p>
-      </div>
-      {hasActiveFilters && (
-        <Button
-          variant="outline"
-          onClick={onClear}
-          className="rounded-md border-0 bg-white/[0.07] text-text-primary hover:bg-white/[0.11]"
-        >
-          Clear all filters
-        </Button>
-      )}
-    </div>
-  )
-}
-
-function BrowseLoadingFallback() {
-  return (
-    <div className="w-full">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <div className="h-11 flex-1 animate-pulse rounded-md bg-bg-raised" />
-        <div className="h-11 w-52 animate-pulse rounded-md bg-bg-raised" />
-      </div>
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <ListingCardSkeleton key={i} />
-        ))}
-      </div>
     </div>
   )
 }

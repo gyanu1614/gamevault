@@ -1944,12 +1944,30 @@
   pointer-events: none;
 }
 
+/* Order Paid + the order details page (owner, 2026-10-19): the order art
+   much darker, so the confirmation, the chat and the order card own the page. */
+.hero-dim-deep > .hero-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 9, 13, 0.66);
+  pointer-events: none;
+}
+
+/* One-screen pages (Order Paid): the art fills exactly the page plus the strip
+   it already reaches up behind the navbar — never taller (that adds a scroll),
+   never clipped at the top (that leaves a bare band under the navbar). */
+.hero-fit > .hero-backdrop {
+  height: calc(100% + var(--hero-offset, 0px));
+}
+
 /* The dims fade out over the hero's lower part. The image already melts into
    the page ground there; a flat dim on top left its bottom edge a shade darker
    than the page below, a hard seam across the screen (owner, 2026-10-10). */
 .hero-dim > .hero-backdrop::after,
 .hero-dim-content > .hero-backdrop::after,
-.hero-dim-strong > .hero-backdrop::after {
+.hero-dim-strong > .hero-backdrop::after,
+.hero-dim-deep > .hero-backdrop::after {
   -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
 }

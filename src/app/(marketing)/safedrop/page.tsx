@@ -1,609 +1,123 @@
 /**
- * SafeDrop Protection Landing Page
+ * /safedrop: what SafeDrop Protection covers and how a claim works.
  *
- * Marketing page explaining DropMarket's SafeDrop Protection programme:
- * what's covered, protection windows by category, how disputes work,
- * seller payouts, and FAQs.
+ * Redesigned 2026-10-15 (owner: the old look, less text, organised, the new
+ * UI): hero, four facts, how it works, covered / not covered, the windows
+ * table, the dispute timeline, the seller line, reviews (only with 10+ real
+ * ones), FAQ, one closing CTA. Static; every number from the legal module.
  */
-
-import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
-import React from 'react'
-import { Metadata } from 'next'
-import {
-  Shield,
-  ShieldCheck,
-  Clock,
-  FileText,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Users,
-  Award,
-  MessageSquare,
-  Scale,
-  Wallet
-} from 'lucide-react'
+import type { Metadata } from 'next'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
+import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText'
+import { ScalesIcon } from '@phosphor-icons/react/dist/ssr/Scales'
+import { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront'
+import { TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer'
+import { PathIcon } from '@phosphor-icons/react/dist/ssr/Path'
 import Link from '@/components/navigation/AppLink'
+import { FactStrip, InfoCtaBand, InfoHero, InfoSection, StepsRow } from '@/components/info'
+import { HubFaqSection } from '@/components/content/HubFaqSection'
+import { ValueCallout } from '@/components/values/ValueCallout'
+import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { TrustpilotGate, TrustpilotShowcase } from '@/components/trust/TrustpilotShowcase'
-import { SafeDropExplainer } from './_SafeDropExplainer'
-import { serializeJsonLd } from '@/lib/seo/jsonld'
-import {
-  COMPLETION_HOLD_HOURS,
-  DISPUTE_WINDOW_DAYS,
-  DISPUTE_WINDOW_LABEL,
-  PROTECTION_WINDOW_HOURS as WIN,
-  hoursAsDays,
-  hoursAsDaysTitle,
-  protectionWindowSummary,
-} from '@/lib/legal/protection-windows'
+import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { seoMeta } from '@/lib/seo/fit'
-
-/*
- * FAQ answers that quote windows are built from @/lib/legal/protection-windows,
- * the same module the legal pack renders from, so this page, its JSON-LD and
- * the SafeDrop Protection Terms always state the same numbers.
- */
-const FAQ_WINDOWS = `${protectionWindowSummary()} Raise any issue within the window and you're covered.`
-const FAQ_COVERS = `SafeDrop covers orders that aren't delivered, items that aren't as described, and accounts recovered by their previous owner within the account's ${hoursAsDays(WIN.account)} protection window. It doesn't cover a change of mind, publisher bans after delivery outside that window, or deals made off-platform.`
-const FAQ_AFTER_CONFIRM = `Yes, if something is wrong. For ${DISPUTE_WINDOW_LABEL} from delivery you can still open a dispute from your order, even after you confirm it or it completes automatically. Confirming tells us you received your order as described, so check it carefully first: our team decides a later claim on the evidence.`
-const FAQ_FEE = 'SafeDrop Protection is included free on every order. There is nothing to upgrade.'
-const FAQ_SELLER_PAID = `Your sale proceeds are credited to your Seller Balance when the order completes. They can be withdrawn ${COMPLETION_HOLD_HOURS} hours after the buyer confirms delivery, or straight away when the order completes automatically at the end of its protection window. A dispute opened within ${DISPUTE_WINDOW_LABEL} of delivery sets that order's amount aside until it is decided.`
+import { cn } from '@/lib/utils'
+import { HOW_STEPS, SAFEDROP_FACTS, SAFEDROP_FAQ, SAFEDROP_LEAD } from './_content'
+import { Coverage } from './_Coverage'
+import { WindowsTable } from './_WindowsTable'
+import { DisputeTimeline } from './_DisputeTimeline'
 
 export const metadata: Metadata = seoMeta({
   title: 'SafeDrop Protection',
   description:
-    "SafeDrop Protection is included on every DropMarket order. Not delivered or not as described? You get your money back.",
+    "SafeDrop Protection is included on every DropMarket order. Not delivered or not as described? You get a full refund. See what's covered and how disputes work.",
+  alternates: { canonical: '/safedrop' },
   openGraph: {
     images: DEFAULT_OG_IMAGES,
     title: 'SafeDrop Protection',
-    description:
-      'SafeDrop Protection on every DropMarket order. Get what you ordered, or your money back',
-    type: 'website'
-  }
+    description: 'SafeDrop Protection on every DropMarket order. Get what you ordered, or your money back.',
+    type: 'website',
+  },
 })
 
 export default function SafeDropPage() {
-  // Schema.org FAQPage structured data for SEO
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "What happens if the seller doesn't deliver?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Every order is covered by SafeDrop Protection. If your order isn't delivered or isn't as described, you get a full refund."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How long do I have to check my order?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": FAQ_WINDOWS
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "What does SafeDrop cover?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": FAQ_COVERS
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Can I get a refund after confirming delivery?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": FAQ_AFTER_CONFIRM
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How do disputes work?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Contact the seller first — most issues are resolved in chat. Once the seller's delivery time has passed you can open a dispute from your order. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Is there a fee for SafeDrop?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": FAQ_FEE
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "When do sellers get paid?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": FAQ_SELLER_PAID
-        }
-      }
-    ]
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black">
-      {/* Schema.org FAQPage Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqSchema) }}
-      />
-      {/* Hero Section */}
-      <section className="relative pt-10 pb-14 sm:pt-16 sm:pb-20 lg:pt-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto relative">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-3 mb-6">
-              <div className="p-4 rounded-2xl bg-lime-tint-bg border border-lime-tint-border">
-                <Shield className="w-12 h-12 text-lime-text" />
-              </div>
-            </div>
+    <main className="relative min-h-screen bg-bg-base pb-20">
+      <JsonLd data={faqPage(SAFEDROP_FAQ)} />
+      <JsonLd data={breadcrumbList([{ name: 'Home', path: '/' }, { name: 'SafeDrop Protection', path: '/safedrop' }])} />
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6">
-              SafeDrop Protection
-            </h1>
+      <InfoHero icon={ShieldCheckIcon} tone="blue" title="SafeDrop Protection" lead={SAFEDROP_LEAD}>
+        <Link href="/safedrop-policy" className={cn(VALUE_BTN_SECONDARY, 'group h-11 px-5 text-body-sm')}>
+          <FileTextIcon size={16} weight="duotone" aria-hidden />
+          Read the SafeDrop Terms
+        </Link>
+      </InfoHero>
 
-            <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-              Not delivered or not as described? You get your money back.
-              SafeDrop Protection is included on every DropMarket order.
-            </p>
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <FactStrip label="Why SafeDrop is safe" items={SAFEDROP_FACTS} className="mt-12 sm:mt-14" />
 
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
-                <span className="text-white font-medium">Included on Every Order</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
-                <span className="text-white font-medium">Money-Back Guarantee</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
-                <span className="text-white font-medium">Verified Sellers</span>
-              </div>
-            </div>
-          </div>
+        <InfoSection id="how-it-works" icon={PathIcon} tone="blue" title="How SafeDrop Works" sub="Three steps on every order, automatic.">
+          <StepsRow steps={HOW_STEPS} tone="blue" />
+          <ValueCallout tone="blue" icon={TimerIcon} title="Forgot to confirm?" className="mt-3">
+            The order completes by itself when its protection window ends.
+          </ValueCallout>
+        </InfoSection>
 
-          {/* Trust Signals */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
-            <StatCard
-              icon={ShieldCheck}
-              value="Every Order"
-              label="Covered by SafeDrop Protection"
-              color="text-lime-text"
-            />
-            <StatCard
-              icon={Award}
-              value="UK-Registered"
-              label="DropMarket is a UK-registered company"
-              color="text-lime-text"
-            />
-            <StatCard
-              icon={Users}
-              value="Verified Sellers"
-              label="Every seller is verified before they can sell"
-              color="text-amber-400"
-            />
-          </div>
-        </div>
-      </section>
+        <InfoSection id="covered" icon={ShieldCheckIcon} tone="green" title="What SafeDrop Covers" sub="Clear rules, no small print.">
+          <Coverage />
+        </InfoSection>
 
-      {/* How It Works */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How SafeDrop Protects You
+        <InfoSection
+          id="windows"
+          icon={TimerIcon}
+          tone="amber"
+          title="Protection Windows"
+          sub="How long you have to check your order and raise an issue."
+        >
+          <WindowsTable />
+        </InfoSection>
+
+        <InfoSection id="disputes" icon={ScalesIcon} tone="lime" title="How Disputes Work" sub="A fixed process with set times, for both sides.">
+          <DisputeTimeline />
+        </InfoSection>
+
+        <ValueCallout tone="blue" icon={StorefrontIcon} title="Selling on DropMarket?" className="mt-6">
+          The same rules protect you: a claim needs evidence, and both sides get the same steps.{' '}
+          <Link href="/sell/fees" className="inline-flex items-center gap-1 font-semibold text-text-primary underline decoration-white/30 underline-offset-4 hover:decoration-white/70">
+            Seller Fees and Payouts
+            <ArrowRightIcon size={12} weight="bold" aria-hidden />
+          </Link>
+        </ValueCallout>
+
+        {/* Reviews only once there are 10+ real ones (set on /admin): no
+            "trusted by" claim before there is proof. */}
+        <TrustpilotGate>
+          <section aria-labelledby="safedrop-reviews" className="mt-16 text-center sm:mt-20">
+            <h2 id="safedrop-reviews" className="text-subheading font-bold text-text-primary sm:text-heading">
+              What Buyers Say
             </h2>
-            <p className="text-gray-400 text-lg">
-              Simple, transparent, and automatic on every order
-            </p>
-          </div>
-
-          <SafeDropExplainer />
-        </div>
-      </section>
-
-      {/* What's Covered */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              What&apos;s Covered
-            </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Clear rules, no fine-print surprises
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="inline-flex p-3 rounded-lg bg-lime-tint-bg border border-lime-tint-border">
-                  <CheckCircle2 className="w-6 h-6 text-lime-text" />
-                </div>
-                <h3 className="text-xl font-bold text-white">Covered by SafeDrop</h3>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-lime-text" />
-                  <span className="text-sm text-gray-300">
-                    Your order isn&apos;t delivered
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-lime-text" />
-                  <span className="text-sm text-gray-300">
-                    The item isn&apos;t as described — wrong item, wrong amount,
-                    or a misleading listing
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-lime-text" />
-                  <span className="text-sm text-gray-300">
-                    An account is recovered by its previous owner within the
-                    account protection window
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="inline-flex p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <XCircle className="w-6 h-6 text-amber-400" />
-                </div>
-                <h3 className="text-xl font-bold text-white">Not Covered</h3>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <XCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
-                  <span className="text-sm text-gray-300">
-                    Change of mind after delivery
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <XCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
-                  <span className="text-sm text-gray-300">
-                    Publisher bans or suspensions after delivery, outside the
-                    account protection window
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <XCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
-                  <span className="text-sm text-gray-300">
-                    Deals or payments made outside DropMarket
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Protection Windows */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Protection Windows by Category
-            </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Your protection window is the time you have to check your order
-              and raise an issue. Confirm and the order is complete. Not
-              delivered or not as described? You get a full refund.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
-            <ProtectionWindowCard iconSlug="currency" category="Currency" window={hoursAsDaysTitle(WIN.currency)} />
-            <ProtectionWindowCard iconSlug="items" category="Items" window={hoursAsDaysTitle(WIN.items)} />
-            <ProtectionWindowCard iconSlug="top-up" category="Top-Ups" window={hoursAsDaysTitle(WIN.top_up)} />
-            <ProtectionWindowCard
-              iconSlug="boosting"
-              category="Boosting"
-              window={hoursAsDaysTitle(WIN.service)}
-              note="From completion"
-            />
-            <ProtectionWindowCard
-              iconSlug="accounts"
-              category="Accounts"
-              window={hoursAsDaysTitle(WIN.account)}
-              className="col-span-2 md:col-span-1"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* How Disputes Work */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How Disputes Work
-            </h2>
-            <p className="text-gray-400 text-lg">
-              A clear process with fixed timelines — no black box
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
-            <HowItWorksStep
-              number={1}
-              icon={MessageSquare}
-              title="Contact the Seller"
-              description="Message the seller first — most issues are resolved in chat"
-            />
-
-            <HowItWorksStep
-              number={2}
-              icon={Clock}
-              title="12-Hour Grace Period"
-              description="Raise it once the seller's delivery time has passed"
-            />
-
-            <HowItWorksStep
-              number={3}
-              icon={Shield}
-              title="Open a Dispute"
-              description="Still unresolved? Escalate it to the DropMarket team"
-            />
-
-            <HowItWorksStep
-              number={4}
-              icon={FileText}
-              title="24-Hour Evidence Window"
-              description="Both sides have 24 hours to submit evidence"
-            />
-
-            <HowItWorksStep
-              number={5}
-              icon={Scale}
-              title="Decision Within 3 Days"
-              description="Our team reviews and decides within 3 days — if your claim stands, you get a full refund"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* For Sellers */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              For Sellers
-            </h2>
-            <p className="text-gray-400 text-lg">
-              SafeDrop protects both sides of every order
-            </p>
-          </div>
-
-          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-8 text-center">
-            <div className="inline-flex p-4 rounded-2xl bg-lime-tint-bg border border-lime-tint-border mb-6">
-              <Wallet className="w-8 h-8 text-lime-text" />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-4">
-              Fast, Guaranteed Payouts
-            </h3>
-            <p className="text-gray-300 mb-4 max-w-2xl mx-auto">
-              You&apos;re paid out after the buyer confirms delivery or the
-              protection window closes — payout guaranteed once the{' '}
-              {DISPUTE_WINDOW_DAYS}-day dispute window closes.
-            </p>
-            <p className="text-gray-400 text-sm max-w-2xl mx-auto">
-              Your sale proceeds are credited to your Seller Balance once the
-              buyer confirms delivery or the protection window closes. Evidence
-              requirements and a structured dispute process protect you from
-              bad-faith claims.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQs */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Frequently Asked Questions
-            </h2>
-          </div>
-
-          <div className="space-y-6">
-            <FAQItem
-              question="What happens if the seller doesn't deliver?"
-              answer="Every order is covered by SafeDrop Protection. If your order isn't delivered or isn't as described, you get a full refund."
-            />
-
-            <FAQItem
-              question="How long do I have to check my order?"
-              answer={FAQ_WINDOWS}
-            />
-
-            <FAQItem
-              question="What does SafeDrop cover?"
-              answer={FAQ_COVERS}
-            />
-
-            <FAQItem
-              question="Can I get a refund after confirming delivery?"
-              answer={FAQ_AFTER_CONFIRM}
-            />
-
-            <FAQItem
-              question="How do disputes work?"
-              answer="Contact the seller first — most issues are resolved in chat. Once the seller's delivery time has passed you can open a dispute from your order. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
-            />
-
-            <FAQItem
-              question="Is there a fee for SafeDrop?"
-              answer={FAQ_FEE}
-            />
-
-            <FAQItem
-              question="When do sellers get paid?"
-              answer={FAQ_SELLER_PAID}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Trustpilot reviews — the whole section waits for 10+ real reviews
-          (set on /admin): no "Trusted by…" claim before there is proof. */}
-      <TrustpilotGate>
-        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Trusted by Gamers Worldwide
-              </h2>
-              <p className="text-gray-400 text-lg">
-                See what buyers and sellers say about shopping with SafeDrop
-              </p>
-            </div>
-            <div className="flex justify-center">
+            <div className="mt-6 flex justify-center">
               <TrustpilotShowcase />
             </div>
-          </div>
-        </section>
-      </TrustpilotGate>
+          </section>
+        </TrustpilotGate>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-lime-tint-bg border border-lime-tint-border rounded-2xl p-6 sm:p-10 lg:p-12">
-            <Shield className="w-16 h-16 text-lime-text mx-auto mb-6" />
-
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Ready to Shop Safely?
-            </h2>
-
-            <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-              Every order is covered by SafeDrop Protection. Get what you
-              ordered, or your money back.
-            </p>
-
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-lime hover:bg-lime-hover text-text-inverse font-semibold rounded-lg transition-colors"
-            >
-              Browse Marketplace
-            </Link>
-          </div>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-// Component: Stat Card
-interface StatCardProps {
-  icon: React.ElementType
-  value: string
-  label: string
-  color: string
-}
-
-function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
-  return (
-    <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 text-center">
-      <Icon className={`w-8 h-8 ${color} mx-auto mb-3`} />
-      <div className="text-3xl font-bold text-white mb-1">{value}</div>
-      <div className="text-sm text-gray-400">{label}</div>
-    </div>
-  )
-}
-
-// Component: Protection Window Card
-interface ProtectionWindowCardProps {
-  /** Slug of the house category SVG under /public/icons/categories. */
-  iconSlug: string
-  category: string
-  window: string
-  note?: string
-  className?: string
-}
-
-function ProtectionWindowCard({
-  iconSlug,
-  category,
-  window: windowLabel,
-  note,
-  className = ''
-}: ProtectionWindowCardProps) {
-  return (
-    <div className={`bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 sm:p-6 text-center ${className}`}>
-      {/* Frosted recessed tile + platinum glyph — the house category-icon
-          treatment (matches the homepage hero rail + hamburger). */}
-      <span className="relative mx-auto mb-3 grid h-12 w-12 place-items-center overflow-hidden rounded-[13px] border border-white/[0.07] bg-[radial-gradient(circle_at_50%_18%,rgba(38,40,46,0.9),rgba(12,13,16,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-8px_14px_-8px_rgba(0,0,0,0.85)]">
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.07),transparent)]" />
-        <span
-          aria-hidden
-          className="relative h-6 w-6 bg-[linear-gradient(180deg,#ffffff,#d8dde1)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
-          style={{
-            maskImage: `url(/icons/categories/${iconSlug}.svg)`,
-            WebkitMaskImage: `url(/icons/categories/${iconSlug}.svg)`,
-            maskSize: 'contain',
-            WebkitMaskSize: 'contain',
-            maskRepeat: 'no-repeat',
-            WebkitMaskRepeat: 'no-repeat',
-            maskPosition: 'center',
-            WebkitMaskPosition: 'center',
-          }}
+        <HubFaqSection
+          title="SafeDrop Protection FAQ"
+          subtitle="Short answers. The full rules are in the SafeDrop Protection Terms."
+          items={SAFEDROP_FAQ}
         />
-      </span>
-      <div className="text-sm text-gray-400 mb-1">{category}</div>
-      <div className="text-xl sm:text-2xl font-bold text-white">{windowLabel}</div>
-      {note && <div className="text-xs text-gray-500 mt-2">{note}</div>}
-    </div>
-  )
-}
 
-// Component: How It Works Step
-interface HowItWorksStepProps {
-  number: number
-  icon: React.ElementType
-  title: string
-  description: string
-}
-
-function HowItWorksStep({ number, icon: Icon, title, description }: HowItWorksStepProps) {
-  return (
-    <div className="text-center">
-      <div className="relative inline-flex items-center justify-center mb-4">
-        <div className="relative w-16 h-16 bg-lime-tint-bg border border-lime-tint-border rounded-full flex items-center justify-center">
-          <Icon className="w-8 h-8 text-lime-text" />
-        </div>
-        <div className="absolute -top-1 -right-1 w-6 h-6 bg-lime text-text-inverse text-xs font-bold rounded-full flex items-center justify-center">
-          {number}
-        </div>
+        <InfoCtaBand
+          icon={ShieldCheckIcon}
+          tone="blue"
+          title="Shop With SafeDrop Protection"
+          body="Every order, every game. Get what you ordered, or your money back."
+          action={{ href: '/browse', label: 'Browse the Marketplace' }}
+        />
       </div>
-
-      <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
-      <p className="text-sm text-gray-400">{description}</p>
-    </div>
-  )
-}
-
-// Component: FAQ Item
-interface FAQItemProps {
-  question: string
-  answer: string
-}
-
-function FAQItem({ question, answer }: FAQItemProps) {
-  return (
-    <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-white mb-3 flex items-start gap-2">
-        <AlertCircle className="w-5 h-5 text-lime-text flex-shrink-0 mt-0.5" />
-        {question}
-      </h3>
-      <p className="text-gray-400 text-sm pl-7">{answer}</p>
-    </div>
+    </main>
   )
 }

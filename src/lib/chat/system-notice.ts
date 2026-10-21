@@ -29,7 +29,8 @@ export type SystemNotice =
   | {
       /** The seller cancelled a paid order; the buyer was refunded. */
       type: 'order_cancelled'
-      by: 'seller'
+      /** 'system' = Cancel – Not Delivered: the seller did not respond in time. */
+      by: 'seller' | 'system'
       /** Reason label ("Out Of Stock"). */
       reason?: string
       note?: string
