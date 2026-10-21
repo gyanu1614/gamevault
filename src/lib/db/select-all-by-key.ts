@@ -54,7 +54,9 @@ export interface SelectAllByKeyOptions {
 }
 
 function withKeyColumns(columns: string, keys: string[]): string {
-  const listed = new Set(columns.split(',').map((c) => c.trim().split(':').pop()))
+  // The OUTPUT name of each item: `alias:column` returns `alias`, so a key that
+  // is only selected under an alias is still missing for the cursor.
+  const listed = new Set(columns.split(',').map((c) => c.trim().split(':')[0]))
   const missing = keys.filter((k) => !listed.has(k))
   return missing.length ? `${columns},${missing.join(',')}` : columns
 }

@@ -92,6 +92,13 @@ describe('selectAllByKey (keyset paging, no OFFSET)', () => {
     expect(JSON.parse(requests[0]).cols).toBe('v,id')
   })
 
+  it('selects the key under its own name when the caller only aliased it', async () => {
+    // `slug:id` returns the column as `slug`; the cursor needs `id` itself.
+    const { client, requests } = fakeClient(ids(2))
+    await selectAllByKey<Row>(client, { table: 't', columns: 'slug:id,v', key: 'id' })
+    expect(JSON.parse(requests[0]).cols).toBe('slug:id,v,id')
+  })
+
   it('pages a composite key (a, b) without skipping ties on a', async () => {
     const rows = [
       { a: 'x', b: '1' }, { a: 'x', b: '2' }, { a: 'x', b: '3' },
