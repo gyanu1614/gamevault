@@ -19,8 +19,9 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { blogHubCopy, getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import { BlogHubHero } from './_BlogHubHero'
-import { FeaturedGuide } from './_FeaturedGuide'
+import { FeaturedGuide } from '@/components/blog/FeaturedGuide'
 import { ArticleGrid } from './_ArticleGrid'
+import { GUIDE_TYPE_LABEL, toGuideCard } from '@/components/blog/GuideCard'
 import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
@@ -96,25 +97,6 @@ const DAY_MONTH = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 })
 
-const POST_TYPE_LABEL: Record<string, string> = {
-  value: 'Values',
-  seller: 'Selling',
-  guide: 'Guide',
-  codes: 'Codes',
-}
-
-const CARD_DATE = new Intl.DateTimeFormat('en-GB', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-function formatCardDate(iso: string): string {
-  const d = new Date(iso)
-  return Number.isFinite(d.getTime()) ? CARD_DATE.format(d) : ''
-}
-
 async function generateMetadataRaw({
   params,
 }: {
@@ -185,17 +167,7 @@ export default async function GameBlogIndex({
 
   const hasPricing = pricedItems > 0
 
-  const articleCards = rest.map((post) => ({
-    slug: post.slug,
-    // A codes post's page is /{game}/codes (postHref).
-    href: postHref(post),
-    title: post.title,
-    excerpt: post.excerpt,
-    category: POST_TYPE_LABEL[post.postType] ?? 'Guide',
-    date: formatCardDate(post.publishedAt),
-    cover: post.cover,
-    readMinutes: post.readMinutes,
-  }))
+  const articleCards = rest.map(toGuideCard)
 
   return (
     // Opaque hub ground + the blog's shared night background (one for every
@@ -247,7 +219,7 @@ export default async function GameBlogIndex({
         {featured && (
           <FeaturedGuide
             href={postHref(featured)}
-            category={POST_TYPE_LABEL[featured.postType] ?? 'Guide'}
+            category={GUIDE_TYPE_LABEL[featured.postType] ?? 'Guide'}
             readMinutes={featured.readMinutes}
             title={featured.title}
             excerpt={featured.excerpt}
