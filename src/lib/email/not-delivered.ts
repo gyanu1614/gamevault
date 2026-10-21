@@ -1,35 +1,34 @@
 /**
  * Cancel – Not Delivered: the seller's warning email. The buyer reported an
- * overdue order; the seller has the grace window to reply in the order chat
- * or start delivery, or the order cancels (order_not_delivered_finalize).
- * Same shell as every other email (src/lib/email/shell.ts).
+ * overdue order; the seller has the response window (the listing's delivery
+ * time, 15 min .. 24 h) to reply in the order chat or start delivery. With
+ * no response the buyer can ask DropMarket to cancel, and an admin reviews
+ * it — nothing cancels automatically. Same shell as every other email
+ * (src/lib/email/shell.ts).
  */
 import { emailShell, emailText, emailButton } from '@/lib/email/shell'
 import { escapeHtmlText, sendTransactionalEmail } from '@/lib/email'
-
-export function graceSpan(minutes: number): string {
-  return minutes % 60 === 0 ? `${minutes / 60} hour${minutes === 60 ? '' : 's'}` : `${minutes} minutes`
-}
+import { windowSpan } from '@/lib/orders/not-delivered'
 
 export async function sendNotDeliveredSellerEmail(a: {
   to: string
   name: string
   orderNumber: string
   orderUrl: string
-  graceMinutes: number
+  windowMinutes: number
 }) {
-  const span = graceSpan(a.graceMinutes)
-  const subject = `Reply about order #${a.orderNumber} within ${span} or it cancels`
+  const span = windowSpan(a.windowMinutes)
+  const subject = `Reply about order #${a.orderNumber} within ${span}`
   const html = emailShell({
     preview: `The buyer reported order #${a.orderNumber} as not delivered.`,
     icon: 'notice',
-    heading: 'Reply now or the order cancels',
+    heading: 'The buyer is waiting for their order',
     body: [
       emailText(
         `Hi ${escapeHtmlText(a.name)}, the buyer reported order <strong>#${escapeHtmlText(a.orderNumber)}</strong> as not delivered. ` +
           `Reply to the buyer in the order chat, or start delivery, within <strong>${span}</strong>.`,
       ),
-      emailText("If you don't respond by then, the order is cancelled, the buyer is refunded, and it counts against your record."),
+      emailText("If you don't, the buyer can ask DropMarket to cancel the order, and it counts against your record."),
       emailButton('Open The Order', a.orderUrl),
     ].join(''),
   })

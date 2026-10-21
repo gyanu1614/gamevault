@@ -8,7 +8,8 @@
 #     · drains provider_cancel_outbox (void charges we closed) with backoff
 #     · re-runs webhook events stuck `received` > 15 min (PAY-010)
 #   /api/cron/not-delivered-sweep (same job — no extra Actions minutes)
-#     · finalizes "Cancel – Not Delivered" reports past their 1-hour window
+#     · marks "Cancel – Not Delivered" reports whose response window ran out
+#       as expired and sends the notices — never cancels or refunds
 #       (vercel.json carries a daily backstop for it)
 #
 # Secrets: CRON_SECRET (existing — the same bearer expire-pending-payments

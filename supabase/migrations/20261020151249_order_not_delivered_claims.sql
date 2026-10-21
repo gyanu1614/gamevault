@@ -1,65 +1,82 @@
--- "Cancel – Not Delivered" (owner 2026-10-16/19; docs/superpowers/plans/
--- 2026-10-16-not-delivered-cancel-and-refund-rule.md, PR 2).
+-- "Cancel – Not Delivered" (owner 2026-10-16/19/20; docs/superpowers/plans/
+-- 2026-10-16-not-delivered-cancel-and-refund-rule.md). Rewritten in place on
+-- 2026-10-20 before it ever reached prod (owner approved): no auto-cancel.
 --
 -- Once a paid order's delivery time has passed the buyer can report it. The
--- seller is notified and gets not_delivered_grace_minutes (60) to RESPOND:
--- a reply in the order chat or Start delivery (order_mark_delivering) keeps
--- the order open; Mark As Delivered or the seller cancelling close it too.
--- Only reading a message does not count (owner, 2026-10-19).
+-- seller is notified and has a RESPONSE WINDOW = the listing's delivery time,
+-- clamped to 15 minutes .. 24 hours (computed by the server action from the
+-- same parse the order page uses). A reply in the order chat or Start
+-- delivery inside the window keeps the order open; Mark As Delivered or the
+-- seller cancelling close the report too. Only reading a message does not
+-- count.
 --
--- No response by the end of the hour → order_not_delivered_finalize cancels
--- through the existing money seams as a SELLER fault (dedupe key
--- not_delivered:<order> → fault source not_delivered): the item price as
--- store credit, the fee kept, the full amount to the card on request
--- (refund rule, 20261016194209). No money function changes here.
+-- When the window runs out with no response NOTHING cancels: the report
+-- becomes `expired` (buyer + seller told) and the buyer can request
+-- cancellation — a normal order_cancellation_requests row that an admin
+-- reviews in Orders → Cancellation Requests, with an alert to every active
+-- admin. The admin's approval runs the existing cancel seam (refund rule
+-- 20261016194209: the item price as store credit, the full amount to the
+-- card on request). The seller can still deliver until the admin acts;
+-- delivery closes the report and the pending request.
 --
--- The claim row is the state. Every function is service-role only and
--- idempotent. Driven by the order page (finalize on view when the countdown
--- ends) and a 15-minute sweep (/api/cron/not-delivered-sweep).
+-- No function here moves money. Every function is service-role only and
+-- idempotent. Driven by the order page (sync on view / when the countdown
+-- ends) and a 15-minute sweep that only marks expiry and sends the notices.
 
--- ── 1. Setting + table ───────────────────────────────────────────────────────
-ALTER TABLE public.platform_fee_settings
-  ADD COLUMN IF NOT EXISTS not_delivered_grace_minutes integer NOT NULL DEFAULT 60
-    CHECK (not_delivered_grace_minutes BETWEEN 5 AND 1440);
-COMMENT ON COLUMN public.platform_fee_settings.not_delivered_grace_minutes IS
-  'Cancel – Not Delivered: minutes the seller has to reply or start delivery after the buyer reports an overdue order.';
-
+-- ── 1. Table ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.order_not_delivered_claims (
-  order_id       uuid PRIMARY KEY REFERENCES public.orders(id) ON DELETE CASCADE,
-  buyer_id       uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  seller_id      uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  due_at         timestamptz NOT NULL,
-  opened_at      timestamptz NOT NULL DEFAULT now(),
-  grace_ends_at  timestamptz NOT NULL,
-  status         text NOT NULL DEFAULT 'open'
-                 CHECK (status IN ('open', 'withdrawn', 'seller_responded', 'delivered', 'disputed', 'cancelled', 'auto_cancelled')),
-  responded_at   timestamptz,
-  response_kind  text CHECK (response_kind IN ('message', 'started_delivery')),
-  closed_at      timestamptz,
-  credited_minor bigint
+  order_id                uuid PRIMARY KEY REFERENCES public.orders(id) ON DELETE CASCADE,
+  buyer_id                uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  seller_id               uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  due_at                  timestamptz NOT NULL,
+  window_minutes          integer NOT NULL CHECK (window_minutes BETWEEN 15 AND 1440),
+  opened_at               timestamptz NOT NULL DEFAULT now(),
+  grace_ends_at           timestamptz NOT NULL,
+  status                  text NOT NULL DEFAULT 'open'
+                          CHECK (status IN ('open', 'withdrawn', 'seller_responded', 'expired', 'cancel_requested',
+                                            'delivered', 'disputed', 'cancelled')),
+  responded_at            timestamptz,
+  response_kind           text CHECK (response_kind IN ('message', 'started_delivery')),
+  cancellation_request_id uuid REFERENCES public.order_cancellation_requests(id) ON DELETE SET NULL,
+  closed_at               timestamptz
 );
 CREATE INDEX IF NOT EXISTS order_not_delivered_claims_due_idx
   ON public.order_not_delivered_claims (grace_ends_at) WHERE status = 'open';
+CREATE INDEX IF NOT EXISTS order_not_delivered_claims_request_idx
+  ON public.order_not_delivered_claims (cancellation_request_id) WHERE cancellation_request_id IS NOT NULL;
 ALTER TABLE public.order_not_delivered_claims ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.order_not_delivered_claims FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.order_not_delivered_claims TO service_role;
 COMMENT ON TABLE public.order_not_delivered_claims IS
-  'One per order: the buyer reported non-delivery after the delivery time; the order auto-cancels at grace_ends_at unless the seller responds or delivers first. Service-role only (the order page reads it through a session-checked action).';
+  'One per order: the buyer reported non-delivery after the delivery time; the seller has window_minutes (the delivery time, 15 min .. 24 h) to respond. No response → expired → the buyer may file an admin-reviewed cancellation request (cancellation_request_id). Never moves money. Service-role only.';
+
+-- "20 minutes", "1 hour", "24 hours".
+CREATE OR REPLACE FUNCTION public.order_not_delivered_span(p_minutes integer)
+  RETURNS text
+  LANGUAGE sql IMMUTABLE SET search_path = public AS $$
+  SELECT CASE WHEN p_minutes % 60 = 0
+              THEN (p_minutes / 60)::text || CASE WHEN p_minutes = 60 THEN ' hour' ELSE ' hours' END
+              ELSE p_minutes::text || ' minutes' END;
+$$;
+REVOKE ALL ON FUNCTION public.order_not_delivered_span(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.order_not_delivered_span(integer) TO service_role;
 
 -- ── 2. Open (the buyer reports) ──────────────────────────────────────────────
--- p_due_at is computed by the server action from the listing's delivery time
--- (lib/orders/not-delivered.ts, the same rule as the order page's timer).
-CREATE OR REPLACE FUNCTION public.order_not_delivered_open(p_order_id uuid, p_buyer_id uuid, p_due_at timestamptz)
+-- p_due_at and p_window_minutes come from the server action
+-- (lib/orders/not-delivered.ts: the listing's delivery time, as the order
+-- page's timer reads it); the window is clamped here again.
+CREATE OR REPLACE FUNCTION public.order_not_delivered_open(
+  p_order_id uuid, p_buyer_id uuid, p_due_at timestamptz, p_window_minutes integer)
   RETURNS jsonb
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_o     RECORD;
-  v_c     RECORD;
-  v_grace integer;
-  v_ends  timestamptz;
-  v_ref   text;
-  v_span  text;
-  v_tag   text;
+  v_o      RECORD;
+  v_c      RECORD;
+  v_window integer;
+  v_ends   timestamptz;
+  v_ref    text;
+  v_span   text;
+  v_tag    text;
 BEGIN
   SELECT * INTO v_o FROM orders WHERE id = p_order_id FOR UPDATE;
   IF NOT FOUND OR v_o.buyer_id IS DISTINCT FROM p_buyer_id THEN
@@ -73,42 +90,38 @@ BEGIN
   END IF;
   SELECT * INTO v_c FROM order_not_delivered_claims WHERE order_id = p_order_id FOR UPDATE;
   IF FOUND AND v_c.status = 'open' THEN
-    RETURN jsonb_build_object('ok', true, 'already', true, 'grace_ends_at', v_c.grace_ends_at);
+    RETURN jsonb_build_object('ok', true, 'already', true, 'grace_ends_at', v_c.grace_ends_at, 'window_minutes', v_c.window_minutes);
   END IF;
   IF FOUND AND v_c.status <> 'withdrawn' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'closed', 'status', v_c.status);
   END IF;
-  SELECT not_delivered_grace_minutes INTO v_grace FROM platform_fee_settings WHERE id;
-  v_grace := COALESCE(v_grace, 60);
-  v_ends  := now() + make_interval(mins => v_grace);
-  INSERT INTO order_not_delivered_claims (order_id, buyer_id, seller_id, due_at, grace_ends_at)
-  VALUES (p_order_id, v_o.buyer_id, v_o.seller_id, p_due_at, v_ends)
+  v_window := LEAST(GREATEST(COALESCE(p_window_minutes, 60), 15), 1440);
+  v_ends   := now() + make_interval(mins => v_window);
+  INSERT INTO order_not_delivered_claims (order_id, buyer_id, seller_id, due_at, window_minutes, grace_ends_at)
+  VALUES (p_order_id, v_o.buyer_id, v_o.seller_id, p_due_at, v_window, v_ends)
   ON CONFLICT (order_id) DO UPDATE
-    SET status = 'open', opened_at = now(), due_at = EXCLUDED.due_at, grace_ends_at = EXCLUDED.grace_ends_at,
-        responded_at = NULL, response_kind = NULL, closed_at = NULL;
-
-  PERFORM money_fault_hook('order_not_delivered_open:after_claim');
+    SET status = 'open', opened_at = now(), due_at = EXCLUDED.due_at, window_minutes = EXCLUDED.window_minutes,
+        grace_ends_at = EXCLUDED.grace_ends_at, responded_at = NULL, response_kind = NULL,
+        cancellation_request_id = NULL, closed_at = NULL;
 
   v_ref  := COALESCE(v_o.order_number, UPPER(LEFT(p_order_id::text, 8)));
-  v_span := CASE WHEN v_grace % 60 = 0
-                 THEN (v_grace / 60)::text || CASE WHEN v_grace = 60 THEN ' hour' ELSE ' hours' END
-                 ELSE v_grace::text || ' minutes' END;
+  v_span := order_not_delivered_span(v_window);
   v_tag  := 'not_delivered:' || p_order_id::text || ':' || extract(epoch FROM v_ends)::bigint::text;
-  PERFORM notify_once(v_o.seller_id, 'order_not_delivered', 'Reply Now Or The Order Cancels',
+  PERFORM notify_once(v_o.seller_id, 'order_not_delivered', 'Reply Now Or The Buyer Can Cancel',
     'The buyer reported order #' || v_ref || ' as not delivered. Reply in the order chat or start delivery within ' || v_span ||
-    ', or the order is cancelled, the buyer is refunded, and it counts against your record.',
+    '. If you don''t, the buyer can ask DropMarket to cancel the order, and it counts against your record.',
     '/account/orders/' || p_order_id::text, v_tag || ':seller');
   PERFORM notify_once(v_o.buyer_id, 'order_not_delivered', 'Seller Notified',
     'We asked the seller to reply or deliver order #' || v_ref || ' within ' || v_span ||
-    '. If they don''t respond by then, the order is cancelled and refunded to your Store Balance automatically.',
+    '. If they don''t respond by then, you can request cancellation from the order page and our team will review it.',
     '/account/orders/' || p_order_id::text, v_tag || ':buyer');
-  RETURN jsonb_build_object('ok', true, 'already', false, 'grace_ends_at', v_ends, 'grace_minutes', v_grace);
+  RETURN jsonb_build_object('ok', true, 'already', false, 'grace_ends_at', v_ends, 'window_minutes', v_window);
 END;
 $$;
-REVOKE ALL ON FUNCTION public.order_not_delivered_open(uuid, uuid, timestamptz) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.order_not_delivered_open(uuid, uuid, timestamptz) TO service_role;
-COMMENT ON FUNCTION public.order_not_delivered_open(uuid, uuid, timestamptz) IS
-  'Cancel – Not Delivered: the buyer reports an overdue paid/delivering order; starts the grace hour and notifies both parties. Idempotent (an open report is returned; a withdrawn one restarts). Service-role only.';
+REVOKE ALL ON FUNCTION public.order_not_delivered_open(uuid, uuid, timestamptz, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.order_not_delivered_open(uuid, uuid, timestamptz, integer) TO service_role;
+COMMENT ON FUNCTION public.order_not_delivered_open(uuid, uuid, timestamptz, integer) IS
+  'Cancel – Not Delivered: the buyer reports an overdue paid/delivering order; starts the seller''s response window (15 min .. 24 h) and notifies both parties. Idempotent (an open report is returned; a withdrawn one restarts). Service-role only.';
 
 -- ── 3. Withdraw (the buyer keeps waiting) ───────────────────────────────────
 CREATE OR REPLACE FUNCTION public.order_not_delivered_withdraw(p_order_id uuid, p_buyer_id uuid)
@@ -133,9 +146,9 @@ $$;
 REVOKE ALL ON FUNCTION public.order_not_delivered_withdraw(uuid, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.order_not_delivered_withdraw(uuid, uuid) TO service_role;
 
--- ── 4. The seller responded inside the hour ─────────────────────────────────
+-- ── 4. The seller responded inside the window ───────────────────────────────
 -- The report closes, the order stays open, the buyer is told. Only a response
--- made BEFORE grace_ends_at counts. Idempotent.
+-- made inside [opened_at, grace_ends_at) counts. Idempotent.
 CREATE OR REPLACE FUNCTION public.order_not_delivered_mark_responded(p_order_id uuid, p_kind text, p_at timestamptz)
   RETURNS boolean
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -189,42 +202,66 @@ CREATE TRIGGER trg_messages_not_delivered_response AFTER INSERT ON public.messag
   FOR EACH ROW WHEN (NEW.sender_id IS NOT NULL)
   EXECUTE FUNCTION public.trg_messages_not_delivered_response();
 
--- ── 5. Finalize (end of the hour, or the order moved on) ────────────────────
-CREATE OR REPLACE FUNCTION public.order_not_delivered_finalize(p_order_id uuid)
+-- ── 5. Sync (order page / sweep / admin) — never moves money ────────────────
+-- Brings the report in line with the order: closes it (and a pending linked
+-- request) when the order was delivered / disputed / cancelled; records a
+-- seller response made inside the window; marks it expired once the window
+-- is over with no response (and tells both sides); puts a cancel_requested
+-- report back to expired when its request was withdrawn or rejected.
+CREATE OR REPLACE FUNCTION public.order_not_delivered_sync(p_order_id uuid)
   RETURNS jsonb
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_o       RECORD;
   v_c       RECORD;
-  v_r       jsonb;
   v_status  text;
-  v_key     text := 'not_delivered:' || p_order_id::text;
-  v_ref     text;
-  v_total   bigint;
-  v_credit  bigint;
+  v_req     text;
   v_kind    text := NULL;
   v_resp_at timestamptz := NULL;
+  v_ref     text;
+  v_tag     text;
 BEGIN
-  PERFORM set_config('app.guarded_write', 'on', true);
-  -- Lock order: the order, then the claim (the refund seams lock the order too).
-  SELECT * INTO v_o FROM orders WHERE id = p_order_id FOR UPDATE;
   SELECT * INTO v_c FROM order_not_delivered_claims WHERE order_id = p_order_id FOR UPDATE;
-  IF NOT FOUND OR v_c.status <> 'open' THEN
-    RETURN jsonb_build_object('finalized', false, 'reason', 'no_open_claim', 'status', v_c.status);
+  IF NOT FOUND OR v_c.status NOT IN ('open', 'expired', 'cancel_requested') THEN
+    RETURN jsonb_build_object('synced', false, 'reason', 'no_open_claim', 'status', v_c.status);
   END IF;
+  SELECT * INTO v_o FROM orders WHERE id = p_order_id;
 
-  -- The order moved on (delivered, disputed, cancelled by the seller/admin): close to match.
+  -- The order moved on: close the report and any pending request it filed.
   IF v_o.delivered_at IS NOT NULL OR v_o.status NOT IN ('paid', 'delivering') THEN
     v_status := CASE
       WHEN v_o.delivered_at IS NOT NULL OR v_o.status IN ('delivered', 'completed') THEN 'delivered'
       WHEN v_o.status = 'disputed' THEN 'disputed'
       ELSE 'cancelled' END;
     UPDATE order_not_delivered_claims SET status = v_status, closed_at = now() WHERE order_id = p_order_id;
-    RETURN jsonb_build_object('finalized', true, 'outcome', v_status);
+    IF v_c.cancellation_request_id IS NOT NULL THEN
+      UPDATE order_cancellation_requests
+         SET status = 'closed', processed_at = now(),
+             admin_notes = COALESCE(admin_notes, CASE v_status
+               WHEN 'delivered' THEN 'Closed automatically: the seller delivered the order.'
+               WHEN 'disputed'  THEN 'Closed automatically: the order went to a dispute.'
+               ELSE 'Closed automatically: the order was cancelled.' END)
+       WHERE id = v_c.cancellation_request_id AND status = 'pending';
+    END IF;
+    RETURN jsonb_build_object('synced', true, 'outcome', v_status);
   END IF;
 
-  -- The seller responded inside the hour: Start delivery, or a chat reply the
-  -- message trigger did not already record.
+  -- A filed request: back to expired if the buyer withdrew it or an admin
+  -- rejected it; otherwise it waits for the admin.
+  IF v_c.status = 'cancel_requested' THEN
+    SELECT status INTO v_req FROM order_cancellation_requests WHERE id = v_c.cancellation_request_id;
+    IF v_c.cancellation_request_id IS NULL OR v_req IS NULL OR v_req IN ('rejected', 'closed') THEN
+      UPDATE order_not_delivered_claims SET status = 'expired', cancellation_request_id = NULL WHERE order_id = p_order_id;
+      RETURN jsonb_build_object('synced', true, 'outcome', 'expired');
+    END IF;
+    RETURN jsonb_build_object('synced', false, 'reason', 'awaiting_admin');
+  END IF;
+  IF v_c.status = 'expired' THEN
+    RETURN jsonb_build_object('synced', false, 'reason', 'expired');
+  END IF;
+
+  -- Open: the seller responded inside the window (Start delivery, or a chat
+  -- reply the message trigger did not already record).
   IF v_o.delivering_at IS NOT NULL AND v_o.delivering_at >= v_c.opened_at AND v_o.delivering_at < v_c.grace_ends_at THEN
     v_kind := 'started_delivery';
     v_resp_at := v_o.delivering_at;
@@ -238,49 +275,90 @@ BEGIN
     END IF;
   END IF;
   IF v_kind IS NOT NULL AND order_not_delivered_mark_responded(p_order_id, v_kind, v_resp_at) THEN
-    RETURN jsonb_build_object('finalized', true, 'outcome', 'seller_responded');
+    RETURN jsonb_build_object('synced', true, 'outcome', 'seller_responded');
   END IF;
 
   IF now() < v_c.grace_ends_at THEN
-    RETURN jsonb_build_object('finalized', false, 'reason', 'grace', 'grace_ends_at', v_c.grace_ends_at);
+    RETURN jsonb_build_object('synced', false, 'reason', 'window', 'grace_ends_at', v_c.grace_ends_at);
   END IF;
 
-  -- No response in the hour: a SELLER-fault cancel through the money seams.
-  IF v_o.status = 'paid' THEN
-    v_r := order_cancel_return_wallet(p_order_id, v_key, true, NULL, NULL, 'void', NULL, 'seller');
-  ELSE
-    v_r := order_refund_to_wallet(p_order_id, v_key, NULL, 'seller');
-  END IF;
-  IF COALESCE((v_r->>'refused')::boolean, false) THEN
-    RETURN jsonb_build_object('finalized', false, 'reason', 'refused');
-  END IF;
-
-  PERFORM money_fault_hook('order_not_delivered_finalize:after_refund');
-
-  v_total  := ROUND(COALESCE(v_o.total_amount, 0) * 100)::bigint;
-  v_credit := COALESCE((v_r->>'credited_minor')::bigint, v_total);
-  UPDATE order_not_delivered_claims SET status = 'auto_cancelled', closed_at = now(), credited_minor = v_credit
-   WHERE order_id = p_order_id;
+  -- The window is over with no response: expired. Nothing is cancelled.
+  UPDATE order_not_delivered_claims SET status = 'expired' WHERE order_id = p_order_id;
   v_ref := COALESCE(v_o.order_number, UPPER(LEFT(p_order_id::text, 8)));
-  PERFORM notify_once(v_o.buyer_id, 'order_refunded', 'Order Cancelled, Refunded',
-    'Order #' || v_ref || ' was not delivered in time. $' || to_char(v_credit::numeric / 100, 'FM999999990.00') ||
-    ' was added to your Store Balance — spend it with no service fee.' ||
-    CASE WHEN v_credit < v_total
-         THEN ' Want the full $' || to_char(v_total::numeric / 100, 'FM999999990.00') || ' back to your payment method? Request it from your Wallet.'
-         ELSE '' END,
-    '/account/wallet', v_key || ':buyer');
-  PERFORM notify_once(v_o.seller_id, 'order_not_delivered', 'Order Cancelled — Not Delivered',
-    'Order #' || v_ref || ' was cancelled because the buyer reported it as not delivered and you did not respond in time. The buyer was refunded and this counts against your record.',
-    '/account/orders/' || p_order_id::text, v_key || ':seller');
-  RETURN v_r || jsonb_build_object('finalized', true, 'outcome', 'auto_cancelled', 'credited_minor', v_credit, 'total_minor', v_total);
+  v_tag := 'not_delivered:' || p_order_id::text || ':' || extract(epoch FROM v_c.grace_ends_at)::bigint::text;
+  PERFORM notify_once(v_o.buyer_id, 'order_not_delivered', 'Seller Did Not Respond',
+    'The seller didn''t reply or start delivery on order #' || v_ref || ' in time. You can now request cancellation from the order page; our team will review it.',
+    '/account/orders/' || p_order_id::text, v_tag || ':expired:buyer');
+  PERFORM notify_once(v_o.seller_id, 'order_not_delivered', 'Deliver Now To Keep The Order',
+    'You didn''t respond to the non-delivery report on order #' || v_ref || '. The buyer can now ask DropMarket to cancel it, which counts against your record. Deliver now to keep the order.',
+    '/account/orders/' || p_order_id::text, v_tag || ':expired:seller');
+  RETURN jsonb_build_object('synced', true, 'outcome', 'expired');
 END;
 $$;
-REVOKE ALL ON FUNCTION public.order_not_delivered_finalize(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.order_not_delivered_finalize(uuid) TO service_role;
-COMMENT ON FUNCTION public.order_not_delivered_finalize(uuid) IS
-  'Cancel – Not Delivered: closes an open report to match the order (delivered / disputed / cancelled), records a seller response inside the hour, or — once the hour is up with no response — cancels as a seller fault through order_cancel_return_wallet / order_refund_to_wallet (key not_delivered:<order>). Idempotent. Service-role only.';
+REVOKE ALL ON FUNCTION public.order_not_delivered_sync(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.order_not_delivered_sync(uuid) TO service_role;
+COMMENT ON FUNCTION public.order_not_delivered_sync(uuid) IS
+  'Cancel – Not Delivered: closes a report (and its pending request) to match the order, records a seller response inside the window, or marks it expired once the window ends (no cancel, no money). Idempotent. Service-role only.';
 
--- ── 6. The sweep's list ──────────────────────────────────────────────────────
+-- ── 6. Request cancellation (the window ran out) ────────────────────────────
+-- Files ONE pending order_cancellation_requests row for an admin to review
+-- (Orders → Cancellation Requests) and alerts every active admin. No money.
+CREATE OR REPLACE FUNCTION public.order_not_delivered_request_cancel(p_order_id uuid, p_buyer_id uuid, p_note text DEFAULT NULL)
+  RETURNS jsonb
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_o      RECORD;
+  v_c      RECORD;
+  v_req_id uuid;
+  v_ref    text;
+  v_span   text;
+  v_reason text;
+BEGIN
+  SELECT * INTO v_o FROM orders WHERE id = p_order_id;
+  IF NOT FOUND OR v_o.buyer_id IS DISTINCT FROM p_buyer_id THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_owner');
+  END IF;
+  -- Bring the report up to date first (expires it if the window just ended).
+  PERFORM order_not_delivered_sync(p_order_id);
+  SELECT * INTO v_c FROM order_not_delivered_claims WHERE order_id = p_order_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'no_claim');
+  END IF;
+  IF v_c.status = 'cancel_requested' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'exists', 'request_id', v_c.cancellation_request_id);
+  END IF;
+  IF v_c.status = 'open' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_expired', 'grace_ends_at', v_c.grace_ends_at);
+  END IF;
+  IF v_c.status <> 'expired' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'closed', 'status', v_c.status);
+  END IF;
+  -- A request already pending through the long-delivery route: reuse it.
+  SELECT id INTO v_req_id FROM order_cancellation_requests WHERE order_id = p_order_id AND status = 'pending' LIMIT 1;
+  v_span := order_not_delivered_span(v_c.window_minutes);
+  IF v_req_id IS NULL THEN
+    v_reason := 'Not delivered: the seller did not reply or start delivery within ' || v_span || ' of the report.' ||
+                CASE WHEN COALESCE(btrim(p_note), '') <> '' THEN ' Buyer: ' || LEFT(btrim(p_note), 500) ELSE '' END;
+    INSERT INTO order_cancellation_requests (order_id, buyer_id, reason, status)
+    VALUES (p_order_id, p_buyer_id, v_reason, 'pending')
+    RETURNING id INTO v_req_id;
+  END IF;
+  UPDATE order_not_delivered_claims SET status = 'cancel_requested', cancellation_request_id = v_req_id WHERE order_id = p_order_id;
+
+  v_ref := COALESCE(v_o.order_number, UPPER(LEFT(p_order_id::text, 8)));
+  PERFORM admin_alert_once('order_review', 'Cancellation Request — Not Delivered #' || v_ref,
+    'Order #' || v_ref || ': the seller did not reply or start delivery within ' || v_span ||
+    ' of the buyer''s report. Review it in Orders → Cancellation Requests (Seller At Fault is on by default).',
+    '/admin/orders?tab=cancellations');
+  RETURN jsonb_build_object('ok', true, 'request_id', v_req_id);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.order_not_delivered_request_cancel(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.order_not_delivered_request_cancel(uuid, uuid, text) TO service_role;
+COMMENT ON FUNCTION public.order_not_delivered_request_cancel(uuid, uuid, text) IS
+  'Cancel – Not Delivered: once the seller''s response window has run out, files one pending order_cancellation_requests row for admin review, links it to the report and alerts every active admin. No money. Service-role only.';
+
+-- ── 7. The sweep's list (expiry notices only) ───────────────────────────────
 CREATE OR REPLACE FUNCTION public.order_not_delivered_due(p_limit integer DEFAULT 50)
   RETURNS SETOF uuid
   LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
