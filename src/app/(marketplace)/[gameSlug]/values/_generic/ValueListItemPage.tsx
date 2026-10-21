@@ -461,6 +461,8 @@ async function ItemBody({
           gameName={theme.name}
           gameSlug={gameSlug}
           buyHref={itemBuyHref({ gameSlug, categorySlug: buy.categorySlug, itemSlug: item.slug })}
+          title={`Get ${item.name} without the grind`}
+          ctaLabel={`See ${item.name} Offers`}
         />
       </div>
       </ValueItemRails>

@@ -33,6 +33,7 @@ import { getValuePageGate, readValuePageEvidence, robotsFor } from '@/lib/seo/ga
 import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
 import { petHeadline } from './_petAnswer'
 import ValueListItemPage from '../_generic/ValueListItemPage'
+import { valueItemMetaTail, valueItemMetaTitle } from '../_generic/valueListItemCopy'
 import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
 import { valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
 import { getValueItems } from '@/lib/values/data'
@@ -42,7 +43,8 @@ import { socialTitle } from '@/lib/seo/title'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
-import { seoMeta } from '@/lib/seo/fit'
+import { DESC_MAX, seoMeta } from '@/lib/seo/fit'
+import { formatTradeValue, frostsLabel } from '@/lib/adopt-me/trade-value'
 
 /**
  * The page SHELL is static content — an item's name, rarity, artwork, income
@@ -470,8 +472,9 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     // to 82 and was cut in results). The price leads the description.
     const title = `${pet.name} Value in Adopt Me (${monthYear})`
     const fr = pet.variants.find((v) => v.variant === 'FR') ?? pet.variants[0]
-    const usd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    const priceLead = fr?.cashUsd != null ? ` A Fly Ride sells for about $${usd(fr.cashUsd)}.` : ''
+    // Our trade points (Frost Dragon FR = 100) in the snippet: what Adopt Me
+    // searchers compare first. The price is already in the answer sentence.
+    const tradeLead = fr?.tradeValue != null ? `Trade value ${formatTradeValue(fr.tradeValue)} (${frostsLabel(fr.tradeValue)}). ` : ''
     // ≤155 characters: question, price, then what the page has (seoMeta trims
     // the tail clause on long pet names, never the price).
     const gate = await getValuePageGate('adopt-me', pet.slug, true)
@@ -479,7 +482,7 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     // The answer sentence leads the snippet (it is not shown on the page).
     const description = withAnswer(
       headline ? answerSentence({ name: `${pet.name} (${headline.label})`, valueUsd: headline.cashUsd, offers: headline.listingsTracked, updatedAt: gate.evidence?.priceMovedAt ?? null }) : null,
-      `How much is ${withArticle(pet.name)} worth in Adopt Me?${priceLead} Cash and trade values for every variant, updated ${monthYear}.`,
+      `${tradeLead}Prices for all 8 forms, Normal to Mega Fly Ride, and safe offers to buy one.`,
     )
     const canonical = `/adopt-me/values/${pet.slug}`
     // Page-specific keywords targeting the uncontested long-tail the brief
@@ -525,12 +528,15 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     }
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     const cheapest = price!.cheapestUsd!
-    const title = `${item.name} Value in ${listHub.shortName} (${monthYear}) — Price in USD`
+    // The Adopt Me pattern (8× the clicks of "… — Price in USD" on Bing, 2026-10-19)
+    // plus the tier players search by; the snippet says what it is and what the page has.
+    const typeLabel = (item.itemType && listHub.itemTypeLabels[item.itemType]) || theme.itemNoun
+    const title = valueItemMetaTitle({ name: item.name, shortName: listHub.shortName, rarity: item.rarity, typeLabel }, monthYear)
     const gate = await getValuePageGate(gameSlug, item.slug, isValueItemIndexable({ priced: true, sampleSize: price!.sampleSize }))
-    const lead = `How much is ${item.name} worth in ${theme.name}? It sells for about $${cheapest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across ${price!.sampleSize} live ${price!.sampleSize === 1 ? 'listing' : 'listings'} from reputable sellers, updated daily.`
+    const answer = answerSentence({ name: item.name, valueUsd: cheapest, offers: price!.sampleSize, updatedAt: gate.evidence?.priceMovedAt ?? null })
     const description = withAnswer(
-      answerSentence({ name: item.name, valueUsd: cheapest, offers: price!.sampleSize, updatedAt: gate.evidence?.priceMovedAt ?? null }),
-      lead,
+      answer,
+      valueItemMetaTail({ rarity: item.rarity, typeNoun: typeLabel.toLowerCase(), obtain: item.obtain, origin: item.origin }, DESC_MAX - (answer ? answer.length + 1 : 0)),
     )
     const canonical = `/${gameSlug}/values/${item.slug}`
     return {

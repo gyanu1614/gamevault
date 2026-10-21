@@ -6,6 +6,9 @@
  *   "<Item> is worth about $X · from N offers we track · Updated <date>."
  * The date is the last MATERIAL price move (seo_value_evidence.price_moved_at),
  * the same value as the page's JSON-LD dateModified and its sitemap lastmod.
+ * Older than a week it reads "price steady since <date>" (2026-10-19): the
+ * date is when the price last moved, so an old one means a held price, and
+ * "Updated 5 Oct" two weeks on made the page look abandoned in results.
  * The count is offers we track, never "sales" (owner, 2026-10-09).
  */
 export function formatAboutUsd(value: number): string {
@@ -25,14 +28,19 @@ export interface AnswerInput {
   valueUsd: number
   offers: number
   updatedAt: string | null
+  /** For tests; defaults to now. */
+  now?: number
 }
+
+const STEADY_AFTER_MS = 7 * 86_400_000
 
 export function answerParts(a: AnswerInput): { worth: string; offers: string; updated: string | null } {
   const updated = formatUpdatedDate(a.updatedAt)
+  const age = a.updatedAt ? (a.now ?? Date.now()) - Date.parse(a.updatedAt) : 0
   return {
     worth: `${a.name} is worth about ${formatAboutUsd(a.valueUsd)}`,
     offers: `from ${a.offers.toLocaleString('en-US')} ${a.offers === 1 ? 'offer' : 'offers'} we track`,
-    updated: updated ? `Updated ${updated}` : null,
+    updated: updated ? (age > STEADY_AFTER_MS ? `price steady since ${updated}` : `Updated ${updated}`) : null,
   }
 }
 
@@ -42,7 +50,7 @@ export function answerLine(a: AnswerInput): string {
 }
 
 /** The answer as the first sentence of a description; null for an unpriced item. */
-export function answerSentence(a: { name: string; valueUsd: number | null | undefined; offers: number; updatedAt: string | null }): string | null {
+export function answerSentence(a: { name: string; valueUsd: number | null | undefined; offers: number; updatedAt: string | null; now?: number }): string | null {
   if (a.valueUsd == null) return null
   return `${answerLine({ ...a, valueUsd: a.valueUsd })}.`
 }

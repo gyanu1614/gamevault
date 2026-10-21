@@ -11,6 +11,7 @@
  */
 
 import type { ValueObtainSource } from '@/lib/values/data'
+import { TITLE_MAX } from '@/lib/seo/fit'
 
 export interface ItemCopyInput {
   name: string
@@ -27,6 +28,8 @@ export interface ItemCopyInput {
   listedNow: number
   /** ISO time the published value last moved. */
   priceChangedAt: string | null
+  /** For tests; defaults to now. */
+  now?: number
   /** The other form: this item's Chroma, or (on a Chroma) its base. */
   counterpart: { name: string; isChroma: boolean; cheapestUsd: number | null } | null
 }
@@ -107,11 +110,16 @@ export function chromaSentence(i: ItemCopyInput): string | null {
 export function priceSentence(i: ItemCopyInput): string | null {
   if (i.cheapestUsd == null) return null
   const date = asOf(i.priceChangedAt)
-  const lead = date ? `As of ${date}, ` : ''
+  // The price shown is today's; the date is when it last MOVED. Within a week
+  // that reads "As of <date>"; older, the sentence ends "steady since <date>"
+  // instead of putting today's price under a stale date (2026-10-19).
+  const old = i.priceChangedAt != null && (i.now ?? Date.now()) - Date.parse(i.priceChangedAt) > 7 * 86_400_000
+  const lead = date && !old ? `As of ${date}, ` : ''
+  const steady = date && old ? ` Its price has been steady since ${date}.` : ''
   const market = i.marketUsd != null && i.marketUsd > i.cheapestUsd + 0.005 ? i.marketUsd : null
   return market != null
-    ? `${lead}${i.name} is worth about ${formatUsd(market)} in ${i.shortName} — its verified market price — and starts at ${formatUsd(i.cheapestUsd)} from professional sellers.`
-    : `${lead}${i.name} is worth about ${formatUsd(i.cheapestUsd)} in ${i.shortName}, the verified price from professional sellers.`
+    ? `${lead}${i.name} is worth about ${formatUsd(market)} in ${i.shortName} — its verified market price — and starts at ${formatUsd(i.cheapestUsd)} from professional sellers.${steady}`
+    : `${lead}${i.name} is worth about ${formatUsd(i.cheapestUsd)} in ${i.shortName}, the verified price from professional sellers.${steady}`
 }
 
 /**
@@ -157,4 +165,43 @@ export function itemFaq(i: ItemCopyInput, howTo: { q: string; a: string }[] = []
     a: `List it on DropMarket and price it against the value on this page. Buyers find listings through these value pages, and every order is covered by SafeDrop — the buyer gets exactly what they ordered, or their money back.`,
   })
   return out
+}
+
+/**
+ * The search title: the Adopt Me pattern ("<Item> Value in MM2 (October 2026)",
+ * 2.6% click rate on Bing vs 0.3% for "… — Price in USD"), plus the tier MM2
+ * players search by ("– Godly Knife") when the title stays within 60. The
+ * tier beats the brand: seoMeta drops " | DropMarket" when both don't fit, and
+ * results show our domain anyway.
+ */
+export function valueItemMetaTitle(
+  i: { name: string; shortName: string; rarity: string | null; typeLabel: string },
+  monthYear: string,
+): string {
+  const base = `${i.name} Value in ${i.shortName} (${monthYear})`
+  const tier = i.rarity ? `${i.rarity} ${i.typeLabel}` : null
+  const withTier = tier ? `${base} – ${tier}` : base
+  return withTier.length <= TITLE_MAX ? withTier : base
+}
+
+/**
+ * The snippet after the answer sentence: what it is, then what the page has.
+ * `room` is what's left of the 155 characters after the answer; the longest
+ * version that fits is used, so the length trimmer never cuts it mid-clause
+ * (it once left "It's an Ancient gun." on its own).
+ */
+export function valueItemMetaTail(
+  i: { rarity: string | null; typeNoun: string; obtain: ValueObtainSource[]; origin: string | null },
+  room = Infinity,
+): string {
+  const what = i.rarity ? `${i.rarity} ${i.typeNoun}` : null
+  const from = originPhrase(i.obtain[0], i.origin)
+  const pageHas = 'How to get it, its price history and safe offers to buy it.'
+  const options = [
+    what && from ? `It's ${article(what)} ${what}, released ${from}. ${pageHas}` : null,
+    what ? `See how to get this ${what}, its price history and safe offers to buy it.` : null,
+    what ? `${what.charAt(0).toUpperCase()}${what.slice(1)}: how to get it, price history and safe offers.` : null,
+    pageHas,
+  ].filter((o): o is string => o != null)
+  return options.find((o) => o.length <= room) ?? options[options.length - 1]
 }

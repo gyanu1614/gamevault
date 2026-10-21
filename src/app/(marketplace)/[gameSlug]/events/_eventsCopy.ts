@@ -155,6 +155,7 @@ export function hubFaq(c: CopyCtx, events: EventView[], featured: EventView | nu
 export function eventH1(c: CopyCtx, e: Pick<EventView, 'name' | 'status'>): string {
   const sep = e.name.includes(':') ? ' —' : ':'
   if (e.status === 'upcoming') return `${eventLabel(c, e)} Event${sep} Release Date and What to Expect`
+  if (e.status === 'live') return `${eventLabel(c, e)} Event${sep} New Items, Values and End Date`
   return `${eventLabel(c, e)} Event${sep} Items, Values and How to Get Them`
 }
 

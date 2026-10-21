@@ -3,7 +3,7 @@ import { answerLine, formatAboutUsd, formatUpdatedDate } from './value-answer-fo
 
 describe('value answer line', () => {
   it('reads "<Item> is worth about $X · from N offers we track · Updated <date>"', () => {
-    expect(answerLine({ name: 'Bat Dragon', valueUsd: 41.6, offers: 18, updatedAt: '2026-10-09T08:30:00Z' })).toBe(
+    expect(answerLine({ name: 'Bat Dragon', valueUsd: 41.6, offers: 18, updatedAt: '2026-10-09T08:30:00Z', now: Date.parse('2026-10-10T00:00:00Z') })).toBe(
       'Bat Dragon is worth about $42 · from 18 offers we track · Updated 9 Oct 2026',
     )
   })
@@ -11,6 +11,14 @@ describe('value answer line', () => {
     const line = answerLine({ name: 'Los Gattitos', valueUsd: 1.18, offers: 1, updatedAt: null })
     expect(line).toBe('Los Gattitos is worth about $1.18 · from 1 offer we track')
     expect(line).not.toMatch(/sale/i)
+  })
+  // Bing 2026-10-19: MM2 snippets read "Updated 5 Oct 2026" two weeks later
+  // (the date only moves on a material price move) and looked abandoned. Past
+  // a week it says what the date really means: the price has held.
+  it('an old move date reads as a steady price, not a stale page', () => {
+    const line = answerLine({ name: 'Icewing', valueUsd: 0.55, offers: 55, updatedAt: '2026-10-05T00:00:00Z', now: Date.parse('2026-10-19T00:00:00Z') })
+    expect(line).toBe('Icewing is worth about $0.55 · from 55 offers we track · price steady since 5 Oct 2026')
+    expect(answerLine({ name: 'Icewing', valueUsd: 0.55, offers: 55, updatedAt: '2026-10-13T00:00:00Z', now: Date.parse('2026-10-19T00:00:00Z') })).toMatch(/Updated 13 Oct 2026$/)
   })
   it('rounds like a person would', () => {
     expect(formatAboutUsd(0.5)).toBe('$0.50')
@@ -27,7 +35,7 @@ describe('value answer line', () => {
 describe('answer sentence for the snippet and JSON-LD', () => {
   it('ends with a period, is null when unpriced, and leads the description', async () => {
     const { answerSentence, withAnswer } = await import('./value-answer-format')
-    const a = answerSentence({ name: 'Harvester', valueUsd: 7.63, offers: 73, updatedAt: '2026-10-08T00:00:00Z' })
+    const a = answerSentence({ name: 'Harvester', valueUsd: 7.63, offers: 73, updatedAt: '2026-10-08T00:00:00Z', now: Date.parse('2026-10-09T00:00:00Z') })
     expect(a).toBe('Harvester is worth about $7.63 · from 73 offers we track · Updated 8 Oct 2026.')
     expect(answerSentence({ name: 'X', valueUsd: null, offers: 0, updatedAt: null })).toBeNull()
     expect(withAnswer(a, 'Rest of it.')).toBe(`${a} Rest of it.`)
