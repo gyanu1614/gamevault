@@ -142,9 +142,9 @@ export default async function AdoptMeValuesPage() {
             title="Adopt Me Value List"
             lead={
               <>
-                What every pet is worth — in community trade value and in real
-                money. Pick a variant to reprice the whole list; Fly Ride is the
-                trading benchmark.
+                What every pet is worth, in trade points and in real money, both
+                from real sale prices (Frost Dragon Fly Ride = 100). Pick a form
+                to reprice the whole list.
               </>
             }
           />

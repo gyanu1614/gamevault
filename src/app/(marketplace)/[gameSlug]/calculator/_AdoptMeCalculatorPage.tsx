@@ -17,7 +17,7 @@ import { HUB_GROUND } from '@/components/values/styles'
 export const ADOPT_ME_CALC_FAQ = [
   {
     q: 'How does the Adopt Me WFL calculator work?',
-    a: 'Add the pets on each side of the trade and pick each pet’s variant (Normal, Fly Ride, Neon, Mega and so on). The calculator totals both sides and tells you whether the trade is a Win, Fair or Loss — in community trade value AND in real money (USD).',
+    a: 'Add the pets on each side of the trade and pick each pet’s variant (Normal, Fly Ride, Neon, Mega and so on). The calculator totals both sides and tells you whether the trade is a Win, Fair or Loss — in trade points (Frost Dragon Fly Ride = 100) AND in real money (USD).',
   },
   {
     q: 'What makes this different from other Adopt Me calculators?',

@@ -26,6 +26,8 @@ export interface AdoptMePetVariant {
   /** Reputable market price (median of cheapest reputable listings). */
   averageUsd: number | null
   isEstimated: boolean
+  /** The trade value was filled from the pet's other priced forms (this form has no real price). */
+  tradeIsEstimated: boolean
   confidence: string
   listingsTracked: number
   /** When this variant was last repriced (ISO), for the freshness badge. */
@@ -122,6 +124,9 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
       cheapestUsd: r ? num(r.cheapest_usd) : null,
       averageUsd,
       isEstimated: r ? Boolean(r.is_estimated) : true,
+      // Our trade value is measured only where the form has a real price
+      // (src/lib/pricing/adopt-me-trade-value.ts); otherwise it is our estimate.
+      tradeIsEstimated: !r || Boolean(r.is_estimated) || (averageUsd ?? num(r.cheapest_usd)) == null,
       confidence: r?.confidence ?? 'low',
       listingsTracked: r ? Number(r.listings_tracked ?? 0) : 0,
       lastPricedAt: r?.last_priced_at ?? null,

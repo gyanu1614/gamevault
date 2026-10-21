@@ -16,6 +16,8 @@ export interface AdoptMePetVariant {
   /** Reputable market price (median of cheapest reputable listings). */
   averageUsd: number | null
   isEstimated: boolean
+  /** The trade value was filled from the pet's other priced forms (this form has no real price). */
+  tradeIsEstimated: boolean
   confidence: string
   listingsTracked: number
   /** When this variant was last repriced (ISO), for the freshness badge. */

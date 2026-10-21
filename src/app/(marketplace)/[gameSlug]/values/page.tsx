@@ -85,7 +85,7 @@ async function generateMetadataRaw({
     const socialTitle = `Adopt Me Value List (${monthYear}) — Pet Values in USD | DropMarket`
     return {
       title: stripBrand(socialTitle),
-      description: `Adopt Me value list for ${monthYear}: real cash values and community trade values for every pet and potion variant (Fly Ride, Neon, Mega) — the only list that shows what a pet is worth in real money.`,
+      description: `Adopt Me value list for ${monthYear}: trade values from real sale prices (Frost Dragon = 100) and cash values in USD for every pet and form (Fly Ride, Neon, Mega).`,
       keywords: [
         'adopt me value list',
         'adopt me values',
@@ -103,7 +103,7 @@ async function generateMetadataRaw({
         images: DEFAULT_OG_IMAGES,
         title: socialTitle,
         description:
-          'Every Adopt Me pet, every variant — community trade value and DropMarket cash value side by side.',
+          'Every Adopt Me pet, every form: trade value from real sale prices and cash value in USD, side by side.',
         url: '/adopt-me/values',
         type: 'website',
       },
