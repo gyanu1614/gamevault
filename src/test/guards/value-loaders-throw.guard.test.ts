@@ -13,7 +13,7 @@ describe('value page loaders never turn a read error into a 404', () => {
     expect(src).toMatch(/if \(error\) throw new Error\(`adopt_me_pets read failed/)
   })
   it('Steal a Brainrot loader throws on error', () => {
-    const src = read('src/app/(marketplace)/[gameSlug]/values/[itemSlug]/page.tsx')
+    const src = read('src/app/(marketplace)/[gameSlug]/values/[itemSlug]/_sabItemData.ts')
     expect(src).not.toMatch(/Unable to load Brainrot value page[\s\S]{0,40}return null/)
     expect(src).toMatch(/if \(error\) throw new Error\(`sab_brainrot_market_catalog read failed/)
   })

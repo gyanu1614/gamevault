@@ -8,9 +8,8 @@ const read = (f: string) => readFileSync(join(process.cwd(), dir, f), 'utf8')
 // Owner, 2026-10-14 (item page redesign).
 describe('value item heroes', () => {
   it('SAB opens with the "<Name> Value in Steal a Brainrot" H1 like Adopt Me and MM2', () => {
-    const page = read('[itemSlug]/page.tsx')
-    expect(page).toMatch(/<ItemPageTitle name=\{brainrot\.name\} game="Steal a Brainrot" \/>/)
-    expect(page).toMatch(/const title = `\$\{brainrot\.name\} Value in Steal a Brainrot/)
+    expect(read('[itemSlug]/_SabItemPage.tsx')).toMatch(/<ItemPageTitle name=\{brainrot\.name\} game="Steal a Brainrot" \/>/)
+    expect(read('[itemSlug]/_itemMetadata.ts')).toMatch(/const title = `\$\{brainrot\.name\} Value in Steal a Brainrot/)
     expect(read('[itemSlug]/_ItemHero.tsx')).toMatch(/titleAs="h2"/)
   })
 

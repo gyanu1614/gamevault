@@ -21,7 +21,9 @@ import {
 
 const read = (rel: string) => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const CATEGORY_PAGE = 'src/app/(marketplace)/[gameSlug]/[categorySlug]/page.tsx'
-const ITEM_PAGE = 'src/app/(marketplace)/[gameSlug]/values/[itemSlug]/page.tsx'
+// The item route hands metadata (robots) to _itemMetadata.ts and the Brainrot render to _SabItemPage.tsx.
+const ITEM_METADATA = 'src/app/(marketplace)/[gameSlug]/values/[itemSlug]/_itemMetadata.ts'
+const SAB_ITEM_PAGE = 'src/app/(marketplace)/[gameSlug]/values/[itemSlug]/_SabItemPage.tsx'
 
 describe('category page rule == shared rule', () => {
   const src = read(CATEGORY_PAGE)
@@ -55,7 +57,7 @@ describe('category page rule == shared rule', () => {
 })
 
 describe('value item page rule == shared rule', () => {
-  const src = read(ITEM_PAGE)
+  const src = read(ITEM_METADATA)
 
   it('noindexes a pipeline value without a price backed by enough live listings', () => {
     const inline = /const thin = !priced \|\| \(price\?\.sampleSize \?\? 0\) < 3/.test(src)
@@ -68,7 +70,7 @@ describe('value item page rule == shared rule', () => {
 })
 
 describe('value-page data gate: one rule for robots meta AND sitemap (growth point 28)', () => {
-  const item = read(ITEM_PAGE)
+  const item = read(ITEM_METADATA)
 
   it('every value page type decides its robots meta through getValuePageGate', () => {
     // Adopt Me, the value-list hub (MM2), other pipeline games, Steal a Brainrot.
@@ -87,7 +89,7 @@ describe('value-page data gate: one rule for robots meta AND sitemap (growth poi
 
   it('the page date, dateModified and sitemap lastmod all come from price_moved_at', () => {
     for (const f of [
-      ITEM_PAGE,
+      SAB_ITEM_PAGE,
       'src/app/(marketplace)/[gameSlug]/values/[itemSlug]/_AdoptMePetPage.tsx',
       'src/app/(marketplace)/[gameSlug]/values/_generic/ValueItemPage.tsx',
       'src/app/(marketplace)/[gameSlug]/values/_generic/ValueListItemPage.tsx',

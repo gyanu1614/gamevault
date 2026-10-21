@@ -34,6 +34,7 @@ export function AdoptMeAbout({
   originType,
   originDetail,
   obtainabilityLabel,
+  released = null,
   variants,
   children,
 }: {
@@ -43,6 +44,8 @@ export function AdoptMeAbout({
   originType: string | null
   originDetail: string | null
   obtainabilityLabel: string
+  /** The shared Released fact ("27 October 2022"). */
+  released?: string | null
   variants: AdoptMePetVariant[]
   /** The description prose (server-rendered, with its highlights). */
   children: ReactNode
@@ -51,7 +54,7 @@ export function AdoptMeAbout({
   const picked = variants.find((v) => v.variant === selectedCode) ?? variants.find((v) => v.variant === 'FR') ?? variants[0]
   const answer = aboutAnswer(name, picked)
   const basis = aboutBasis(picked)
-  const facts = aboutFacts({ rarity, originType, originDetail, obtainabilityLabel }, variants)
+  const facts = aboutFacts({ rarity, originType, originDetail, obtainabilityLabel, released }, variants)
 
   return (
     <section aria-labelledby="about-pet">

@@ -83,11 +83,13 @@ export function aboutBasis(v: AdoptMePetVariant | undefined): string | null {
 }
 
 export function aboutFacts(
-  pet: { rarity: string; originDetail: string | null; originType: string | null; obtainabilityLabel: string },
+  pet: { rarity: string; originDetail: string | null; originType: string | null; obtainabilityLabel: string; released?: string | null },
   variants: AdoptMePetVariant[],
 ): Array<{ label: string; value: string }> {
   const prices = variants.map(formPrice).filter((p): p is number => p != null && p > 0)
   const facts: Array<{ label: string; value: string }> = [{ label: 'Rarity', value: pet.rarity }]
+  // The shared Released fact (item-facts releasedLabel), before Origin like every game.
+  if (pet.released) facts.push({ label: 'Released', value: pet.released })
   const origin = pet.originDetail ?? pet.originType
   if (origin) facts.push({ label: 'Origin', value: origin })
   facts.push({ label: 'Availability', value: pet.obtainabilityLabel })

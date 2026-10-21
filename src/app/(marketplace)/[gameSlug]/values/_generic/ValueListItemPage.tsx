@@ -24,7 +24,9 @@ import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { rarityMeta } from '@/lib/values/rarity'
 import { boxForItem } from '@/lib/values/boxes'
-import { getValueItemHistory, getValueItemHowToGet, trendValue, type ValueItem } from '@/lib/values/data'
+import { getValueItemHistory, trendValue, type ValueItem } from '@/lib/values/data'
+import { getItemFacts } from '@/lib/values/item-facts-data'
+import { itemFactsGame } from '@/lib/values/item-facts-config'
 import { priceHistorySummary } from '@/lib/values/history-summary'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { parseImageAttribution, valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
@@ -35,11 +37,12 @@ import {
   ValueListPriceTrend,
   type ItemForm,
 } from './ValueListItemClient'
-import { ValueItemHowToGet } from './ValueItemHowToGet'
+import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
 import { ValueListItemSkeleton } from './ValueListItemSkeleton'
 import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { aboutSentence, chromaSentence, formatUsd, itemFaq, priceSentence, type ItemCopyInput } from './valueListItemCopy'
-import { howToGetFaqs } from './valueHowToGetCopy'
+import { howToGetFaqs } from '@/lib/values/how-to-get-copy'
+import { factRows, releasedLabel } from '@/lib/values/item-facts'
 
 /**
  * Value page for one high-tier item on a value-list hub (Murder Mystery 2:
@@ -67,10 +70,10 @@ export default async function ValueListItemPage({
 }) {
   const theme = getGameContentTheme(gameSlug)
   const hub = valueListHub(gameSlug)!
-  const [hubNav, howToGet, fromEvent, evidence] = await Promise.all([
+  const [hubNav, facts, fromEvent, evidence] = await Promise.all([
     getHubNavData(gameSlug),
-    // Verified how-to-get facts (values_items.how_to_get), under the item's tags.
-    getValueItemHowToGet(gameSlug, item.slug),
+    // The shared facts (verified how_to_get), under the item's tags.
+    getItemFacts(gameSlug, item.slug),
     // The event it came from (values_events), for the link back — item tags too.
     hasHubPage(gameSlug, 'events') ? getValueItemEvent(gameSlug, item.slug) : Promise.resolve(null),
     // The ONE page date: the last material price move (seo_value_evidence) —
@@ -78,6 +81,8 @@ export default async function ValueListItemPage({
     readValuePageEvidence(gameSlug, item.slug),
   ])
   const priceMovedAt = evidence?.priceMovedAt ?? null
+  const howToGet = facts.howToGet
+  const game = itemFactsGame(gameSlug)
 
   const rarity = rarityMeta(gameSlug, item.rarity)
   const typeLabel = (item.itemType && hub.itemTypeLabels[item.itemType]) || theme.itemNoun
@@ -119,7 +124,7 @@ export default async function ValueListItemPage({
   const faq = itemFaq(
     copy,
     howToGet
-      ? howToGetFaqs({ name: item.name, gameName: theme.name, shortName: hub.shortName, h: howToGet, cheapestUsd, earnRate: hub.earnRate })
+      ? howToGetFaqs({ name: item.name, gameName: game.gameName, shortName: game.shortName, h: howToGet, cheapestUsd, earnRate: game.earnRate, vocab: game.vocab })
       : [],
   )
   const path = `/${gameSlug}/values/${item.slug}`
@@ -329,8 +334,8 @@ async function ItemBody({
   const stats: { label: string; value: string; color?: string }[] = []
   if (item.rarity) stats.push({ label: 'Rarity', value: rarity.label, color: rarity.color })
   stats.push({ label: 'Type', value: typeLabel })
-  if (item.origin) stats.push({ label: 'Origin', value: item.origin })
-  if (item.releaseYear) stats.push({ label: 'Released', value: String(item.releaseYear) })
+  // The shared fact rows (Released, Origin), from the catalogue row.
+  stats.push(...factRows({ released: releasedLabel({ year: item.releaseYear }), origin: item.origin, howToGet: null }))
   stats.push({ label: 'Sold By', value: 'Professional Sellers' })
 
   const series = [item, ...(counterpart ? [counterpart] : [])].map((f) => ({
@@ -411,13 +416,11 @@ async function ItemBody({
           />
         </section>
 
-        <ValueItemHowToGet
+        <ItemHowToGet
           itemName={item.name}
-          gameName={theme.name}
-          shortName={hub.shortName}
+          game={itemFactsGame(gameSlug)}
           imageUrl={item.imageUrl}
           accent={rarity.color}
-          earnRate={hub.earnRate}
           howToGet={howToGet}
           cheapestUsd={cheapestUsd}
           buy={buy}
