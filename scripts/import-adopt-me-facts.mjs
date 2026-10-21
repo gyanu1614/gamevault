@@ -2,7 +2,7 @@
 /**
  * Loads scripts/values-seeds/adopt-me.facts.json (built by
  * `pnpm am:facts:collect`) into adopt_me_pets:
- *   how_to_get     always (migration 20261019193145) — the wiki-cited entry;
+ *   how_to_get     always (migration 20261020180531) — the wiki-cited entry;
  *   released_at,
  *   origin_type,
  *   origin_detail  only where the row has none — curated values are kept;
