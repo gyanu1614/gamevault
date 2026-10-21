@@ -99,7 +99,11 @@ export async function selectAllByKey<T>(client: unknown, options: SelectAllByKey
       await sleep(retryDelayMs(attempt))
     }
 
-    if (page === null) throw new Error(`${table}: ${lastError?.message ?? 'unknown read error'}`)
+    if (page === null) {
+      // `cause` keeps the PostgREST error (code, message) for callers that
+      // branch on it, e.g. a missing table.
+      throw Object.assign(new Error(`${table}: ${lastError?.message ?? 'unknown read error'}`), { cause: lastError })
+    }
 
     rows.push(...page)
     if (page.length < pageSize) return rows

@@ -116,6 +116,16 @@ describe('selectAllByKey (keyset paging, no OFFSET)', () => {
   })
 })
 
+describe('selectAllByKey errors', () => {
+  it('keeps the original PostgREST error as `cause` (callers branch on its code)', async () => {
+    const original = { code: 'PGRST205', message: 'Could not find the table public.t in the schema cache' }
+    const { client } = fakeClient(ids(1), { failures: [original] })
+    const err = await selectAllByKey<Row>(client, { table: 't', columns: 'id', key: 'id', retryDelayMs: () => 0 }).catch((e) => e)
+    expect(err).toBeInstanceOf(Error)
+    expect((err as Error & { cause?: unknown }).cause).toEqual(original)
+  })
+})
+
 describe('isRetryableReadError', () => {
   it('retries statement timeouts and transient network errors only', () => {
     expect(isRetryableReadError({ code: '57014' })).toBe(true)

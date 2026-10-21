@@ -21,10 +21,10 @@ import {
   type PriceDiff,
   type PublishedPrice,
 } from './change-rule'
+import { selectAllByKey } from '@/lib/db/select-all-by-key'
 
 export const PUBLISHED_PRICES_TABLE = 'values_published_prices'
 
-const PAGE_SIZE = 1000
 const WRITE_BATCH = 500
 
 /** The slice of a Supabase client this needs (service role). */
@@ -55,31 +55,24 @@ export async function loadPublishedSnapshot(
   client: SnapshotClient,
   gameSlug: string,
 ): Promise<PublishedPrice[]> {
-  const rows: PublishedPrice[] = []
-  for (let page = 0; ; page += 1) {
-    const from = page * PAGE_SIZE
-    const { data, error } = await client
-      .from(PUBLISHED_PRICES_TABLE)
-      .select('item_slug,variant,prices')
-      .eq('game_slug', gameSlug)
-      // Unique order: paging without one skips/duplicates rows at the seams.
-      .order('item_slug', { ascending: true })
-      .order('variant', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1)
-    if (error) {
-      if (isMissingTable(error)) {
-        throw new PublishedSnapshotUnavailableError(
-          `${PUBLISHED_PRICES_TABLE} is missing — the migration is not on this database yet`,
-        )
-      }
-      throw new Error(`${PUBLISHED_PRICES_TABLE} read: ${error.message ?? String(error)}`)
+  let batch: SnapshotRow[]
+  try {
+    // Keyset on (item_slug, variant), unique within a game; never OFFSET.
+    batch = await selectAllByKey<SnapshotRow>(client, {
+      table: PUBLISHED_PRICES_TABLE,
+      columns: 'item_slug,variant,prices',
+      key: ['item_slug', 'variant'],
+      filter: (q) => q.eq('game_slug', gameSlug),
+    })
+  } catch (e) {
+    if (isMissingTable((e as { cause?: { code?: string; message?: string } }).cause)) {
+      throw new PublishedSnapshotUnavailableError(
+        `${PUBLISHED_PRICES_TABLE} is missing — the migration is not on this database yet`,
+      )
     }
-    const batch = (data ?? []) as SnapshotRow[]
-    for (const r of batch) {
-      rows.push({ itemSlug: r.item_slug, variant: r.variant, prices: r.prices ?? {} })
-    }
-    if (batch.length < PAGE_SIZE) break
+    throw new Error(`${PUBLISHED_PRICES_TABLE} read: ${(e as Error).message}`)
   }
+  const rows: PublishedPrice[] = batch.map((r) => ({ itemSlug: r.item_slug, variant: r.variant, prices: r.prices ?? {} }))
   return rows
 }
 

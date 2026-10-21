@@ -21,6 +21,10 @@ function fakeClient(snapshot: Array<{ item_slug: string; variant: string; prices
         eq: () => b,
         order: () => b,
         range: async () => ({ data: snapshot, error: null }),
+        // Keyset read: one page holds the whole fixture.
+        gt: () => b,
+        or: () => b,
+        limit: async () => ({ data: snapshot, error: null }),
         upsert: async (rows: unknown[]) => {
           upserts.push(...rows)
           return { error: null }
