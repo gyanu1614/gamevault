@@ -68,13 +68,16 @@ export function OrderChat({
   return (
     // V21/P7.af — Fixed chat height; the message list scrolls inside so
     // the card never grows per message. On mobile the 720px target is
-    // capped to the visual viewport (dvh) so the thread + composer always
-    // fit on screen — including when the soft keyboard shrinks the
-    // viewport — and the internal MessageList scroll does the work.
+    // capped to the SMALL viewport (svh: browser bars shown) so the thread +
+    // composer always fit on screen, including when the soft keyboard
+    // shrinks the viewport, and the internal MessageList scroll does the
+    // work. Not dvh: it changes while the address bar slides during a page
+    // scroll, which resized the thread and made it scroll by itself
+    // (owner, 2026-10-21).
     // Desktop: absolutely fills its wrapper in _OrderClient (flex-1, min
     // 580px), so it ends level with the rail and messages never size it.
     <OrderCard
-      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 max-sm:h-[clamp(340px,100dvh_-_230px,640px)] lg:absolute lg:inset-0 lg:h-auto"
+      className="flex h-[clamp(360px,100svh_-_180px,720px)] flex-col overflow-hidden p-0 max-sm:h-[clamp(340px,100svh_-_230px,640px)] lg:absolute lg:inset-0 lg:h-auto"
       padded={false}
     >
       <ChatInterface

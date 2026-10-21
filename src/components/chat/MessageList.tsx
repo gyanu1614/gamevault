@@ -238,7 +238,7 @@ export default function MessageList({
     <div className="relative flex min-h-0 flex-1 flex-col">
     <div
       ref={scrollRef}
-      className="min-h-0 flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
     >
     <div ref={contentRef} className="space-y-4 px-4 py-6">
       {/* V21/P5.c — Welcome banner shown only on empty state (no user

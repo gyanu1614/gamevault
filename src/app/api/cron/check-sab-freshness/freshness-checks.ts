@@ -3,7 +3,7 @@
  *
  * The pipeline is now three materialized hops deep:
  *
- *   raw listings  --(crawl, every 3h)-->  sab_market_raw_listings.observed_at
+ *   raw listings  --(crawl, daily)----->  sab_market_raw_listings.observed_at
  *   evidence      --(refresh)---------->  sab_market_evidence_display.refreshed_at
  *   prices        --(refresh)---------->  sab_price_display.price_updated_at
  *
@@ -48,44 +48,39 @@ export type FreshnessCheck = {
 }
 
 /**
- * The three hops, each with its real cadence read off the schedules:
+ * The three hops, each with its real cadence read off the schedules.
  *
- *  - evidence + raw listings advance once per crawl. The Eldorado collector runs
- *    every 3 hours (.github/workflows/sab-eldorado-daily.yml) and the import
- *    edge function refreshes the evidence snapshot at the end of every run, so
- *    both hops have a 3h cadence and a 6h threshold.
+ * All three advance once a day, in the shared pricing window
+ * (.github/workflows/values-pricing-daily.yml; T1, 2026-10-04): the crawl
+ * writes raw listings, then `pnpm reprice --game=sab` refreshes the evidence
+ * snapshot and the price display. So the cadence is 24 h and the threshold
+ * (2x) 48 h: one late or skipped run is not an alert, two are.
  *
- *    T1 (2026-10-04): the crawl is now ONCE a day, in the shared pricing
- *    window (.github/workflows/values-pricing-daily.yml, 02:10 UTC, done by
- *    ~04:30). The 6h threshold is kept on purpose: both places this check
- *    runs read it right after the crawl — in-job straight after the reprice,
- *    and the daily Vercel cron at 06:40 UTC, ~2–4h after the window — so
- *    "older than 6h" still means "today's run did not land".
- *  - sab_price_display advances from the same crawl: the reprice runs as a
- *    runner step right after every collect (pnpm reprice --game=sab), so it has
- *    the crawl's 3h cadence and the same 6h threshold. There is no daily Vercel
- *    backstop any more (2026-09-20): the 10:00 UTC correct-prices entry ran the
- *    same reprice a second time, on a 300s budget it could not meet.
+ * Until 2026-10-21 these still said "every 3 hours" with a 6 h threshold. The
+ * daily Vercel cron (06:40 UTC) runs BEFORE that day's run (GitHub starts the
+ * 02:10 schedule 5-7 h late), so it saw ~23 h old data every morning and
+ * emailed a false "stopped advancing" alert. A failed run is still loud the
+ * same day: the reprice step fails the job, and the in-job freshness step runs
+ * right after it.
  */
 export const FRESHNESS_CHECKS: FreshnessCheck[] = [
   {
     table: 'sab_market_evidence_display',
     column: 'refreshed_at',
-    cadenceHours: 3,
-    cadence: 'refreshed at the end of every Eldorado crawl (every 3 hours)',
+    cadenceHours: 24,
+    cadence: 'refreshed by the daily pricing run (Values Pricing Daily, once a day)',
   },
   {
     table: 'sab_price_display',
     column: 'price_updated_at',
-    cadenceHours: 3,
-    cadence:
-      'refreshed by the reprice step at the end of every Eldorado crawl (every 3 hours)',
+    cadenceHours: 24,
+    cadence: 'refreshed by the reprice step of the daily pricing run (once a day)',
   },
   {
     table: 'sab_market_raw_listings',
     column: 'observed_at',
-    cadenceHours: 3,
-    cadence: 'written by every Eldorado crawl (every 3 hours)',
+    cadenceHours: 24,
+    cadence: 'written by the daily Eldorado crawl (once a day)',
   },
 ]
 
