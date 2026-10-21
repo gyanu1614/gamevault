@@ -10,17 +10,7 @@
  * nothing is left behind (no fixture rows, no sab_import_runs rows).
  */
 import { describe, it, expect } from 'vitest'
-import { execFileSync } from 'node:child_process'
-
-const DB_URL = process.env.SUPABASE_DB_URL ?? ''
-const host = (() => {
-  try {
-    return new globalThis.URL(DB_URL).hostname
-  } catch {
-    return ''
-  }
-})()
-const LOCAL = ['127.0.0.1', 'localhost', '::1', '[::1]'].includes(host)
+import { DB_IS_LOCAL, runRolledBack } from './local-psql'
 
 const SOURCE = 'guardtest-raw-slim'
 const item = (over: Record<string, unknown> = {}) =>
@@ -40,22 +30,12 @@ const item = (over: Record<string, unknown> = {}) =>
     },
   ]).replace(/'/g, "''")
 
-/** Runs the statements in one transaction that always rolls back. Each
- *  `select` prints one `|`-separated line. */
-function runRolledBack(statements: string[]): string[] {
-  const script = ['BEGIN;', ...statements.map((s) => `${s};`), 'ROLLBACK;'].join('\n')
-  const out = execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-At', '-F', '|', '-c', script], {
-    stdio: 'pipe',
-  })
-  return out.toString().trim().split('\n').filter(Boolean)
-}
-
 const imp = (json: string) =>
   `select records_inserted || '/' || records_updated from public.sab_import_market_listings('${SOURCE}', '${json}'::jsonb)`
 const status = `select parse_status || '/' || total_price_usd from public.sab_market_raw_listings where external_listing_id = 'slim-1'`
 const markPending = `update public.sab_market_raw_listings set parse_status = 'pending' where external_listing_id = 'slim-1'`
 
-describe.skipIf(!LOCAL)('sab_import_market_listings stays light', () => {
+describe.skipIf(!DB_IS_LOCAL)('sab_import_market_listings stays light', () => {
   const setup = `insert into public.sab_market_sources (slug, name, collection_method, status) values ('${SOURCE}', 'Guard Raw Slim', 'scraper', 'active')`
 
   it('stores only the payload keys anything reads', () => {
