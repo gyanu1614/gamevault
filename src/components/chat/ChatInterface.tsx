@@ -11,6 +11,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { useSellerOnline } from '@/hooks/use-seller-presence'
 import { useChatThread } from '@/hooks/use-chat-thread'
 import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
+import { replySnippet, senderLabel } from '@/lib/chat/reply'
 import { AlertCircle } from 'lucide-react'
 import type { ChatRow } from '@/lib/chat/message-state'
 
@@ -173,6 +174,10 @@ export default function ChatInterface({
     send: handleSend,
     retry: handleRetry,
     setAtBottom,
+    reactions,
+    react,
+    replyToId,
+    setReplyTo,
   } = useChatThread({
     conversationId,
     currentUserId,
@@ -181,6 +186,14 @@ export default function ChatInterface({
     onIncoming: handleIncoming,
     onDelivered: () => void handleDelivered(),
   })
+
+  // React / Reply: the two parties while the chat is open; admins always
+  // (they already write in dispute chats). Copy is offered to everyone.
+  const canInteract = isParticipant ? !isChatExpired : isAdmin
+  const replyTarget = replyToId ? messages.find((m) => m.id === replyToId) : undefined
+  const replyingTo = replyTarget
+    ? { id: replyTarget.id, name: senderLabel(replyTarget.sender_id, currentUserId, namesRef.current), snippet: replySnippet(replyTarget) }
+    : null
 
   if (error) {
     return (
@@ -201,7 +214,9 @@ export default function ChatInterface({
   }
 
   return (
-    <div className={`flex h-full flex-col bg-bg-raised ${className}`}>
+    // The card gradient (#212228 → #1A1B1F), lighter than the flat page
+    // surface; --chat-canvas is what reaction chips cut out of.
+    <div className={`flex h-full flex-col bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] [--chat-canvas:#1E1F24] ${className}`}>
       {/* Admin View: Party Indicators */}
       {isAdmin && order?.buyer && order?.seller && (
         <div className="bg-gradient-to-r from-gray-500/10 via-black to-[rgba(86,184,127,0.10)] border-b border-border-subtle px-4 py-2">
@@ -251,7 +266,7 @@ export default function ChatInterface({
           area so the chat reads as a real conversation surface and
           not just a stream of bubbles. */}
       {otherUser && (
-        <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-border-subtle bg-white/[0.025] px-4 py-3">
           <div className="relative flex-shrink-0">
             {/* Same avatar source as the rest of the page: uploaded photo,
                 else the DiceBear character seeded by username. */}
@@ -263,7 +278,7 @@ export default function ChatInterface({
             {otherOnline !== null && (
               <span
                 aria-label={otherOnline ? 'Online' : 'Offline'}
-                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-bg-raised ${
+                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-[#24252B] ${
                   otherOnline ? 'bg-green-400' : 'bg-text-tertiary'
                 }`}
               />
@@ -272,6 +287,11 @@ export default function ChatInterface({
           <div className="min-w-0 flex-1 leading-tight">
             <div className="flex items-center gap-1.5 text-[13.5px] font-bold text-text-primary">
               {otherUser.username ?? 'User'}
+              {otherOnline !== null && (
+                <span className={`text-[11px] font-medium ${otherOnline ? 'text-green-400' : 'text-text-tertiary'}`}>
+                  {otherOnline ? 'Online' : 'Offline'}
+                </span>
+              )}
             </div>
             {order && (
               <div className="mt-0.5 truncate text-[11.5px] text-text-secondary">
@@ -296,6 +316,9 @@ export default function ChatInterface({
         autoScroll={true}
         onRetry={handleRetry}
         onAtBottomChange={setAtBottom}
+        reactions={reactions}
+        onReact={canInteract ? react : undefined}
+        onReply={canInteract ? setReplyTo : undefined}
       />
 
       {/* Message Input */}
@@ -311,6 +334,9 @@ export default function ChatInterface({
         disabled={isLoading || (isChatExpired && !isAdmin)}
         allowAttachments={canAttach}
         optimistic
+        replyingTo={canInteract ? replyingTo : null}
+        onCancelReply={() => setReplyTo(null)}
+        className="bg-[#1A1B1F]"
       />
     </div>
   )

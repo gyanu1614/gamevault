@@ -49,6 +49,14 @@ describe('storeMessage (the one insert path for every chat surface)', () => {
     ])
   })
 
+  it('a reply carries reply_to_id, and only a reply does', async () => {
+    const { client, calls } = fakeClient({ insert: { data: stored, error: null } })
+    await storeMessage(client, { id: 'id-1', conversationId: 'c1', senderId: 'me', content: 'yes', replyToId: 'm0' })
+    await storeMessage(client, { id: 'id-2', conversationId: 'c1', senderId: 'me', content: 'no reply', replyToId: null })
+    expect(calls.inserted[0]).toMatchObject({ reply_to_id: 'm0' })
+    expect(calls.inserted[1]).not.toHaveProperty('reply_to_id')
+  })
+
   it('sends the uploaded attachment path, and only when there is one', async () => {
     const { client, calls } = fakeClient({ insert: { data: stored, error: null } })
     await storeMessage(client, {

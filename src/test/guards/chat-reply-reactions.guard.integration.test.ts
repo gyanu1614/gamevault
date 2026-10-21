@@ -21,6 +21,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js'
 import { hasEnv, makeFixture, type Fixture } from './throwaway'
 import { CHAT_REACTIONS } from '@/lib/chat/reactions'
+import { THREAD_SELECT, splitThreadRows } from '@/lib/chat/thread-read'
 
 let fx: Fixture | null = null
 let convoA = ''
@@ -173,6 +174,14 @@ describe.skipIf(!hasEnv)('chat: replies, reactions, instant delivery (integratio
       expect(react.error?.code).toBe('42501')
       const { data } = await fx!.buyer.client.from('message_reactions').select('emoji').eq('message_id', sellerMsgB)
       expect(data ?? []).toEqual([])
+    })
+
+    it('the thread read (messages + embedded reactions) returns them to a participant in one request', async () => {
+      const { data, error } = await fx!.seller.client.from('messages').select(THREAD_SELECT).eq('conversation_id', convoA).order('created_at')
+      expect(error).toBeNull()
+      const { rows, reactions } = splitThreadRows(data)
+      expect(rows.some((m) => m.id === sellerMsgA)).toBe(true)
+      expect(reactions).toContainEqual(expect.objectContaining({ message_id: sellerMsgA, user_id: fx!.buyer.id, emoji: HEART }))
     })
 
     it('the anon key reads nothing', async () => {

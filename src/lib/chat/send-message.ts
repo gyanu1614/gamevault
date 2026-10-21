@@ -21,6 +21,8 @@ export interface StoreMessageInput {
   content: string
   /** Storage path of an already-uploaded attachment, if any. */
   attachmentPath?: string | null
+  /** The message this one replies to (same conversation; the DB checks). */
+  replyToId?: string | null
 }
 
 /** The slice of the Supabase browser client this needs (typed loosely, as
@@ -42,6 +44,7 @@ export async function storeMessage(client: MessagesWriteClient, input: StoreMess
       content: input.content,
       is_read: false,
       ...(input.attachmentPath ? { attachments: [input.attachmentPath] } : {}),
+      ...(input.replyToId ? { reply_to_id: input.replyToId } : {}),
     })
     .select('*')
     .single()

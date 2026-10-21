@@ -11,6 +11,20 @@
 export const CHAT_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const
 export type ChatReactionEmoji = (typeof CHAT_REACTIONS)[number]
 
+/** Screen-reader names for the six emoji. */
+export const REACTION_LABELS: Record<ChatReactionEmoji, string> = {
+  '👍': 'Like',
+  '❤️': 'Love',
+  '😂': 'Haha',
+  '😮': 'Wow',
+  '😢': 'Sad',
+  '🙏': 'Thanks',
+}
+
+export function reactionLabel(emoji: string): string {
+  return isChatReaction(emoji) ? REACTION_LABELS[emoji] : emoji
+}
+
 export interface ReactionRow {
   message_id: string
   user_id: string

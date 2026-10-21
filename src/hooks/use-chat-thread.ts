@@ -10,8 +10,12 @@
  *    client-minted id shared with the insert, the insert response and the
  *    realtime echo — the bubble settles in place, never re-mounts);
  *  - Sending… → Sent → Read; a failure stays as "Not sent · Retry";
- *  - realtime INSERT/UPDATE rows are merged by id, plus a quiet re-sync on
- *    (re)subscribe, tab focus and a 20 s poll;
+ *  - live: the private broadcast topic chat:<conversation id> (a DB trigger
+ *    sends every new message, read receipt and reaction; only the two
+ *    parties and admins may join), merged by id, plus a quiet re-sync on
+ *    (re)subscribe, tab focus and a 60 s poll;
+ *  - replies (reply_to_id) and one emoji reaction per person per message
+ *    (useChatReactions);
  *  - the other party's messages are stamped read only once seen (tab
  *    visible AND the newest message in view).
  *
@@ -26,6 +30,10 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { attachmentOnlyLabel, uploadChatAttachment } from '@/lib/chat/attachments'
 import { storeMessage } from '@/lib/chat/send-message'
+import { chatTopic, parseChatBroadcast } from '@/lib/chat/broadcast'
+import { THREAD_SELECT, splitThreadRows } from '@/lib/chat/thread-read'
+import type { ReactionRow } from '@/lib/chat/reactions'
+import { useChatReactions } from '@/hooks/use-chat-reactions'
 import {
   addOptimistic,
   markLocalStatus,
@@ -73,6 +81,13 @@ export interface ChatThread {
   retry: (id: string) => void
   /** For MessageList `onAtBottomChange` (drives mark-as-read). */
   setAtBottom: (atBottom: boolean) => void
+  /** Every reaction in this conversation (MessageList groups them). */
+  reactions: ReactionRow[]
+  /** Tap an emoji on a message: add, change or take off the viewer's reaction. */
+  react: (messageId: string, emoji: string) => void
+  /** The message the next send replies to (cleared by the send). */
+  replyToId: string | null
+  setReplyTo: (messageId: string | null) => void
 }
 
 interface PendingSend {
@@ -83,6 +98,7 @@ interface PendingSend {
   attachmentPath: string | null
   /** Order folder the file was accepted for at send time. */
   attachOrderId: string | null
+  replyToId: string | null
   /** The bubble, so it survives switching conversations and back. */
   bubble: ChatMessage
   inFlight: boolean
@@ -118,6 +134,17 @@ export function useChatThread({
   const attachOrderIdRef = useRef(attachOrderId)
   attachOrderIdRef.current = attachOrderId
 
+  // Declared before the thread read below so a conversation switch clears
+  // its reactions before the new read lands.
+  const reactions = useChatReactions({ conversationId, conversationRef, currentUserId, supabase })
+  const { replace: replaceReactions, apply: applyReaction } = reactions
+
+  // The message being replied to; a different conversation starts fresh.
+  const [replyToId, setReplyToId] = useState<string | null>(null)
+  const replyToRef = useRef(replyToId)
+  replyToRef.current = replyToId
+  useEffect(() => setReplyToId(null), [conversationId])
+
   // Tab visibility + "is the newest message on screen" (from MessageList):
   // together they decide when messages count as read and whether a new
   // message deserves a toast. Refs mirror them for the realtime callback.
@@ -145,15 +172,16 @@ export function useChatThread({
     if (conversationRef.current === convId) setMessages(update)
   }, [])
 
+  // One read for the thread AND its reactions (lib/chat/thread-read).
   const fetchThread = useCallback(
-    async (convId: string): Promise<ChatRow[]> => {
+    async (convId: string): Promise<{ rows: ChatRow[]; reactions: ReactionRow[] }> => {
       const { data, error: fetchError } = await supabase
         .from('messages')
-        .select('*')
+        .select(THREAD_SELECT)
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true })
       if (fetchError) throw fetchError
-      return (data ?? []) as unknown as ChatRow[]
+      return splitThreadRows(data)
     },
     [supabase],
   )
@@ -174,8 +202,10 @@ export function useChatThread({
     setIsLoading(true)
     setError(null)
     fetchThread(conversationId)
-      .then((rows) => {
-        if (alive) setMessages((prev) => mergeServer(prev, rows))
+      .then(({ rows, reactions: found }) => {
+        if (!alive) return
+        setMessages((prev) => mergeServer(prev, rows))
+        replaceReactions(conversationId, found)
       })
       .catch((err) => {
         console.error('Error fetching messages:', err)
@@ -187,7 +217,7 @@ export function useChatThread({
     return () => {
       alive = false
     }
-  }, [conversationId, fetchThread])
+  }, [conversationId, fetchThread, replaceReactions])
 
   // Quiet re-sync with the server. mergeServer keeps pending/failed sends
   // and returns the same array when nothing changed, so it never flickers.
@@ -201,12 +231,13 @@ export function useChatThread({
     if (now - lastResyncRef.current < RESYNC_MIN_GAP_MS) return
     lastResyncRef.current = now
     try {
-      const rows = await fetchThread(convId)
+      const { rows, reactions: found } = await fetchThread(convId)
       applyFor(convId, (prev) => mergeServer(prev, rows))
+      replaceReactions(convId, found)
     } catch {
       // A failed background re-sync is retried by the next trigger.
     }
-  }, [fetchThread, applyFor])
+  }, [fetchThread, applyFor, replaceReactions])
   const resyncRef = useRef(resync)
   resyncRef.current = resync
 
@@ -240,17 +271,18 @@ export function useChatThread({
   const invalidateUnreadRef = useRef(invalidateUnread)
   invalidateUnreadRef.current = invalidateUnread
 
-  // Real-time subscription: one channel per conversation. Rows are merged
-  // straight from the payload (REPLICA IDENTITY FULL carries the whole row)
-  // instead of refetching the thread on every insert and read receipt.
+  // Live channel: the private topic chat:<conversation id>. A DB trigger
+  // broadcasts each messages INSERT/UPDATE and message_reactions change
+  // (migration 20261021222022); only the two parties and admins may join
+  // (RLS on realtime.messages, checked at join). Rows are merged straight
+  // from the payload instead of refetching the thread.
   useEffect(() => {
     if (!conversationId || !currentUserId) return
     let cancelled = false
     let channel: ReturnType<typeof supabase.channel> | null = null
 
-    // Join only once the socket carries the signed-in session: a channel
-    // joined with the anonymous key is filtered by RLS and never receives
-    // the other party's messages (they only showed after a refresh).
+    // Join only once the socket carries the signed-in session: a private
+    // channel joined with the anonymous key is refused.
     const join = async () => {
       const {
         data: { session },
@@ -259,37 +291,24 @@ export function useChatThread({
       if (session?.access_token) supabase.realtime.setAuth(session.access_token)
 
       channel = supabase
-        .channel(`order-chat:${conversationId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${conversationId}`,
-          },
-          (payload) => {
-            const row = payload.new as ChatRow
-            // Dedupe by id: the echo of my own send settles its optimistic
-            // bubble; anything else slots in by time.
-            applyFor(conversationId, (prev) => upsertRow(prev, row))
-            if (row.sender_id === currentUserId) return
-            const { visible, atBottom: seesNewest } = seenRef.current
-            onIncomingRef.current?.(row, visible && seesNewest)
-            if (row.sender_id) invalidateUnreadRef.current()
-          },
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${conversationId}`,
-          },
-          // Read receipts: the other side stamped is_read / read_at.
-          (payload) => applyFor(conversationId, (prev) => upsertRow(prev, payload.new as ChatRow)),
-        )
+        .channel(chatTopic(conversationId), { config: { private: true } })
+        .on('broadcast', { event: 'message' }, (msg) => {
+          const event = parseChatBroadcast(msg)
+          if (event?.kind !== 'message' || event.row.conversation_id !== conversationId) return
+          const row = event.row
+          // Dedupe by id: the echo of my own send settles its optimistic
+          // bubble; anything else slots in by time. An UPDATE is a read
+          // receipt (the other side stamped is_read / read_at).
+          applyFor(conversationId, (prev) => upsertRow(prev, row))
+          if (event.op !== 'INSERT' || row.sender_id === currentUserId) return
+          const { visible, atBottom: seesNewest } = seenRef.current
+          onIncomingRef.current?.(row, visible && seesNewest)
+          if (row.sender_id) invalidateUnreadRef.current()
+        })
+        .on('broadcast', { event: 'reaction' }, (msg) => {
+          const event = parseChatBroadcast(msg)
+          if (event) applyReaction(conversationId, event)
+        })
         .subscribe((status) => {
           // Joined or re-joined after a drop: pick up whatever was written
           // while the socket was away.
@@ -304,7 +323,7 @@ export function useChatThread({
       // topic gets a fresh channel instead of the one still leaving.
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [conversationId, currentUserId, supabase, applyFor])
+  }, [conversationId, currentUserId, supabase, applyFor, applyReaction])
 
   // Mark the other party's messages read once they are actually seen: tab
   // visible AND the newest message in view (not while scrolled up with the
@@ -364,6 +383,7 @@ export function useChatThread({
           senderId: currentUserId,
           content: pending.content,
           attachmentPath: pending.attachmentPath,
+          replyToId: pending.replyToId,
         })
 
         pendingRef.current.delete(id)
@@ -399,6 +419,8 @@ export function useChatThread({
       // messages.content can't be empty; a file-only message gets a label.
       const content = text || (file ? attachmentOnlyLabel(file.type) : text)
       const id = crypto.randomUUID()
+      const replyTo = replyToRef.current
+      setReplyToId(null)
 
       let localFiles: LocalFile[] | undefined
       if (file) {
@@ -417,6 +439,7 @@ export function useChatThread({
         senderId: currentUserId,
         content,
         localFiles,
+        replyToId: replyTo,
       })
       pendingRef.current.set(id, {
         conversationId: convId,
@@ -424,6 +447,7 @@ export function useChatThread({
         file: file ?? null,
         attachmentPath: null,
         attachOrderId: file ? attachOrderIdRef.current : null,
+        replyToId: replyTo,
         bubble,
         inFlight: false,
       })
@@ -433,5 +457,16 @@ export function useChatThread({
     [currentUserId, deliver],
   )
 
-  return { messages, isLoading, error, send, retry, setAtBottom }
+  return {
+    messages,
+    isLoading,
+    error,
+    send,
+    retry,
+    setAtBottom,
+    reactions: reactions.rows,
+    react: reactions.react,
+    replyToId,
+    setReplyTo: setReplyToId,
+  }
 }
