@@ -5,9 +5,15 @@ import { adoptMeHeadline, refreshValueEvidence } from './refresh'
 const NOW = '2026-10-09T12:00:00.000Z'
 const SITE = 'https://dropmarket.gg'
 
-/** A Supabase stand-in: seeded rows per table and per rpc, upserts captured. Filters are not evaluated. */
-function fakeDb(seed: Record<string, any[]>, rpc: any[] = []) {
+/**
+ * A Supabase stand-in: seeded rows per table, upserts captured. Filters are not
+ * evaluated. `series` is the per-(item, series_key) daily history; the two
+ * rpcs are answered from it like the SQL would: a per-item summary, and the
+ * full series only for the slugs asked for. Each rpc call is recorded.
+ */
+function fakeDb(seed: Record<string, any[]>, series: any[] = []) {
   const upserts: any[] = []
+  const rpcCalls: { name: string; args: any }[] = []
   const builder = (rows: any[]) => {
     const b: any = {}
     for (const m of ['select', 'eq', 'like', 'order', 'range', 'limit', 'in']) b[m] = () => b
@@ -15,8 +21,18 @@ function fakeDb(seed: Record<string, any[]>, rpc: any[] = []) {
     b.then = (res: any, rej: any) => Promise.resolve({ data: rows, error: null }).then(res, rej)
     return b
   }
+  const summary = () => {
+    const bySlug = new Map<string, Set<string>>()
+    for (const s of series) {
+      const daysSeen = bySlug.get(s.item_slug) ?? new Set<string>()
+      s.days.forEach((d: string, i: number) => s.vals[i] != null && daysSeen.add(d))
+      bySlug.set(s.item_slug, daysSeen)
+    }
+    return [...bySlug].map(([item_slug, d]) => ({ item_slug, history_days: d.size, first_priced_day: [...d].sort()[0] ?? null }))
+  }
   return {
     upserts,
+    rpcCalls,
     from: (table: string) => {
       const b = builder(seed[table] ?? [])
       b.upsert = async (rows: any[]) => {
@@ -25,7 +41,12 @@ function fakeDb(seed: Record<string, any[]>, rpc: any[] = []) {
       }
       return b
     },
-    rpc: () => builder(rpc),
+    rpc: async (name: string, args: any) => {
+      rpcCalls.push({ name, args })
+      if (name === 'seo_value_history_summary') return { data: summary(), error: null }
+      if (name === 'seo_value_series_for') return { data: series.filter((s) => args.p_item_slugs.includes(s.item_slug)), error: null }
+      throw new Error(`unexpected rpc ${name}`)
+    },
   }
 }
 
@@ -146,5 +167,47 @@ describe('new pages are announced on day one (owner 2026-10-10)', () => {
     // No history yet: first seen now, and it passes on offers alone even with the gate on.
     expect(fresh).toMatchObject({ first_seen_at: NOW, passes_gate: true, history_days: 0 })
     expect(db.upserts.find((u) => u.item_slug === 'old-fruit')).toMatchObject({ first_seen_at: '2026-09-01T00:00:00.000Z' })
+  })
+})
+
+// 2026-10-20 usage audit (C6): seo_value_series returned every item's whole
+// history and was paged with .range(), so each 1000-row page re-ran the full
+// aggregation (~7 times a call for Adopt Me), 2-3 calls a day per game.
+describe('the evidence refresh reads history cheaply', () => {
+  it('reads the per-item summary once and the full series only for pages with no stored evidence', async () => {
+    const db = fakeDb(
+      {
+        values_items: [
+          { slug: 'old-fruit', values_prices: { sample_size: 12, cheapest_usd: 5, price_changed_at: NOW } },
+          { slug: 'new-fruit', values_prices: { sample_size: 12, cheapest_usd: 9, price_changed_at: NOW } },
+        ],
+        seo_value_evidence: [{ item_slug: 'old-fruit', anchors: { '': 5 }, price_moved_at: '2026-09-01T00:00:00.000Z', passes_gate: true, passes_changed_at: null, first_seen_at: '2026-09-01T00:00:00.000Z' }],
+        seo_settings: [{ gate_mode: 'report' }],
+      },
+      [
+        { item_slug: 'old-fruit', series_key: '', ...days(10, 5) },
+        { item_slug: 'new-fruit', series_key: '', ...days(3, 9) },
+      ],
+    )
+    await refreshValueEvidence(db, 'murder-mystery-2', { now: NOW, record: vi.fn(), siteUrl: SITE })
+    expect(db.rpcCalls.map((c) => c.name)).toEqual(['seo_value_history_summary', 'seo_value_series_for'])
+    expect(db.rpcCalls[1].args.p_item_slugs).toEqual(['new-fruit'])
+    // The stored page still gets its history count from the summary.
+    expect(db.upserts.find((u) => u.item_slug === 'old-fruit')).toMatchObject({ history_days: 10 })
+    // The new page is replayed from its full series, as before.
+    expect(db.upserts.find((u) => u.item_slug === 'new-fruit')).toMatchObject({ history_days: 3, price_moved_at: '2026-09-10T00:00:00.000Z' })
+  })
+
+  it('skips the full-series rpc when every page is already stored', async () => {
+    const db = fakeDb(
+      {
+        values_items: [{ slug: 'old-fruit', values_prices: { sample_size: 12, cheapest_usd: 5, price_changed_at: NOW } }],
+        seo_value_evidence: [{ item_slug: 'old-fruit', anchors: { '': 5 }, price_moved_at: '2026-09-01T00:00:00.000Z', passes_gate: true, passes_changed_at: null, first_seen_at: '2026-09-01T00:00:00.000Z' }],
+        seo_settings: [{ gate_mode: 'report' }],
+      },
+      [{ item_slug: 'old-fruit', series_key: '', ...days(10, 5) }],
+    )
+    await refreshValueEvidence(db, 'murder-mystery-2', { now: NOW, record: vi.fn(), siteUrl: SITE })
+    expect(db.rpcCalls.map((c) => c.name)).toEqual(['seo_value_history_summary'])
   })
 })
