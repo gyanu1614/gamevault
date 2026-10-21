@@ -26,6 +26,8 @@ import { MarkReceivedModal } from './_MarkReceivedModal'
 import { DisputeModal } from './_DisputeModal'
 import { CancelOrderModal } from './_CancelOrderModal'
 import { RequestCancelModal } from './_RequestCancelModal'
+import { NotDeliveredModal, NotDeliveredRequestModal, NotDeliveredStatus } from './_NotDeliveredPanel'
+import type { NotDeliveredClaim } from '@/lib/actions/not-delivered'
 import { cancelCancellationRequest } from '@/lib/actions/order-cancellation'
 import { toast } from 'sonner'
 import { AuditLog } from './_AuditLog'
@@ -60,11 +62,15 @@ interface OrderClientProps {
   deliveryMethod?: CurrencyDeliveryMethod | null
   /** Buyer / admin: what came back as store credit and whether the service
    *  fee was kept (buyer-fault cancel). null before any refund. */
-  buyerRefund?: { credited: number; feeKept: boolean } | null
+  buyerRefund?: { credited: number; feeKept: boolean; total: number } | null
   /** Buyer: refund-to-original-method request state (refund policy). */
   refundToSource?: RefundToSourceState | null
   /** Buyer: Request Cancellation eligibility, and an already pending request. */
   cancelRequest?: { eligible: boolean; pending: boolean } | null
+  /** Buyer + seller: the order's "Cancel – Not Delivered" report, if any. */
+  notDelivered?: NotDeliveredClaim | null
+  /** The seller's response window for a new report (the delivery time, 15 min .. 24 h). */
+  notDeliveredWindowMinutes?: number
   gameName: string | null
   gameIconUrl: string | null
   categoryName: string | null
@@ -101,6 +107,8 @@ export function OrderClient(props: OrderClientProps) {
     buyerRefund = null,
     refundToSource = null,
     cancelRequest = null,
+    notDelivered = null,
+    notDeliveredWindowMinutes = 60,
     itemTitle,
     deliveryMethod = null,
     gameName,
@@ -162,6 +170,8 @@ export function OrderClient(props: OrderClientProps) {
   const [markReceivedOpen, setMarkReceivedOpen] = useState(false)
   const [cancelOrderOpen, setCancelOrderOpen] = useState(false)
   const [requestCancelOpen, setRequestCancelOpen] = useState(false)
+  const [notDeliveredOpen, setNotDeliveredOpen] = useState(false)
+  const [notDeliveredRequestOpen, setNotDeliveredRequestOpen] = useState(false)
   const withdrawCancelRequest = async () => {
     const res = await cancelCancellationRequest(order.id)
     if (res.error) {
@@ -312,7 +322,9 @@ export function OrderClient(props: OrderClientProps) {
 
   return (
     <div
-      className="has-backdrop relative isolate min-h-screen"
+      className="has-backdrop hero-dim-deep relative isolate min-h-screen"
+      // Owner 2026-10-19: the order art much darker (hero-dim-deep), so the
+      // chat and the order card own the page.
       // V21/P5.x — Same hero-backdrop pattern as HomePage. The
       // .hero-backdrop child below renders the art behind the
       // navbar via --page-hero-image; --hero-offset pulls it up
@@ -455,10 +467,38 @@ export function OrderClient(props: OrderClientProps) {
                   : undefined
               }
               onOpenDispute={openDispute}
+              onReportNotDelivered={
+                // Cancel – Not Delivered: overdue, still owed, and no report
+                // open or already answered (a withdrawn one can be re-made).
+                userRole === 'buyer' &&
+                (order.status === 'paid' || order.status === 'delivering') &&
+                !deliveredAt &&
+                (!notDelivered || notDelivered.status === 'withdrawn')
+                  ? () => setNotDeliveredOpen(true)
+                  : undefined
+              }
+              onRequestNotDeliveredCancel={
+                // The seller's window ran out with no response: ask DropMarket
+                // to cancel (an admin reviews it; nothing cancels by itself).
+                userRole === 'buyer' &&
+                (order.status === 'paid' || order.status === 'delivering') &&
+                !deliveredAt &&
+                notDelivered?.status === 'expired'
+                  ? () => setNotDeliveredRequestOpen(true)
+                  : undefined
+              }
               existingReview={existingReview}
               promoted
               hidePassiveOnMobile
             />
+            )}
+            {notDelivered && (order.status === 'paid' || order.status === 'delivering') && (
+              <NotDeliveredStatus
+                role={userRole}
+                orderId={order.id}
+                claim={notDelivered}
+                onWithdrawRequest={userRole === 'buyer' ? withdrawCancelRequest : undefined}
+              />
             )}
             {userRole === 'buyer' && order.status === 'completed' && <TrustpilotReviewLine />}
             {/* Mobile stacking: delivery instructions (small, actionable)
@@ -618,6 +658,19 @@ export function OrderClient(props: OrderClientProps) {
       {userRole === 'buyer' && (
         <>
           <RequestCancelModal open={requestCancelOpen} onOpenChange={setRequestCancelOpen} orderId={order.id} />
+          <NotDeliveredModal
+            open={notDeliveredOpen}
+            onOpenChange={setNotDeliveredOpen}
+            orderId={order.id}
+            windowMinutes={notDeliveredWindowMinutes}
+          />
+          <NotDeliveredRequestModal
+            open={notDeliveredRequestOpen}
+            onOpenChange={setNotDeliveredRequestOpen}
+            orderId={order.id}
+            creditAmount={Math.max(0, subtotal - Number(paymentSummary?.promoDiscount ?? order.promo_discount ?? 0))}
+            totalAmount={totalPaid}
+          />
           <MarkReceivedModal
             open={markReceivedOpen}
             onOpenChange={setMarkReceivedOpen}

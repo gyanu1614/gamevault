@@ -12,7 +12,8 @@
 import { Barcode, CreditCard, Landmark, QrCode, Smartphone, Store, Wallet, Zap, type LucideIcon } from 'lucide-react'
 
 import type { ClientMethod } from '@/lib/payments/eligibility'
-import { PAYMENT_METHOD_LOGOS } from '@/lib/payments/method-marks'
+import { PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
+import { flagEmoji } from '@/lib/geo/countries'
 
 export type MethodIcon = LucideIcon
 
@@ -70,19 +71,13 @@ export interface LocalMethodRow {
   region: string
   /** The database's buyer-fee quote for this order (checkout B3). */
   quote: ClientMethod['quote']
-  /** Real brand mark (public/payments/*.svg); Icon is the fallback. */
-  logo?: string
+  /** Real brand mark, drawn for a dark row (public/payments/ondark); Icon is the fallback. */
+  mark?: { logo: string; aspect: number }
   /** Emoji flag for the region chip: country flag, or 🌍 for multi-country. */
   flag: string
   countries: string[]
   Icon: MethodIcon
   points: string[]
-}
-
-/** ISO-3166 alpha-2 → emoji flag (regional-indicator pair). */
-function ccFlag(cc: string): string {
-  if (!/^[A-Za-z]{2}$/.test(cc)) return '🌍'
-  return String.fromCodePoint(...[...cc.toUpperCase()].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65))
 }
 
 export function toRow(m: ClientMethod): LocalMethodRow {
@@ -92,12 +87,31 @@ export function toRow(m: ClientMethod): LocalMethodRow {
     label: m.label,
     region: m.coverage,
     quote: m.quote,
-    logo: PAYMENT_METHOD_LOGOS[m.method],
-    flag: m.countries.length === 1 ? ccFlag(m.countries[0]) : '🌍',
+    mark: PAYMENT_METHOD_ONDARK[m.method],
+    flag: m.countries.length === 1 ? flagEmoji(m.countries[0]) : '🌍',
     countries: m.countries,
     Icon: ui.Icon,
     points: ui.points,
   }
+}
+
+/** The mark slot on a payment row. */
+export const MARK_SLOT = { width: 76, height: 30 } as const
+
+/**
+ * One optical size for every brand mark in the row's slot: a square tile
+ * stands the full height, a wide wordmark runs longer and lower (height ∝
+ * aspect^-0.4), so a GCash wordmark and a Touch 'n Go tile weigh the same.
+ */
+export function markSize(aspect: number): { width: number; height: number } {
+  const a = aspect > 0 && Number.isFinite(aspect) ? aspect : 1
+  let height = Math.min(MARK_SLOT.height, MARK_SLOT.height * Math.pow(a, -0.4))
+  let width = height * a
+  if (width > MARK_SLOT.width) {
+    width = MARK_SLOT.width
+    height = width / a
+  }
+  return { width: Math.round(width), height: Math.round(height) }
 }
 
 /** pm_ids with a METHOD_UI line (tests pin every registry method to one). */

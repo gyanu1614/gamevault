@@ -63,6 +63,11 @@ const PINNED_FILES = [
   // The one page that shows rates: every number on it comes from the
   // resolver at render time, so a literal in its source is a hard-coded rate.
   'src/app/(marketing)/sell/fees/page.tsx',
+  // Its sections and copy (split out 2026-10-15): the same rule, every number from the resolver.
+  'src/app/(marketing)/sell/fees/_fees-content.ts',
+  'src/app/(marketing)/sell/fees/_RateTables.tsx',
+  'src/app/(marketing)/sell/fees/_LowerRate.tsx',
+  'src/app/(marketing)/sell/fees/_GettingPaid.tsx',
   'src/components/account/BecomeSellerBanner.tsx',
   'src/components/account/BecomeSellerCta.tsx',
 ]

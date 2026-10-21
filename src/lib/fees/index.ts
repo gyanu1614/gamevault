@@ -90,8 +90,10 @@ export const WARRANTY_ACCOUNTS = {
 //
 // Refund amounts are decided in SQL (order_refund_buyer_credit, reached
 // through order_refund_to_wallet / order_cancel_return_wallet with a fault):
-// buyer fault = item price, fees kept; seller / platform fault = full. Nothing
-// in TypeScript computes a refund amount.
+// every policy refund credits the item price as store credit and keeps the
+// fees (fee_kept:<order>); a refund to the payment method pays the full
+// amount (refund_to_source_*). The fault only decides the seller's record.
+// Nothing in TypeScript computes a refund amount.
 
 /** ADJUSTABLE to actual PSP fee once contracts sign. */
 export const CHARGEBACK_FEE_USD = 20

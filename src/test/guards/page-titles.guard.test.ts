@@ -33,6 +33,9 @@ vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react')>()),
   cache: (fn: unknown) => fn,
 }))
+// next/font is a build-time loader; /blog (2026-10-15) loads the blog's Lato
+// face at module scope, like the game blog pages. Only metadata is read here.
+vi.mock('next/font/google', () => ({ Lato: () => ({ className: '', variable: '', style: {} }) }))
 vi.mock('next/cache', () => ({
   unstable_cache: (fn: () => Promise<unknown>) => fn,
   revalidateTag: () => undefined,

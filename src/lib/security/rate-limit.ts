@@ -51,6 +51,9 @@ export const RATE_LIMITS = {
    *  60 a minute per IP is generous for people and stops a script filling the
    *  table. */
   valueEvent: { limit: 60, windowSeconds: 60 },
+  /** Buyer order reports ("Cancel – Not Delivered"): each one notifies and
+   *  emails the seller, so a few a minute per user is plenty. */
+  orderReport: { limit: 5, windowSeconds: 60 },
 } as const satisfies Record<string, RateLimitBudget>
 
 export type RateLimitName = keyof typeof RATE_LIMITS

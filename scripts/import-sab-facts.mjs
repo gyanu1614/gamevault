@@ -2,7 +2,7 @@
 /**
  * Loads scripts/values-seeds/steal-a-brainrot.facts.json (built by
  * `pnpm sab:facts:collect`) into sab_brainrots.released_at / origin /
- * how_to_get (migration 20261019193145), so the value pages show the shared
+ * how_to_get (migration 20261020180531), so the value pages show the shared
  * facts and a re-check ships without a deploy.
  *
  * Idempotent: every entry is validated first (one bad entry fails the run
