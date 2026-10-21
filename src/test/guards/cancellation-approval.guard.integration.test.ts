@@ -171,6 +171,27 @@ describe.skipIf(!hasEnv)('admin cancellation approval — money first, one RPC (
     expect((await requestRow(req)).status).toBe('approved')
   })
 
+  it('a Not Delivered request whose order the seller has since delivered is CLOSED, not refunded', async () => {
+    const id = await insertPaidOrder()
+    const req = await request(id)
+    // The report this request came from (order_not_delivered_request_cancel links it).
+    const { error: ce } = await (fx!.svc.from('order_not_delivered_claims' as any).insert as any)({
+      order_id: id, buyer_id: fx!.buyer.id, seller_id: fx!.seller.id, due_at: new Date(Date.now() - 3600e3).toISOString(),
+      opened_at: new Date(Date.now() - 1800e3).toISOString(), grace_ends_at: new Date(Date.now() - 60e3).toISOString(),
+      window_minutes: 20, status: 'cancel_requested', cancellation_request_id: req,
+    })
+    if (ce) throw new Error(`claim: ${ce.message}`)
+    await rpc('order_mark_delivered', { p_order_id: id, p_seller_id: fx!.seller.id })
+    const before = await buyerWallet()
+    const { processCancellationRequest } = await import('@/lib/actions/order-cancellation')
+    const r = await processCancellationRequest(req, 'approve', undefined, 'seller')
+    expect(r.error?.message).toMatch(/delivered/i)
+    expect(await buyerWallet()).toBe(before)
+    expect((await orderRow(id)).status).toBe('delivered')
+    expect((await requestRow(req)).status).toBe('closed')
+    await fx!.svc.from('order_not_delivered_claims' as any).delete().eq('order_id', id)
+  })
+
   it('disputed: nothing changes and the request stays pending (retryable)', async () => {
     const id = await insertPaidOrder()
     await open(id)

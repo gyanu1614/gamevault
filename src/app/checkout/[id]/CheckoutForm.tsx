@@ -21,7 +21,7 @@
  * preselects.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from '@/components/navigation/AppLink'
@@ -48,18 +48,15 @@ import {
   X,
 } from 'lucide-react'
 
-import PaymentsRoundedIcon from '@mui/icons-material/PaymentsRounded'
-import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded'
-import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
-import CurrencyExchangeRoundedIcon from '@mui/icons-material/CurrencyExchangeRounded'
 import GppGoodRoundedIcon from '@mui/icons-material/GppGoodRounded'
 import HttpsRoundedIcon from '@mui/icons-material/HttpsRounded'
-import PublicRoundedIcon from '@mui/icons-material/PublicRounded'
 import { createCheckout, quoteCheckoutMethods } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
-import { orderMethodsForRegion, regionForCountry, regionsWithMethods, type RegionId } from '@/lib/payments/regions'
+import { orderMethodsForRegion, regionForCountry } from '@/lib/payments/regions'
+import { countryName, flagEmoji } from '@/lib/geo/countries'
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { clampCheckoutQty } from './qty'
-import { toRow, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { MARK_SLOT, markSize, toRow, type LocalMethodRow, type MethodIcon } from './_method-ui'
 import { lowestFeeMethodId } from '@/lib/payments/lowest-fee'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
@@ -67,6 +64,7 @@ import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { cn } from '@/lib/utils'
 import { SERVICE_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { SilverIcon } from '@/components/ui/silver-icon'
 import { CheckoutNavbar } from '../_components/CheckoutNavbar'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { sellerStatText } from '@/lib/seller/stat-line'
@@ -101,6 +99,9 @@ const T = {
   amberLn: 'rgba(255,178,62,0.35)',
   nav: '#16171B',
 }
+
+/** The country picker's "Other Country" value (no geo rails: crypto only). */
+const OTHER_COUNTRY = 'other'
 
 function fmtUnitPrice(n: number): string {
   if (n === 0) return '$0.00'
@@ -149,28 +150,22 @@ function LightSelect({
   options,
   ariaLabel,
   placeholder,
-  leading,
-  size = 'md',
 }: {
   value: string
   onChange: (v: string) => void
   options: Array<{ value: string; label: string; icon?: string; hint?: string; disabled?: boolean }>
   ariaLabel: string
   placeholder?: string
-  /** Rendered before the label in the trigger (e.g. a region icon). */
-  leading?: React.ReactNode
-  size?: 'md' | 'sm'
 }) {
   const selected = options.find((o) => o.value === value)
   return (
     <Select.Root value={value} onValueChange={onChange}>
       <Select.Trigger
         aria-label={ariaLabel}
-        className={cn('flex w-full items-center justify-between gap-2 rounded-md border px-3 font-medium outline-none transition-colors focus-visible:border-focus-border', size === 'sm' ? 'h-9 text-[13px]' : 'h-[42px] text-[14px]')}
+        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3 text-[14px] font-medium outline-none transition-colors focus-visible:border-focus-border"
         style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
       >
         <span className="flex min-w-0 items-center gap-2">
-          {leading}
           {selected?.icon && <Image src={selected.icon} alt="" width={18} height={18} unoptimized />}
           {selected ? (
             <span className="truncate">{selected.label}</span>
@@ -270,12 +265,12 @@ function InfoDot({
                 </span>
               )}
             </p>
-            <p className="mt-1 max-w-[190px] text-[11.5px] leading-snug" style={{ color: T.ink2 }}>
+            <p className="mt-1 w-max max-w-[280px] text-[12px] leading-snug" style={{ color: T.ink2 }}>
               {text}
             </p>
           </div>
         ) : (
-          <p className="max-w-[220px] px-3 py-2 text-[12px] leading-snug" style={{ color: T.ink }}>
+          <p className="max-w-[280px] px-3 py-2 text-[12px] leading-snug" style={{ color: T.ink }}>
             {text}
           </p>
         )}
@@ -371,7 +366,7 @@ function CompanyStrip() {
       <div className="mx-auto flex w-full max-w-[1120px] flex-col items-center justify-between gap-2.5 px-4 py-4 sm:px-10 lg:flex-row lg:py-3.5">
         <div className="flex flex-col items-center gap-2 lg:flex-row lg:gap-6">
           <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Landmark className="h-4 w-4 shrink-0" style={{ color: T.accentText }} />
+            <Landmark className="h-4 w-4 shrink-0" style={{ color: T.ink2 }} />
             <span>
               <b className="font-semibold" style={{ color: T.ink }}>DropMarket Ltd</b>
               <span className="hidden sm:inline"> · Registered In The United Kingdom · Company No. 17309867</span>
@@ -379,7 +374,7 @@ function CompanyStrip() {
             </span>
           </span>
           <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Lock className="h-4 w-4 shrink-0" style={{ color: T.accentText }} />
+            <Lock className="h-4 w-4 shrink-0" style={{ color: T.ink2 }} />
             <span>
               Secured By <b className="font-semibold" style={{ color: T.ink }}>DropMarket Payments</b>
             </span>
@@ -387,7 +382,7 @@ function CompanyStrip() {
         </div>
         <nav className="flex items-center gap-4 text-[11.5px] font-medium" style={{ color: T.ink2 }}>
           <Link href="/support" className={`${link} flex items-center gap-1.5`}>
-            <LifeBuoy className="h-3.5 w-3.5" style={{ color: T.accentText }} />
+            <LifeBuoy className="h-3.5 w-3.5" style={{ color: T.ink2 }} />
             Support
           </Link>
           <span aria-hidden className="h-3 w-px" style={{ background: T.line }} />
@@ -424,17 +419,20 @@ interface CheckoutFormProps {
   methods: ClientMethod[]
   /** Currency delivery method the seller hands the order over with, or null. */
   deliveryMethod?: CurrencyDeliveryMethod | null
+  /** Back from a provider page with this listing's order still unpaid
+   *  (?order=<id> on the URL): say so above the methods. */
+  unfinishedPayment?: boolean
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false }: CheckoutFormProps) {
   const router = useRouter()
 
-  // Flat selector (checkout regions, 2026-09-26): rails local to the
-  // buyer's own country first, then the rest of their region, then
-  // Cryptocurrency last (first and only when the region has nothing). The
-  // region comes from the geo country; a chip row lets the buyer switch.
-  // Rows derive from the provider registry, so new methods surface
-  // automatically.
+  // Flat selector (checkout regions, 2026-09-26): the buyer's own-country
+  // rails, or the region's when the country has none, then Cryptocurrency
+  // last (first and only when nothing else fits). The country comes from
+  // geo; "Paying from … · Change" under the list lets a buyer on a VPN or
+  // abroad pick theirs (owner 2026-10-19). Rows derive from the provider
+  // registry, so new methods surface automatically.
   // The quotes start as the page's (promo 0, store credit 0) and are
   // re-quoted by quoteCheckoutMethods when the promo, the store-credit
   // toggle or the quantity changes — the SQL quote is the only fee math.
@@ -446,15 +444,26 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const walletQuote = quotedMethods.find((m) => m.kind === 'wallet')?.quote ?? null
   const geoCc = (buyerCountry ?? '').trim().toUpperCase()
   const geo = /^[A-Z]{2}$/.test(geoCc) ? geoCc : null
-  const [region, setRegion] = useState<RegionId>(() => regionForCountry(geo))
-  const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, region, geo)
+  const [country, setCountry] = useState<string | null>(geo)
+  const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, regionForCountry(country), country)
   const orderedRows = [...localRows, ...regionalRows]
   // "Lowest Fee" tag: the cheapest of the buyer's OWN-country methods for
   // this order — never a regional rail they can't use (a Vietnamese buyer is
   // not pointed at Indonesia's QRIS) and never crypto. Re-derived from the
   // live quotes on every render.
   const lowestFeeId = lowestFeeMethodId(localRows)
-  const regionChips = regionsWithMethods(allLocalRows, region)
+  // The countries worth picking: every country one of this order's local
+  // rails lists (sorted by name), plus the buyer's own, then Other Country.
+  const countryOptions = useMemo<ComboboxOption[]>(() => {
+    const codes = new Set<string>()
+    for (const m of quotedMethods) if (m.kind === 'local') for (const c of m.countries) codes.add(c)
+    if (geo) codes.add(geo)
+    const named = [...codes].map((cc) => ({ cc, name: countryName(cc) })).sort((a, b) => a.name.localeCompare(b.name))
+    return [
+      ...named.map(({ cc, name }) => ({ value: cc, label: `${flagEmoji(cc)}  ${name}`, keywords: [name] })),
+      { value: OTHER_COUNTRY, label: '🌍  Other Country' },
+    ]
+  }, [quotedMethods, geo])
 
   // Quantity comes clamped from the ?qty deep-link (chosen on the item page)
   // — the same clamp the page quoted the buyer fee for.
@@ -463,11 +472,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // Payment method: NOTHING is picked until the buyer taps a row (owner
   // call 2026-09-28) — Pay Now stays disabled until then.
   const [payMethod, setPayMethod] = useState<PayMethodId | null>(null)
-  // Switching region re-orders the list; a pick that is no longer listed
+  // Switching country re-orders the list; a pick that is no longer listed
   // is cleared (crypto is always listed, so it survives).
-  const selectRegion = (id: RegionId) => {
-    setRegion(id)
-    const next = orderMethodsForRegion(allLocalRows, id, geo)
+  const selectCountry = (v: string) => {
+    const cc = v === OTHER_COUNTRY ? null : v
+    setCountry(cc)
+    const next = orderMethodsForRegion(allLocalRows, regionForCountry(cc), cc)
     const rows = [...next.local, ...next.regional]
     if (payMethod && payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(null)
   }
@@ -584,24 +594,36 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [payError, setPayError] = useState<string | null>(null)
   // Crypto needs a coin picked before Pay makes sense.
   const payDisabled = paying || payMethod == null || (payMethod === 'crypto' && (!coin || !cryptoMethod)) || activeQuote == null
+  // Same-tab pay (owner 2026-10-16): every exit from checkout is a FULL
+  // navigation in this tab, so Back is plain browser history. Before leaving,
+  // this entry's URL gets ?order=<id>: Back then lands on a checkout that
+  // knows the order (Order Paid view, or a "not finished" note). A page the
+  // browser restores from its back/forward cache reloads, so it never shows
+  // a stale "Redirecting…" button.
+  const leftRef = useRef(false)
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted && leftRef.current) window.location.reload()
+    }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
+  const leaveFor = (orderId: string | undefined, url: string) => {
+    if (orderId) {
+      const sp = new URLSearchParams(window.location.search)
+      sp.set('order', orderId)
+      sp.delete('cancelled')
+      window.history.replaceState(null, '', `${window.location.pathname}?${sp.toString()}`)
+    }
+    leftRef.current = true
+    window.location.assign(url)
+  }
+
   const handlePay = async () => {
     if (!payMethod) return
     if (payMethod === 'crypto' && !coin) return
     setPaying(true)
     setPayError(null)
-    // Provider-hosted methods open in a NEW tab so DropMarket never
-    // disappears (some cashier pages — GCash — have no back/cancel at all).
-    // The tab must be claimed HERE, synchronously with the click, or popup
-    // blockers kill it; it shows a holding line until the charge exists.
-    let payTab: Window | null = null
-    if (payMethod !== 'crypto') {
-      payTab = window.open('', '_blank')
-      try {
-        payTab?.document.write(
-          '<title>Secure Payment</title><body style="margin:0;background:#16171B"><p style="font-family:system-ui;padding:24px;color:#E9EDF2">Opening your secure payment page…</p></body>'
-        )
-      } catch {}
-    }
     try {
       const result = await createCheckout({
         listingId: listing.id,
@@ -613,7 +635,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,
       })
       if (!result.success) {
-        payTab?.close()
+        // Paid on the provider page, Back, then Pay again before the webhook
+        // landed: the server keeps that order; show it, never re-charge.
+        if (result.alreadyPaid && result.orderId) {
+          toast.success(result.error || 'You have already paid for this order.')
+          leaveFor(result.orderId, `/checkout/paid/${result.orderId}`)
+          return
+        }
         setPayError(result.error || 'Checkout failed')
         toast.error(result.error || 'Checkout failed')
         setPaying(false)
@@ -627,24 +655,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         { beacon: true },
       )
       if (result.fullyPaidByWallet && result.orderId) {
-        payTab?.close()
-        toast.success('Paid From Wallet — redirecting to your order…')
-        router.push(`/orders/${result.orderId}`)
+        leaveFor(result.orderId, `/checkout/paid/${result.orderId}`)
         return
       }
       if (result.checkoutUrl) {
         if (payMethod !== 'crypto') {
-          if (payTab) {
-            // Payment in the new tab; THIS tab parks on the order page,
-            // which carries Resume Payment / Cancel Order / the countdown —
-            // the buyer's way back no matter what the cashier page allows.
-            payTab.location.href = result.checkoutUrl
-            if (result.orderId) router.push(`/account/orders/${result.orderId}`)
-            setPaying(false)
-            return
-          }
-          // Popup blocked → same-tab redirect (old behavior).
-          window.location.href = result.checkoutUrl
+          // The provider's page (Payssion) in THIS tab; its return comes back
+          // through /checkout/return → Order Paid.
+          leaveFor(result.orderId, result.checkoutUrl)
           return
         }
         // Carry the chosen coin (and, for USDT, its network) so the payment
@@ -652,14 +670,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         // net=trc20 (a TRON name) with it only confused the link.
         const sep = result.checkoutUrl.includes('?') ? '&' : '?'
         const params = coin === 'btc' ? 'coin=btc' : `coin=${coin}&net=${network}`
-        window.location.href = `${result.checkoutUrl}${sep}${params}`
+        leaveFor(result.orderId, `${result.checkoutUrl}${sep}${params}`)
         return
       }
-      payTab?.close()
       setPayError('No checkout URL returned')
       setPaying(false)
     } catch (err: any) {
-      payTab?.close()
       setPayError(err?.message || 'An unexpected error occurred')
       toast.error(err?.message || 'An unexpected error occurred')
       setPaying(false)
@@ -720,8 +736,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               onClick={() => setCoin(c.value)}
               className="flex items-center gap-2.5 rounded-md px-3.5 py-3 text-left transition-[box-shadow,transform] active:scale-[0.98]"
               style={{
-                boxShadow: `inset 0 0 0 1.5px ${selected ? T.accentText : T.line}`,
-                background: selected ? T.row : T.ivory2,
+                boxShadow: `inset 0 0 0 1.5px ${selected ? T.accentText : 'rgba(255,255,255,0.10)'}`,
+                background: selected ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
               }}
             >
               <Image src={c.icon} alt="" width={22} height={22} unoptimized />
@@ -793,49 +809,51 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const pickMark = (checked: boolean) => (
     <span
       aria-hidden
-      className="grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors"
+      className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full transition-colors"
       style={checked ? { background: T.forest } : { boxShadow: `inset 0 0 0 1.5px ${T.disLine}` }}
     >
-      {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+      {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
     </span>
   )
 
-  /** Row surface: hairline edge, soft top highlight; the pick fills ivory. */
+  /** Glass row (owner 2026-10-19): a see-through pane over the hero art, a
+   *  hairline edge and a soft top sheen; the pick brightens and takes the
+   *  green ring. */
   const rowClass = (checked: boolean) =>
     cn(
-      'rounded-lg transition-[background-color,box-shadow] duration-150',
-      checked ? 'bg-[#24252B]' : 'bg-[#1D1E23] hover:bg-[#24252B]'
+      'rounded-md bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0)_70%)] backdrop-blur-xl backdrop-saturate-150 transition-[background-color,box-shadow] duration-150',
+      checked ? 'bg-white/[0.085]' : 'bg-white/[0.035] hover:bg-white/[0.06]'
     )
   const rowSurface = (checked: boolean) =>
     checked
-      ? `inset 0 0 0 1.5px ${T.accentText}, inset 0 1px 0 rgba(255,255,255,0.06)`
-      : `inset 0 0 0 1px ${T.line}, inset 0 1px 0 rgba(255,255,255,0.05)`
+      ? `inset 0 0 0 1.5px ${T.accentText}, inset 0 1px 0 rgba(255,255,255,0.10), 0 0 0 4px rgba(86,184,127,0.10), 0 10px 28px rgba(0,0,0,0.30)`
+      : `inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 22px rgba(0,0,0,0.20)`
 
-  /** The brand mark in a square white tile on the left (the row's icon,
-   *  tinted, when a method has no logo yet). */
-  const markTile = (logo: string | undefined, Icon: MethodIcon) => (
-    <span
-      className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
-      style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
-    >
-      {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} alt="" className="h-full w-full object-contain p-1" />
-      ) : (
-        <Icon className="h-[18px] w-[18px]" style={{ color: T.accentText }} />
-      )}
-    </span>
-  )
+  /** The brand mark itself on the glass, no tile, every mark one optical size
+   *  (markSize); the row's icon when a method has no mark. */
+  const markSlot = (mark: LocalMethodRow['mark'], Icon: MethodIcon) => {
+    const size = mark && markSize(mark.aspect)
+    return (
+      <span className="flex shrink-0 items-center justify-center" style={MARK_SLOT}>
+        {mark && size ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={mark.logo} alt="" width={size.width} height={size.height} style={size} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
+        ) : (
+          <Icon className="h-6 w-6" strokeWidth={1.75} style={{ color: '#C9D1DA' }} />
+        )}
+      </span>
+    )
+  }
 
-  const rowButton = 'flex w-full items-center gap-3 rounded-lg px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+  const rowButton = 'flex w-full items-center gap-3.5 rounded-md px-4 py-[15px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
   const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
     return (
       <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
         <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
-          {markTile(m.logo, m.Icon)}
-          <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
+          {markSlot(m.mark, m.Icon)}
+          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
             {m.label}
           </span>
           {m.id === lowestFeeId && (
@@ -857,13 +875,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const cryptoRow = cryptoMethod && (
     <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
       <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
-        <span
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
-          style={{ background: '#F7931A' }}
-        >
-          <Image src="/crypto/btc.svg" alt="" width={20} height={20} unoptimized />
+        {/* The coins themselves, overlapped, in the same slot as the marks. */}
+        <span className="flex shrink-0 items-center justify-center" style={MARK_SLOT}>
+          <Image src="/crypto/btc.svg" alt="" width={26} height={26} unoptimized className="relative z-[1] drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
+          <Image src="/crypto/usdt.svg" alt="" width={26} height={26} unoptimized className="-ml-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
           Crypto
         </span>
         {pickMark(cryptoChecked)}
@@ -876,18 +893,36 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
-  // ── Region: a compact dropdown at the right of the "Payment" heading ──
-  const regionPicker = regionChips.length > 1 && (
-    <div className="w-[172px] shrink-0">
-      <LightSelect
+  // ── Country: one quiet line under the list (owner 2026-10-19). Most
+  //    buyers never touch it; a wrong geo (VPN, travel) is one tap to fix.
+  //    A searchable list on desktop, a bottom sheet on phones. ──
+  const countryLine = (
+    <p className="flex flex-wrap items-center gap-x-1.5 text-body-sm" style={{ color: T.ink2 }}>
+      <span>Paying from</span>
+      <span className="font-semibold" style={{ color: T.ink }}>
+        {country ? `${flagEmoji(country)} ${countryName(country)}` : '🌍 Another Country'}
+      </span>
+      <span aria-hidden>·</span>
+      <Combobox
+        value={country ?? OTHER_COUNTRY}
+        onChange={selectCountry}
+        options={countryOptions}
+        unsorted
         ariaLabel="Paying From"
-        size="sm"
-        value={region}
-        onChange={(v) => selectRegion(v as RegionId)}
-        options={regionChips.map((r) => ({ value: r.id, label: r.label }))}
-        leading={<PublicRoundedIcon style={{ fontSize: 16, color: T.accentText }} />}
+        sheetOnTouch
+        sheetTitle="Paying From"
+        emptyText="No country matches."
+        renderTrigger={() => (
+          <button
+            type="button"
+            className="rounded font-semibold underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            style={{ color: T.accentText }}
+          >
+            Change
+          </button>
+        )}
       />
-    </div>
+    </p>
   )
 
   const rowMotion = {
@@ -900,6 +935,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
   const paymentList = (
     <div className="flex flex-col gap-3">
+      {unfinishedPayment && (
+        <Callout variant="warning">Your last payment wasn’t finished. Pick a method to try again.</Callout>
+      )}
       {orderedRows.length === 0 && !cryptoMethod ? (
         <div className="rounded-lg px-5 py-6 text-center" style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}>
           <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
@@ -930,6 +968,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           </AnimatePresence>
         </div>
       )}
+      {countryLine}
     </div>
   )
 
@@ -1048,7 +1087,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           info={
             walletCoversAll
               ? 'No service fee when you pay with store credit.'
-              : 'Covers payment processing and keeps SafeDrop Protection running.'
+              : 'Covers payment processing and SafeDrop Protection on every order.'
           }
         />
         {promoDiscount > 0 && (
@@ -1267,7 +1306,6 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   All transactions are secure and encrypted.
                 </p>
               </div>
-              {regionPicker}
             </div>
             {paymentList}
             {payError && (
@@ -1292,9 +1330,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         {/* Trust hero band — centered title above, then a full-width strip:
             mirrored sky art behind everything under one smooth ivory wash,
             strong at the left, opening to color at the right. */}
-        <p className="mb-4 mt-10 text-center text-[18px] font-semibold" style={{ color: T.ink }}>
+        <h2 className="mb-5 mt-16 text-center text-heading" style={{ color: T.ink }}>
           How Your Order Works
-        </p>
+        </h2>
         <div
           className="relative overflow-hidden rounded-md px-5 py-5 sm:px-8 sm:py-6"
           style={{ background: T.ivory, boxShadow: `inset 0 0 0 1px ${T.line}` }}
@@ -1328,33 +1366,30 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
               {[
                 {
-                  Icon: PaymentsRoundedIcon,
+                  icon: '/icons/set/card.svg',
                   title: 'Choose Payment Method',
                   sub: 'Every payment is encryption-protected.',
                 },
                 {
-                  Icon: LocalShippingRoundedIcon,
+                  icon: '/icons/set/package.svg',
                   title: 'Wait for Delivery',
                   sub: 'Your seller preps the order. Chat live anytime.',
                 },
                 {
-                  Icon: VerifiedRoundedIcon,
+                  icon: '/icons/set/verified.svg',
                   title: 'Order Delivered',
                   sub: 'Check your items and confirm delivery.',
                 },
                 {
-                  Icon: CurrencyExchangeRoundedIcon,
+                  icon: '/icons/set/refund.svg',
                   title: 'Item Not Received?',
                   sub: '100% refund, guaranteed.',
                 },
               ].map((step) => (
-                <li key={step.title} className="flex items-start gap-2.5">
-                  <span
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
-                    style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}
-                  >
-                    <step.Icon style={{ fontSize: 21, color: T.accentText }} />
-                  </span>
+                <li key={step.title} className="flex items-start gap-3.5">
+                  {/* The silver-glass mark on its own: no tile, no green
+                      (owner 2026-10-19: no box in box). */}
+                  <SilverIcon src={step.icon} alt="" className="h-10 w-10" />
                   <div>
                     <p className="text-[14px] font-bold leading-snug" style={{ color: T.ink }}>
                       {step.title}

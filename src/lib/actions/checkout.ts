@@ -88,6 +88,11 @@ const WALLET_CHANGED_MESSAGE =
 /** B4: the provider refused the charge as below its minimum (Payssion 417 —
  *  its own FX rate moved past our headroom). The order was cancelled and any
  *  wallet credit returned by the PAY-006 path before this is shown. */
+/** Same-tab pay (2026-10-16): the buyer paid on Payssion, pressed Back and
+ *  pressed Pay again before the webhook landed. The open order is NOT
+ *  cancelled; the buyer is sent to it. */
+const ALREADY_PAID_MESSAGE =
+  'You have already paid for this order — taking you to it now.'
 const BELOW_PROVIDER_MINIMUM_MESSAGE =
   'This order is under the minimum amount for that payment method — nothing was charged, and any wallet credit you applied is back in your wallet. Please pick another payment method.'
 
@@ -108,6 +113,8 @@ export interface CreateCheckoutResult {
   orderId?: string
   checkoutUrl?: string // hosted page or our native pay page (null if fully wallet-paid)
   fullyPaidByWallet?: boolean
+  /** The open order for this listing is already paid at the provider. */
+  alreadyPaid?: boolean
   error?: string
 }
 
@@ -243,8 +250,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       // buyer just picked → reuse it verbatim (handing a GCash buyer a crypto
       // pay page, or vice versa, is worse than minting a fresh charge).
       const sameAmount = Math.abs(Number(existingPending.total_amount) - totalAmountMajor) < 0.005
+      // Payssion: the same METHOD too — two pm_ids can quote the same total
+      // (PayNow / GrabPay), and a GrabPay buyer must not get PayNow's page.
+      const sameMethod = providerName !== 'payssion' || attempt?.pm_id === pmId
       if (
         sameAmount &&
+        sameMethod &&
         attempt?.status === 'active' &&
         attempt.checkout_url &&
         attempt.provider === providerName &&
@@ -259,6 +270,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       // in a moment and finds the finished order (reuse above).
       if (attempt?.status === 'created' && isChargeInFlight(attempt.created_at)) {
         return { success: false, orderId: existingPending.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
+      }
+      // Same-tab pay: the buyer may have PAID on Payssion and pressed Back
+      // before the webhook landed. Never supersede money that is on its way.
+      const { payssionPaidAtProvider } = await import('@/lib/payments/provider-paid-probe')
+      if (await payssionPaidAtProvider(attempt, existingPending.id)) {
+        return { success: false, orderId: existingPending.id, alreadyPaid: true, error: ALREADY_PAID_MESSAGE }
       }
       // Amounts drifted (quantity/promo/wallet changed), the invoice expired,
       // the method changed, or the minting request died. Supersede the stale
@@ -416,7 +433,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         amount: money(chargeMinor, ORDER_CURRENCY),
         // Payssion has ONE return URL for paid AND cancelled — the smart
         // /checkout/return route inspects the outcome and lands the buyer on
-        // the order page (paid/awaiting) or back at checkout (cancelled).
+        // Order Paid (paid / confirming), back at checkout (cancelled or
+        // unfinished) or the order page (a voucher still open).
         returnUrl:
           providerName === 'payssion'
             ? `${base}/checkout/return/${orderId}`

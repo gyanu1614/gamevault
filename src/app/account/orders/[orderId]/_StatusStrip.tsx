@@ -55,6 +55,10 @@ interface StatusStripProps {
   onLeaveReview?: () => void
   /** Opens the Dispute modal (any role can hit this from various states). */
   onOpenDispute?: () => void
+  /** Buyer, overdue: "Cancel – Not Delivered" (the seller gets a response window). */
+  onReportNotDelivered?: () => void
+  /** Buyer, overdue, the seller's window ran out: ask DropMarket to cancel (admin reviews it). */
+  onRequestNotDeliveredCancel?: () => void
   /** Review the buyer left for this order, if any.
    *  Buyer view (completed) → strip morphs into "Review Submitted"
    *  panel showing their own review back.
@@ -233,6 +237,8 @@ export function StatusStrip({
   onMarkReceived,
   onLeaveReview,
   onOpenDispute,
+  onReportNotDelivered,
+  onRequestNotDeliveredCancel,
   existingReview,
   promoted = false,
   hidePassiveOnMobile = false,
@@ -269,9 +275,26 @@ export function StatusStrip({
         <div className="min-w-0 flex-1 leading-tight">
           <div className={cn(sTitle, 'font-bold text-text-primary')}>Order Is Overdue</div>
           <div className={cn('mt-0.5 text-text-secondary', sCaption)}>
-            The delivery time has passed. Seller not responding? Open a dispute.
+            {onRequestNotDeliveredCancel
+              ? "The seller didn't respond in time. Request cancellation, or open a dispute."
+              : onReportNotDelivered
+                ? 'The delivery time has passed. Tell the seller, or open a dispute.'
+                : 'The delivery time has passed. Seller not responding? Open a dispute.'}
           </div>
         </div>
+        {onRequestNotDeliveredCancel ? (
+          <button type="button" onClick={onRequestNotDeliveredCancel} className={sCtaCls}>
+            <Ban className={sCtaGlyph} aria-hidden />
+            Request Cancellation
+          </button>
+        ) : (
+          onReportNotDelivered && (
+            <button type="button" onClick={onReportNotDelivered} className={sCtaCls}>
+              <TimerOff className={sCtaGlyph} aria-hidden />
+              Cancel – Not Delivered
+            </button>
+          )
+        )}
         <DisputeCTA
           onOpenDispute={onOpenDispute}
           fallbackHref={disputeHref}

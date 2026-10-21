@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { ListingWithRelations } from '@/types/database'
+import { cleanListingSearch, listingOrder } from './listings-query'
 
 export interface ListingsFilters {
   gameId?: string
@@ -8,7 +9,11 @@ export interface ListingsFilters {
   maxPrice?: number
   search?: string
   sortBy?: 'created_at' | 'price' | 'sales'
+  /** Overrides the sort's natural direction (price: cheapest first, else newest first). */
   sortOrder?: 'asc' | 'desc'
+  /** Page size and start row; no limit = the whole result (legacy callers). */
+  limit?: number
+  offset?: number
 }
 
 export async function getListings(filters: ListingsFilters = {}) {
@@ -45,14 +50,20 @@ export async function getListings(filters: ListingsFilters = {}) {
     query = query.lte('price', filters.maxPrice)
   }
 
-  if (filters.search) {
-    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+  const search = filters.search ? cleanListingSearch(filters.search) : ''
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
   }
 
-  // Apply sorting
-  const sortBy = filters.sortBy || 'created_at'
-  const sortOrder = filters.sortOrder || 'desc'
-  query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+  const order = listingOrder(filters.sortBy)
+  const ascending = filters.sortOrder ? filters.sortOrder === 'asc' : order.ascending
+  // Ties broken by id, so pages never overlap or skip a row.
+  query = query.order(order.column, { ascending }).order('id', { ascending: true })
+
+  if (filters.limit) {
+    const from = filters.offset ?? 0
+    query = query.range(from, from + filters.limit - 1)
+  }
 
   const { data, error } = await query
 

@@ -33,6 +33,31 @@ interface OrderComms {
   seller: { email: string | null; name: string }
 }
 
+/** What the refund seam put in the buyer's Store Balance for this order (the
+ *  item price since 2026-10-16), or null when no store-credit refund posted. */
+async function walletRefundCreditMinor(orderId: string): Promise<number | null> {
+  const supabase = createServiceRoleClient() as any
+  const { data: txn } = await supabase
+    .from('ledger_transactions')
+    .select('id')
+    .eq('idempotency_key', `wallet_refund:${orderId}`)
+    .maybeSingle()
+  if (!txn) return null
+  const { data: entries } = await supabase
+    .from('ledger_entries')
+    .select('amount_minor, direction, account_id')
+    .eq('transaction_id', txn.id)
+  const credits = ((entries ?? []) as Array<{ amount_minor: number; direction: string; account_id: string }>).filter((e) => e.direction === 'credit')
+  if (credits.length === 0) return null
+  const { data: accounts } = await supabase
+    .from('ledger_accounts')
+    .select('id, kind')
+    .in('id', credits.map((e) => e.account_id))
+  const wallet = new Set(((accounts ?? []) as Array<{ id: string; kind: string }>).filter((a) => a.kind === 'user_wallet').map((a) => a.id))
+  const sum = credits.filter((e) => wallet.has(e.account_id)).reduce((n, e) => n + Number(e.amount_minor), 0)
+  return sum > 0 ? sum : null
+}
+
 async function fetchOrderComms(orderId: string): Promise<OrderComms | null> {
   const supabase = createServiceRoleClient()
   const { data: order } = await supabase
@@ -239,11 +264,16 @@ export async function notifyOrderTransition(
     }
 
     // Completed refund: use the ACTUAL refunded amount from the provider
-    // event when present (partial/fee-adjusted refunds), not the order total.
+    // event when present (partial/fee-adjusted refunds); otherwise what the
+    // refund seam credited as store credit (the item price), not the total.
+    const creditedMinor =
+      canonical?.type === 'REFUND_COMPLETED' && canonical.amount ? null : await walletRefundCreditMinor(orderId)
     const refundedAmount =
       canonical?.type === 'REFUND_COMPLETED' && canonical.amount
         ? Number(toDecimal(canonical.amount))
-        : order.total_amount ?? 0
+        : creditedMinor != null
+          ? creditedMinor / 100
+          : order.total_amount ?? 0
 
     await Promise.allSettled([
       order.buyer.email
@@ -255,6 +285,7 @@ export async function notifyOrderTransition(
             gameSlug: order.gameSlug,
             amount: refundedAmount,
             destination: 'your Store Balance',
+            fullAmount: order.total_amount ?? undefined,
           })
         : Promise.resolve(),
       insertNotification({

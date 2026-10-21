@@ -46,7 +46,7 @@ Two providers are live on one shared "payments spine":
 | BTCPay provider | `src/lib/payments/providers/btcpay/` |
 | Payssion webhook | `src/app/api/webhooks/payssion` |
 | Pending-payment sweep | `.github/workflows/expire-pending-payments.yml` → `/api/cron/expire-pending-payments` |
-| Method logos | `public/payments/*.svg` |
+| Method logos | `public/payments/*.svg` (colour originals) · `public/payments/ondark/*.svg` (checkout rows) |
 | Trust-band art | `public/checkout/trust-hero.jpg` |
 
 ---
@@ -98,8 +98,12 @@ feePercent, coverage, countries[]`. Entry **order = display order**.
 
 The UI adds only what the registry shouldn't know, in `METHOD_UI`
 (`app/checkout/[id]/_method-ui.ts`, pinned by its test to every registry method): an icon, 2–3 checkmark **points** (crisp facts, no sentences),
-and an optional `logo` (real brand SVG in `public/payments/`; falls back to a
-stroke icon). **Adding a method = one registry entry + one METHOD_UI line** —
+and an optional brand `mark` (`PAYMENT_METHOD_ONDARK` in
+`lib/payments/method-marks.ts`: the logo redrawn for a dark row — card
+background removed, dark ink white, canvas trimmed — with its aspect, so
+`markSize` draws every mark at one optical size on the glass row; falls back
+to a stroke icon). A new brand logo needs its on-dark copy too (the
+`_method-ui` test fails otherwise). **Adding a method = one registry entry + one METHOD_UI line** —
 filtering, ordering, routing, expiry and tests pick it up automatically.
 
 Region behavior (G2A pattern):
@@ -140,6 +144,48 @@ Language rule: never "escrow" / "we hold funds" — agent model wording only
 ("Item Guaranteed or Full Refund").
 
 ---
+
+### 4.6 Pay flow: same tab, Back-safe (2026-10-16)
+
+Owner, 2026-10-16: the provider page opens in the SAME tab (no new tab), every
+step survives Back / double Back, and a paid order ends on **Order Paid → Go
+to Order** (GameBoost pattern).
+
+- **Leaving checkout** (`CheckoutForm.handlePay` → `leaveFor`): before any full
+  navigation (Payssion page, crypto pay page, wallet-paid) this history entry's
+  URL gets `?order=<id>`, so Back lands on a checkout that knows the order. A
+  page restored from the back/forward cache reloads (`pageshow` persisted).
+- **Back to `/checkout/[id]?order=<id>`** (`page.tsx`): order paid, or Payssion
+  says paid while its webhook is in flight → redirect to the one **Order
+  Paid** page (`/checkout/paid/[orderId]`) instead of a Pay button. Still unpaid → the form with a "Your last
+  payment wasn't finished" note.
+- **Pay again** (`createCheckout`): same method → the same order and page (no
+  second charge); another method → the old order is cancelled first, its
+  charge voided; Payssion already paid → nothing is cancelled, the buyer is
+  sent to the order (`alreadyPaid`). Reuse compares the Payssion pm_id, not
+  just the provider (PayNow and GrabPay quote the same total).
+- **Return** (`/checkout/return/[orderId]` → `lib/payments/return-destination.ts`):
+  paid or Payssion-paid → `/checkout/paid/[orderId]`; cancelled → checkout with
+  the "Payment Cancelled" toast; unpaid → checkout `?order=`; a voucher still
+  open → its order page.
+- **Order Paid** (`/checkout/paid/[orderId]`, `_components/OrderPaidView`):
+  "Confirming Your Payment" while our order is pending (polls
+  `getPaymentPageStatus`, read-only), then "Order Paid"; "Still Confirming"
+  after 2 minutes; "Payment Not Completed" + Try Again if it was cancelled.
+  Paid → **What Happens Next** (`PaidNextSteps`): manual delivery shows three
+  steps (Order Received → Chat With Your Seller → Confirm & You're Set);
+  automatic delivery shows **Show My Item** (`revealMyOrderItem`: the
+  signed-in buyer only, one code claimed atomically, the same one on retry).
+- **Lists by country** (`lib/payments/regions.ts`): a buyer whose country has
+  its own rails sees only those (Belgium: Trustly, Bancontact, MyBank, Skrill,
+  paysafecard); the region's list is the fallback for a country with none.
+  The country is the geo header; **"Paying from 🇧🇪 Belgium · Change"** under
+  the list lets a buyer on a VPN or abroad pick theirs (a searchable list of
+  the countries this order's rails cover + Other Country; a bottom sheet on
+  phones). Client-side only: `createCheckout` never reads the country.
+- **Local end-to-end test**: `PAYSSION_BASE_URL` (ignored in production) points
+  the adapter at a local Payssion stand-in (create → hosted page → signed
+  notify → return), so the whole flow can be clicked through without money.
 
 ## 5. Money flow
 
@@ -263,7 +309,7 @@ boleto_br (BR) · oxxo_mx, spei_mx, creditcard_mx (MX) · qris_id (ID) · pse_co
 grabpay_sg (SG) · vietqr_vn (VN) · trustly (Europe) · blik_pl, p24_pl (PL) ·
 bancontact_be (BE) · eps_at (AT) · mbway_pt (PT) · bancomatpay_it, satispay,
 mybank (IT +) · payu_cz (CZ) · twint_ch (CH) · mada_sa, applepay_sa (SA) ·
-creditcard_za (ZA) · kakaopay_kr (KR) · skrill, paysafecard (worldwide).
+creditcard_za (ZA) · kakaopay_kr (KR) · skrill (EU/EEA, UK, CH), paysafecard (EU/UK/CA/AU).
 B4 methods probe-confirmed 200 on 2026-09-24, the 17 newest on 2026-10-15
 (`docs/payments/eu-methods-probe.md`; recorded answers in
 `src/lib/payments/providers/payssion/probe-fixtures.ts`).
@@ -293,7 +339,7 @@ charges stay USD end to end.
 | mbway_pt | PT | 2.75% + €0.25 | **€1.00 minimum charge** (417 below) → `min_total_minor = 100` |
 | bancomatpay_it | IT | 2.75% + €0.20 | the pm_id is `bancomatpay_it`; `bancomat_it` is not one (405) |
 | payu_cz | CZ | 4.75% + 3.5 Kč | |
-| skrill | worldwide (Skrill's 116 sign-up countries) | 3.5% + $0.35 | €1–€2,000; row stored in EUR (€0.30 fixed); Payssion holds a 10% / 180-day rolling reserve (20% above $300) |
+| skrill | EU/EEA, UK, CH (Payssion's Skrill page refuses other network locations) | 3.5% + $0.35 | €1–€2,000; row stored in EUR (€0.30 fixed); Payssion holds a 10% / 180-day rolling reserve (20% above $300) |
 | bancontact_be | BE | 4.25% + €0.45 | €1–€2,000 |
 | satispay / mybank | IT, FR, LU / IT, BE, ES, PT | 3.75% + €0.35 / 2.25% + €0.35 | max €2,000 |
 | twint_ch | CH | 3.5% + 0.15 CHF | 0.10–5,000 CHF; 10% / 180-day reserve |

@@ -37,8 +37,13 @@ export function LayoutWrapper({
   // 2Game) which Baymard found lifts conversion 5–15%.
   // (dev-only /dev/checkout-preview mirrors the checkout chrome so the
   // design harness renders faithfully; route 404s in production.)
+  // /checkout/paid is AFTER the purchase (Order Paid → Go to Order): there is
+  // nothing to leak out of, so it keeps the full site navbar + footer.
   const isCheckout =
-    pathname?.startsWith('/checkout') || pathname?.startsWith('/dev/checkout-preview')
+    (pathname?.startsWith('/checkout') && !pathname.startsWith('/checkout/paid')) ||
+    pathname?.startsWith('/dev/checkout-preview')
+  // Order Paid is one screen, no scroll (owner 2026-10-19): navbar, no footer.
+  const isOrderPaid = !!pathname?.startsWith('/checkout/paid')
 
   // Seller application (Forest Ledger redesign) is a full-screen formal
   // flow with its own light shell — no global navbar/footer, same
@@ -102,6 +107,7 @@ export function LayoutWrapper({
       {!isAdminPage &&
         !isSellWizard &&
         !isCheckout &&
+        !isOrderPaid &&
         !isSellerApplication &&
         !hasSidebar &&
         !isValuesHub && (
