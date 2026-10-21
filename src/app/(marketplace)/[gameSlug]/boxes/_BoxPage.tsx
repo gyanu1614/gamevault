@@ -37,8 +37,7 @@ import { hexRgb } from '@/lib/values/events-model'
 import { expectedDraws, fmtDraws } from '@/lib/values/box-odds'
 import type { BoxItemView, BoxView, MmBox } from '@/lib/values/boxes'
 import { cn } from '@/lib/utils'
-import { WaySectionHead } from '../values/_generic/WaySectionHead'
-import { WAY_STEP_COLS } from '../values/_generic/ValueItemHowToGet'
+import { WAY_STEP_COLS, WaySectionHead } from '@/components/values/how-to-get/WaySectionHead'
 import {
   boxAnswer,
   boxFacts,

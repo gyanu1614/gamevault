@@ -11,10 +11,10 @@ export function supabaseGscStore(db: Db): GscStore {
   }
   return {
     async loadInspections() {
-      const rows = await fetchAllRows<{ url: string; section: string; verdict: string | null; inspected_at: string | null; search_synced_at: string | null }>(
-        (f, t) => db.from('seo_url_inspections').select('url, section, verdict, inspected_at, search_synced_at').order('url').range(f, t),
+      const rows = await fetchAllRows<{ url: string; section: string; verdict: string | null; coverage_state: string | null; inspected_at: string | null; search_synced_at: string | null }>(
+        (f, t) => db.from('seo_url_inspections').select('url, section, verdict, coverage_state, inspected_at, search_synced_at').order('url').range(f, t),
       )
-      return rows.map((r) => ({ url: r.url, section: r.section, verdict: r.verdict, inspectedAt: r.inspected_at, searchSyncedAt: r.search_synced_at }))
+      return rows.map((r) => ({ url: r.url, section: r.section, verdict: r.verdict, coverageState: r.coverage_state, inspectedAt: r.inspected_at, searchSyncedAt: r.search_synced_at }))
     },
     async changedUrlsSince(iso) {
       const rows = await fetchAllRows<{ url: string; id: number }>((f, t) =>
@@ -76,7 +76,18 @@ export function supabaseGscStore(db: Db): GscStore {
     async upsertSectionDaily(day, rows) {
       check(
         await db.from('seo_section_daily').upsert(
-          rows.map((r) => ({ day, section: r.section, sitemap_urls: r.sitemapUrls, inspected: r.inspected, indexed: r.indexed, clicks: r.clicks, impressions: r.impressions })),
+          rows.map((r) => ({
+            day,
+            section: r.section,
+            sitemap_urls: r.sitemapUrls,
+            inspected: r.inspected,
+            indexed: r.indexed,
+            clicks: r.clicks,
+            impressions: r.impressions,
+            unknown: r.unknown ?? 0,
+            discovered: r.discovered ?? 0,
+            crawled: r.crawled ?? 0,
+          })),
           { onConflict: 'day,section' },
         ),
         'seo_section_daily upsert',

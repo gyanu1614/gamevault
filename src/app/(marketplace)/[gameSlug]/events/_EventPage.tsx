@@ -52,8 +52,7 @@ import {
   type ObtainChannel,
 } from '@/lib/values/events-model'
 import { cn } from '@/lib/utils'
-import { WaySectionHead } from '../values/_generic/WaySectionHead'
-import { WAY_STEP_COLS } from '../values/_generic/ValueItemHowToGet'
+import { WAY_STEP_COLS, WaySectionHead } from '@/components/values/how-to-get/WaySectionHead'
 import {
   buyRow,
   channelStepValue,

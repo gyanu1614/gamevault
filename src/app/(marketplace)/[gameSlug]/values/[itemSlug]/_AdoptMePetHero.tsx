@@ -21,8 +21,8 @@ import { ValueItemHero, HeroBadge, ConfidenceBadge } from '@/components/values/V
 import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
 import { TradeValue } from '@/components/values/TradeValue'
 import { petImageCredit } from '@/lib/adopt-me/image-credit'
+import { formatTradeValue, frostsLabel } from '@/lib/adopt-me/trade-value'
 
-const TRADE = new Intl.NumberFormat('en-US')
 
 export default function AdoptMePetHero({
   name,
@@ -116,7 +116,21 @@ export default function AdoptMePetHero({
         { label: 'Type', value: 'Pet' },
         { label: 'Rarity', value: <span style={{ color: rarityColor }}>{rarityLabel}</span> },
         { label: 'Availability', value: obtainabilityLabel },
-        { label: 'Trade Value', value: selected.tradeValue != null ? <TradeValue>{TRADE.format(selected.tradeValue)}</TradeValue> : '—' },
+        {
+          label: 'Trade Value',
+          value:
+            selected.tradeValue != null ? (
+              <span className="inline-flex flex-col items-start leading-tight">
+                <span>
+                  <TradeValue>{formatTradeValue(selected.tradeValue)}</TradeValue>
+                  {selected.tradeIsEstimated && <span className="ml-1 text-caption font-medium text-text-tertiary">est.</span>}
+                </span>
+                <span className="text-caption font-medium text-text-tertiary">{frostsLabel(selected.tradeValue)}</span>
+              </span>
+            ) : (
+              '—'
+            ),
+        },
       ]}
       panel={
         <ValueBuyPanel
@@ -132,8 +146,8 @@ export default function AdoptMePetHero({
                   label: 'Trade Value',
                   value: (
                     <>
-                      <TradeValue>{TRADE.format(pointsValue)}</TradeValue>
-                      <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts</span>
+                      <TradeValue>{formatTradeValue(pointsValue)}</TradeValue>
+                      <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts · {frostsLabel(pointsValue)}</span>
                     </>
                   ),
                 }

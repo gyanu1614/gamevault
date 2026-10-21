@@ -50,6 +50,10 @@ describe('aboutFacts', () => {
       ['Forms Priced', '4 of 5'],
     ])
   })
+  it('the shared Released fact sits after rarity, before origin', () => {
+    const facts = aboutFacts({ rarity: 'Legendary', originDetail: 'Halloween Event (2022)', originType: 'event', obtainabilityLabel: 'Unobtainable', released: '27 October 2022' }, variants)
+    expect(facts.slice(0, 3).map((f) => f.label)).toEqual(['Rarity', 'Released', 'Origin'])
+  })
 })
 
 describe('withoutStalePrices', () => {

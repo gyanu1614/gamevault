@@ -67,7 +67,7 @@ const RENDER_MODULES = [
   '[categorySlug]/item/_itemRoute.tsx', // item + item/variant pages
   'values/page.tsx',
   'values/_AdoptMeValuesPage.tsx',
-  'values/[itemSlug]/page.tsx',
+  'values/[itemSlug]/_SabItemPage.tsx', // the Brainrot item page (the route dispatches per game)
   'values/[itemSlug]/_AdoptMePetPage.tsx',
   'values/methodology/page.tsx',
   'values/methodology/_AdoptMeMethodology.tsx',

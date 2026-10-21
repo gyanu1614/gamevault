@@ -82,10 +82,13 @@ async function generateMetadataRaw({
     })
     // The branded string is reused on purpose for the social title; the
     // templated <title> gets it bare (the layout appends "| DropMarket").
-    const socialTitle = `Adopt Me Value List (${monthYear}) — Pet Values in USD | DropMarket`
+    // Bing 2026-10-19: 14.2K impressions at 1.1% for "Adopt Me Value List …
+    // — Pet Values in USD". The searches are "adopt me pet values" (top),
+    // "adopt me values" and "value list": the title now says exactly that.
+    const socialTitle = `Adopt Me Pet Values (${monthYear}) – Value List | DropMarket`
     return {
       title: stripBrand(socialTitle),
-      description: `Adopt Me value list for ${monthYear}: real cash values and community trade values for every pet and potion variant (Fly Ride, Neon, Mega) — the only list that shows what a pet is worth in real money.`,
+      description: `Every Adopt Me pet's value for ${monthYear}: trade points from real sale prices (Frost Dragon = 100) and USD prices for all 8 forms, checked daily.`,
       keywords: [
         'adopt me value list',
         'adopt me values',
@@ -103,7 +106,7 @@ async function generateMetadataRaw({
         images: DEFAULT_OG_IMAGES,
         title: socialTitle,
         description:
-          'Every Adopt Me pet, every variant — community trade value and DropMarket cash value side by side.',
+          'Every Adopt Me pet, every form: trade value from real sale prices and cash value in USD, side by side.',
         url: '/adopt-me/values',
         type: 'website',
       },

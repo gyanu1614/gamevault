@@ -83,6 +83,9 @@ describe('H1s are the searches people type', () => {
   })
   it('upcoming event', () => {
     expect(eventH1(C, upcoming)).toBe('MM2 Halloween 2026 Event: Release Date and What to Expect')
+    // A live event: what searchers want while it runs (Bing 2026-10-19: the
+    // upcoming-style title kept showing after launch, 0.3% CTR).
+    expect(eventH1(C, { ...upcoming, status: 'live' })).toBe('MM2 Halloween 2026 Event: New Items, Values and End Date')
   })
   it('a name with a colon gets a dash, not a second colon', () => {
     expect(eventH1(C, ev({ name: 'The Hunt: Roblox 20' }))).toBe(

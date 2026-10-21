@@ -8,12 +8,15 @@
  */
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { MagnifyingGlass, Warning } from '@phosphor-icons/react'
+import { Warning } from '@phosphor-icons/react'
 
 import { StatStrip } from '@/components/account/AccountSurface'
 import { cn } from '@/lib/utils'
 import { setSeoGateMode, setSeoIndexOverride, setSeoPlannedEnforceDate, type SeoHealth } from '@/lib/actions/admin-seo'
+import type { SeoReport } from '@/lib/seo/report'
 import { AdminEmpty, PageHeader, PanelHead, StatusBadge, TABLE, adminBtnSm, adminFieldCls } from '../components/kit'
+import { SeoWeekly } from './_SeoWeekly'
+import { SeoBing } from './_SeoBing'
 
 const fmt = (n: number) => new Intl.NumberFormat('en-US').format(n)
 const pct = (num: number, den: number) => (den > 0 ? `${((num / den) * 100).toFixed(0)}%` : '–')
@@ -29,7 +32,17 @@ const SECTION_LABELS: Record<string, string> = {
 }
 const sectionLabel = (s: string) => SECTION_LABELS[s] ?? (s.startsWith('values-') ? `Values: ${s.slice(7).replace(/-/g, ' ')}` : s)
 
-export default function SeoHealthClient({ data, fetchError }: { data: SeoHealth | null; fetchError?: string }) {
+export default function SeoHealthClient({
+  data,
+  fetchError,
+  report,
+  reportError,
+}: {
+  data: SeoHealth | null
+  fetchError?: string
+  report: SeoReport | null
+  reportError?: string
+}) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [message, setMessage] = useState<string | null>(null)
@@ -76,7 +89,7 @@ export default function SeoHealthClient({ data, fetchError }: { data: SeoHealth 
     <>
       <PageHeader
         title="SEO Health"
-        description="Google index rate per page type, the daily check's alerts, IndexNow delivery and the value-page data gate."
+        description="This week vs last on Google and Bing, Google's pipeline per page type, Bing's top pages and queries, alerts, IndexNow and the value-page data gate."
       />
 
       <div className="space-y-5">
@@ -90,6 +103,18 @@ export default function SeoHealthClient({ data, fetchError }: { data: SeoHealth 
         />
 
         {message && <p className="rounded-md bg-bg-raised px-4 py-3 text-[13px] text-text-secondary">{message}</p>}
+
+        {/* ── Weekly check + Google pipeline + Bing ──────────────── */}
+        {report ? (
+          <>
+            <SeoWeekly report={report} sectionLabel={sectionLabel} />
+            <SeoBing report={report} />
+          </>
+        ) : (
+          <p className="rounded-md bg-bg-raised px-4 py-3 text-[13px] text-text-secondary">
+            Weekly check unavailable: {/seo_bing|column|does not exist/i.test(reportError ?? '') ? 'apply migration 20261020171259_seo_bing_and_funnel (supabase db push).' : reportError}
+          </p>
+        )}
 
         {/* ── Data gate ─────────────────────────────────────────── */}
         <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
@@ -219,46 +244,6 @@ export default function SeoHealthClient({ data, fetchError }: { data: SeoHealth 
             </div>
           </section>
         )}
-
-        {/* ── Index rate per section ────────────────────────────── */}
-        <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
-          <PanelHead
-            title="Index Rate Per Section"
-            subtitle={data.sectionsDay ? `Daily Google check of ${dateLabel(data.sectionsDay)}. The rate counts the URLs inspected so far; the check rotates through the whole sitemap.` : 'The daily Google check has not run yet.'}
-          />
-          {data.sections.length === 0 ? (
-            <AdminEmpty icon={MagnifyingGlass} title="No Google data yet" hint="The daily check runs at 06:20 UTC once GSC_SERVICE_ACCOUNT_KEY_B64 is set." className="bg-bg-overlay" />
-          ) : (
-            <div className={TABLE.wrap}>
-              <table className={TABLE.table}>
-                <thead>
-                  <tr>
-                    <th className={TABLE.th}>Section</th>
-                    <th className={TABLE.th}>In Sitemap</th>
-                    <th className={TABLE.th}>Inspected</th>
-                    <th className={TABLE.th}>Indexed</th>
-                    <th className={TABLE.th}>Rate</th>
-                    <th className={TABLE.th}>Week Ago</th>
-                    <th className={TABLE.th}>Clicks (28 Days)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.sections.map((s) => (
-                    <tr key={s.section} className={TABLE.row}>
-                      <td className={cn(TABLE.tdPrimary, 'capitalize')}>{sectionLabel(s.section)}</td>
-                      <td className={TABLE.td}>{fmt(s.sitemapUrls)}</td>
-                      <td className={TABLE.td}>{fmt(s.inspected)}</td>
-                      <td className={TABLE.td}>{fmt(s.indexed)}</td>
-                      <td className={TABLE.tdPrimary}>{pct(s.indexed, s.inspected)}</td>
-                      <td className={TABLE.td}>{s.inspectedWeekAgo != null ? pct(s.indexedWeekAgo ?? 0, s.inspectedWeekAgo) : '–'}</td>
-                      <td className={TABLE.td}>{fmt(s.clicks)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
 
         {/* ── Alerts + IndexNow failures ────────────────────────── */}
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">

@@ -21,10 +21,21 @@ export const DEFAULT_MAX_LIST_PAGES = 30
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export async function fetchText(url, { ua = BROWSER_UA } = {}) {
-  const res = await fetch(url, { headers: { 'user-agent': ua, accept: 'text/html' } })
-  if (!res.ok) throw new Error(`GET ${url} → ${res.status}`)
-  return res.text()
+/**
+ * GET a page, giving up after 30 s and retrying once. On 2026-10-17 one list
+ * page hung for 24 minutes and pushed the weekly job past its time limit.
+ */
+export async function fetchText(url, { ua = BROWSER_UA, timeoutMs = 30_000 } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const res = await fetch(url, { headers: { 'user-agent': ua, accept: 'text/html' }, signal: AbortSignal.timeout(timeoutMs) })
+      if (!res.ok) throw new Error(`GET ${url} → ${res.status}`)
+      return await res.text()
+    } catch (err) {
+      if (attempt >= 2) throw err
+      await sleep(5_000)
+    }
+  }
 }
 
 /** URL of list page `n` (1-based). Page 1 is the bare /values path. */
@@ -51,36 +62,8 @@ export function parseCompactNumber(raw) {
   return round2(n * mult)
 }
 
-/**
- * The potion / Neon ladder. The source publishes only N, NEON and MEGA; the
- * other five are derived from these anchors with the community-standard rough
- * premiums (FR is the trading benchmark). Derived rows are flagged estimated
- * by the importer.
- */
-export const DERIVED_TRADE = {
-  F: { from: 'N', mult: 1.15 },
-  R: { from: 'N', mult: 1.15 },
-  FR: { from: 'N', mult: 1.45 },
-  NFR: { from: 'NEON', mult: 1.35 },
-  MFR: { from: 'MEGA', mult: 1.25 },
-}
-export const PUBLISHED_TRADE_VARIANTS = ['N', 'NEON', 'MEGA']
+/** Our 8 Adopt Me forms. Trade values are DropMarket's own (src/lib/pricing/adopt-me-trade-value.ts). */
 export const ALL_TRADE_VARIANTS = ['N', 'F', 'R', 'FR', 'NEON', 'NFR', 'MEGA', 'MFR']
-
-/** Every variant's trade value from the published three (null when its anchor is missing). */
-export function variantTradeValues(published) {
-  const out = {}
-  for (const variant of ALL_TRADE_VARIANTS) {
-    if (PUBLISHED_TRADE_VARIANTS.includes(variant)) {
-      out[variant] = published[variant] ?? null
-    } else {
-      const rule = DERIVED_TRADE[variant]
-      const anchor = published[rule.from]
-      out[variant] = anchor != null ? round2(anchor * rule.mult) : null
-    }
-  }
-  return out
-}
 
 /** adoptmevalues rarity text → our canonical schema value, or null if unknown. */
 export function normalizeRarity(raw) {
@@ -99,7 +82,7 @@ export function normalizeRarity(raw) {
  * @typedef {{
  *   slug: string, name: string, rarity: string | null, rarity_raw: string | null,
  *   image_url: string | null,
- *   trade_values: { N: number | null, NEON: number | null, MEGA: number | null },
+ *   trade_values: { FR: number | null, NFR: number | null, MFR: number | null },
  *   obtainability: string | null, demand_rank: number | null, demand_trend: string | null,
  * }} CatalogPet
  */
@@ -107,7 +90,9 @@ export function normalizeRarity(raw) {
 /**
  * Parse one values list page into pet records. The list is a flat run of
  * anchor cards: <a href="/values/{slug}">…<img alt="Name">…<p>rarity</p>…
- * <p>{base}</p>…<span>N {neon}</span><span>M {mega}</span>. We slice per anchor
+ * <p>{base}</p>…<span>N {neon}</span><span>M {mega}</span>. The three numbers
+ * are the site's Fly Ride values (FR / Neon FR / Mega FR), kept in the feed
+ * for reference only: our trade values are our own. We slice per anchor
  * and pull fields by local regex so one malformed card can't derail the rest.
  */
 /** @returns {CatalogPet[]} */
@@ -134,9 +119,9 @@ export function parseListPage(html) {
       rarity_raw: rarityRaw ?? null,
       image_url: image ? image.replace(/ /g, '%20') : null,
       trade_values: {
-        N: parseCompactNumber(baseRaw),
-        NEON: parseCompactNumber(neonRaw),
-        MEGA: parseCompactNumber(megaRaw),
+        FR: parseCompactNumber(baseRaw),
+        NFR: parseCompactNumber(neonRaw),
+        MFR: parseCompactNumber(megaRaw),
       },
       obtainability: null, // filled by --enrich
       demand_rank: null,

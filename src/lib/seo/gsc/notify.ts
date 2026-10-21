@@ -24,3 +24,22 @@ export async function postSeoAlerts(alerts: NewAlert[], opts: { webhookUrl?: str
     return false
   }
 }
+
+/** Post one plain message to #seo-alerts (the weekly check). Same webhook and rules as the alerts: unset → false, never throws. */
+export async function postSeoMessage(content: string, opts: { webhookUrl?: string | undefined; fetchImpl?: typeof fetch } = {}): Promise<boolean> {
+  const url = opts.webhookUrl ?? process.env.DISCORD_SEO_WEBHOOK_URL
+  if (!url || !content) return false
+  try {
+    const res = await (opts.fetchImpl ?? fetch)(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content: content.slice(0, 1900), allowed_mentions: { parse: [] } }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) console.error(`[seo-weekly] Discord webhook answered ${res.status}`)
+    return res.ok
+  } catch (e) {
+    console.error('[seo-weekly] Discord webhook failed:', (e as Error).message)
+    return false
+  }
+}

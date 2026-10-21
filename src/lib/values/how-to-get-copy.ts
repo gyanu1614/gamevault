@@ -1,8 +1,11 @@
 /**
- * Copy for the "How To Get" section of a value-list item page, built ONLY
- * from the item's verified how_to_get entry (values_items.how_to_get) and its
- * published price. Pure, so it is unit-tested and the section, the visible
- * FAQ and the FAQPage schema all say the same thing.
+ * Copy for the "How To Get" section of every value item page (MM2 first, then
+ * Adopt Me and Steal a Brainrot), built ONLY from the item's verified
+ * how_to_get entry and its published price. Pure, so it is unit-tested and
+ * the section, the visible FAQ and the FAQPage schema all say the same thing.
+ * The few game-specific words (where boxes are bought, the crafting station,
+ * the currency players earn) come from the game's HowToGetVocab
+ * (src/lib/values/item-facts-config.ts), so a new game is config + data.
  *
  * Honesty rules (owner, 2026-10-05):
  *   - "unknown" never reads as obtainable: no cost, no odds, no note, only the
@@ -23,6 +26,30 @@ import {
 } from '@/lib/values/how-to-get'
 
 const sentence = (s: string) => (/[.!?]$/.test(s) ? s : `${s}.`)
+
+/** The words one game's How To Get copy needs. MM2's are the default. */
+export interface HowToGetVocab {
+  /** Where a box or egg is bought, as written in the data's method: "the in-game Shop". */
+  shop: string
+  /** One clause for an item that can no longer be got in-game. */
+  gone: string
+  /** The currency players earn by playing, with the step's line when no earn rate is known. */
+  earn: { unit: string; hint: string } | null
+  /** Crafting, for games that have it. Null: a "Crafted …" method reads as a plain method. */
+  craft: { station: string; materialHint: string } | null
+}
+
+export const MM2_VOCAB: HowToGetVocab = {
+  shop: 'the in-game Shop',
+  gone: 'It isn’t in the Shop or sold for Robux',
+  earn: { unit: 'Coins', hint: 'Collect Coins in every round' },
+  craft: { station: 'the Crafting Station', materialHint: 'From salvaging weapons' },
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const capFirst = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`
+/** "Coins" ~ "coin": units match whatever their case or plural. */
+const sameUnit = (a: string, b: string) => a.toLowerCase().replace(/s$/, '') === b.toLowerCase().replace(/s$/, '')
 
 /* ───────────────────────── Two ways (owner, 2026-10-05) ─────────────────────────
  * The section answers the search people make — "how to get <item> for free in
@@ -75,9 +102,9 @@ const noDot = (s: string) => s.replace(/[.\s]+$/, '')
 const usd = (n: number | null) =>
   n == null ? null : `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-/** "Unboxed from Mystery Box 2 in the in-game Shop (Chroma drop)." → "Mystery Box 2" */
-export function boxName(method: string): string | null {
-  const m = method.match(/\bfrom (?:the )?(.+?) in the in-game Shop\b/i)
+/** "Unboxed from Mystery Box 2 in the in-game Shop (Chroma drop)." → "Mystery Box 2" (the shop is the game's vocab.shop). */
+export function boxName(method: string, shop: string = MM2_VOCAB.shop): string | null {
+  const m = method.match(new RegExp(`\\bfrom (?:the )?(.+?) (?:in|at) ${escapeRe(shop)}\\b`, 'i'))
   return m ? m[1].trim() : null
 }
 
@@ -91,6 +118,8 @@ export interface WaysInput {
   h: ValueHowToGet
   cheapestUsd: number | null
   earnRate?: { unit: string; perRound: number } | null
+  /** The game's words; MM2's when omitted. */
+  vocab?: HowToGetVocab
 }
 
 function fastWay(name: string, gameName: string, shortName: string, price: string | null) {
@@ -112,6 +141,7 @@ function fastWay(name: string, gameName: string, shortName: string, price: strin
 
 export function howToGetWays(i: WaysInput): HowToGetWays {
   const { name, gameName, shortName, h } = i
+  const vocab = i.vocab ?? MM2_VOCAB
   const price = usd(i.cheapestUsd)
   const fromPrice = price ? ` from ${price}` : ''
   const fast = fastWay(name, gameName, shortName, price)
@@ -128,7 +158,7 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
           : `There’s no free way to get ${name} in ${shortName} anymore.`,
       body: unconfirmed
         ? `Until that’s confirmed, the sure way is to buy it from another player${fromPrice} and get it traded to you in-game.`
-        : `It isn’t in the Shop or sold for Robux, so buying it from another player${fromPrice} is the way to get it now — delivered by in-game trade in minutes.`,
+        : `${vocab.gone}, so buying it from another player${fromPrice} is the way to get it now — delivered by in-game trade in minutes.`,
       free: {
         state: unconfirmed ? 'unconfirmed' : 'gone',
         heading: unconfirmed ? 'Free Way: Unconfirmed' : 'The Free Way Has Ended',
@@ -152,13 +182,14 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
 
   const e = unboxExpectation(h)
   if (e) {
-    const box = boxName(h.method)
+    const box = boxName(h.method, vocab.shop)
     const hatch = e.action === 'hatch'
     const verb = hatch ? 'hatch' : 'spin'
     const verbs = hatch ? 'hatches' : 'spins'
-    const coins = e.totals.find((t) => /^coins?$/i.test(t.unit))
-    const pay = coins ?? e.totals[0]
-    const rate = i.earnRate && coins && i.earnRate.unit.toLowerCase() === 'coins' ? i.earnRate.perRound : null
+    // The price in the currency players earn by playing (MM2 Coins), else the first listed.
+    const earned = vocab.earn ? e.totals.find((t) => sameUnit(t.unit, vocab.earn!.unit)) : undefined
+    const pay = earned ?? e.totals[0]
+    const rate = i.earnRate && earned && sameUnit(i.earnRate.unit, earned.unit) ? i.earnRate.perRound : null
     const rounds = rate ? Math.ceil(pay.total / rate) : null
     const perSpin = e.totals.map((t) => formatAmount(t.amount, t.unit)).join(', ').replace(/, ([^,]*)$/, ' or $1')
     return {
@@ -171,10 +202,10 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
         steps: [
           {
             icon: 'coins',
-            title: coins ? 'Earn Coins' : `Get ${plural(pay.unit, 2)}`,
-            value: coins && rate ? `Up to ${rate} Coins per round` : coins ? 'Collect Coins in every round' : `Pay in ${plural(pay.unit, 2)}`,
+            title: earned ? `Earn ${vocab.earn!.unit}` : `Get ${plural(pay.unit, 2)}`,
+            value: earned && rate ? `Up to ${rate} ${vocab.earn!.unit} per round` : earned ? vocab.earn!.hint : `Pay in ${plural(pay.unit, 2)}`,
           },
-          { icon: 'box', title: `Open ${box ?? (hatch ? 'The Egg' : 'The Box')}`, value: 'In the in-game Shop' },
+          { icon: 'box', title: `Open ${box ?? (hatch ? 'The Egg' : 'The Box')}`, value: `In ${vocab.shop}` },
           { icon: 'spin', title: hatch ? 'Hatch It' : 'Spin It', value: `${perSpin} per ${verb}` },
           { icon: 'target', title: 'Land The Drop', value: `${e.oddsPct}% per ${verb} — about ${formatCount(e.spins)} ${verbs}` },
         ],
@@ -191,13 +222,14 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
     }
   }
 
-  const recipe = isCrafted(h) ? parseRecipe(h.costs) : null
-  if (recipe) {
+  const recipe = vocab.craft && isCrafted(h) ? parseRecipe(h.costs) : null
+  if (recipe && vocab.craft) {
+    const { station, materialHint } = vocab.craft
     const needs = recipe.map((r) => r.label).join(' + ')
     return {
       title: `How To Get ${name} for Free in ${gameName}`,
       lead: `Yes, you can craft ${name} for free in ${shortName}.`,
-      body: `Collect ${needs} and craft it at the Crafting Station — no Robux needed. Or skip the grind and buy it${fromPrice}, delivered in minutes.`,
+      body: `Collect ${needs} and craft it at ${station} — no Robux needed. Or skip the grind and buy it${fromPrice}, delivered in minutes.`,
       free: {
         state: 'available',
         heading: 'How To Get It For Free',
@@ -205,12 +237,12 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
           ...recipe.map((r) => ({
             icon: 'materials' as const,
             title: `Collect ${r.label}`,
-            value: r.hint ? `${r.hint.charAt(0).toUpperCase()}${r.hint.slice(1)}` : 'From salvaging weapons',
+            value: r.hint ? capFirst(r.hint) : materialHint,
           })),
-          { icon: 'craft' as const, title: 'Open The Crafting Station', value: `In ${shortName}` },
+          { icon: 'craft' as const, title: `Open ${capFirst(station)}`, value: `In ${shortName}` },
           { icon: 'target' as const, title: `Craft ${name}`, value: 'No Robux needed' },
         ],
-        total: { label: 'Total', value: needs, detail: 'Crafted at the Crafting Station. No Robux needed.' },
+        total: { label: 'Total', value: needs, detail: `Crafted at ${station}. No Robux needed.` },
         message: null,
       },
       fast,

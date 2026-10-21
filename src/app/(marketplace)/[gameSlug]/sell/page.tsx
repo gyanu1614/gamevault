@@ -42,6 +42,7 @@ import { SellChoiceModal, SellFinalCta } from './_SellChoiceModal'
 import { SpotlightCard } from '@/components/ui/spotlight-card'
 import { foundingHref } from '@/lib/seo/founding-href'
 import { seoMeta } from '@/lib/seo/fit'
+import { getGameSellerGuide } from '@/lib/blog/db'
 
 const AMBER = '#F5C451'
 
@@ -157,32 +158,36 @@ export default async function SellLandingPage({ params }: PageProps) {
   if (!game) notFound()
 
   const theme = getGameContentTheme(gameSlug)
-  const [hubNav, topPets, ctaImage] = await Promise.all([
+  const [hubNav, topPets, ctaImage, guide, rate] = await Promise.all([
     getHubNavData(gameSlug),
     // Returns [] for any game without a values hub, so the teaser section
     // below simply doesn't render for the seeded `listed` catalogue.
     getHubTopValues(gameSlug, 3),
     // The game's ONE CTA image (admin upload → static art) for both bands.
     getGameCtaImage(gameSlug),
+    // The game's seller guide post, linked under How It Works when there is one.
+    getGameSellerGuide(gameSlug),
+    // The headline commission for the primary pair (cached under FEE_RULES_TAG), for the FAQ.
+    game.primaryCategory ? getPairHeadlineRate(game.primaryCategory.id) : Promise.resolve(null),
   ])
   const name = CONTENT_HUB_GAME_SLUGS.includes(gameSlug) ? theme.name : game.name
 
   const FAQ = [
     {
       q: `How do I sell ${name} for real money?`,
-      a: `Join DropMarket as a seller, complete verification, then list your ${name} items with an accurate price and delivery window. When a buyer orders, the order is SafeDrop protected; you deliver in-game, they confirm, and your proceeds are credited to your Seller Balance to withdraw.`,
+      a: `Sign up as a seller, then list your ${name} items with an accurate price and delivery time. When a buyer orders, the order is SafeDrop protected; you deliver in-game, they confirm, and the money goes to your Seller Balance to withdraw.`,
     },
     {
       q: `What does it cost to sell?`,
-      a: `There's no listing fee — you only pay when an item sells, and you keep more of every sale than on the big marketplaces. Founding sellers (the first 100) get a discounted rate for their first year, applied automatically to every sale.`,
+      a: `There's no listing fee — you only pay ${rate != null ? `a ${rate}% commission` : 'a commission'} when an item sells, and it drops as your seller rank goes up. Founding sellers (the first 100) get a discounted rate for their first year, applied automatically to every sale.`,
     },
     {
       q: `Is it safe to sell here?`,
-      a: `Yes. SafeDrop protects you from buyers who pay then vanish. Every seller is verified, and all communication and delivery stay on-platform where they're covered.`,
+      a: `Yes. SafeDrop protects you from buyers who pay then vanish, and all communication and delivery stay on-platform where every order is covered.`,
     },
     {
-      q: `Do I need to verify my identity?`,
-      a: `Yes — every seller completes a one-time verification before listing. It's what makes the marketplace safe for buyers and sellers alike, and it's required before any payout.`,
+      q: `How do I get paid?`,
+      a: `When the buyer confirms delivery, the money goes to your Seller Balance. You withdraw it to your payout method whenever you like.`,
     },
   ]
 
@@ -332,7 +337,7 @@ export default async function SellLandingPage({ params }: PageProps) {
                   >
                     become a seller
                   </Link>{' '}
-                  and pass a quick one-time verification.
+                  and list your first item today.
                 </p>
               </div>
             </div>
@@ -350,10 +355,12 @@ export default async function SellLandingPage({ params }: PageProps) {
                 </p>
                 {topPets.length > 0 && (
                   <div className="mt-4 grid grid-cols-3 gap-3">
+                    {/* Each one links to its value page: what it sells for, and how it compares. */}
                     {topPets.map((pet) => (
-                      <div
+                      <Link
                         key={pet.slug}
-                        className="flex flex-col items-center border border-[#1A211A] bg-[#0E1310] p-3 text-center"
+                        href={`/${gameSlug}/values/${pet.slug}`}
+                        className="flex flex-col items-center border border-[#1A211A] bg-[#0E1310] p-3 text-center transition-colors hover:border-[#2A352B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                       >
                         {pet.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -372,7 +379,7 @@ export default async function SellLandingPage({ params }: PageProps) {
                         <p className="mt-0.5 font-mono text-[12px] tabular-nums text-[#8FBF9C]">
                           {pet.priceLabel}
                         </p>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -395,6 +402,20 @@ export default async function SellLandingPage({ params }: PageProps) {
             </div>
           </div>
         </section>
+
+        {/* The game's full seller guide, one slim line under How It Works. */}
+        {guide && (
+          <p className="mx-auto mt-5 max-w-4xl text-center text-[13.5px] text-[#98A398]">
+            New to selling {name}?{' '}
+            <Link
+              href={`/${gameSlug}/blog/${guide.slug}`}
+              className="group inline-flex items-center gap-1 font-semibold text-[#8FBF9C] underline-offset-2 transition-colors hover:text-[#A6D9B6] hover:underline"
+            >
+              Read the full guide: {guide.title}
+              <IconArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" stroke={2.2} />
+            </Link>
+          </p>
+        )}
 
         {/* Price-it-first — reuse the shared HubCtaBand at full hub width
             (max-w-7xl, like the Values page modal). */}
