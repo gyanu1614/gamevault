@@ -98,6 +98,8 @@ const AUTHENTICATED_READ_ALLOWLIST: Record<string, string> = {
   // reads stay scoped by the existing policies.
   seller_tier_history: 'sellers read their own tier history (auth.uid() = user_id)',
   seller_verification_logs: 'applicants read their own application log; admins read all',
+  // 20261021222022 (chat-reply-reactions.guard): the chat reads reactions as the session.
+  message_reactions: 'conversation participants read the reactions in their thread; admins read all (is_admin())',
 }
 
 /** Tables that may be written by anon/authenticated (RLS scopes the rows). */
@@ -108,6 +110,7 @@ const WRITE_ALLOWLIST: Record<string, string> = {
   seller_presence: 'sellers toggle their own presence',
   orders: 'buyers create their own orders (RLS + 20260903020000 lock)',
   messages: 'conversation participants insert messages',
+  message_reactions: 'participants add, change or remove their OWN reaction (insert: message_id + emoji only; update: emoji only)',
   conversations: 'participants create conversations',
   notifications: 'users mark their own notifications read',
   wishlists: 'users manage their own wishlist',
