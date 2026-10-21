@@ -47,9 +47,11 @@ const catLabel = (slug: string, name: string | null) =>
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase())
 
-export function useSpotlightGames() {
+export function useSpotlightGames({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['spotlight-games'],
+    // The navbar passes `mobileMenuOpen`: nothing is read until the menu opens.
+    enabled,
     queryFn: async (): Promise<SpotlightGame[]> => {
       const supabase = createClient()
 
