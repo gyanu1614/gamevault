@@ -47,3 +47,12 @@ export function WaySectionHead({
     </div>
   )
 }
+
+/** Steps across one line on desktop (2-up on tablets, stacked on phones). */
+export const WAY_STEP_COLS: Record<number, string> = {
+  1: 'lg:grid-cols-1',
+  2: 'lg:grid-cols-2',
+  3: 'lg:grid-cols-3',
+  4: 'lg:grid-cols-4',
+  5: 'lg:grid-cols-5',
+}

@@ -18,6 +18,7 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import {
   getSimilarPets,
   type AdoptMePetDetail,
+  type SimilarPet,
   type AdoptMePetVariant,
 } from './_adoptMePetData'
 import AdoptMePetHero from './_AdoptMePetHero'
@@ -32,6 +33,13 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
+import { formatTradeValue, frostsLabel } from '@/lib/adopt-me/trade-value'
+import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
+import { getItemFacts } from '@/lib/values/item-facts-data'
+import { itemFactsGame } from '@/lib/values/item-facts-config'
+import { factFaqs, mergeFaqs } from '@/lib/values/item-facts'
+import { ValueCompare } from '@/components/values/ValueCompare'
+import { nearestByValue, type CompareItem } from '@/lib/values/compare'
 
 const OBTAINABILITY_LABEL: Record<string, string> = {
   obtainable: 'Obtainable',
@@ -39,8 +47,6 @@ const OBTAINABILITY_LABEL: Record<string, string> = {
   unobtainable: 'Unobtainable',
 }
 
-// Trade-points formatter — used by the per-pet FAQ copy below.
-const TRADE = new Intl.NumberFormat('en-US')
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
 const rarityMeta = (r: string) => sharedRarityMeta('adopt-me', r)
@@ -92,11 +98,13 @@ function benchmark(pet: AdoptMePetDetail): AdoptMePetVariant | undefined {
 
 function petFaq(pet: AdoptMePetDetail) {
   const fr = benchmark(pet)
-  const frTrade = fr?.tradeValue != null ? TRADE.format(fr.tradeValue) : 'its listed'
+  const frTrade = fr?.tradeValue != null ? `${formatTradeValue(fr.tradeValue)} trade points (${frostsLabel(fr.tradeValue).replace('≈ ', 'about ')})` : null
   return [
     {
       q: `How much is ${withArticle(pet.name)} worth in Adopt Me?`,
-      a: `A Fly Ride ${pet.name} is worth around ${frTrade} in community trade value. Its cash value in real money is shown on this page and is built from DropMarket marketplace activity; where we don't yet hold enough sales, the cash value is a clearly-marked estimate derived from the variant ladder.`,
+      a: frTrade
+        ? `A Fly Ride ${pet.name} is worth ${frTrade}. The cash price is on this page too, from real listings by established sellers.`
+        : `There aren't enough sales of the Fly Ride ${pet.name} yet to value it. The prices we do have are on this page.`,
     },
     {
       q: `Is the ${pet.name} still obtainable?`,
@@ -109,11 +117,36 @@ function petFaq(pet: AdoptMePetDetail) {
       q: `What is a Fly Ride (FR) ${pet.name}?`,
       a: `A Fly Ride ${pet.name} has had both a Fly Potion and a Ride Potion applied, letting you fly and ride it. FR is the standard trading benchmark — when traders quote a pet's value, they usually mean its Fly Ride value.`,
     },
+    ...megaFaq(pet),
     {
-      q: `Why do the cash value and trade value differ?`,
-      a: `Trade value is the community's consensus in points, used for checking whether a trade is fair. Cash value is what the pet actually sells for in real money on DropMarket. They diverge because community ratings lag real demand — which is exactly why we show both.`,
+      q: `How is the trade value worked out?`,
+      a: `From real sale prices, not votes. A Frost Dragon (Fly Ride) is 100 points and every pet is scored against it, so 320 points is worth about 3.2 Frost Dragons. A form with too few sales is estimated from the same pet's other forms and marked "est."`,
+    },
+    {
+      q: `How do I sell my ${pet.name} for real money?`,
+      a: `List it on DropMarket and price it against the values on this page — each form has its own price. Buyers find listings through these value pages, and every order is covered by SafeDrop: the buyer gets exactly what they ordered, or their money back.`,
     },
   ]
+}
+
+/** "How much is a Mega Neon Fly Ride X worth?" — the top form we can value, from our own numbers; none when we can't. */
+function megaFaq(pet: AdoptMePetDetail): Array<{ q: string; a: string }> {
+  const top = ['MFR', 'NFR']
+    .map((code) => pet.variants.find((v) => v.variant === code))
+    .find((v): v is AdoptMePetVariant => v != null && (v.tradeValue != null || (v.cheapestUsd ?? v.cashUsd) != null))
+  if (!top) return []
+  const cash = top.cheapestUsd ?? top.cashUsd
+  const worth = [
+    top.tradeValue != null ? `${formatTradeValue(top.tradeValue)} trade points (${frostsLabel(top.tradeValue).replace('≈ ', 'about ')})${top.tradeIsEstimated ? ', estimated' : ''}` : null,
+    cash != null ? `about ${USD.format(cash)} in real money` : null,
+  ].filter(Boolean)
+  const mega = top.variant === 'MFR'
+  // The words people search ("mega neon frost dragon value"), not the short form label.
+  const form = mega ? 'Mega Neon Fly Ride' : 'Neon Fly Ride'
+  return [{
+    q: `How much is a ${form} ${pet.name} worth?`,
+    a: `A ${form} ${pet.name} is worth ${worth.join(', or ')}. ${mega ? 'A Mega Neon takes four Neons — 16 of the same pet — to make' : 'A Neon takes four full-grown pets to make'}, which is why it is worth so much more than a regular one.`,
+  }]
 }
 
 export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail }) {
@@ -121,13 +154,15 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   // This pet's FR cash value — used to rank similar pets by value proximity.
   const refFrUsd = fr?.cheapestUsd ?? fr?.cashUsd ?? null
 
-  const [hubNav, similar, buyData, evidence] = await Promise.all([
+  const [hubNav, { similar, pool }, buyData, evidence, facts] = await Promise.all([
     getHubNavData('adopt-me'),
     getSimilarPets(pet.rarity, pet.slug, refFrUsd),
     // DropMarket's own live stock (Bundle 2): buy buttons + "Available Now".
     getValueItemBuyData('adopt-me', pet.slug),
     // The ONE page date: the last material price move of any variant.
     readValuePageEvidence('adopt-me', pet.slug),
+    // The shared facts (released, origin, verified How To Get).
+    getItemFacts('adopt-me', pet.slug),
   ])
   const priceMovedAt = evidence?.priceMovedAt ?? null
   // The answer sentence (snippet + JSON-LD, not shown on the page): Fly Ride, else the best-covered real price.
@@ -135,7 +170,31 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   const meta = rarityMeta(pet.rarity)
-  const faq = petFaq(pet)
+  const game = itemFactsGame('adopt-me')
+  const buy = { gameSlug: 'adopt-me', itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }
+  // The pet questions, with the facts' verified answers in their place.
+  // How it compares: the nearest same-rarity pet, and pets worth about the same from any rarity (one read: getSimilarPets' pool).
+  const asCompare = (p: SimilarPet): CompareItem => ({
+    key: p.slug,
+    name: p.name,
+    href: `/adopt-me/values/${p.slug}`,
+    imageUrl: p.imageUrl,
+    priceUsd: p.frCashUsd,
+    tradePoints: p.frTradeValue,
+    facts: [{ label: 'Rarity', value: rarityMeta(p.rarity).label }],
+  })
+  const rival = similar[0] && similar[0].rarity === pet.rarity && similar[0].frCashUsd != null ? asCompare(similar[0]) : null
+  const worthSame = nearestByValue(refFrUsd, pool.map(asCompare), 4, new Set([rival?.key ?? '']))
+  const selfCompare: CompareItem = {
+    key: pet.slug,
+    name: pet.name,
+    href: `/adopt-me/values/${pet.slug}`,
+    imageUrl: pet.imageUrl,
+    priceUsd: refFrUsd,
+    tradePoints: fr?.tradeValue ?? null,
+    facts: [{ label: 'Rarity', value: meta.label }],
+  }
+  const faq = mergeFaqs(petFaq(pet), factFaqs({ name: pet.name, game, facts, cheapestUsd: refFrUsd }))
   // The stored story without its old baked-in prices, plus one live line
   // from the same numbers as the table (no more "$6.98" next to "$6.28").
   const story = withoutStalePrices(pet.description)
@@ -249,6 +308,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           originType={pet.originType}
           originDetail={pet.originDetail}
           obtainabilityLabel={OBTAINABILITY_LABEL[pet.obtainability] ?? pet.obtainability}
+          released={facts.released}
           variants={pet.variants}
         >
           <p>
@@ -257,6 +317,16 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             {history && <> {history}</>}
           </p>
         </AdoptMeAbout>
+
+        <ItemHowToGet
+          itemName={pet.name}
+          game={game}
+          imageUrl={pet.imageUrl}
+          accent={meta.color}
+          howToGet={facts.howToGet}
+          cheapestUsd={refFrUsd}
+          buy={buy}
+        />
 
         {/* ── Price trend — daily history for the SELECTED variant (shared with
             the hero). One focused line + range tabs; its own dropdown writes the
@@ -269,6 +339,8 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           variants={pet.variants}
           buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
         />
+
+        <ValueCompare item={selfCompare} rival={rival} worthSame={worthSame} tradeLabel={formatTradeValue} priceLabel="Fly Ride Price" />
 
         {/* ── Similar pets — the shared values rail ───────────────────────── */}
         <SimilarItemsRail
@@ -302,7 +374,13 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
         />
 
         {/* Shared end-of-page CTA with the per-game background hero. */}
-        <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref={itemBuyHref({ gameSlug: 'adopt-me', categorySlug: buyCategorySlug, itemSlug: pet.slug })} />
+        <HubBuyCta
+          gameName="Adopt Me"
+          gameSlug="adopt-me"
+          buyHref={itemBuyHref({ gameSlug: 'adopt-me', categorySlug: buyCategorySlug, itemSlug: pet.slug })}
+          title={`Get ${withArticle(pet.name)} without the grind`}
+          ctaLabel={`See ${pet.name} Offers`}
+        />
       </div>
       </ValueItemRails>
       </SelectedVariantProvider>

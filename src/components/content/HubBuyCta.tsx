@@ -18,6 +18,7 @@ export async function HubBuyCta({
   gameSlug,
   buyHref,
   title,
+  ctaLabel,
   /** Override the background image (e.g. a blog post's own CTA art). Defaults
       to the game's ONE CTA image (`getGameCtaImage`). */
   bgSrc,
@@ -28,6 +29,8 @@ export async function HubBuyCta({
   gameSlug: string
   buyHref: string
   title?: string
+  /** The button. On an item page it names the item ("See Bat Dragon Offers"), since the link goes to its listings. */
+  ctaLabel?: string
   bgSrc?: string
   className?: string
 }) {
@@ -39,7 +42,7 @@ export async function HubBuyCta({
       className={className}
       title={title ?? `Skip the grind — buy the ${gameName} item you want`}
       body={HUB_COPY.safedrop}
-      ctaLabel={`Buy ${gameName} items`}
+      ctaLabel={ctaLabel ?? `Buy ${gameName} Items`}
       ctaHref={buyHref}
     />
   )

@@ -601,6 +601,7 @@ export type Database = {
           demand_trend: string | null
           description: string | null
           has_page: boolean | null
+          how_to_get: Json | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -620,6 +621,7 @@ export type Database = {
           demand_trend?: string | null
           description?: string | null
           has_page?: boolean | null
+          how_to_get?: Json | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -639,6 +641,7 @@ export type Database = {
           demand_trend?: string | null
           description?: string | null
           has_page?: boolean | null
+          how_to_get?: Json | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -4862,8 +4865,8 @@ export type Database = {
       order_not_delivered_claims: {
         Row: {
           buyer_id: string
+          cancellation_request_id: string | null
           closed_at: string | null
-          credited_minor: number | null
           due_at: string
           grace_ends_at: string
           opened_at: string
@@ -4872,11 +4875,12 @@ export type Database = {
           response_kind: string | null
           seller_id: string
           status: string
+          window_minutes: number
         }
         Insert: {
           buyer_id: string
+          cancellation_request_id?: string | null
           closed_at?: string | null
-          credited_minor?: number | null
           due_at: string
           grace_ends_at: string
           opened_at?: string
@@ -4885,11 +4889,12 @@ export type Database = {
           response_kind?: string | null
           seller_id: string
           status?: string
+          window_minutes: number
         }
         Update: {
           buyer_id?: string
+          cancellation_request_id?: string | null
           closed_at?: string | null
-          credited_minor?: number | null
           due_at?: string
           grace_ends_at?: string
           opened_at?: string
@@ -4898,6 +4903,7 @@ export type Database = {
           response_kind?: string | null
           seller_id?: string
           status?: string
+          window_minutes?: number
         }
         Relationships: [
           {
@@ -4941,6 +4947,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_cancellation_request_id_fkey"
+            columns: ["cancellation_request_id"]
+            isOneToOne: false
+            referencedRelation: "order_cancellation_requests"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "order_not_delivered_claims_order_id_fkey"
@@ -5736,7 +5749,6 @@ export type Database = {
           founding_discount_pct: number
           founding_months: number
           id: boolean
-          not_delivered_grace_minutes: number
           payout_details_freeze_hours: number
           rank_floor_pct: number
           seller_fault_fee_threshold: number
@@ -5755,7 +5767,6 @@ export type Database = {
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
-          not_delivered_grace_minutes?: number
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
           seller_fault_fee_threshold?: number
@@ -5774,7 +5785,6 @@ export type Database = {
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
-          not_delivered_grace_minutes?: number
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
           seller_fault_fee_threshold?: number
@@ -7332,6 +7342,7 @@ export type Database = {
           base_income_per_second: number | null
           created_at: string
           game_data_last_verified_at: string | null
+          how_to_get: Json | null
           id: string
           image_alt_text: string | null
           image_path: string | null
@@ -7342,8 +7353,10 @@ export type Database = {
           name: string
           needs_review: boolean
           obtainability: string
+          origin: string | null
           popularity_rank: number | null
           rarity: string | null
+          released_at: string | null
           slug: string
           source_name: string | null
           source_page_id: number | null
@@ -7358,6 +7371,7 @@ export type Database = {
           base_income_per_second?: number | null
           created_at?: string
           game_data_last_verified_at?: string | null
+          how_to_get?: Json | null
           id?: string
           image_alt_text?: string | null
           image_path?: string | null
@@ -7368,8 +7382,10 @@ export type Database = {
           name: string
           needs_review?: boolean
           obtainability?: string
+          origin?: string | null
           popularity_rank?: number | null
           rarity?: string | null
+          released_at?: string | null
           slug: string
           source_name?: string | null
           source_page_id?: number | null
@@ -7384,6 +7400,7 @@ export type Database = {
           base_income_per_second?: number | null
           created_at?: string
           game_data_last_verified_at?: string | null
+          how_to_get?: Json | null
           id?: string
           image_alt_text?: string | null
           image_path?: string | null
@@ -7394,8 +7411,10 @@ export type Database = {
           name?: string
           needs_review?: boolean
           obtainability?: string
+          origin?: string | null
           popularity_rank?: number | null
           rarity?: string | null
+          released_at?: string | null
           slug?: string
           source_name?: string | null
           source_page_id?: number | null
@@ -14653,18 +14672,25 @@ export type Database = {
         Returns: Json
       }
       order_not_delivered_due: { Args: { p_limit?: number }; Returns: string[] }
-      order_not_delivered_finalize: {
-        Args: { p_order_id: string }
-        Returns: Json
-      }
       order_not_delivered_mark_responded: {
         Args: { p_at: string; p_kind: string; p_order_id: string }
         Returns: boolean
       }
       order_not_delivered_open: {
-        Args: { p_buyer_id: string; p_due_at: string; p_order_id: string }
+        Args: {
+          p_buyer_id: string
+          p_due_at: string
+          p_order_id: string
+          p_window_minutes: number
+        }
         Returns: Json
       }
+      order_not_delivered_request_cancel: {
+        Args: { p_buyer_id: string; p_note?: string; p_order_id: string }
+        Returns: Json
+      }
+      order_not_delivered_span: { Args: { p_minutes: number }; Returns: string }
+      order_not_delivered_sync: { Args: { p_order_id: string }; Returns: Json }
       order_not_delivered_withdraw: {
         Args: { p_buyer_id: string; p_order_id: string }
         Returns: Json

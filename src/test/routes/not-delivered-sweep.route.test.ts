@@ -1,8 +1,10 @@
 /**
- * /api/cron/not-delivered-sweep — finalizes every "Cancel – Not Delivered"
- * report whose grace hour ran out. Pins: the cron bearer is required; every
- * due report is finalized (one failure doesn't stop the rest and is counted);
- * the response says how many were due / auto-cancelled / failed.
+ * /api/cron/not-delivered-sweep — syncs every "Cancel – Not Delivered" report
+ * whose response window ran out, so the buyer and seller get the "seller did
+ * not respond" notices even when nobody has the order page open. It never
+ * cancels or refunds (that is an admin decision). Pins: the cron bearer is
+ * required; every due report is synced (one failure doesn't stop the rest and
+ * is counted); the response says how many were due / expired / failed.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
@@ -10,8 +12,8 @@ import { NextRequest } from 'next/server'
 vi.mock('@/lib/email', () => ({}))
 const rpc = vi.fn()
 vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: () => ({ rpc }) }))
-const finalize = vi.fn()
-vi.mock('@/lib/orders/not-delivered-finalize', () => ({ finalizeNotDelivered: (id: string) => finalize(id) }))
+const sync = vi.fn()
+vi.mock('@/lib/orders/not-delivered-sync', () => ({ syncNotDelivered: (id: string) => sync(id) }))
 
 import { GET } from '@/app/api/cron/not-delivered-sweep/route'
 
@@ -30,30 +32,30 @@ describe('not-delivered sweep route', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it('finalizes every due report and reports the counts', async () => {
+  it('syncs every due report and reports the counts', async () => {
     rpc.mockResolvedValue({ data: ['o1', 'o2', 'o3'], error: null })
-    finalize
-      .mockResolvedValueOnce({ outcome: 'auto_cancelled' })
+    sync
+      .mockResolvedValueOnce({ outcome: 'expired' })
       .mockResolvedValueOnce({ outcome: 'seller_responded' })
-      .mockResolvedValueOnce({ outcome: 'auto_cancelled' })
+      .mockResolvedValueOnce({ outcome: 'expired' })
     const res = await GET(req('Bearer test-cron-secret'))
     expect(res.status).toBe(200)
     expect(rpc).toHaveBeenCalledWith('order_not_delivered_due', { p_limit: 50 })
-    expect(finalize.mock.calls.map((c) => c[0])).toEqual(['o1', 'o2', 'o3'])
-    expect(await res.json()).toEqual({ due: 3, autoCancelled: 2, errors: 0 })
+    expect(sync.mock.calls.map((c) => c[0])).toEqual(['o1', 'o2', 'o3'])
+    expect(await res.json()).toEqual({ due: 3, expired: 2, errors: 0 })
   })
 
   it('one failing report does not stop the others; the run reports 500 with the error count', async () => {
     rpc.mockResolvedValue({ data: ['o1', 'o2'], error: null })
-    finalize.mockRejectedValueOnce(new Error('lock timeout')).mockResolvedValueOnce({ outcome: 'auto_cancelled' })
+    sync.mockRejectedValueOnce(new Error('lock timeout')).mockResolvedValueOnce({ outcome: 'expired' })
     const res = await GET(req('Bearer test-cron-secret'))
     expect(res.status).toBe(500)
-    expect(await res.json()).toEqual({ due: 2, autoCancelled: 1, errors: 1 })
+    expect(await res.json()).toEqual({ due: 2, expired: 1, errors: 1 })
   })
 
   it('a failed list read is a 500', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'db down' } })
     expect((await GET(req('Bearer test-cron-secret'))).status).toBe(500)
-    expect(finalize).not.toHaveBeenCalled()
+    expect(sync).not.toHaveBeenCalled()
   })
 })

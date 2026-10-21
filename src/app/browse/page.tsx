@@ -1,34 +1,43 @@
 /**
- * /browse — universal marketplace browse (SEO shell + interactive client).
+ * /browse: universal marketplace browse (SEO shell + interactive client).
  *
- * Server component: renders indexable content (H1, intro, a game directory
- * with internal links, category shortcuts, popular searches, FAQ) plus
- * breadcrumb + FAQ JSON-LD, then mounts the client filter/listings UI
- * (_BrowseClient) below the fold. Previously this route was a bare
- * 'use client' shell — crawlers saw nothing, so it never ranked and the
- * game/category graph wasn't linked from a hub.
+ * Server component: renders the indexable content (H1, intro, the popular
+ * games, every game A to Z as internal links, FAQ) plus breadcrumb + FAQ
+ * JSON-LD, then mounts the client filter/listings UI (_BrowseClient).
+ *
+ * Redesigned 2026-10-15 (owner: the old look, less text, organised): the
+ * 240-tile game wall became a popular row and a compact A to Z index.
  */
 
 import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
-import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
-import { FaqCards } from '@/components/marketplace/FaqCards'
 import type { Metadata } from 'next'
-import Link from '@/components/navigation/AppLink'
+import { FireIcon } from '@phosphor-icons/react/dist/ssr/Fire'
+import { GameControllerIcon } from '@phosphor-icons/react/dist/ssr/GameController'
+import { ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets'
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass'
+import { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront'
+import { TagIcon } from '@phosphor-icons/react/dist/ssr/Tag'
+import { FactStrip, InfoCtaBand, InfoHero, InfoSection } from '@/components/info'
+import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { getGameIcon } from '@/features/home/lib/game-icons'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
-import BrowseClient from './_BrowseClient'
+import { foundingHref } from '@/lib/seo/founding-href'
 import { seoMeta } from '@/lib/seo/fit'
+import BrowseClient from './_BrowseClient'
+import { gamesByLetter, popularGames, type BrowseGame } from './_browse-model'
+import { PopularGames } from './_PopularGames'
+import { GameIndex } from './_GameIndex'
 
 /**
- * The server shell is a static game/category directory; the live listing grid
- * is client-fetched by _BrowseClient, so the shell itself can cache.
+ * The server shell is a static game directory; the live listing grid is
+ * client-fetched by _BrowseClient, so the shell itself can cache.
  */
 export const revalidate = 900
 
 export const metadata: Metadata = seoMeta({
-  title: 'Browse the Marketplace — Accounts, Currency, Items & Boosts',
+  title: 'Browse the Marketplace: Accounts, Currency, Items & Boosts',
   description:
     'Browse every game on DropMarket. Buy and sell accounts, in-game currency, items, top-ups and boosting. Every order is covered by SafeDrop Protection: Item Guaranteed or Full Refund.',
   keywords: [
@@ -43,8 +52,7 @@ export const metadata: Metadata = seoMeta({
   openGraph: {
     images: DEFAULT_OG_IMAGES,
     title: 'Browse the DropMarket Marketplace',
-    description:
-      'Accounts, currency, items, top-ups and boosting across every game — protected by SafeDrop.',
+    description: 'Accounts, currency, items, top-ups and boosting across every game, protected by SafeDrop.',
     type: 'website',
     url: `${SITE_URL}/browse`,
   },
@@ -57,131 +65,94 @@ const FAQS = [
   },
   {
     q: 'What can I buy on the marketplace?',
-    a: 'Game accounts, in-game currency, items and skins, direct top-ups, and boosting services across every game we support. Use the search and filters below, or jump straight to a game from the directory.',
+    a: 'Game accounts, in-game currency, items and skins, direct top-ups, and boosting services across every game we support. Use the search and filters, or jump straight to a game from the A to Z list.',
   },
   {
     q: 'How fast is delivery?',
-    a: 'Most currency, item and top-up orders are delivered within minutes by verified sellers. Delivery time is shown on each listing before you buy.',
+    a: 'Most currency, item and top-up orders arrive within minutes. Each listing shows its delivery time before you buy.',
   },
   {
     q: 'How much does it cost to sell?',
-    a: 'Sellers pay some of the lowest fees in the market — set per category and published on our Seller Fees page — so listings start cheaper here and stay cheaper.',
+    a: 'Listing is free. Sellers pay a commission set per category, only when an order completes, and every rate is published on our Seller Fees page.',
   },
   {
     q: 'What does it cost to buy?',
-    a: 'Lowest fees for buyers and sellers: the price you see at checkout is the price you pay. A small marketplace fee keeps SafeDrop Protection on every order, and the processing fee for the payment method you pick is quoted on its tile before you pay — the current terms are on our Fees page.',
+    a: 'Lowest fees for buyers and sellers: the price you see at checkout is the price you pay. A small marketplace fee keeps SafeDrop Protection on every order, and the processing fee for your payment method is shown on its tile before you pay. The current terms are on our Fees page.',
   },
 ]
 
-interface GameRow {
-  id: string
-  slug: string
-  name: string
-  image_url: string | null
-  sort_order: number | null
-}
-
-async function getBrowseDirectory() {
+async function getBrowseDirectory(): Promise<BrowseGame[]> {
   const supabase = createAnonClient()
-
-  const { data: games } = (await supabase
+  const { data } = (await supabase
     .from('games')
     .select('id, slug, name, image_url, sort_order')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
-    .order('name', { ascending: true })) as { data: GameRow[] | null }
-
-  const list = games ?? []
-  if (list.length === 0) return { games: [] as (GameRow & { href: string })[] }
-
-  return {
-    games: list.map((g) => ({
-      ...g,
-      // The game hub: it always exists for an active game (2026-10-07 Bing
-      // scan: a game with no enabled category got an invented /buy-currency
-      // link that 404s).
-      href: `/${g.slug}`,
-    })),
-  }
+    .order('name', { ascending: true })) as { data: Omit<BrowseGame, 'href'>[] | null }
+  // The game hub: it always exists for an active game (2026-10-07 Bing scan:
+  // a game with no enabled category got an invented /buy-currency link that 404s).
+  return (data ?? []).map((g) => ({ ...g, href: `/${g.slug}` }))
 }
 
 export default async function BrowsePage() {
-  const { games } = await getBrowseDirectory()
-
-  const breadcrumb = breadcrumbList([
-    { name: 'Home', path: '/' },
-    { name: 'Browse', path: '/browse' },
-  ])
+  const games = await getBrowseDirectory()
+  const popular = popularGames(games)
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
-      <JsonLd data={breadcrumb} />
-      <JsonLd data={faqPage(FAQS.map((f) => ({ q: f.q, a: f.a })))} />
+    <main className="relative min-h-screen bg-bg-base pb-20">
+      <JsonLd data={breadcrumbList([{ name: 'Home', path: '/' }, { name: 'Browse', path: '/browse' }])} />
+      <JsonLd data={faqPage(FAQS)} />
 
-      {/* SEO hero — real H1 + intro, server-rendered. */}
-      <header className="mb-8 max-w-3xl">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
-          Browse the Marketplace
-        </h1>
-        <p className="mt-3 text-body-lg text-text-secondary">
-          Buy and sell game <strong className="font-semibold text-text-primary">accounts</strong>,{' '}
-          <strong className="font-semibold text-text-primary">currency</strong>,{' '}
-          <strong className="font-semibold text-text-primary">items</strong>, top-ups and boosting
-          across every game, every order covered by{' '}
-          <Link href="/safedrop" className="font-semibold text-lime-text hover:underline">
-            SafeDrop Protection
-          </Link>
-          . Item Guaranteed or Full Refund.
-        </p>
-      </header>
+      <InfoHero
+        icon={StorefrontIcon}
+        tone="lime"
+        title="Browse the Marketplace"
+        lead="Accounts, currency, items, top-ups and boosting across every game, with every order covered by SafeDrop Protection."
+      />
 
-      {/* Game directory — the SEO payload: an internal link to every
-          active game's marketplace page. */}
-      {games.length > 0 && (
-        <section aria-labelledby="browse-games" className="mb-12">
-          <h2 id="browse-games" className="mb-4 text-[18px] font-bold tracking-[-0.01em] text-text-primary sm:text-[20px]">
-            Browse by Game
-          </h2>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-            {games.map((g) => (
-              <Link
-                key={g.slug}
-                href={g.href}
-                className={`group flex items-center gap-2.5 rounded-lg p-2.5 ${MARKET_CARD} ${MARKET_CARD_HOVER}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={g.image_url || getGameIcon(g.slug)}
-                  alt={`${g.name} logo`}
-                  aria-hidden
-                  loading="lazy"
-                  className="h-9 w-9 shrink-0 rounded-md object-cover"
-                />
-                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-text-primary">
-                  {g.name}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <FactStrip
+          label="Why buy on DropMarket"
+          className="mt-12 sm:mt-14"
+          items={[
+            { icon: GameControllerIcon, tone: 'blue', title: `${games.length} Games`, body: 'Accounts, currency, items, top-ups and boosting.' },
+            { icon: ShieldCheckIcon, tone: 'green', title: 'SafeDrop Protection', body: 'Item Guaranteed or Full Refund on every order.', href: '/safedrop' },
+            { icon: TagIcon, tone: 'lime', title: 'Low Fees', body: 'Lowest fees for buyers and sellers, shown before you pay.', href: '/fees' },
+          ]}
+        />
 
-      {/* Interactive filter + listings (client). */}
-      <section aria-labelledby="browse-listings" className="mb-14 scroll-mt-28" id="listings">
-        <h2 id="browse-listings" className="mb-4 text-xl font-bold text-text-primary sm:text-2xl">
-          All Listings
-        </h2>
-        <BrowseClient />
-      </section>
+        {popular.length > 0 && (
+          <InfoSection id="popular-games" icon={FireIcon} tone="amber" title="Popular Games" sub="The most traded games on DropMarket.">
+            <PopularGames games={popular} />
+          </InfoSection>
+        )}
 
-      {/* FAQ — indexable content + matching JSON-LD above. */}
-      <section aria-labelledby="browse-faq" className="max-w-3xl">
-        <h2 id="browse-faq" className="mb-5 text-xl font-bold text-text-primary sm:text-2xl">
-          Frequently Asked Questions
-        </h2>
-        {/* Shared FAQ cards (every answer stays in the HTML). */}
-        <FaqCards items={FAQS} defaultOpen={0} />
-      </section>
+        <InfoSection
+          id="listings"
+          icon={MagnifyingGlassIcon}
+          tone="blue"
+          title="All Listings"
+          sub="Search every live offer, then narrow it by game, category and price."
+        >
+          <BrowseClient />
+        </InfoSection>
+
+        {games.length > 0 && (
+          <InfoSection id="all-games" icon={ListBulletsIcon} title="All Games A to Z" sub={`Every game on DropMarket, ${games.length} in all.`}>
+            <GameIndex groups={gamesByLetter(games)} total={games.length} />
+          </InfoSection>
+        )}
+
+        <HubFaqSection title="Marketplace FAQ" subtitle="Buying, selling and delivery, in short." items={FAQS} />
+
+        <InfoCtaBand
+          icon={StorefrontIcon}
+          tone="lime"
+          title="Have Something to Sell?"
+          body="List for free and reach buyers across every game."
+          action={{ href: foundingHref('browse'), label: 'Become a Seller' }}
+        />
+      </div>
     </main>
   )
 }

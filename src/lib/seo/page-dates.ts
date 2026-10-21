@@ -13,9 +13,9 @@ import { LEGAL_ENTITY } from '@/lib/legal/documents'
  */
 export const SITE_PAGES_UPDATED = {
   /** src/app/(marketing)/safedrop/page.tsx */
-  safedrop: '2026-09-28',
+  safedrop: '2026-10-15',
   /** src/app/(marketing)/sell/fees/page.tsx */
-  sellFees: '2026-09-29',
+  sellFees: '2026-10-15',
   /** src/app/founding/ — the public "Become a Seller" flow (open signup) */
   founding: '2026-10-08',
   /** src/app/(marketplace)/[gameSlug]/values/methodology/page.tsx */

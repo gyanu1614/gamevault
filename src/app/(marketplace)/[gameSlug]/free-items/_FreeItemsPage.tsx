@@ -38,7 +38,7 @@ import { valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
 import { rarityMeta } from '@/lib/values/rarity'
 import { hexRgb } from '@/lib/values/events-model'
 import { cn } from '@/lib/utils'
-import { WaySectionHead } from '../values/_generic/WaySectionHead'
+import { WaySectionHead } from '@/components/values/how-to-get/WaySectionHead'
 import {
   NOTHING_HERE,
   NOTHING_ORDER,

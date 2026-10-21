@@ -143,6 +143,21 @@ export const getGameCodesPost = cache(async function getGameCodesPost(gameSlug: 
   return rowToPost(data as unknown as BlogPostRow)
 })
 
+/** A game's newest published seller guide ("How To Sell X For Real Money"), linked from /{game}/sell; null when it has none. */
+export const getGameSellerGuide = cache(async function getGameSellerGuide(gameSlug: string): Promise<DbBlogPost | null> {
+  const { data, error } = await createAnonClient()
+    .from('blog_posts')
+    .select(LIST_SELECT)
+    .eq('primary_game_slug', gameSlug)
+    .eq('post_type', 'seller')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) return null
+  return rowToPost(data as unknown as BlogPostRow)
+})
+
 /**
  * The games with a published codes post — the hub nav's Codes menu reads it on
  * every hub page, so it is cached under BLOG_CODES_GAMES_TAG (saveBlogPost

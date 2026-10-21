@@ -5,8 +5,8 @@ import {
   boxName,
   howToGetFaqs,
   howToGetWays,
-} from './valueHowToGetCopy'
-import { itemFaq, type ItemCopyInput } from './valueListItemCopy'
+} from './how-to-get-copy'
+import { itemFaq, type ItemCopyInput } from '@/app/(marketplace)/[gameSlug]/values/_generic/valueListItemCopy'
 
 const base: Omit<ValueHowToGet, 'status' | 'method'> = {
   sources: ['https://murder-mystery-2.fandom.com/wiki/Chroma_Lightbringer', 'https://murder-mystery-2.fandom.com/wiki/Mystery_Box_2'],

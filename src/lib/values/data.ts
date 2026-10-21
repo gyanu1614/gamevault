@@ -1,6 +1,7 @@
 import 'server-only'
 import { createValuesReadClient } from '@/lib/values/read-client'
-import { parseHowToGet, type ValueHowToGet } from '@/lib/values/how-to-get'
+import { parseHowToGet } from '@/lib/values/how-to-get'
+import { NO_FACTS, releasedLabel, type ItemFacts } from '@/lib/values/item-facts'
 
 /**
  * Read layer for the generic values pipeline.
@@ -104,17 +105,19 @@ const num = (v: number | string | null | undefined): number | null => {
   return Number.isFinite(n) ? n : null
 }
 
-/** PostgREST caps a select at 1000 rows; page through so nothing is truncated. */
+/**
+ * PostgREST caps a select at 1000 rows; page through so nothing is truncated.
+ * A read error THROWS (2026-10-20 outage): returning what we have would let an
+ * ISR page cache an empty or partial list — or a 404 for every item — for its
+ * whole revalidate window. A throw keeps the last good page served instead.
+ */
 async function selectAll<T>(build: (from: number, to: number) => any): Promise<T[]> {
   const PAGE = 1000
   const out: T[] = []
   for (let page = 0; ; page += 1) {
     const from = page * PAGE
     const { data, error } = await build(from, from + PAGE - 1)
-    if (error) {
-      console.error('values selectAll:', error)
-      break
-    }
+    if (error) throw new Error(`values read failed: ${error.message ?? String(error)}`)
     if (!data?.length) break
     out.push(...(data as T[]))
     if (data.length < PAGE) break
@@ -124,12 +127,14 @@ async function selectAll<T>(build: (from: number, to: number) => any): Promise<T
 
 type ReadClient = ReturnType<typeof createValuesReadClient>
 
+/** The game's id; null only when the game truly doesn't exist. A read error throws (see selectAll). */
 async function gameIdFor(supabase: ReadClient, slug: string): Promise<string | null> {
-  const { data } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from('games')
     .select('id')
     .eq('slug', slug)
     .maybeSingle()
+  if (error) throw new Error(`games read failed: ${error.message ?? String(error)}`)
   return data?.id ?? null
 }
 
@@ -224,27 +229,33 @@ export async function getValueItem(
 }
 
 /**
- * One item's verified "How To Get" facts (values_items.how_to_get), or null
- * when it has none — the item page then renders no section. Its own one-row
+ * One item's shared facts (values_items.release_year / origin / how_to_get) —
+ * the How To Get section renders only when how_to_get is set. Its own one-row
  * read, under the ITEM's tags, so the list reads don't carry the column and a
- * values revalidate refreshes it with the rest of the page.
+ * values revalidate refreshes it with the rest of the page. Callers use
+ * getItemFacts (item-facts-data.ts), which picks the table per game.
  */
-export async function getValueItemHowToGet(gameSlug: string, itemSlug: string): Promise<ValueHowToGet | null> {
+export async function getValueItemFacts(gameSlug: string, itemSlug: string): Promise<ItemFacts> {
   const supabase = createValuesReadClient({ gameSlug, itemSlug })
   const gameId = await gameIdFor(supabase, gameSlug)
-  if (!gameId) return null
+  if (!gameId) return NO_FACTS
   const { data, error } = await (supabase as any)
     .from('values_items')
-    .select('how_to_get')
+    .select('release_year,origin,how_to_get')
     .eq('game_id', gameId)
     .eq('slug', itemSlug)
     .eq('is_enabled', true)
     .maybeSingle()
   if (error) {
-    console.error('getValueItemHowToGet:', error)
-    return null
+    console.error('getValueItemFacts:', error)
+    return NO_FACTS
   }
-  return parseHowToGet(data?.how_to_get)
+  if (!data) return NO_FACTS
+  return {
+    released: releasedLabel({ year: data.release_year }),
+    origin: typeof data.origin === 'string' && data.origin.trim() ? data.origin.trim() : null,
+    howToGet: parseHowToGet(data.how_to_get),
+  }
 }
 
 /**

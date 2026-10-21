@@ -15,13 +15,17 @@ import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibilit
 // wallet credit are ONE RPC each (order_cancel_return_wallet /
 // order_refund_to_wallet via lib/wallet/order-money), never composed here.
 import { cancelOrderReturnWallet, refundOrderToWallet } from '@/lib/wallet/order-money'
+import { syncNotDelivered } from '@/lib/orders/not-delivered-sync'
 
 export interface CancellationRequest {
   id: string
   order_id: string
   buyer_id: string
   reason: string
-  status: 'pending' | 'approved' | 'rejected'
+  /** 'closed' = closed automatically (Cancel – Not Delivered: the seller delivered first). */
+  status: 'pending' | 'approved' | 'rejected' | 'closed'
+  /** Filed by Cancel – Not Delivered after the seller's response window ran out. */
+  not_delivered?: boolean
   admin_id?: string
   admin_notes?: string
   created_at: string
@@ -254,7 +258,29 @@ export async function getPendingCancellationRequests(): Promise<{
       return { error: { message: error.message } }
     }
 
-    return { data: data as any }
+    // Cancel – Not Delivered: tag the requests a report filed, and sync each
+    // one first — a seller who delivered meanwhile closes the request, so it
+    // drops off this list instead of being refunded by mistake.
+    const rows = (data ?? []) as any[]
+    const { data: linked } = rows.length
+      ? await (createServiceRoleClient() as any)
+          .from('order_not_delivered_claims')
+          .select('order_id, cancellation_request_id')
+          .in('cancellation_request_id', rows.map((r) => r.id))
+      : { data: [] }
+    const byRequest = new Map<string, string>(((linked ?? []) as any[]).map((c) => [c.cancellation_request_id, c.order_id]))
+    const closed = new Set<string>()
+    await Promise.all(
+      [...byRequest.entries()].map(async ([requestId, orderId]) => {
+        const r = await syncNotDelivered(orderId).catch(() => ({ outcome: null }))
+        if (r.outcome && r.outcome !== 'expired' && r.outcome !== 'seller_responded') closed.add(requestId)
+      }),
+    )
+    return {
+      data: rows
+        .filter((r) => !closed.has(r.id))
+        .map((r) => ({ ...r, not_delivered: byRequest.has(r.id) })) as any,
+    }
   } catch (error: any) {
     console.error('Error in getPendingCancellationRequests:', error)
     return { error: { message: error.message || 'Failed to fetch requests' } }
@@ -376,6 +402,31 @@ export async function processCancellationRequest(
       return { error: { message: 'This request has already been processed' } }
     }
 
+    // Cancel – Not Delivered: the seller can deliver until an admin acts.
+    // Sync the report first; if the order moved on (delivered, disputed,
+    // cancelled) the sync closed this request — say so, move nothing.
+    const { data: notDeliveredClaim } = await (createServiceRoleClient() as any)
+      .from('order_not_delivered_claims')
+      .select('order_id')
+      .eq('cancellation_request_id', requestId)
+      .maybeSingle()
+    if (notDeliveredClaim) {
+      const synced = await syncNotDelivered(request.order_id)
+      if (synced.outcome === 'delivered' || synced.outcome === 'disputed' || synced.outcome === 'cancelled') {
+        revalidatePath('/admin/orders')
+        return {
+          error: {
+            message:
+              synced.outcome === 'delivered'
+                ? 'The seller delivered this order, so the request was closed. Nothing was refunded.'
+                : synced.outcome === 'disputed'
+                  ? 'This order went to a dispute, so the request was closed. Resolve it in the dispute tools.'
+                  : 'This order was already cancelled, so the request was closed.',
+          },
+        }
+      }
+    }
+
     // Approve: move the money FIRST, as ONE atomic RPC (CLAUDE.md money
     // seams), and only then mark the request approved. The old order
     // (mark approved -> transition -> separate wallet credit) could leave an
@@ -493,6 +544,12 @@ export async function processCancellationRequest(
       })().catch((err) =>
         console.error('[Cancellation] Buyer refund email failed:', err)
       )
+    }
+
+    // The report follows the decision: cancelled on approve, back to expired
+    // on reject (the buyer may ask again). Best-effort; no money moves here.
+    if (notDeliveredClaim) {
+      await syncNotDelivered(request.order_id).catch((err) => console.error('[Cancellation] not-delivered sync failed:', err))
     }
 
     // Revalidate paths

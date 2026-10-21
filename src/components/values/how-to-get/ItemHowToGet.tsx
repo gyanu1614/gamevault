@@ -11,16 +11,13 @@ import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question'
 import { TargetIcon } from '@phosphor-icons/react/dist/ssr/Target'
 import type { IconProps } from '@phosphor-icons/react'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
+import type { ItemFactsGame } from '@/lib/values/item-facts-config'
 import { VALUE_SURFACE } from '@/components/values/styles'
 import { ValueCallout } from '@/components/values/ValueCallout'
-import { WaySectionHead } from './WaySectionHead'
+import { WAY_STEP_COLS, WaySectionHead } from './WaySectionHead'
 import { cn } from '@/lib/utils'
-import { HowToGetFastWay, type ItemBuy } from './ValueListItemClient'
-import {
-  howToGetWays,
-  type FreeWay,
-  type WayIcon,
-} from './valueHowToGetCopy'
+import { HowToGetFastWay, type ItemBuy } from './HowToGetFastWay'
+import { howToGetWays, type FreeWay, type WayIcon } from '@/lib/values/how-to-get-copy'
 
 const FREE_ICONS: Partial<Record<WayIcon, ComponentType<IconProps>>> = {
   coins: CoinsIcon,
@@ -41,24 +38,23 @@ function hexRgb(hex: string): string | null {
 }
 
 /**
- * "How To Get <Item> for Free in Murder Mystery 2" on a value-list item page,
- * from the item's verified how_to_get entry (values_items.how_to_get, `pnpm
- * values:mm2:how-to-get`). Renders nothing for an item without one.
+ * "How To Get <Item> for Free in <Game>" on any value item page (MM2, Adopt
+ * Me, Steal a Brainrot), from the item's verified how_to_get entry
+ * (getItemFacts). Renders nothing for an item without one; the game's words
+ * come from its ItemFactsGame (src/lib/values/item-facts-config.ts).
  *
  * Owner, 2026-10-05: answer the search ("how to get X for free"), then show
  * TWO ways side by side — the free in-game way in short steps with real
  * numbers and its honest total, and the fast way (DropMarket → buy →
  * delivered in minutes) — with the item's art and its rarity colour so the
  * card isn't flat grey. Every string is crawlable server text; the FAQ and
- * its schema reuse the same sentences (valueHowToGetCopy.ts, unit-tested).
+ * its schema reuse the same sentences (src/lib/values/how-to-get-copy.ts, unit-tested).
  */
-export function ValueItemHowToGet({
+export function ItemHowToGet({
   itemName,
-  gameName,
-  shortName,
+  game,
   imageUrl,
   accent,
-  earnRate,
   howToGet,
   cheapestUsd,
   buy,
@@ -66,12 +62,10 @@ export function ValueItemHowToGet({
   boxLink = null,
 }: {
   itemName: string
-  gameName: string
-  shortName: string
+  game: ItemFactsGame
   imageUrl: string | null
   /** The item's rarity colour (hex). */
   accent: string
-  earnRate: { unit: string; perRound: number } | null
   howToGet: ValueHowToGet | null
   cheapestUsd: number | null
   buy: ItemBuy
@@ -81,11 +75,12 @@ export function ValueItemHowToGet({
   boxLink?: { href: string; label: string } | null
 }) {
   if (!howToGet) return null
-  const ways = howToGetWays({ name: itemName, gameName, shortName, h: howToGet, cheapestUsd, earnRate })
+  const { gameName, shortName, earnRate, vocab } = game
+  const ways = howToGetWays({ name: itemName, gameName, shortName, h: howToGet, cheapestUsd, earnRate, vocab })
   const rgb = hexRgb(accent) ?? '255,255,255'
 
   return (
-    <section aria-labelledby="how-to-get-title" className={cn(VALUE_SURFACE, 'relative isolate overflow-hidden')}>
+    <section aria-labelledby="how-to-get-title" className={cn(VALUE_SURFACE, 'relative isolate overflow-clip')}>
       {/* Atmosphere: the item's rarity colour glowing in from the top corner,
           and its art, large and faint, behind the header. Decorative only. */}
       <div
@@ -146,15 +141,6 @@ export function ValueItemHowToGet({
 
     </section>
   )
-}
-
-/** Steps across one line on desktop (2-up on tablets, stacked on phones). */
-export const WAY_STEP_COLS: Record<number, string> = {
-  1: 'lg:grid-cols-1',
-  2: 'lg:grid-cols-2',
-  3: 'lg:grid-cols-3',
-  4: 'lg:grid-cols-4',
-  5: 'lg:grid-cols-5',
 }
 
 /** Row 1: the free in-game route (or why it's gone) — steps in a line, then the total. */

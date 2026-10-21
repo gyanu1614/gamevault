@@ -21,6 +21,7 @@ import type { RawListing } from '@/lib/pricing/reputable-adapter'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import type { PublishedPrice } from '@/lib/pricing/change-rule'
 import { OBSERVED_PRICE_TTL_DAYS, evidenceSince, staleObservedKeys } from '@/lib/pricing/adopt-me-expiry'
+import { writeOwnTradeValues } from '@/lib/pricing/games/adopt-me-trade'
 
 const PAGE_SIZE = 1000
 
@@ -198,6 +199,10 @@ export async function runAdoptMeCorrection(
   // outlier whose previous run's price would otherwise stay up).
   const unpublished = await unpublishLadderOutliers(admin, plan.flagged, existing, startedAt)
 
+  // Our own trade values (Frost Dragon FR = 100) from the prices just stored.
+  const trade = await writeOwnTradeValues(admin)
+  console.log(trade.skipped ? `⚠️ Adopt Me trade values: ${trade.skipped}` : `✅ Adopt Me trade values: ${trade.written} changed`)
+
   // Everything the pet pages display after this run (T1 publish step).
   const publishedPrices = await adoptMePublishedPrices(admin, existing)
 
@@ -217,6 +222,7 @@ export async function runAdoptMeCorrection(
     ladder_unpublished: unpublished,
     expired_estimated: expired,
     placeholders_dropped: plan.placeholdersDropped,
+    trade_values_written: trade.written,
     publishedPrices,
   }
 }

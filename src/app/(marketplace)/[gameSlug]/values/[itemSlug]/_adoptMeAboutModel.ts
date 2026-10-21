@@ -8,8 +8,8 @@ import { VARIANTS, VARIANT_DISPLAY, type Variant } from '@/lib/adopt-me/variants
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { formatUsd } from '@/lib/value-listings/format'
 import type { AdoptMePetVariant } from './_adoptMePetTypes'
+import { formatTradeValue } from '@/lib/adopt-me/trade-value'
 
-const TRADE = new Intl.NumberFormat('en-US')
 
 export interface FormRow {
   code: Variant
@@ -18,6 +18,7 @@ export interface FormRow {
   tradeValue: number | null
   listings: number
   isEstimated: boolean
+  tradeIsEstimated: boolean
   /** Our own cheapest live offer for this form, and how many. */
   ourFromUsd: number | null
   ourCount: number
@@ -48,6 +49,7 @@ export function formRows(
       tradeValue: v.tradeValue,
       listings: v.listingsTracked,
       isEstimated: v.isEstimated,
+      tradeIsEstimated: v.tradeIsEstimated ?? false,
       ourFromUsd: ours && ours.count > 0 ? ours.minPriceUsd : null,
       ourCount: ours?.count ?? 0,
       selected: code === selected,
@@ -64,7 +66,7 @@ export function aboutAnswer(name: string, v: AdoptMePetVariant | undefined): str
   if (!v) return null
   const form = `${VARIANT_DISPLAY[v.variant]} ${name}`
   const usd = formPrice(v)
-  const trade = v.tradeValue != null ? TRADE.format(v.tradeValue) : null
+  const trade = v.tradeValue != null ? formatTradeValue(v.tradeValue) : null
   if (usd != null) return `A ${form} sells for ${formatUsd(usd)}${trade ? `, with a trade value of ${trade}` : ''}.`
   if (trade) return `A ${form} has a trade value of ${trade}.`
   return null
@@ -81,11 +83,13 @@ export function aboutBasis(v: AdoptMePetVariant | undefined): string | null {
 }
 
 export function aboutFacts(
-  pet: { rarity: string; originDetail: string | null; originType: string | null; obtainabilityLabel: string },
+  pet: { rarity: string; originDetail: string | null; originType: string | null; obtainabilityLabel: string; released?: string | null },
   variants: AdoptMePetVariant[],
 ): Array<{ label: string; value: string }> {
   const prices = variants.map(formPrice).filter((p): p is number => p != null && p > 0)
   const facts: Array<{ label: string; value: string }> = [{ label: 'Rarity', value: pet.rarity }]
+  // The shared Released fact (item-facts releasedLabel), before Origin like every game.
+  if (pet.released) facts.push({ label: 'Released', value: pet.released })
   const origin = pet.originDetail ?? pet.originType
   if (origin) facts.push({ label: 'Origin', value: origin })
   facts.push({ label: 'Availability', value: pet.obtainabilityLabel })

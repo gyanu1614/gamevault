@@ -5,7 +5,7 @@
  *
  * Adopt Me's price dimension is the 8-form potion/Neon ladder, chosen with a
  * VARIANT SELECTOR that reprices the whole list (and per card). Every card
- * shows BOTH numbers — community trade value and the cheapest reputable cash
+ * shows BOTH numbers — our trade value (from real prices) and the cheapest reputable cash
  * price. Built on the shared values kit (src/components/values) so it reads
  * as one product with the other hubs.
  */
@@ -50,6 +50,7 @@ import {
   type AdoptMeView,
 } from './_adoptMeListModel'
 import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
+import { formatTradeValue } from '@/lib/adopt-me/trade-value'
 
 export type { AdoptMePetItem, AdoptMeVariantValue } from './_adoptMeListModel'
 
@@ -57,7 +58,6 @@ const rarityMeta = (r: string) => sharedRarityMeta('adopt-me', r)
 const RARITY_ORDER = ADOPT_ME_RARITIES.map((r) => r.key)
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-const TRADE = new Intl.NumberFormat('en-US')
 
 
 const PAGE_SIZE = ADOPT_ME_PAGE_SIZE
@@ -368,7 +368,7 @@ function PetCard({
       footer={
         <PriceStatPair
           stats={[
-            { label: 'Trade', value: tradeVal != null ? TRADE.format(tradeVal) : null, shine: true },
+            { label: 'Trade', value: tradeVal != null ? formatTradeValue(tradeVal) : null, shine: true },
             {
               label: 'Cheapest',
               value: cheapest != null ? USD.format(cheapest) : null,
