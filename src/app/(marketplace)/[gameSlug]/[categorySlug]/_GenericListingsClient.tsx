@@ -16,6 +16,7 @@
 
 import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
+import { mediaUrl } from '@/lib/images/media-url'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -207,7 +208,7 @@ function ListingCard({
         <div className="relative aspect-[4/3] overflow-hidden bg-bg-overlay">
           {imageUrl ? (
             <Image
-              src={imageUrl}
+              src={mediaUrl(imageUrl) ?? imageUrl}
               alt={listing.title}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

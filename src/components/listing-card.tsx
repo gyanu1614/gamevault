@@ -2,6 +2,7 @@
 
 import { sellerDisplayName, sellerInitial, sellerRatingPercent } from '@/lib/seller/identity'
 import Link from '@/components/navigation/AppLink'
+import { mediaUrl } from '@/lib/images/media-url'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Eye, ShoppingBag, Clock, Zap, Infinity, TrendingDown } from 'lucide-react'
@@ -55,7 +56,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
         <div className="relative aspect-[4/3] overflow-hidden bg-bg-overlay">
           {primaryImage ? (
             <Image
-              src={primaryImage}
+              src={mediaUrl(primaryImage) ?? primaryImage}
               alt={listing.title}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
