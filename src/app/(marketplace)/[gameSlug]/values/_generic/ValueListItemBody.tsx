@@ -20,6 +20,9 @@ import { formatUsd, type ItemCopyInput } from './valueListItemCopy'
 import { factRows, releasedLabel } from '@/lib/values/item-facts'
 import { ValueListFormTable, type FormRow } from './ValueListFormTable'
 import { pointsOf, tradeCopy } from './valueListTrade'
+import { ValueCompare } from '@/components/values/ValueCompare'
+import { nearestByValue, type CompareItem } from '@/lib/values/compare'
+import { formatTradeValue } from '@/lib/values/trade-points'
 
 /**
  * The streamed body of a value-list item page (Murder Mystery 2): hero, buy
@@ -59,10 +62,12 @@ export default async function ValueListItemBody({
   const rarity = rarityMeta(gameSlug, item.rarity)
   const hasPage = (i: ValueItem) => valueItemHasPage(gameSlug, { rarity: i.rarity, priced: i.price?.cheapestUsd != null })
 
-  const [buyData, history] = await Promise.all([
+  const [buyData, history, counterpartBuy] = await Promise.all([
     // DropMarket's own live stock (Bundle 2): buy buttons + "Available Now".
     getValueItemBuyData(gameSlug, item.slug),
     getValueItemHistory(gameSlug, item.slug, counterpart ? [item.id, counterpart.id] : [item.id]),
+    // The other form's stock only (no offers), for the forms table's "On DropMarket" link.
+    counterpart && hasPage(counterpart) ? getValueItemBuyData(gameSlug, counterpart.slug, 0) : Promise.resolve(null),
   ])
   const buy = {
     gameSlug,
@@ -126,6 +131,28 @@ export default async function ValueListItemBody({
     .slice(0, 14)
   const allSameType = similar.length > 0 && similar.every((s) => s.itemType === item.itemType)
   const similarTitle = `Similar ${rarity.label || ''} ${allSameType ? plural(typeLabel) : theme.itemNounPlural}`.replace(/\s+/g, ' ')
+
+  // How it compares: the closest same-tier item (similar[0]), and the items worth about the same from any tier.
+  const asCompare = (i: ValueItem): CompareItem => ({
+    key: i.slug,
+    name: i.name,
+    href: `/${gameSlug}/values/${i.slug}`,
+    imageUrl: i.imageUrl,
+    priceUsd: i.price?.cheapestUsd ?? null,
+    tradePoints: pointsOf(gameSlug, items, i),
+    facts: [
+      ...(i.rarity ? [{ label: 'Rarity', value: rarityMeta(gameSlug, i.rarity).label }] : []),
+      { label: 'Type', value: (i.itemType && hub.itemTypeLabels[i.itemType]) || theme.itemNoun },
+      ...factRows({ released: releasedLabel({ year: i.releaseYear }), origin: i.origin, howToGet: null }),
+    ],
+  })
+  const rival = similar[0] ? asCompare(similar[0]) : null
+  const worthSame = nearestByValue(
+    cheapestUsd,
+    items.filter((i) => hasPage(i)).map(asCompare),
+    4,
+    new Set([item.slug, counterpart?.slug ?? '', rival?.key ?? '']),
+  )
 
   const imageCredit = parseImageAttribution(item.imageAttribution)
 
@@ -202,6 +229,8 @@ export default async function ValueListItemBody({
               marketUsd: f.price?.averageUsd ?? null,
               tradePoints: pointsOf(gameSlug, items, f),
               offers: f.price?.sampleSize ?? 0,
+              ourFromUsd: (f.id === item.id ? buyData : counterpartBuy)?.stock?.minPriceUsd ?? null,
+              buyHref: itemBuyHref({ gameSlug, categorySlug: buy.categorySlug, itemSlug: f.slug }),
             }))}
           />
         )}
@@ -209,6 +238,8 @@ export default async function ValueListItemBody({
         <ValueListPriceTrend series={series} selectedKey={item.slug} />
         {/* What the browser-only chart shows, as text crawlers can read. */}
         {historyLine && <p className="-mt-6 text-meta leading-6 text-text-tertiary">{historyLine}</p>}
+
+        <ValueCompare item={asCompare(item)} rival={rival} worthSame={worthSame} tradeLabel={formatTradeValue} />
 
         {similar.length > 0 && (
           <SimilarItemsRail

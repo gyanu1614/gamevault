@@ -41,8 +41,13 @@ import {
   getMutations,
   getPriceHistory,
   getRelatedBrainrots,
+  getBrainrotsNearValue,
   type BrainrotRow,
+  type ComparableBrainrot,
 } from './_sabItemData'
+import { ValueCompare } from '@/components/values/ValueCompare'
+import { SabMutationTable } from './_SabMutationTable'
+import { nearestByValue, type CompareItem } from '@/lib/values/compare'
 
 /**
  * The Steal a Brainrot item page (/steal-a-brainrot/values/[itemSlug]). The
@@ -110,7 +115,11 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
 
   // DropMarket's own live stock for this brainrot (Bundle 2): the hero button
   // and "Available Now" read it; cached per game, refreshed by listing changes.
-  const buyData = await getValueItemBuyData('steal-a-brainrot', brainrot.slug)
+  const [buyData, nearValue] = await Promise.all([
+    getValueItemBuyData('steal-a-brainrot', brainrot.slug),
+    // Brainrots priced near this one, any rarity, for "Worth About the Same".
+    getBrainrotsNearValue(brainrot, marketPriceUsd),
+  ])
   const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   // Highest-value priced mutation (excluding default) for the FAQ copy.
@@ -139,6 +148,22 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
   }), factFaqs({ name: brainrot.name, game, facts, cheapestUsd: reputableCheapest ?? marketPriceUsd }))
   const factList = factRows(facts)
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
+
+  // How it compares: the same-rarity brainrot priced closest, and brainrots worth about the same from any rarity.
+  const asCompare = (b: Pick<ComparableBrainrot, 'slug' | 'name' | 'rarity' | 'image_url' | 'base_income_per_second' | 'ingame_cost'>, usd: number | null): CompareItem => ({
+    key: b.slug,
+    name: b.name,
+    href: `/steal-a-brainrot/values/${b.slug}`,
+    imageUrl: b.image_url,
+    priceUsd: usd,
+    facts: [
+      { label: 'Rarity', value: b.rarity },
+      ...(asNumber(b.base_income_per_second) != null ? [{ label: 'Income', value: `$${formatIncome(b.base_income_per_second)}` }] : []),
+      ...(formatIngameCost(b.ingame_cost) ? [{ label: 'Cost', value: formatIngameCost(b.ingame_cost)! }] : []),
+    ],
+  })
+  const rival = nearestByValue(marketPriceUsd, relatedBrainrots.map((r) => asCompare(r, r.compare_usd ?? asNumber(r.display_price_usd))), 1)[0] ?? null
+  const worthSame = nearestByValue(marketPriceUsd, nearValue.map((r) => asCompare(r, r.compare_usd)), 4, new Set([rival?.key ?? '']))
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
@@ -356,6 +381,16 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
       </div>
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="space-y-10 pb-10">
+          <SabMutationTable
+            name={brainrot.name}
+            itemSlug={brainrot.slug}
+            categorySlug={buyCategorySlug}
+            mutations={mutations}
+            stock={buyData?.stock ?? null}
+          />
+          <ValueCompare item={asCompare(brainrot, marketPriceUsd)} rival={rival} worthSame={worthSame} />
+        </div>
         <SimilarItemsRail
           title={`Similar ${brainrot.rarity} Brainrots`}
           seeAllHref="/steal-a-brainrot/values"

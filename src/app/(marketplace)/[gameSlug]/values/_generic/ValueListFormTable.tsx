@@ -15,6 +15,10 @@ export interface FormRow {
   marketUsd: number | null
   tradePoints: number | null
   offers: number
+  /** DropMarket's cheapest live listing of this form, or null when we stock none. */
+  ourFromUsd: number | null
+  /** This form's listings on DropMarket. */
+  buyHref: string
 }
 
 const Dash = () => (
@@ -46,7 +50,8 @@ export function ValueListFormTable({ name, rows }: { name: string; rows: FormRow
                 <th scope="col" className="px-3 py-2 text-right font-medium">Cheapest</th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">Market</th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">Trade Value</th>
-                <th scope="col" className="hidden px-5 py-2 text-right font-medium sm:table-cell sm:px-6">Offers Tracked</th>
+                <th scope="col" className="hidden px-3 py-2 text-right font-medium sm:table-cell">Offers Tracked</th>
+                <th scope="col" className="px-5 py-2 text-right font-medium sm:px-6">On DropMarket</th>
               </tr>
             </thead>
             <tbody>
@@ -82,7 +87,21 @@ export function ValueListFormTable({ name, rows }: { name: string; rows: FormRow
                   <td className="px-3 py-3 text-right font-semibold tabular-nums text-text-primary">
                     {r.tradePoints != null ? formatTradeValue(r.tradePoints) : <Dash />}
                   </td>
-                  <td className="hidden px-5 py-3 text-right tabular-nums text-text-secondary sm:table-cell sm:px-6">{r.offers > 0 ? r.offers : '—'}</td>
+                  <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary sm:table-cell">{r.offers > 0 ? r.offers : '—'}</td>
+                  <td className="px-5 py-3 text-right sm:px-6">
+                    {r.ourFromUsd != null ? (
+                      <Link
+                        href={r.buyHref}
+                        prefetch={false}
+                        className="group inline-flex items-center gap-1 rounded-sm font-semibold tabular-nums text-text-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                      >
+                        From {formatUsd(r.ourFromUsd)}
+                        <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                    ) : (
+                      <Dash />
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

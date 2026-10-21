@@ -18,6 +18,7 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import {
   getSimilarPets,
   type AdoptMePetDetail,
+  type SimilarPet,
   type AdoptMePetVariant,
 } from './_adoptMePetData'
 import AdoptMePetHero from './_AdoptMePetHero'
@@ -37,6 +38,8 @@ import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
 import { getItemFacts } from '@/lib/values/item-facts-data'
 import { itemFactsGame } from '@/lib/values/item-facts-config'
 import { factFaqs, mergeFaqs } from '@/lib/values/item-facts'
+import { ValueCompare } from '@/components/values/ValueCompare'
+import { nearestByValue, type CompareItem } from '@/lib/values/compare'
 
 const OBTAINABILITY_LABEL: Record<string, string> = {
   obtainable: 'Obtainable',
@@ -151,7 +154,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   // This pet's FR cash value — used to rank similar pets by value proximity.
   const refFrUsd = fr?.cheapestUsd ?? fr?.cashUsd ?? null
 
-  const [hubNav, similar, buyData, evidence, facts] = await Promise.all([
+  const [hubNav, { similar, pool }, buyData, evidence, facts] = await Promise.all([
     getHubNavData('adopt-me'),
     getSimilarPets(pet.rarity, pet.slug, refFrUsd),
     // DropMarket's own live stock (Bundle 2): buy buttons + "Available Now".
@@ -170,6 +173,27 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   const game = itemFactsGame('adopt-me')
   const buy = { gameSlug: 'adopt-me', itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }
   // The pet questions, with the facts' verified answers in their place.
+  // How it compares: the nearest same-rarity pet, and pets worth about the same from any rarity (one read: getSimilarPets' pool).
+  const asCompare = (p: SimilarPet): CompareItem => ({
+    key: p.slug,
+    name: p.name,
+    href: `/adopt-me/values/${p.slug}`,
+    imageUrl: p.imageUrl,
+    priceUsd: p.frCashUsd,
+    tradePoints: p.frTradeValue,
+    facts: [{ label: 'Rarity', value: rarityMeta(p.rarity).label }],
+  })
+  const rival = similar[0] && similar[0].rarity === pet.rarity && similar[0].frCashUsd != null ? asCompare(similar[0]) : null
+  const worthSame = nearestByValue(refFrUsd, pool.map(asCompare), 4, new Set([rival?.key ?? '']))
+  const selfCompare: CompareItem = {
+    key: pet.slug,
+    name: pet.name,
+    href: `/adopt-me/values/${pet.slug}`,
+    imageUrl: pet.imageUrl,
+    priceUsd: refFrUsd,
+    tradePoints: fr?.tradeValue ?? null,
+    facts: [{ label: 'Rarity', value: meta.label }],
+  }
   const faq = mergeFaqs(petFaq(pet), factFaqs({ name: pet.name, game, facts, cheapestUsd: refFrUsd }))
   // The stored story without its old baked-in prices, plus one live line
   // from the same numbers as the table (no more "$6.98" next to "$6.28").
@@ -315,6 +339,8 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           variants={pet.variants}
           buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
         />
+
+        <ValueCompare item={selfCompare} rival={rival} worthSame={worthSame} tradeLabel={formatTradeValue} priceLabel="Fly Ride Price" />
 
         {/* ── Similar pets — the shared values rail ───────────────────────── */}
         <SimilarItemsRail
