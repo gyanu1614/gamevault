@@ -71,7 +71,10 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
     .eq('has_page', true)
     .maybeSingle()
 
-  if (error || !pet) return null
+  // A read error throws: returning null here made the page notFound(), and ISR
+  // cached that 404 for 7 days (2026-10-20 outage). Null = the pet has no page.
+  if (error) throw new Error(`adopt_me_pets read failed: ${error.message ?? String(error)}`)
+  if (!pet) return null
 
   const { data: valueRows } = await (supabase as any)
     .from('adopt_me_pet_values')
