@@ -26,6 +26,7 @@ import { displayOrderRef } from '@/lib/orders/order-number'
 import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
 import { orderPaymentMethodLabel } from '@/lib/orders/payment-method-label'
 import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
+import { responseWindowMinutes } from '@/lib/orders/not-delivered'
 import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
@@ -548,6 +549,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         refundToSource={refundToSource}
         cancelRequest={cancelRequest}
         notDelivered={notDelivered}
+        notDeliveredWindowMinutes={responseWindowMinutes(order.listing?.delivery_time)}
         itemTitle={listingTitle ?? 'Order Details'}
         deliveryMethod={deliveryMethod}
         gameName={gameName ?? null}
