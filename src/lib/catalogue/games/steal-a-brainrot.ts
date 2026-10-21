@@ -9,7 +9,7 @@
 import { buildSabFacts, parseObtainment, parseUpdateLog, statusOf, type SabHowToGetStatus } from '../../sab/wiki-facts'
 import { plainText, templateBody, templateParams } from '../../wiki/markup'
 import { slugifyTitle } from '../plan'
-import type { CatalogueAdapter, ParsedItem, WikiPage } from '../types'
+import type { CatalogueAdapter, KnownItem, ParsedItem, WikiPage } from '../types'
 
 const HOST = 'stealabrainrot.fandom.com'
 const BUCKET = 'sab-brainrots'
@@ -118,10 +118,45 @@ export const stealABrainrot: CatalogueAdapter = {
     return { updates }
   },
   parse: (page, ctx) => parseSabPage(page, ctx.updates as Map<number, string>, ctx.checkedAt),
-  loadKnown: async () => {
-    throw new Error('steal-a-brainrot loadKnown: not wired yet')
+  async loadKnown(db) {
+    const out: KnownItem[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await db.from('sab_brainrots').select('slug,name,source_page_id').order('slug').range(from, from + 999)
+      if (error) throw new Error(`sab_brainrots: ${error.message}`)
+      for (const r of data ?? []) out.push({ slug: r.slug, name: r.name, pageId: r.source_page_id == null ? null : Number(r.source_page_id) })
+      if (!data || data.length < 1000) return out
+    }
   },
-  insert: async () => {
-    throw new Error('steal-a-brainrot insert: not wired yet')
+  async insert(db, items, images) {
+    const verifiedAt = new Date().toISOString()
+    const rows = []
+    for (const item of items) {
+      const path = `${item.slug}.webp`
+      const copied = item.imageFile ? await images.copy(item.imageFile, { bucket: BUCKET, path }) : false
+      rows.push(sabRow(item, copied ? path : null, verifiedAt))
+    }
+    // ON CONFLICT (slug) DO NOTHING: an existing brainrot is never rewritten, and only inserted rows come back.
+    const { data, error } = await db.from('sab_brainrots').upsert(rows, { onConflict: 'slug', ignoreDuplicates: true }).select('slug')
+    if (error) throw new Error(`sab_brainrots insert: ${error.message}`)
+    return (data ?? []).map((r) => r.slug as string)
+  },
+  async fixMissingImages(db, images) {
+    const { data, error } = await db
+      .from('sab_brainrots')
+      .select('id,slug,source_payload')
+      .eq('image_status', 'missing')
+      .eq('source_payload->>imported_by', PIPELINE_MARK)
+      .limit(25)
+    if (error) throw new Error(`sab_brainrots missing images: ${error.message}`)
+    const fixed: string[] = []
+    for (const row of data ?? []) {
+      const file = (row.source_payload as { image_file?: string | null } | null)?.image_file
+      const path = `${row.slug}.webp`
+      if (!file || !(await images.copy(file, { bucket: BUCKET, path }))) continue
+      const { error: upErr } = await db.from('sab_brainrots').update({ image_path: path, image_status: 'approved' }).eq('id', row.id)
+      if (upErr) throw new Error(`sab_brainrots image ${row.slug}: ${upErr.message}`)
+      fixed.push(row.slug)
+    }
+    return fixed
   },
 }
