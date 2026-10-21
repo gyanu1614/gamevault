@@ -2,7 +2,9 @@ import { readValuePageEvidence } from '@/lib/seo/gate/read'
 import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
-import { JsonLd, breadcrumbList, productAggregate, valuePage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, productAggregate, valuePage } from '@/lib/seo/jsonld'
+import { HubFaqSection } from '@/components/content/HubFaqSection'
+import { valueItemFaq } from './valueItemFaq'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
@@ -98,6 +100,9 @@ export default async function ValueItemPage({
   // The item's type leads its fact rows (owner, 2026-10-12: Type, Rarity, …).
   facts.unshift({ label: 'Type', value: kindLabel })
 
+  // Only what the catalogue and listings say (valueItemFaq.ts); the schema uses the same list.
+  const faq = valueItemFaq({ item, gameName: theme.name, items, income: item.incomePerSec != null ? formatIncome(item.incomePerSec) : null })
+
   return (
     <main
       className={`relative min-h-screen ${HUB_GROUND}`}
@@ -133,6 +138,7 @@ export default async function ValueItemPage({
           dateModified: priceMovedAt,
         })}
       />
+      {faq.length > 0 && <JsonLd data={faqPage(faq)} />}
       {/* Product schema only where a real price backs it. */}
       {hasPrice && !thin && (
         <JsonLd
@@ -226,7 +232,13 @@ export default async function ValueItemPage({
         />
       </section>
 
-      <div className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+      {faq.length > 0 && (
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <HubFaqSection title={`${item.name} FAQ`} items={faq} />
+        </div>
+      )}
+
+      <div className={`mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 lg:px-8 ${faq.length > 0 ? 'pt-10' : ''}`}>
         <Link href={`/${gameSlug}/values`} className={VALUE_BTN_SECONDARY}>
           <ArrowLeftIcon aria-hidden size={15} weight="bold" />
           All {theme.name} Values

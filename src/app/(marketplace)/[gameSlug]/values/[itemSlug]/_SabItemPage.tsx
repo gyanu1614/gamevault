@@ -27,6 +27,7 @@ import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
 import { getItemFacts } from '@/lib/values/item-facts-data'
 import { itemFactsGame } from '@/lib/values/item-facts-config'
 import { factFaqs, factRows, mergeFaqs } from '@/lib/values/item-facts'
+import { sabAbout } from '@/lib/sab/about'
 import { rarityMeta } from '@/lib/values/rarity'
 import ItemHero from './_ItemHero'
 import {
@@ -291,8 +292,16 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
 
           <section className={`${VALUE_SURFACE} p-5 sm:p-6`}>
             <h2 className="text-lg font-semibold text-text-primary">About {brainrot.name}</h2>
+            {/* Written from this brainrot's own facts (src/lib/sab/about.ts), not one template for all. */}
             <p className="mt-2 text-sm leading-6 text-text-secondary">
-              {brainrot.name} is {withArticle(brainrot.rarity)} Brainrot with a base income of {formatIncome(brainrot.base_income_per_second)}. Its current obtainability status is {brainrot.obtainability}. Mutation income estimates use the verified base income and each mutation&apos;s multiplier unless a verified variant-specific override exists.
+              {sabAbout({
+                name: brainrot.name,
+                rarity: brainrot.rarity,
+                income: asNumber(brainrot.base_income_per_second) != null ? `$${formatIncome(brainrot.base_income_per_second)}` : null,
+                cost: formatIngameCost(brainrot.ingame_cost),
+                obtainability: brainrot.obtainability,
+                facts,
+              })}
             </p>
             {factList.length > 0 && (
               <dl className="mt-4">

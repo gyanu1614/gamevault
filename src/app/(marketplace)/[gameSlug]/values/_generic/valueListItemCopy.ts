@@ -32,6 +32,8 @@ export interface ItemCopyInput {
   now?: number
   /** The other form: this item's Chroma, or (on a Chroma) its base. */
   counterpart: { name: string; isChroma: boolean; cheapestUsd: number | null } | null
+  /** Our trade points (src/lib/values/trade-points.ts): "27", "≈ 0.3 Harvesters", and the item fixed at 100. */
+  trade?: { points: string; inBenchmark: string; benchmark: string; benchmarkPoints: string; isBenchmark: boolean } | null
 }
 
 export const formatUsd = (v: number): string =>
@@ -154,6 +156,14 @@ export function itemFaq(i: ItemCopyInput, howTo: { q: string; a: string }[] = []
         ? `How much is the ${i.counterpart.name} worth?`
         : `How is ${i.name} different from the ${i.counterpart.name}?`,
       a: chroma,
+    })
+  }
+  if (i.trade) {
+    out.push({
+      q: `What is the trade value of ${i.name} in ${i.shortName}?`,
+      a: i.trade.isBenchmark
+        ? `${i.name} is the benchmark: it is ${i.trade.benchmarkPoints} trade points, and every ${i.shortName} item is scored against it from real sale prices, not votes, so the numbers move with the market every day.`
+        : `${i.name} is worth ${i.trade.points} trade points (${i.trade.inBenchmark.replace('≈ ', 'about ').replace('< ', 'under ')}). A ${i.trade.benchmark} is ${i.trade.benchmarkPoints} points and every item is scored against it from real sale prices, not votes, so the numbers move with the market every day.`,
     })
   }
   out.push({

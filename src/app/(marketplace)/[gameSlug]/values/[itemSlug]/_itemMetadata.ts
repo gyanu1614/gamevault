@@ -14,6 +14,8 @@ import { valueItemMetaTail, valueItemMetaTitle } from '../_generic/valueListItem
 import { getAdoptMePet } from './_adoptMePetData'
 import { petHeadline } from './_petAnswer'
 import { SAB_GAME, getBrainrot } from './_sabItemData'
+import { getItemFacts } from '@/lib/values/item-facts-data'
+import { sabMetaTail } from '@/lib/sab/about'
 
 export interface ItemPageProps {
   params: Promise<{
@@ -168,11 +170,10 @@ export async function generateItemMetadata({ params }: ItemPageProps): Promise<M
   // Same head phrase as Adopt Me / MM2 (owner, 2026-10-14: the game name was missing).
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const title = `${brainrot.name} Value in Steal a Brainrot (${monthYear})`
-  const gate = await getValuePageGate(SAB_GAME, brainrot.slug, true)
-  const description = withAnswer(
-    answerSentence({ name: brainrot.name, valueUsd: gate.evidence?.valueUsd, offers: gate.evidence?.observations ?? 0, updatedAt: gate.evidence?.priceMovedAt ?? null }),
-    `${brainrot.name} value guide for Steal a Brainrot. See rarity, base income, mutation income, obtainability, and current DropMarket pricing.`,
-  )
+  const [gate, facts] = await Promise.all([getValuePageGate(SAB_GAME, brainrot.slug, true), getItemFacts(SAB_GAME, brainrot.slug)])
+  const answer = answerSentence({ name: brainrot.name, valueUsd: gate.evidence?.valueUsd, offers: gate.evidence?.observations ?? 0, updatedAt: gate.evidence?.priceMovedAt ?? null })
+  // What it is (and when it came out), then what the page has — sized to the room the answer leaves.
+  const description = withAnswer(answer, sabMetaTail({ rarity: brainrot.rarity, released: facts.released }, DESC_MAX - (answer ? answer.length + 1 : 0)))
   const canonical = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return {

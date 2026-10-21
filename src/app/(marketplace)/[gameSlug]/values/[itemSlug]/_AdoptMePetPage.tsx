@@ -114,11 +114,36 @@ function petFaq(pet: AdoptMePetDetail) {
       q: `What is a Fly Ride (FR) ${pet.name}?`,
       a: `A Fly Ride ${pet.name} has had both a Fly Potion and a Ride Potion applied, letting you fly and ride it. FR is the standard trading benchmark — when traders quote a pet's value, they usually mean its Fly Ride value.`,
     },
+    ...megaFaq(pet),
     {
       q: `How is the trade value worked out?`,
       a: `From real sale prices, not votes. A Frost Dragon (Fly Ride) is 100 points and every pet is scored against it, so 320 points is worth about 3.2 Frost Dragons. A form with too few sales is estimated from the same pet's other forms and marked "est."`,
     },
+    {
+      q: `How do I sell my ${pet.name} for real money?`,
+      a: `List it on DropMarket and price it against the values on this page — each form has its own price. Buyers find listings through these value pages, and every order is covered by SafeDrop: the buyer gets exactly what they ordered, or their money back.`,
+    },
   ]
+}
+
+/** "How much is a Mega Neon Fly Ride X worth?" — the top form we can value, from our own numbers; none when we can't. */
+function megaFaq(pet: AdoptMePetDetail): Array<{ q: string; a: string }> {
+  const top = ['MFR', 'NFR']
+    .map((code) => pet.variants.find((v) => v.variant === code))
+    .find((v): v is AdoptMePetVariant => v != null && (v.tradeValue != null || (v.cheapestUsd ?? v.cashUsd) != null))
+  if (!top) return []
+  const cash = top.cheapestUsd ?? top.cashUsd
+  const worth = [
+    top.tradeValue != null ? `${formatTradeValue(top.tradeValue)} trade points (${frostsLabel(top.tradeValue).replace('≈ ', 'about ')})${top.tradeIsEstimated ? ', estimated' : ''}` : null,
+    cash != null ? `about ${USD.format(cash)} in real money` : null,
+  ].filter(Boolean)
+  const mega = top.variant === 'MFR'
+  // The words people search ("mega neon frost dragon value"), not the short form label.
+  const form = mega ? 'Mega Neon Fly Ride' : 'Neon Fly Ride'
+  return [{
+    q: `How much is a ${form} ${pet.name} worth?`,
+    a: `A ${form} ${pet.name} is worth ${worth.join(', or ')}. ${mega ? 'A Mega Neon takes four Neons — 16 of the same pet — to make' : 'A Neon takes four full-grown pets to make'}, which is why it is worth so much more than a regular one.`,
+  }]
 }
 
 export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail }) {

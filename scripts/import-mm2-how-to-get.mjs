@@ -20,13 +20,10 @@
  */
 import fs from 'node:fs'
 import process from 'node:process'
+import { canon, howToGetErrors, isText, toStoredHowToGet as toStored } from './lib/how-to-get-seed.mjs'
 
 const GAME = 'murder-mystery-2'
 const FILE = `scripts/values-seeds/${GAME}.how-to-get.json`
-const STATUSES = new Set(['obtainable', 'unobtainable', 'unknown', 'seasonal'])
-const CONFIDENCE = new Set(['high', 'medium', 'low'])
-const OPTIONAL = ['costs', 'odds', 'released', 'note']
-
 const argv = process.argv.slice(2)
 const val = (name, fallback = null) => {
   const eq = argv.find((a) => a.startsWith(`--${name}=`))
@@ -35,18 +32,6 @@ const val = (name, fallback = null) => {
   return i !== -1 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : fallback
 }
 const flag = (name) => argv.includes(`--${name}`)
-
-const isText = (v) => typeof v === 'string' && v.trim().length > 0
-
-/** The stored object: the entry minus its key fields, keys in a fixed order. */
-function toStored(e) {
-  const out = { status: e.status, method: e.method.trim() }
-  for (const k of OPTIONAL) if (isText(e[k])) out[k] = e[k].trim()
-  out.sources = e.sources
-  out.confidence = e.confidence
-  out.checked_at = e.checked_at
-  return out
-}
 
 function validate(entries) {
   if (!Array.isArray(entries)) throw new Error(`${FILE}: expected an array`)
@@ -57,24 +42,10 @@ function validate(entries) {
     if (!isText(e?.slug) || !/^[a-z0-9-]+$/.test(e.slug)) errors.push(`${at}: bad slug`)
     else if (seen.has(e.slug)) errors.push(`${at}: duplicate slug`)
     else seen.add(e.slug)
-    if (!STATUSES.has(e?.status)) errors.push(`${at}: status must be ${[...STATUSES].join('|')}`)
-    if (!isText(e?.method)) errors.push(`${at}: method is required`)
-    for (const k of OPTIONAL) if (e?.[k] != null && typeof e[k] !== 'string') errors.push(`${at}: ${k} must be a string`)
-    if (!Array.isArray(e?.sources) || !e.sources.length || !e.sources.every((s) => /^https:\/\/\S+$/.test(s)))
-      errors.push(`${at}: sources must be a non-empty list of https URLs`)
-    if (!CONFIDENCE.has(e?.confidence)) errors.push(`${at}: confidence must be ${[...CONFIDENCE].join('|')}`)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(e?.checked_at ?? '')) errors.push(`${at}: checked_at must be YYYY-MM-DD`)
+    errors.push(...howToGetErrors(e, at))
   })
   if (errors.length) throw new Error(`${FILE}: ${errors.length} invalid entr${errors.length === 1 ? 'y' : 'ies'}\n  ${errors.join('\n  ')}`)
 }
-
-/** Key-order-independent equality for the stored JSON. */
-const canon = (v) =>
-  Array.isArray(v)
-    ? `[${v.map(canon).join(',')}]`
-    : v && typeof v === 'object'
-      ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}`
-      : JSON.stringify(v)
 
 async function main() {
   const entries = JSON.parse(fs.readFileSync(FILE, 'utf8'))
