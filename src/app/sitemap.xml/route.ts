@@ -6,7 +6,9 @@
  */
 import { loadSitemapSections, sectionSitemapUrl, sitemapSectionIds } from '@/lib/seo/sitemap-sections'
 
-export const revalidate = 3600
+// Each rebuild loads the whole sitemap input; IndexNow announces new pages
+// at once, so six hours is fresh enough (was hourly; 2026-10-20 usage audit).
+export const revalidate = 21600
 
 const escapeXml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
