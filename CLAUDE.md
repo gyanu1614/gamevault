@@ -68,6 +68,12 @@
 - `src/lib/trend-radar/roblox.ts` and `resolve.ts` are loaded by Node's type-stripper (`pnpm radar:backfill`): keep them free of `@/` imports and of TS-only runtime syntax (parameter properties, enums). Inject the matcher instead; `index.ts` pre-wires it for app code.
 - Thresholds are config (`src/lib/trend-radar/config.ts`, `TREND_*` env overrides), and every fired value is kept in `trend_events` — tune from that table, not from memory.
 
+## Values catalogue pipeline (from migration 20261021161513)
+- New items (pets, guns, brainrots) reach the values hubs ONLY through `pnpm catalogue` (`src/lib/catalogue/`): one shared run, one adapter per game in `games/`, registry `CATALOGUE_GAMES`, daily workflow `values-catalogue-daily.yml` (matrix, one job per game, fail-fast off).
+- Insert-only: the run never updates or deletes an existing item row (it only fills an image on rows it added). `catalogue_refs` (game, wiki page id) is the dedupe key; `catalogue_runs` is the run log /admin and the health check read.
+- A run over `insertCap` (default 50) or with >20% unparseable pages stops itself and posts to Discord; a big backlog is a manual `--allow-large` run after a dry run.
+- Adding a game: adapter + `games/<game-slug>.test.ts` (saved wiki pages) + registry line + workflow matrix key — the guard test fails until all exist. Never edit another game's adapter for it.
+
 ## Public pages are static-first (from Step 7a, 2026-09-19)
 - Every public page is ISR or SSG. `scripts/check-public-route-caching.mjs` runs ahead of `next build` (and as `src/test/guards/public-route-caching.guard.test.ts`) and fails the deploy when a public route breaks a rule below. A new per-request public route needs an entry in its `GRANDFATHERED` list with the reason — the same review a `force-dynamic` would get.
 - **No cookie client on a public read.** `@/lib/supabase/server` calls `cookies()`; one call anywhere in a page's server import graph makes the whole route `private, no-store`. Public data goes through `@/lib/supabase/anon`. A `'use server'` module that mixes session writes with public reads must be in `MIXED_ACTION_MODULES`, and its public reads must be covered by a behaviour test that mocks the cookie client to throw (`category-page-anon-reads.test.ts`).

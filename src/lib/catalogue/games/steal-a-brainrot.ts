@@ -44,16 +44,21 @@ const pageUrl = (title: string) => `https://${HOST}/wiki/${encodeURI(title.repla
 
 /**
  * A brainrot page → its item. Null for subpages (/Gallery), pages without the
- * infobox or a known rarity, and announced-but-unreleased brainrots; the run
- * records those as ignored and looks again when the page is edited.
+ * infobox or a known rarity, announced-but-unreleased brainrots, and things
+ * that share the infobox but are not brainrots: lucky blocks and event items
+ * earn nothing, and the wiki tags them "Non-Indexable Brainrots". The run
+ * records those as ignored and looks again when the page is edited (a stub's
+ * income is often filled in a day later).
  */
 export function parseSabPage(page: WikiPage, updates: Map<number, string>, checkedAt: string): ParsedItem | null {
   if (page.title.includes('/')) return null
+  if (page.categories.some((c) => /non-indexable brainrots$/i.test(c))) return null
   const body = templateBody(page.content, 'Brainrot Infobox')
   if (body == null) return null
   const info = templateParams(body)
   const rarity = sabRarity(info.rarity)
-  if (!rarity || parseObtainment(page.content)?.upcoming) return null
+  const income = parseAmount(info.income)
+  if (!rarity || !income || parseObtainment(page.content)?.upcoming) return null
   const slug = slugifyTitle(page.title)
   const url = pageUrl(page.title)
   const categories = page.categories.map((c) => c.replace(/^Category:/, ''))
@@ -72,7 +77,7 @@ export function parseSabPage(page: WikiPage, updates: Map<number, string>, check
     origin: facts.origin,
     howToGet: facts.how_to_get,
     extra: {
-      income: parseAmount(info.income),
+      income,
       cost: parseAmount(info.cost),
       obtainability: OBTAINABILITY[facts.how_to_get?.status ?? statusOf(info.status)],
       categories,

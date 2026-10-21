@@ -40,6 +40,12 @@ describe('parseSabPage', () => {
     expect(parseSabPage({ ...base, content: base.content.replace('rarity=Secret', 'rarity=Celestial') }, UPDATES, '2026-10-21')).toBeNull()
     expect(parseSabPage({ ...base, content: base.content.replace('{{Obtainment|', '{{Obtainment|Upcoming=yes|') }, UPDATES, '2026-10-21')).toBeNull()
   })
+  it('skips lucky blocks and event items: no income, or tagged Non-Indexable by the wiki', () => {
+    const base = page('Cobra Gelato')
+    expect(parseSabPage({ ...base, content: base.content.replace('income=77.5M|', '') }, UPDATES, '2026-10-21')).toBeNull()
+    expect(parseSabPage({ ...base, content: base.content.replace('income=77.5M', 'income=0') }, UPDATES, '2026-10-21')).toBeNull()
+    expect(parseSabPage({ ...base, categories: [...base.categories, 'Category:Non-Indexable Brainrots'] }, UPDATES, '2026-10-21')).toBeNull()
+  })
 })
 
 describe('sabRow', () => {
