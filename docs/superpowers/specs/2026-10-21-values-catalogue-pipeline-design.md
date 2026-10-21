@@ -128,8 +128,12 @@ scripts/catalogue.mjs  (tsx CLI, GitHub runner)
 
 ## Later steps (each has its own plan and PR)
 
-- **Price, page and Google rule.**
+- **Price, page, Google and New-badge rule.**
   - One headline helper, used by the item hero, list cards and sell pages.
+  - **New badge** (owner, 2026-10-21) on list cards, the item hero and sell-page rows. One helper, `isNewItem({ releasedAt, addedAt }, now)`:
+    - with a known release date, New means released within 14 days;
+    - without one, New means the row's `created_at` is within 14 days.
+    - It uses the row's own dates, so there are no new reads, and a backlog import never makes old items look new.
   - Every catalogue item gets a page: AM drops the description gate; MM2 drops the priced and top-tier gate.
   - Indexed when priced, or when new (under 30 days) with How To Get and a release date. Otherwise noindex until data arrives.
   - The sitemap follows the same verdict.
