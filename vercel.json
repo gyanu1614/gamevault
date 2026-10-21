@@ -13,6 +13,7 @@
     { "path": "/api/cron/value-listing-refs", "schedule": "50 4 * * *" },
     { "path": "/api/cron/seo-evidence", "schedule": "10 5 * * *" },
     { "path": "/api/cron/seo-indexnow", "schedule": "40 5 * * *" },
-    { "path": "/api/cron/seo-gsc", "schedule": "20 6 * * *" }
+    { "path": "/api/cron/seo-gsc", "schedule": "20 6 * * *" },
+    { "path": "/api/cron/seo-bing", "schedule": "40 7 * * *" }
   ]
 }

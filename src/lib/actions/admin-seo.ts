@@ -16,6 +16,7 @@ import { valueItemHasPage } from '@/lib/values/hub-config'
 import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
 import { SEO_GATE_TAG } from '@/lib/seo/gate/settings'
 import { recordAndFlush } from '@/lib/seo/events/log'
+import { readSeoReport, type SeoReport } from '@/lib/seo/report'
 
 const ROLES = ['admin', 'super_admin'] as const
 
@@ -82,6 +83,16 @@ export interface SeoHealth {
   sections: { section: string; sitemapUrls: number; inspected: number; indexed: number; clicks: number; impressions: number; indexedWeekAgo: number | null; inspectedWeekAgo: number | null }[]
   alerts: { id: number; kind: string; message: string; createdAt: string; posted: boolean }[]
   events: { pending: number; failed: number; sent24h: number; recentFailed: { url: string; reason: string; error: string | null; attempts: number }[] }
+}
+
+/** The weekly check, Google's pipeline per section and Bing (small daily tables only — see lib/seo/report). */
+export async function getSeoReport(): Promise<{ ok: true; data: SeoReport } | { ok: false; error: string }> {
+  await requireRole([...ROLES])
+  try {
+    return { ok: true, data: await readSeoReport(createServiceRoleClient()) }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
 }
 
 export async function getSeoHealth(): Promise<{ ok: true; data: SeoHealth } | { ok: false; error: string }> {
