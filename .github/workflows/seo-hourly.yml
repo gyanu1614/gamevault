@@ -3,9 +3,10 @@
 # (05:40) and /api/cron/seo-gsc (06:20) are the backstop, this is the real cadence.
 #  - seo-indexnow: retries unsent/failed IndexNow rows within the hour, and runs
 #    the post-deploy step within an hour of a release.
-#  - seo-gsc: one ~4-minute URL Inspection batch per run. The route caps the day
-#    at 1,500 inspections (Google allows 2,000) and pulls Search Analytics once a
-#    day, so 24 runs cover the whole sitemap in about a day instead of a week.
+#  - seo-gsc: one ~4-minute URL Inspection batch every 3rd hour (8 a day, ~150
+#    pages each, cover the ~1,000-page sitemap daily). The route caps the day
+#    at 1,500 inspections (Google allows 2,000) and pulls Search Analytics once
+#    a day.
 # Both handlers are idempotent; an overlapping run does nothing twice.
 name: SEO Hourly
 on:
@@ -27,8 +28,19 @@ jobs:
             https://dropmarket.gg/api/cron/seo-indexnow)
           cat /tmp/out
           [ "$code" = "200" ] || exit 1
+      # Every 3rd UTC hour only (2026-10-20 usage audit): each call loads the
+      # whole sitemap input + every stored inspection from Supabase, and 8
+      # batches of ~150 already cover the ~1,000-page sitemap. A manual run
+      # always inspects.
       - name: Google URL Inspection batch
         run: |
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            h=$(date -u +%H)
+            if [ $((10#$h % 3)) -ne 0 ]; then
+              echo "Inspection batch runs every 3rd UTC hour; skipped at ${h}:xx."
+              exit 0
+            fi
+          fi
           code=$(curl -s -o /tmp/out -w "%{http_code}" -m 310 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             https://dropmarket.gg/api/cron/seo-gsc)
