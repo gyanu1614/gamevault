@@ -118,6 +118,19 @@ describe('sectionStats', () => {
         [`${S}/y`, 'NEUTRAL'],
       ]),
     )
-    expect(stats).toEqual([{ section: 'values-adopt-me', sitemapUrls: 3, inspected: 2, indexed: 1 }])
+    expect(stats).toEqual([{ section: 'values-adopt-me', sitemapUrls: 3, inspected: 2, indexed: 1, unknown: 0, discovered: 0, crawled: 0 }])
+  })
+  it('counts where the unindexed pages sit in Google’s pipeline', () => {
+    const stats = sectionStats(
+      new Map([['values-mm2', [`${S}/a`, `${S}/b`, `${S}/c`, `${S}/d`]]]),
+      new Map([[`${S}/a`, 'PASS'], [`${S}/b`, 'NEUTRAL'], [`${S}/c`, 'NEUTRAL'], [`${S}/d`, 'NEUTRAL']]),
+      new Map([
+        [`${S}/a`, 'Submitted and indexed'],
+        [`${S}/b`, 'URL is unknown to Google'],
+        [`${S}/c`, 'Discovered - currently not indexed'],
+        [`${S}/d`, 'Crawled - currently not indexed'],
+      ]),
+    )
+    expect(stats[0]).toMatchObject({ indexed: 1, unknown: 1, discovered: 1, crawled: 1 })
   })
 })

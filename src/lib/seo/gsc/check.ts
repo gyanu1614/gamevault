@@ -161,13 +161,36 @@ export function alertsFor(input: {
   return out
 }
 
-/** Per section: URLs in the sitemap, how many have an inspection, how many are indexed. */
+/** Google's coverage stage for a page that isn't indexed yet, from its coverageState text. */
+export function coverageStage(state: string | null | undefined): 'unknown' | 'discovered' | 'crawled' | null {
+  const s = (state ?? '').toLowerCase()
+  if (s.startsWith('url is unknown')) return 'unknown'
+  if (s.startsWith('discovered')) return 'discovered'
+  if (s.startsWith('crawled')) return 'crawled'
+  return null
+}
+
+/**
+ * Per section: URLs in the sitemap, how many have an inspection, how many are
+ * indexed, and where the rest sit in Google's pipeline (unknown → discovered →
+ * crawled), so progress shows before the index count moves.
+ */
 export function sectionStats(
   sitemapBySection: ReadonlyMap<string, string[]>,
   verdictByUrl: ReadonlyMap<string, string | null>,
-): (SectionCount & { sitemapUrls: number })[] {
+  coverageByUrl: ReadonlyMap<string, string | null> = new Map(),
+): (SectionCount & { sitemapUrls: number; unknown: number; discovered: number; crawled: number })[] {
   return [...sitemapBySection].map(([section, urls]) => {
     const verdicts = urls.map((u) => verdictByUrl.get(u)).filter((v): v is string => !!v)
-    return { section, sitemapUrls: urls.length, inspected: verdicts.length, indexed: verdicts.filter((v) => v === 'PASS').length }
+    const stages = urls.map((u) => coverageStage(coverageByUrl.get(u)))
+    return {
+      section,
+      sitemapUrls: urls.length,
+      inspected: verdicts.length,
+      indexed: verdicts.filter((v) => v === 'PASS').length,
+      unknown: stages.filter((s) => s === 'unknown').length,
+      discovered: stages.filter((s) => s === 'discovered').length,
+      crawled: stages.filter((s) => s === 'crawled').length,
+    }
   })
 }

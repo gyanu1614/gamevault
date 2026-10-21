@@ -16,6 +16,7 @@ export interface StoredInspection {
   url: string
   section: string
   verdict: string | null
+  coverageState?: string | null
   inspectedAt: string | null
   searchSyncedAt: string | null
 }
@@ -42,7 +43,10 @@ export interface GscStore {
   markEventsInspected(rows: { url: string; gscState: string | null; at: string; since: string }[]): Promise<void>
   /** Clicks per page; rows not in `rows` get zero (a page that lost its clicks loses its protection). */
   replaceSearch(rows: { url: string; section: string; clicks: number; impressions: number }[], at: string): Promise<void>
-  upsertSectionDaily(day: string, rows: { section: string; sitemapUrls: number; inspected: number; indexed: number; clicks: number; impressions: number }[]): Promise<void>
+  upsertSectionDaily(
+    day: string,
+    rows: { section: string; sitemapUrls: number; inspected: number; indexed: number; clicks: number; impressions: number; unknown?: number; discovered?: number; crawled?: number }[],
+  ): Promise<void>
   sectionDaily(day: string): Promise<{ section: string; inspected: number; indexed: number; clicks: number; impressions: number }[]>
   recentAlertKeys(sinceIso: string): Promise<Set<string>>
   insertAlerts(alerts: NewAlert[]): Promise<number[]>
@@ -181,8 +185,12 @@ export async function runDailyGscCheck(deps: {
 
   // 3. Index rate per section, today.
   const verdictByUrl = new Map<string, string | null>(stored.map((s) => [s.url, s.verdict]))
-  for (const w of writes) verdictByUrl.set(w.url, w.verdict)
-  const stats = sectionStats(deps.sitemap as ReadonlyMap<string, string[]>, verdictByUrl)
+  const coverageByUrl = new Map<string, string | null>(stored.map((s) => [s.url, s.coverageState ?? null]))
+  for (const w of writes) {
+    verdictByUrl.set(w.url, w.verdict)
+    coverageByUrl.set(w.url, w.coverageState)
+  }
+  const stats = sectionStats(deps.sitemap as ReadonlyMap<string, string[]>, verdictByUrl, coverageByUrl)
   const today = day(now)
   const previousToday = didSync ? [] : await store.sectionDaily(today)
   await store.upsertSectionDaily(
