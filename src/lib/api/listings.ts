@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/client'
 import type { ListingWithRelations } from '@/types/database'
-import { cleanListingSearch, listingOrder } from './listings-query'
+import {
+  BROWSE_CATEGORY_SELECT,
+  BROWSE_GAME_SELECT,
+  BROWSE_LISTING_SELECT,
+  cleanListingSearch,
+  listingOrder,
+} from './listings-query'
 
 export interface ListingsFilters {
   gameId?: string
@@ -24,12 +30,7 @@ export async function getListings(filters: ListingsFilters = {}) {
   // parent rows via the inner join, works client- and server-side.
   let query = supabase
     .from('listings')
-    .select(`
-      *,
-      seller:public_profiles!listings_seller_id_fkey!inner(*),
-      game:games!listings_game_id_fkey(*),
-      category:game_categories!listings_game_category_id_fkey(*)
-    `)
+    .select(BROWSE_LISTING_SELECT)
     .eq('status', 'active')
     .eq('seller.is_test', false)
 
@@ -80,7 +81,7 @@ export async function getGames() {
 
   const { data, error } = await supabase
     .from('games')
-    .select('*')
+    .select(BROWSE_GAME_SELECT)
     .eq('is_active', true)
     .order('name') as any
 
@@ -92,7 +93,8 @@ export async function getCategories() {
 
   const { data, error } = await supabase
     .from('game_categories')
-    .select('*')
+    .select(BROWSE_CATEGORY_SELECT)
+    .eq('is_enabled', true)
     .order('name') as any
 
   return { data, error }
