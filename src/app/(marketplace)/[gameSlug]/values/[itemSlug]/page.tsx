@@ -251,10 +251,8 @@ async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
     .eq('slug', slug)
     .maybeSingle()
 
-  if (error) {
-    console.error('Unable to load Brainrot value page:', error)
-    return null
-  }
+  // A read error throws, never a 404 (ISR would cache it for 7 days — 2026-10-20 outage).
+  if (error) throw new Error(`sab_brainrot_market_catalog read failed: ${error.message ?? String(error)}`)
 
   return (data as BrainrotRow | null) ?? null
 }
