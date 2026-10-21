@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { EventEmitter } from 'node:events'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-// @ts-expect-error — plain .mjs helpers shared by the runner scripts
 import { sabImporterArgs, runSabImporter } from '../../../scripts/lib/sab-importer.mjs'
-// @ts-expect-error — plain .mjs helpers shared by the runner scripts
 import { retireUnseenRawListings } from '../../../scripts/lib/values-raw.mjs'
 
 const ROOT = process.cwd()
@@ -32,7 +30,7 @@ describe('SAB crawl import never publishes', () => {
       queueMicrotask(() => child.emit('exit', 0))
       return child
     }
-    await runSabImporter('feed.json', { spawnFn: fakeSpawn })
+    await runSabImporter('feed.json', { spawnFn: fakeSpawn as never })
     expect(calls).toHaveLength(1)
     expect(calls[0][0]).toBe(process.execPath)
     expect(calls[0][1]).toEqual(sabImporterArgs('feed.json'))
@@ -44,7 +42,7 @@ describe('SAB crawl import never publishes', () => {
       queueMicrotask(() => child.emit('exit', 3))
       return child
     }
-    await expect(runSabImporter('feed.json', { spawnFn: fakeSpawn })).rejects.toThrow(/code 3/)
+    await expect(runSabImporter('feed.json', { spawnFn: fakeSpawn as never })).rejects.toThrow(/code 3/)
   })
 
   it('both SAB collectors use the shared importer (no private copy)', () => {

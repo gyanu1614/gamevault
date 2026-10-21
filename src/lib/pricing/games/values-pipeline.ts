@@ -19,6 +19,7 @@
  *  4. Fewer than MIN_EVIDENCE reputable listings → nothing published.
  */
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import type { RepriceOptions, RepriceResult } from '@/lib/pricing/registry'
 import type { PublishedPrice } from '@/lib/pricing/change-rule'
 import {
@@ -28,7 +29,6 @@ import {
   type VariantReputablePrice,
 } from '@/lib/pricing/reputable-adapter'
 
-const PAGE_SIZE = 1000
 
 /** Only listings observed in this window feed a live price. */
 const FRESH_WINDOW_HOURS = 24
@@ -53,37 +53,6 @@ function toNumber(value: unknown): number | null {
   if (value == null) return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
-}
-
-/**
- * Page through a table in 1000-row chunks (PostgREST caps a single select).
- *
- * `orderBy` is REQUIRED and per-table: pagination without a stable sort can
- * skip or duplicate rows at the page seams. It is a parameter rather than a
- * hardcoded 'id' because these tables do not share a key — values_prices is
- * keyed by `item_id` (one row per item, no surrogate id), so ordering it by
- * 'id' raised `column values_prices.id does not exist` and failed the whole
- * pricing run in production.
- */
-async function selectAll<T>(
-  client: ReturnType<typeof createServiceRoleClient>,
-  table: string,
-  columns: string,
-  orderBy: string,
-  filter?: (q: any) => any,
-): Promise<T[]> {
-  const rows: T[] = []
-  for (let page = 0; ; page += 1) {
-    const from = page * PAGE_SIZE
-    let query = (client as any).from(table).select(columns).order(orderBy)
-    if (filter) query = filter(query)
-    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
-    if (error) throw new Error(`${table}: ${error.message}`)
-    if (!data?.length) break
-    rows.push(...(data as T[]))
-    if (data.length < PAGE_SIZE) break
-  }
-  return rows
 }
 
 /**
@@ -247,30 +216,29 @@ export async function runValuesPipelineCorrection(
     return { game: gameSlug, skipped: 'game not found', startedAt }
   }
 
-  const items = await selectAll<ItemRow>(
-    admin,
-    'values_items',
-    'id,slug,kind,is_priced',
-    'id',
-    (q) => q.eq('game_id', game.id).eq('is_enabled', true),
-  )
+  // Keyset reads (never OFFSET); the key must be unique per table.
+  const items = await selectAllByKey<ItemRow>(admin, {
+    table: 'values_items',
+    columns: 'id,slug,kind,is_priced',
+    key: 'id',
+    filter: (q) => q.eq('game_id', game.id).eq('is_enabled', true),
+  })
   const priceable = new Set(
     items.filter((i) => i.is_priced && !policy.unpricedKinds.includes(i.kind)).map((i) => i.id),
   )
 
   const since = new Date(Date.now() - FRESH_WINDOW_HOURS * 3600_000).toISOString()
-  const rawRows = await selectAll<RawRow>(
-    admin,
-    'values_raw_listings',
-    'id,matched_item_id,price_usd,quantity,seller_reviews,match_confidence',
-    'id',
-    (q) =>
+  const rawRows = await selectAllByKey<RawRow>(admin, {
+    table: 'values_raw_listings',
+    columns: 'id,matched_item_id,price_usd,quantity,seller_reviews,match_confidence',
+    key: 'id',
+    filter: (q) =>
       q
         .eq('game_id', game.id)
         .eq('is_active', true)
         .eq('parse_status', 'matched')
         .gte('observed_at', since),
-  )
+  })
 
   const plan = planValuesPrices(rawRows, priceable, policy)
   const { listings, priced, spanByItem, skippedUnpriceable, droppedFakeCheap, placeholdersDropped } = plan
@@ -278,14 +246,14 @@ export async function runValuesPipelineCorrection(
   // Read current values so `price_changed_at` only moves when the value moves.
   // A crawl that confirms the same price must NOT re-date the page, or every
   // value page would advertise a freshness it does not have.
-  const existing = await selectAll<ExistingPriceRow>(
-    admin,
-    'values_prices',
-    'item_id,cheapest_usd,average_usd,market_low_usd,market_high_usd,sample_size,confidence_label,price_changed_at',
+  const existing = await selectAllByKey<ExistingPriceRow>(admin, {
+    table: 'values_prices',
+    columns:
+      'item_id,cheapest_usd,average_usd,market_low_usd,market_high_usd,sample_size,confidence_label,price_changed_at',
     // values_prices has no surrogate `id`; item_id IS the primary key.
-    'item_id',
-    (q) => q.eq('game_id', game.id),
-  )
+    key: 'item_id',
+    filter: (q) => q.eq('game_id', game.id),
+  })
   const prev = new Map(existing.map((r) => [r.item_id, r]))
 
   const now = new Date().toISOString()
