@@ -17,8 +17,8 @@
  *      like the navbar logout overlay (opaque body-matched fill, spinner tile).
  *   3. RESOLUTION arrives two ways: the _OrderClient orders-UPDATE realtime
  *      subscription router.refresh()es on the webhook flip (re-rendering this
- *      with orderStatus !== 'pending'), plus a 4s router.refresh() fallback
- *      poll. On leaving 'pending' we clear the flag + toast "Payment Confirmed".
+ *      with orderStatus !== 'pending'), plus a router.refresh() fallback poll
+ *      (4 s backing off to 30 s, skipped while the tab is hidden). On leaving 'pending' we clear the flag + toast "Payment Confirmed".
  *   4. TIMEOUT — after 120s the overlay degrades to a dismissible "still
  *      confirming" state with a Continue Browsing escape. Crypto confirmations
  *      can take minutes (CHARGE_PENDING is a webhook no-op), so we never trap
@@ -30,9 +30,12 @@ import { safeSession } from '@/lib/safe-storage'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from '@/components/navigation/AppLink'
 import { toast } from 'sonner'
+import { backoffDelayMs } from '@/lib/polling/backoff'
+import { isTabVisible } from '@/lib/polling/intervals'
 
 const CONFIRM_TIMEOUT_MS = 120_000
-const REFRESH_INTERVAL_MS = 4_000
+const REFRESH_BASE_MS = 4_000
+const REFRESH_MAX_MS = 30_000
 
 function flagKey(orderId: string) {
   return `paid-return:${orderId}`
@@ -94,14 +97,26 @@ export function PaymentReturnHandler({
     setTimedOut(false)
   }, [orderStatus, orderId])
 
-  // While confirming: poll router.refresh() as a fallback to the realtime
-  // subscription, and arm the 120s degrade-to-dismissible timeout.
+  // While confirming: router.refresh() as a FALLBACK to the realtime
+  // subscription, backing off 4 s → 30 s and skipped while the tab is hidden
+  // (each refresh re-renders the whole order page; a fixed 4 s poll was ~500
+  // database calls per payment, 2026-10-20 usage audit). Arms the 120 s
+  // degrade-to-dismissible timeout.
   useEffect(() => {
     if (!confirming) return
-    const poll = setInterval(() => router.refresh(), REFRESH_INTERVAL_MS)
+    let attempt = 0
+    let poll: ReturnType<typeof setTimeout>
+    const schedule = () => {
+      poll = setTimeout(() => {
+        if (isTabVisible()) router.refresh()
+        attempt += 1
+        schedule()
+      }, backoffDelayMs(attempt, { baseMs: REFRESH_BASE_MS, maxMs: REFRESH_MAX_MS }))
+    }
+    schedule()
     const timer = setTimeout(() => setTimedOut(true), CONFIRM_TIMEOUT_MS)
     return () => {
-      clearInterval(poll)
+      clearTimeout(poll)
       clearTimeout(timer)
     }
   }, [confirming, router])

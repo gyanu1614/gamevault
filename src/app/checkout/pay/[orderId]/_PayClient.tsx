@@ -41,6 +41,7 @@ import { accountBtn } from '@/components/account/AccountSurface'
 import { cn } from '@/lib/utils'
 import { CheckoutNavbar } from '../../_components/CheckoutNavbar'
 import { nextPollDelayMs, countdownShouldContinue, POLL_BASE_MS } from './poll-policy'
+import { isTabVisible } from '@/lib/polling/intervals'
 import { qrPayload, walletDeepLink } from './qr'
 import { PaymentQr } from './_PaymentQr'
 
@@ -558,6 +559,12 @@ export default function PayClient({
     }
     const tick = async () => {
       if (cancelled) return
+      // Hidden tab: no status call; the next visible tick (within the base
+      // rate) catches up. The webhook flips the order either way.
+      if (!isTabVisible()) {
+        schedule()
+        return
+      }
       let res
       try {
         res = await getPaymentPageStatus(orderId)

@@ -39,6 +39,10 @@ import {
   type ChatRow,
   type LocalFile,
 } from '@/lib/chat/message-state'
+import { POLL_MS } from '@/lib/polling/intervals'
+
+/** Triggers closer together than this share one thread read. */
+const RESYNC_MIN_GAP_MS = 2_000
 
 export const ATTACH_NOT_ALLOWED = 'Files can only be sent in an active order chat.'
 
@@ -187,9 +191,15 @@ export function useChatThread({
 
   // Quiet re-sync with the server. mergeServer keeps pending/failed sends
   // and returns the same array when nothing changed, so it never flickers.
+  // One read per burst of triggers: returning to the tab fires
+  // visibilitychange AND focus (and sometimes online) together.
+  const lastResyncRef = useRef(0)
   const resync = useCallback(async () => {
     const convId = conversationRef.current
     if (!convId || document.visibilityState !== 'visible') return
+    const now = Date.now()
+    if (now - lastResyncRef.current < RESYNC_MIN_GAP_MS) return
+    lastResyncRef.current = now
     try {
       const rows = await fetchThread(convId)
       applyFor(convId, (prev) => mergeServer(prev, rows))
@@ -202,8 +212,9 @@ export function useChatThread({
 
   // Safety net for the live channel: re-sync whenever this tab comes back
   // into view (the other party may have written while it was in the
-  // background) and every 20 s while it is visible. A silently deaf
-  // channel then costs seconds, not a manual refresh.
+  // background) and once a minute while it is visible (was every 20 s, each
+  // a full-thread read; 2026-10-20 usage audit). Realtime delivers new
+  // messages; this only covers a silently deaf channel.
   useEffect(() => {
     if (!conversationId) return
     const onVisible = () => {
@@ -212,7 +223,7 @@ export function useChatThread({
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
     window.addEventListener('online', onVisible)
-    const poll = setInterval(() => void resyncRef.current(), 20_000)
+    const poll = setInterval(() => void resyncRef.current(), POLL_MS.chatResync)
     return () => {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
