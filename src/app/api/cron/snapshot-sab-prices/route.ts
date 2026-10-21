@@ -13,8 +13,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import { runEvidenceRefresh } from '@/lib/seo/gate/run'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
@@ -54,22 +54,15 @@ async function captureFromCorrectedView(
   admin: ReturnType<typeof createServiceRoleClient>,
 ): Promise<number> {
   const historyDate = new Date().toISOString().slice(0, 10)
-  const rows: CorrectedRow[] = []
-
-  for (let page = 0; ; page += 1) {
-    const from = page * PAGE_SIZE
-    const { data, error } = await (admin as any)
-      .from('sab_price_display')
-      .select(
-        'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,external_sample_size,source_count,confidence_label,is_trade_ready,is_public_estimate,price_updated_at',
-      )
-      .range(from, from + PAGE_SIZE - 1)
-
-    if (error) throw new Error(`corrected view: ${error.message}`)
-    if (!data?.length) break
-    rows.push(...(data as CorrectedRow[]))
-    if (data.length < PAGE_SIZE) break
-  }
+  // Keyset on sab_price_display's primary key (brainrot_id, mutation_slug).
+  // The OFFSET loop this replaced had no ORDER BY, so page seams could skip or
+  // repeat rows.
+  const rows = await selectAllByKey<CorrectedRow>(admin, {
+    table: 'sab_price_display',
+    columns:
+      'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,external_sample_size,source_count,confidence_label,is_trade_ready,is_public_estimate,price_updated_at',
+    key: ['brainrot_id', 'mutation_slug'],
+  })
 
   const snapshots = rows
     .map((row) => {
@@ -97,7 +90,10 @@ async function captureFromCorrectedView(
     const batch = snapshots.slice(index, index + PAGE_SIZE)
     const { error } = await (admin as any)
       .from('sab_price_history')
-      .upsert(batch, { onConflict: 'brainrot_id,mutation_id,history_date' })
+      // The daily reprice already writes today's row (sab.ts); this cron is the
+      // backstop for a day it did not run, so it never rewrites an existing row
+      // (that left a dead tuple per row, ~3k a day).
+      .upsert(batch, { onConflict: 'brainrot_id,mutation_id,history_date', ignoreDuplicates: true })
 
     if (error) throw new Error(`snapshot upsert: ${error.message}`)
     captured += batch.length
@@ -139,41 +135,17 @@ export async function GET(request: NextRequest) {
     // moved (>= 5% and >= $0.25 against the anchor) are logged to the SEO change
     // log, which /api/cron/seo-indexnow delivers to IndexNow. Never throws, and
     // never blocks the capture result.
+    // The evidence refresh revalidates the pages whose evidence moved. It does
+    // NOT re-render every price page: the pricing publish already revalidates
+    // the items whose price moved and the list pages (2026-10-20 usage audit:
+    // the old loop re-rendered all ~500 SAB pages every day).
     let indexNowChanged = 0
-    let revalidatedCount = 0
     try {
-      const { data: slugRows } = await admin
-        .from('sab_price_display')
-        .select('brainrot_slug')
-        .eq('mutation_slug', 'default') as { data: { brainrot_slug: string }[] | null }
-
-      const itemPaths = Array.from(
-        new Set((slugRows ?? []).map((r) => r.brainrot_slug).filter(Boolean)),
-      ).map((slug) => `/steal-a-brainrot/values/${slug}`)
-
       indexNowChanged = (await runEvidenceRefresh('steal-a-brainrot'))?.moved.length ?? 0
-
-      // Bust the ISR cache for every price-bearing SAB page so today's corrected
-      // prices show the moment this cron finishes, instead of up to an hour later
-      // when the page's `revalidate = 3600` window happens to lapse. Without this,
-      // visitors can see a stale value list / calculator right after the daily
-      // update (the Discord bot reads the DB live and looked correct meanwhile).
-      // revalidatePath is a no-op cheap call; the price-bearing calculators share
-      // the same data as the value list.
-      const pricePages = [
-        '/steal-a-brainrot',
-        '/steal-a-brainrot/values',
-        '/steal-a-brainrot/calculator',
-        ...itemPaths,
-      ]
-      for (const path of pricePages) {
-        revalidatePath(path)
-      }
-      revalidatedCount = pricePages.length
     } catch (pingErr) {
       // Never fail the cron over a freshness ping or revalidation.
       console.error(
-        'IndexNow submission / revalidation after snapshot failed (non-fatal):',
+        'SEO evidence refresh after snapshot failed (non-fatal):',
         pingErr,
       )
     }
@@ -182,8 +154,7 @@ export async function GET(request: NextRequest) {
       success: true,
       captured: capturedCount,
       indexnow_changed: indexNowChanged,
-      revalidated: revalidatedCount,
-      message: `Captured ${capturedCount} SAB price snapshot rows; ${indexNowChanged} value pages changed enough for IndexNow; revalidated ${revalidatedCount} pages`,
+      message: `Captured ${capturedCount} SAB price snapshot rows; ${indexNowChanged} value pages changed enough for IndexNow`,
     })
   } catch (error: any) {
     console.error('Unexpected error in snapshot-sab-prices cron:', error)
