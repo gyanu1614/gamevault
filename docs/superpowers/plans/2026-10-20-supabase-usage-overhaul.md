@@ -72,12 +72,12 @@ Target: DB ≈ 380–450 MB. Script: `docs/handoff/supabase-space-cleanup-2026-1
 - [ ] 3.3 Store banner cache header; static art (hero, item art) served by Vercel where it is fixed.
 
 ## Phase 4 — Signed-in load (PR D: RELEASE)
-- [ ] 4.1 AuthProvider: no profile re-read on visibility SIGNED_IN when the user id is unchanged; select needed columns.
-- [ ] 4.2 Navbar polls lean on realtime; `admin_roles` cached; conversations index.
-- [ ] 4.3 Order chat 60 s floor; post-payment refresh backoff; pay poll pauses when hidden.
-- [ ] 4.4 Seller messages: one query instead of 1+N+1; filtered realtime channel.
-- [ ] 4.5 Presence heartbeat throttle; `/account/orders` seller query gated.
-- [ ] 4.6 Intent prefetch: `kind: auto` (no full render of dynamic pages on hover).
+- [x] 4.1 AuthProvider: no profile re-read on visibility SIGNED_IN when the user id is unchanged; select needed columns.
+- [x] 4.2 `admin_roles` cached (useIsAdmin). DEFERRED: one-rpc unread count + conversations indexes (migration + fixtures).
+- [x] 4.3 Order chat 60 s floor; post-payment refresh backoff; pay poll pauses when hidden.
+- [x] 4.4 Seller messages: filtered realtime channel, one join. DEFERRED: one query instead of 1+N+1 (rpc + fixtures).
+- [x] 4.5 Presence heartbeat throttle; `/account/orders` seller query gated.
+- [x] 4.6 Intent prefetch: `kind: auto` (no full render of dynamic pages on hover).
 
 ## Phase 5 — Large files (one PR per area, behaviour-preserving)
 Rule: split by responsibility into named units. Components `PascalCase` (one per file), hooks `useThing`, server-only helpers in `*.server.ts`, route-private helpers in the route's `_lib/`, shared logic in `src/lib/<domain>/`. Function names say what they do: `loadSabCatalogue`, `buildPriceRows`, `formatPayoutRail`. Target ≤ 400 lines per file. Each split: tsc + tests + one local-stack browser pass for UI.
