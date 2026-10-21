@@ -13,6 +13,9 @@ import { createClient } from '@/lib/supabase/client'
 import { updatePresenceOnline, updatePresenceOffline } from '@/lib/actions/seller-presence'
 import { isSellerOnline } from '@/lib/presence/online'
 
+/** A visibility change within this of the last heartbeat writes nothing. */
+const HEARTBEAT_MIN_GAP_MS = 60_000
+
 interface SellerPresence {
   seller_id: string
   is_online: boolean
@@ -26,6 +29,8 @@ interface SellerPresence {
 export function useMyPresence() {
   const [isOnline, setIsOnline] = useState(false)
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null)
+  /** When presence was last written, so tab switches share one write a minute. */
+  const lastBeatRef = useRef(0)
   const supabase = createClient()
 
   useEffect(() => {
@@ -33,6 +38,7 @@ export function useMyPresence() {
 
     const initializePresence = async () => {
       // Set initial online status
+      lastBeatRef.current = Date.now()
       const result = await updatePresenceOnline()
       if (result.success && mounted) {
         setIsOnline(true)
@@ -45,15 +51,20 @@ export function useMyPresence() {
     // Heartbeat: Update presence every 2 minutes
     heartbeatInterval.current = setInterval(async () => {
       if (document.visibilityState === 'visible') {
+        lastBeatRef.current = Date.now()
         await updatePresenceOnline()
       }
     }, 2 * 60 * 1000) // 2 minutes
 
-    // Update presence on visibility change
+    // Update presence on visibility change, at most once a minute: quick tab
+    // switches wrote a presence row (plus an auth call) each time
+    // (2026-10-20 usage audit). Online lasts 2+ minutes, so nothing goes stale.
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
-        await updatePresenceOnline()
         setIsOnline(true)
+        if (Date.now() - lastBeatRef.current < HEARTBEAT_MIN_GAP_MS) return
+        lastBeatRef.current = Date.now()
+        await updatePresenceOnline()
       } else {
         // Don't immediately mark offline, let the cron job handle it
       }

@@ -69,6 +69,20 @@ describe('client polling budget', () => {
     expect(src).toMatch(/conversationsRef/)
   })
 
+  // 2026-10-20 usage audit (4.5): buyers loaded the full SELLER order history
+  // on /account/orders (the hook was not gated), and the seller heartbeat
+  // wrote presence on every visibility change with no throttle.
+  it('/account/orders reads seller orders only for approved sellers', () => {
+    expect(read('src/app/account/orders/page.tsx')).toMatch(/useSellerOrders\(\{\}, \{ enabled: [^}]*isApprovedSeller/)
+    expect(read('src/hooks/use-seller-orders.ts')).toMatch(/enabled/)
+  })
+
+  it('the presence heartbeat is throttled on tab switches', () => {
+    const src = read('src/hooks/use-seller-presence.ts')
+    expect(src).toMatch(/lastBeatRef/)
+    expect(src).toMatch(/HEARTBEAT_MIN_GAP_MS/)
+  })
+
   it('nothing polls in a background tab', () => {
     const offenders = files.filter((f) => /refetchIntervalInBackground:\s*true/.test(readFileSync(f, 'utf8')))
     expect(offenders.map((f) => path.relative(ROOT, f))).toEqual([])

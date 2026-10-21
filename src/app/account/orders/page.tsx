@@ -191,7 +191,7 @@ function OrdersContent() {
     orders: sellerOrders,
     isLoading: sellerOrdersLoading,
     error: sellerOrdersError,
-  } = useSellerOrders({})
+  } = useSellerOrders({}, { enabled: !!user?.isApprovedSeller })
   const queryClient = useQueryClient()
 
   // Determine which orders to show based on active tab
