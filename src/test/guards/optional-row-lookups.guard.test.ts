@@ -13,7 +13,8 @@ const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8')
 describe('optional row lookups in the browser', () => {
   it.each([
     ['src/hooks/use-auth.tsx', "from('seller_applications')"],
-    ['src/components/navbar-floating.tsx', "from('admin_roles')"],
+    // The navbar's admin check moved into the cached hook (2026-10-20).
+    ['src/hooks/use-is-admin.ts', ".from('admin_roles')"],
   ])('%s: %s may find nothing → maybeSingle()', (file, table) => {
     const src = read(file)
     let at = src.indexOf(table)

@@ -32,6 +32,8 @@ export const POLL_MS = {
   recentSales: 120_000,
   /** Profile re-read while a seller application is in flight (realtime is primary). */
   sellerApproval: 60_000,
+  /** Order/inbox chat thread safety-net re-sync (realtime delivers new messages). */
+  chatResync: 60_000,
 } as const
 
 /** React Query options for a poll that only runs while the tab is visible. */

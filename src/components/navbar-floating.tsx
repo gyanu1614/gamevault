@@ -25,6 +25,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { navCategoriesQuery } from '@/lib/nav/nav-categories-query'
 import { useSpotlightGames } from '@/features/home/hooks/useSpotlightGames'
+import { useIsAdmin } from '@/hooks/use-is-admin'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
@@ -461,36 +462,14 @@ export function Navbar({
     }
   }, [awaitingHomePaint, pathname])
 
-  const [isAdmin, setIsAdmin] = useState(false)
+  const isAdmin = useIsAdmin(user?.id)
   // V21/P7.ae — Offline Mode (store pause). When on, the seller's offers
   // are taken down for buyers until toggled back. `pendingOffline` blocks
   // double-clicks while the server action is in flight.
   const [offlineMode, setOfflineMode] = useState(false)
   const [pendingOffline, setPendingOffline] = useState(false)
 
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user?.id) {
-        setIsAdmin(false)
-        return
-      }
-
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      const { data } = await supabase
-        .from('admin_roles')
-        .select('role, is_active')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      setIsAdmin(!!data)
-    }
-
-    checkAdminStatus()
-  }, [user?.id])
+  // Admin badge/menu: one cached read per user (useIsAdmin), not one per mount.
 
   // V21/P7.ae — Hydrate Offline Mode for approved sellers.
   useEffect(() => {

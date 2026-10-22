@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { messagesApi, Conversation, Message } from '@/lib/api/seller-compatible'
 import { toast } from 'sonner'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
@@ -33,9 +33,21 @@ export function useSellerMessages() {
     staleTime: 0, // Consider data stale immediately to ensure fresh data
   })
 
-  // Realtime subscription for new messages
+  // The handler reads the latest list through a ref, so a refetch does not
+  // re-join the channel (it used to: `conversations` was a dependency).
+  const conversationsRef = useRef(conversations)
+  conversationsRef.current = conversations
+  // The channel only changes when the SET of conversations does. Realtime
+  // filters accept at most 100 values; beyond that it listens to all (RLS
+  // still limits delivery to rows this user may read).
+  const ids = (conversations ?? []).map((c) => c.id).sort()
+  const conversationKey = ids.length > 0 && ids.length <= 100 ? ids.join(',') : ids.length > 100 ? '*' : ''
+
+  // Realtime subscription for new messages in THIS user's conversations
+  // (was every insert on messages, each authorised per subscriber; 2026-10-20
+  // usage audit).
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || !conversationKey) return
 
     const channel = supabase
       .channel('new-messages')
@@ -45,6 +57,7 @@ export function useSellerMessages() {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
+          ...(conversationKey === '*' ? {} : { filter: `conversation_id=in.(${conversationKey})` }),
         },
         (payload) => {
           const newMessage = payload.new as Message
@@ -55,7 +68,7 @@ export function useSellerMessages() {
           }
 
           // Get the conversation to show sender info
-          const conversation = conversations?.find(
+          const conversation = conversationsRef.current?.find(
             (c) => c.id === newMessage.conversation_id
           )
 
@@ -89,7 +102,7 @@ export function useSellerMessages() {
     return () => {
       channel.unsubscribe()
     }
-  }, [user?.id, conversations, queryClient, supabase])
+  }, [user?.id, conversationKey, queryClient, supabase])
 
   // Mark as read mutation
   const markAsRead = useMutation({

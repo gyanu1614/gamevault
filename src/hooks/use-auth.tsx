@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { POLL_MS, isTabVisible, shouldPollSellerApproval } from '@/lib/polling/intervals'
 import { uploadProfileAvatar } from '@/lib/actions/auth'
 import { readPendingSignupAvatar, clearPendingSignupAvatar } from '@/lib/auth/pending-avatar'
+import { shouldReloadProfile, type ProfileLoad } from '@/lib/auth/profile-reload'
 import type { User } from '@supabase/supabase-js'
 import type { Profile } from '@/types/database'
 
@@ -150,11 +151,19 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 function useAuthState(): AuthContextValue {
   const [user, setUser] = useState<AuthUser | null>(null)
+  // The auth listener is created once; it reads the current user through this.
+  const userRef = useRef<AuthUser | null>(null)
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
   // Beta A — flush the signup avatar stash exactly once per authenticated
   // session (strict mode double-invokes effects in dev).
   const avatarFlushRef = useRef(false)
+  // When the profile was last read, so auth events that do not change it
+  // (tab focus, token refresh, the initial session) reuse it (profile-reload.ts).
+  const lastProfileLoad = useRef<ProfileLoad>(null)
 
   useEffect(() => {
     let mounted = true
@@ -208,6 +217,7 @@ function useAuthState(): AuthContextValue {
             // Cache the profile if successfully fetched
             if (profile) {
               setCachedProfile(userId, profile)
+              lastProfileLoad.current = { userId, at: Date.now() }
             }
 
             // V22 — Seller status resolution, optimized.
@@ -319,6 +329,8 @@ function useAuthState(): AuthContextValue {
             localStorage.removeItem(`${CACHE_KEYS.SELLER_APP_STATUS}_${session.user.id}`)
           } catch {}
         }
+        // A sign-in after this must load the profile again, even for the same user.
+        lastProfileLoad.current = null
         setUser(null)
         setLoading(false)
         return
@@ -328,6 +340,15 @@ function useAuthState(): AuthContextValue {
       if (!mounted) return
       if (session?.user) {
         const userId = session.user.id
+
+        // Tab focus, token refresh and the initial session fire this without
+        // the profile changing: keep the one loaded moments ago and only take
+        // the new session (2026-10-20 usage audit).
+        if (userRef.current?.id === userId && !shouldReloadProfile(event, userId, lastProfileLoad.current)) {
+          setUser((prev) => (prev && prev.id === userId ? { ...prev, ...session.user } : prev))
+          if (mounted) setLoading(false)
+          return
+        }
 
         // Get cached data first
         const cachedProfile = getCachedProfile(userId)
@@ -350,6 +371,7 @@ function useAuthState(): AuthContextValue {
           // Cache the profile if successfully fetched
           if (profile) {
             setCachedProfile(userId, profile)
+            lastProfileLoad.current = { userId, at: Date.now() }
           }
 
           // Seller status — MUST mirror initAuth's logic (they were divergent,

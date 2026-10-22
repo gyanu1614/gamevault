@@ -13,14 +13,16 @@ interface UseOrdersOptions {
   search?: string
 }
 
-export function useSellerOrders(options?: UseOrdersOptions) {
-  // Fetch orders
+export function useSellerOrders(options?: UseOrdersOptions, { enabled = true }: { enabled?: boolean } = {}) {
+  // Fetch orders. `enabled`: /account/orders passes isApprovedSeller, so a
+  // buyer never loads (and pages through) a seller history (2026-10-20).
   const {
     data: orders,
     isLoading,
     error,
   } = useQuery<Order[]>({
     queryKey: ['seller', 'orders', options],
+    enabled,
     queryFn: async () => {
       const result = await ordersApi.getAll(options)
       return result

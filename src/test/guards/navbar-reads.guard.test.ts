@@ -28,4 +28,9 @@ describe('navbar reads', () => {
     expect(spotlight).toMatch(/export function useSpotlightGames\(\{\s*enabled\s*=\s*true\s*\}/)
     expect(spotlight).toMatch(/\benabled,/)
   })
+
+  it('checks admin status through the cached useIsAdmin, never per mount', () => {
+    expect(navbar).toMatch(/useIsAdmin\(user\?\.id\)/)
+    expect(navbar).not.toMatch(/from\('admin_roles'\)/)
+  })
 })

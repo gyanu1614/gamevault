@@ -45,6 +45,44 @@ describe('client polling budget', () => {
     expect(offenders).toEqual([])
   })
 
+  // 2026-10-20 usage audit (4.3): the order chat re-read the WHOLE thread
+  // every 20 s, and twice more on each return to the tab (visibilitychange
+  // and focus both fire). Realtime delivers new messages; the re-sync is the
+  // safety net for a silently deaf channel.
+  it('the order chat re-syncs on the shared 60 s budget, once per return to the tab', () => {
+    const src = read('src/hooks/use-chat-thread.ts')
+    expect(src).toMatch(/setInterval\(\(\) => void resyncRef\.current\(\), POLL_MS\.chatResync\)/)
+    expect(src).not.toMatch(/setInterval\([^)]*,\s*20_000\)/)
+    // visibilitychange + focus + online collapse into one read.
+    expect(src).toMatch(/RESYNC_MIN_GAP_MS/)
+  })
+
+  // 2026-10-20 usage audit (4.4): the seller inbox subscribed to EVERY insert
+  // on messages (Realtime authorises each one per subscriber) and re-joined
+  // the channel on every conversations refetch (`conversations` was an effect
+  // dependency).
+  it('the seller inbox listens only to its own conversations and keeps one channel', () => {
+    const src = read('src/hooks/use-seller-messages.ts')
+    const effect = src.slice(src.indexOf("postgres_changes"), src.indexOf('// Mark as read mutation'))
+    expect(effect).toMatch(/filter:\s*`conversation_id=in\.\(/)
+    expect(effect).not.toMatch(/\[user\?\.id, conversations, queryClient, supabase\]/)
+    expect(src).toMatch(/conversationsRef/)
+  })
+
+  // 2026-10-20 usage audit (4.5): buyers loaded the full SELLER order history
+  // on /account/orders (the hook was not gated), and the seller heartbeat
+  // wrote presence on every visibility change with no throttle.
+  it('/account/orders reads seller orders only for approved sellers', () => {
+    expect(read('src/app/account/orders/page.tsx')).toMatch(/useSellerOrders\(\{\}, \{ enabled: [^}]*isApprovedSeller/)
+    expect(read('src/hooks/use-seller-orders.ts')).toMatch(/enabled/)
+  })
+
+  it('the presence heartbeat is throttled on tab switches', () => {
+    const src = read('src/hooks/use-seller-presence.ts')
+    expect(src).toMatch(/lastBeatRef/)
+    expect(src).toMatch(/HEARTBEAT_MIN_GAP_MS/)
+  })
+
   it('nothing polls in a background tab', () => {
     const offenders = files.filter((f) => /refetchIntervalInBackground:\s*true/.test(readFileSync(f, 'utf8')))
     expect(offenders.map((f) => path.relative(ROOT, f))).toEqual([])
