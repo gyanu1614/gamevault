@@ -24,7 +24,7 @@ export function ReplyQuote({
   )
   const cls = cn(
     'mb-1.5 block w-full min-w-0 rounded-md border-l-2 px-2.5 py-1.5 text-left',
-    own ? 'border-lime/70 bg-black/20' : 'border-white/30 bg-black/20',
+    own ? 'border-[color-mix(in_srgb,var(--color-accent-default)_70%,transparent)] bg-black/20' : 'border-white/30 bg-black/20',
   )
   return onJump ? (
     <button
