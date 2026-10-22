@@ -40,6 +40,23 @@ const OBTAINABILITY: Record<SabHowToGetStatus, 'obtainable' | 'limited' | 'unobt
   unknown: 'unknown',
 }
 
+/**
+ * The infobox picture → one wiki file name. A plain "Slushi Huski.png", or a
+ * <gallery> with one "file|caption" per line (normal + egg art): the first file.
+ * Also cleans a value stored before this existed ("A.png|Brainrot B.png|Egg").
+ */
+export function firstImageFile(raw: string | null | undefined): string | null {
+  const lines = (raw ?? '')
+    .replace(/<\/?gallery[^>]*>/gi, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  const name = plainText(lines[0]?.split('|')[0] ?? '')
+    .replace(/^(?:file|image):/i, '')
+    .trim()
+  return name || null
+}
+
 const pageUrl = (title: string) => `https://${HOST}/wiki/${encodeURI(title.replace(/ /g, '_'))}`
 
 /**
@@ -63,7 +80,7 @@ export function parseSabPage(page: WikiPage, updates: Map<number, string>, check
   const url = pageUrl(page.title)
   const categories = page.categories.map((c) => c.replace(/^Category:/, ''))
   const facts = buildSabFacts({ slug, pageUrl: url, text: page.content, categories, updates, checkedAt })
-  const image = plainText(info.image1 ?? info.image ?? '').replace(/^file:/i, '').trim()
+  const image = firstImageFile(info.image1 ?? info.image)
   return {
     pageId: page.pageId,
     revisionId: page.revisionId,
@@ -72,7 +89,7 @@ export function parseSabPage(page: WikiPage, updates: Map<number, string>, check
     slug,
     name: page.title,
     rarity,
-    imageFile: image || null,
+    imageFile: image,
     releasedAt: facts.released_at,
     origin: facts.origin,
     howToGet: facts.how_to_get,
@@ -155,7 +172,7 @@ export const stealABrainrot: CatalogueAdapter = {
     if (error) throw new Error(`sab_brainrots missing images: ${error.message}`)
     const fixed: string[] = []
     for (const row of data ?? []) {
-      const file = (row.source_payload as { image_file?: string | null } | null)?.image_file
+      const file = firstImageFile((row.source_payload as { image_file?: string | null } | null)?.image_file)
       const path = `${row.slug}.webp`
       if (!file || !(await images.copy(file, { bucket: BUCKET, path }))) continue
       const { error: upErr } = await db.from('sab_brainrots').update({ image_path: path, image_status: 'approved' }).eq('id', row.id)
