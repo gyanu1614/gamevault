@@ -1,32 +1,25 @@
 /**
- * Checkout skeleton — dark marketplace theme. Shape-faithful to the live page:
- * navbar strip, dark ground, Secure Checkout header row, then the
- * 1fr/400px grid — crypto method card + disabled rows on the left, the
- * order-summary card on the right. Pulses in dark tones so the
- * transition into the real page is colour- and shape-stable.
+ * Checkout skeleton — the same frame as the live page (owner 2026-10-21):
+ * neutral grey ground, the Secure Checkout header, then the 1fr / 392px grid —
+ * payment rows (radio, name + line, logo tile) and the seal strip on the
+ * left; the order card, the rating card and the trust list on the right.
  */
 
 const GROUND = '#16171B'
-const NAV = '#16171B'
-const LINE = 'rgba(255,255,255,0.14)'
 
 function Block({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-lg border bg-[#1D1E23] ${className}`} style={{ borderColor: LINE }}>
-      {children}
-    </div>
-  )
+  return <div className={`rounded-lg border border-white/[0.08] bg-white/[0.035] ${className}`}>{children}</div>
 }
 
 export default function CheckoutLoading() {
   return (
     <div className="min-h-screen" style={{ background: GROUND }}>
       {/* Navbar strip */}
-      <div className="flex h-16 items-center justify-between px-4 sm:px-10" style={{ background: NAV }}>
+      <div className="flex h-16 items-center justify-between px-4 sm:px-10">
         <div className="flex items-center gap-2">
           <div className="h-6 w-6 animate-pulse rounded-md bg-white/10" />
           <div className="h-4 w-24 animate-pulse rounded bg-white/10" />
@@ -34,22 +27,20 @@ export default function CheckoutLoading() {
         <div className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-8 sm:px-10">
+      <div className="mx-auto w-full max-w-[1040px] px-4 pb-24 pt-7 sm:px-6">
         {/* Header row */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Block className="h-9 w-9" />
-            <Block className="h-7 w-48" />
-          </div>
-          <Block className="h-8 w-36" />
+        <div className="flex items-center gap-3">
+          <Block className="h-9 w-9" />
+          <Block className="h-6 w-6 rounded-full" />
+          <Block className="h-7 w-48" />
         </div>
 
-        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_392px] lg:gap-8">
           {/* Phones: compact order strip */}
           <Card className="p-3.5 lg:hidden">
             <Block className="h-4 w-20" />
             <div className="mt-2.5 flex items-start gap-3">
-              <Block className="h-[52px] w-[52px] rounded-md" />
+              <Block className="h-[52px] w-[52px]" />
               <div className="min-w-0 flex-1">
                 <Block className="h-4 w-44" />
                 <Block className="mt-1.5 h-3 w-40" />
@@ -61,92 +52,101 @@ export default function CheckoutLoading() {
 
           {/* Left — payment column */}
           <div>
-            {/* Heading */}
-            <div>
-              <Block className="h-6 w-28" />
-              <Block className="mt-1.5 h-3.5 w-64" />
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <Block className="h-6 w-40" />
+              <Block className="h-4 w-44" />
             </div>
-
-            {/* Method rows (60px glass rows): brand mark + label + pick mark */}
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="mt-2 flex items-center gap-3.5 rounded-md bg-white/[0.035] px-4 py-[15px]"
-                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)' }}
-              >
-                <div className="flex w-[76px] shrink-0 justify-center"><Block className="h-[18px] w-12" /></div>
-                <Block className="h-4 w-28 flex-1" />
-                <Block className="h-[22px] w-[22px] rounded-full" />
-              </div>
-            ))}
-
-            {/* "Paying from … · Change" */}
-            <Block className="mt-3 h-4 w-52" />
+            {/* Method rows: radio, name, logo tile */}
+            <div className="flex flex-col gap-2">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="flex min-h-[56px] items-center gap-3.5 rounded-md bg-white/[0.03] px-4 py-2"
+                  style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.09)' }}
+                >
+                  <Block className="h-5 w-5 rounded-full" />
+                  <Block className="h-4 w-28 flex-1" />
+                  <Block className="h-9 w-[60px]" />
+                </div>
+              ))}
+            </div>
 
             {/* Phones: discount + money rows under the list */}
             <Card className="mt-4 px-4 pb-4 pt-3 lg:hidden">
               <Block className="h-3.5 w-40" />
-              <div className="mt-3 space-y-2 border-t pt-3.5" style={{ borderColor: LINE }}>
-                {[0, 1, 2].map((i) => (
+              <div className="mt-3 space-y-2 border-t border-white/[0.08] pt-3.5">
+                {[0, 1].map((i) => (
                   <div key={i} className="flex justify-between">
                     <Block className="h-3.5 w-28" />
                     <Block className="h-3.5 w-14" />
                   </div>
                 ))}
-                <div className="flex justify-between border-t pt-3" style={{ borderColor: LINE }}>
+              </div>
+            </Card>
+
+            {/* Seal strip */}
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-start gap-2 sm:justify-center">
+                  <Block className="h-[18px] w-[18px]" />
+                  <div>
+                    <Block className="h-3 w-28" />
+                    <Block className="mt-1.5 h-2.5 w-32" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right — order card, rating, trust list */}
+          <div className="flex flex-col gap-3.5">
+            <Card className="hidden p-5 lg:block">
+              <div className="flex items-center gap-3.5">
+                <Block className="h-14 w-14 rounded-lg" />
+                <div className="min-w-0 flex-1">
+                  <Block className="h-4 w-40" />
+                  <Block className="mt-1.5 h-3.5 w-24" />
+                </div>
+              </div>
+              <Block className="mt-3.5 h-10 w-full" />
+              <div className="mt-4 flex items-center gap-3 border-t border-white/[0.08] pt-4">
+                <Block className="h-10 w-10 rounded-full" />
+                <div>
+                  <Block className="h-4 w-32" />
+                  <Block className="mt-1 h-3 w-24" />
+                </div>
+              </div>
+              <div className="mt-4 space-y-2 border-t border-white/[0.08] pt-3.5">
+                {[0, 1].map((i) => (
+                  <div key={i} className="flex justify-between">
+                    <Block className="h-3.5 w-28" />
+                    <Block className="h-3.5 w-14" />
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-white/[0.08] pt-3">
                   <Block className="h-5 w-12" />
                   <Block className="h-6 w-20" />
                 </div>
               </div>
+              <Block className="mt-4 h-12 w-full" />
+              <Block className="mx-auto mt-3 h-3 w-56" />
             </Card>
-
-          </div>
-
-          {/* Desktop — summary card */}
-          <Card className="hidden p-5 lg:block">
-            <div className="flex items-center gap-3.5">
-              <Block className="h-14 w-14 rounded-lg" />
-              <div className="min-w-0 flex-1">
-                <Block className="h-4 w-40" />
-                <Block className="mt-1.5 h-3.5 w-24" />
-              </div>
-            </div>
-            <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: LINE }}>
-              <div className="flex justify-between"><Block className="h-3.5 w-24" /><Block className="h-3.5 w-12" /></div>
-              <div className="flex justify-between"><Block className="h-3.5 w-16" /><Block className="h-3.5 w-8" /></div>
-            </div>
-            <div className="mt-3 flex items-center gap-3 border-t pt-3" style={{ borderColor: LINE }}>
-              <Block className="h-10 w-10 rounded-full" />
-              <div>
-                <Block className="h-4 w-32" />
-                <Block className="mt-1 h-3 w-24" />
-              </div>
-            </div>
-            <div className="mt-4 space-y-2 border-t pt-3.5" style={{ borderColor: LINE }}>
+            <Card className="flex items-center gap-3 px-5 py-4">
+              <Block className="h-4 w-24" />
+              <Block className="ml-auto h-5 w-32" />
+            </Card>
+            <Card className="space-y-4 px-5 py-4">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="flex justify-between">
-                  <Block className="h-3.5 w-28" />
-                  <Block className="h-3.5 w-14" />
+                <div key={i} className="flex items-start gap-3">
+                  <Block className="h-5 w-5" />
+                  <div>
+                    <Block className="h-3.5 w-36" />
+                    <Block className="mt-1.5 h-3 w-48" />
+                  </div>
                 </div>
               ))}
-              <div className="flex justify-between border-t pt-3" style={{ borderColor: LINE }}>
-                <Block className="h-5 w-12" />
-                <Block className="h-6 w-20" />
-              </div>
-            </div>
-            {/* Desktop pay button + legal line live in the card now */}
-            <Block className="mt-4 hidden h-12 w-full lg:block" />
-            <Block className="mx-auto mt-3 hidden h-3 w-56 lg:block" />
-            <div className="mt-4 border-t pt-3.5" style={{ borderColor: LINE }}>
-              <Block className="h-4 w-40" />
-              <Block className="mt-1.5 h-3.5 w-full" />
-              <div className="mt-3 flex gap-1.5">
-                <Block className="h-7 flex-1" />
-                <Block className="h-7 flex-1" />
-                <Block className="h-7 flex-1" />
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

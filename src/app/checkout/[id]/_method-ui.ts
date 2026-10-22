@@ -98,17 +98,20 @@ export function toRow(m: ClientMethod): LocalMethodRow {
 /** The mark slot on a payment row. */
 export const MARK_SLOT = { width: 76, height: 30 } as const
 
+/** The mark area inside the logo tile at the right of a payment row (owner 2026-10-21, Eldorado-style rows). */
+export const TILE_SLOT = { width: 46, height: 22 } as const
+
 /**
  * One optical size for every brand mark in the row's slot: a square tile
  * stands the full height, a wide wordmark runs longer and lower (height ∝
  * aspect^-0.4), so a GCash wordmark and a Touch 'n Go tile weigh the same.
  */
-export function markSize(aspect: number): { width: number; height: number } {
+export function markSize(aspect: number, slot: { width: number; height: number } = MARK_SLOT): { width: number; height: number } {
   const a = aspect > 0 && Number.isFinite(aspect) ? aspect : 1
-  let height = Math.min(MARK_SLOT.height, MARK_SLOT.height * Math.pow(a, -0.4))
+  let height = Math.min(slot.height, slot.height * Math.pow(a, -0.4))
   let width = height * a
-  if (width > MARK_SLOT.width) {
-    width = MARK_SLOT.width
+  if (width > slot.width) {
+    width = slot.width
     height = width / a
   }
   return { width: Math.round(width), height: Math.round(height) }

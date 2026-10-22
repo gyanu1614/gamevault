@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { MARK_SLOT, METHOD_UI_IDS, markSize, toRow } from './_method-ui'
+import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, toRow } from './_method-ui'
 import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
 import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
 
@@ -41,5 +41,14 @@ describe('checkout method rows', () => {
     expect(markSize(4).height).toBeLessThan(markSize(1).height)
     expect(markSize(4).width).toBeGreaterThan(markSize(1).width)
     expect(markSize(Number.NaN)).toEqual({ width: 30, height: 30 })
+  })
+
+  it('markSize in the row logo tile: every mark fits the tile slot', () => {
+    for (const { aspect } of Object.values(PAYMENT_METHOD_ONDARK)) {
+      const s = markSize(aspect, TILE_SLOT)
+      expect(s.width).toBeLessThanOrEqual(TILE_SLOT.width)
+      expect(s.height).toBeLessThanOrEqual(TILE_SLOT.height)
+    }
+    expect(markSize(1, TILE_SLOT)).toEqual({ width: 22, height: 22 })
   })
 })

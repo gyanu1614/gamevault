@@ -35,13 +35,14 @@ export function LayoutWrapper({
   // navbar + checkout-specific footer so the buyer can't leak out
   // mid-purchase. Matches industry pattern (G2A, G2G, Eldorado,
   // 2Game) which Baymard found lifts conversion 5–15%.
-  // (dev-only /dev/checkout-preview mirrors the checkout chrome so the
-  // design harness renders faithfully; route 404s in production.)
+  // (dev-only /dev/checkout-preview and /dev/crypto-pay-preview mirror the
+  // checkout chrome so the design harness renders faithfully; 404 in production.)
   // /checkout/paid is AFTER the purchase (Order Paid → Go to Order): there is
   // nothing to leak out of, so it keeps the full site navbar + footer.
   const isCheckout =
     (pathname?.startsWith('/checkout') && !pathname.startsWith('/checkout/paid')) ||
-    pathname?.startsWith('/dev/checkout-preview')
+    pathname?.startsWith('/dev/checkout-preview') ||
+    pathname?.startsWith('/dev/crypto-pay-preview')
   // Order Paid is one screen, no scroll (owner 2026-10-19): navbar, no footer.
   const isOrderPaid = !!pathname?.startsWith('/checkout/paid')
 

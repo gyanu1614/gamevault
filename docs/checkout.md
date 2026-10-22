@@ -47,7 +47,8 @@ Two providers are live on one shared "payments spine":
 | Payssion webhook | `src/app/api/webhooks/payssion` |
 | Pending-payment sweep | `.github/workflows/expire-pending-payments.yml` → `/api/cron/expire-pending-payments` |
 | Method logos | `public/payments/*.svg` (colour originals) · `public/payments/ondark/*.svg` (checkout rows) |
-| Trust-band art | `public/checkout/trust-hero.jpg` |
+| Trust layer (seals, rating, list, footer) | `src/app/checkout/[id]/_trust.tsx` · real rating: `src/lib/reviews/site-rating.ts` |
+| Crypto pay page UI | `src/app/checkout/pay/[orderId]/_pay-ui.tsx` · preview `/dev/crypto-pay-preview?state=…` |
 
 ---
 
@@ -101,8 +102,8 @@ The UI adds only what the registry shouldn't know, in `METHOD_UI`
 and an optional brand `mark` (`PAYMENT_METHOD_ONDARK` in
 `lib/payments/method-marks.ts`: the logo redrawn for a dark row — card
 background removed, dark ink white, canvas trimmed — with its aspect, so
-`markSize` draws every mark at one optical size on the glass row; falls back
-to a stroke icon). A new brand logo needs its on-dark copy too (the
+`markSize(aspect, TILE_SLOT)` draws every mark at one optical size inside the
+logo tile at the right of the row; falls back to a stroke icon). A new brand logo needs its on-dark copy too (the
 `_method-ui` test fails otherwise). **Adding a method = one registry entry + one METHOD_UI line** —
 filtering, ordering, routing, expiry and tests pick it up automatically.
 
@@ -120,25 +121,38 @@ Region behavior (G2A pattern):
 Flags are emoji (computed from the ISO code — no assets); country names come
 from `Intl.DisplayNames`.
 
-### 4.4 Pay area
+### 4.4 Layout and trust (owner 2026-10-21)
 
-Pay button (desktop inline, mobile sticky bottom bar) → trust chips row
-(SafeDrop Guarantee · ID-Verified Sellers · Refund Policy) → legal microcopy
-(11 px, muted: "By paying you agree to our Terms of Service and Refund
-Policy").
+A friend called the old checkout "sus": no trust signals, game art behind
+the form. The page is now a flat neutral grey (no hero or game art), 1040px:
 
-### 4.5 Trust band + footer
+- **Left:** "Payment Method" + "Paying from … · Change"; Eldorado-shape rows
+  (radio, name only, a plain blue "Lowest Fee" label, the brand logo in a
+  tile at the right); under them three quiet seals (`TrustSeals`: SafeDrop
+  Protection · SSL Encrypted · Trusted Payments), small Phosphor duotone
+  icons in a soft trust blue, no circles.
+- **Right:** the order card (item, a hairline Delivery / Quantity /
+  Protection strip, seller, a white "Have A Discount Code?", money rows,
+  Pay, legal line), then `BuyerRating` and `TrustList` (seller chat, fast
+  delivery, 24/7 support).
+- **Buyer Rating** is the real average of visible buyer reviews
+  (`getSiteRating`, cached 1 h, anon read). It is hidden below 10 reviews and
+  never padded. We do not imitate Trustpilot's widget or show card-scheme
+  seals (PCI, Visa Secure …): neither is ours to claim.
+- **"How Your Order Works"**: the same four steps in a plain neutral card.
+- **Footer** (`CheckoutFooter`): "© {year} DropMarket Ltd. All rights
+  reserved." + company number; Terms of Use, Privacy, Refund and Cookie
+  policies. Mobile stacks centered with sticky-bar clearance.
 
-- **"How Your Order Works"**: centered 18 px title above a full-width band.
-  Mirrored painted-art background (`trust-hero.jpg` — mirrored so the sky,
-  not the cliff, sits behind text) under one left-strong→right-clear ivory
-  wash; uniform wash on phones. Four steps: Choose Payment Method / Wait for
-  Delivery / Order Delivered / Item Not Received? (100% refund). ⚠️ The art
-  is borrowed concept art — replace with original before serious marketing.
-- **Footer**: full-bleed thin strip — DropMarket Ltd · Registered In The
-  United Kingdom · Company No. 17309867, "Secured By DropMarket Payments",
-  Support + Terms/Refunds/Privacy links. Mobile stacks centered with
-  sticky-bar clearance.
+### 4.5 Crypto pay page (`/checkout/pay/[orderId]`)
+
+White hosted-invoice layout (CoinGate / Cryptomus pattern, our own build): a
+light header (logo + "Secure Payment"), one centred 480px card with the order
+total and an Order Info toggle, then coin + network, countdown, the exact
+amount, QR, address, Open In Wallet, a four-step progress bar (Created → Sent
+→ Seen → Confirmed) and Cancel Order. SafeDrop, Payment Help, Terms and the
+Refund Policy sit under the card. The state machine is unchanged
+(`_PayClient`); the UI pieces live in `_pay-ui.tsx`.
 
 Language rule: never "escrow" / "we hold funds" — agent model wording only
 ("Item Guaranteed or Full Refund").

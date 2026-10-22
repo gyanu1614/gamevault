@@ -77,9 +77,9 @@ describe('robots.txt: canonical pages and assets stay crawlable', () => {
     expect(isBlocked(url)).toBe(false)
   })
 
-  // public/checkout/ holds one image used only by the /checkout page, which is
-  // itself disallowed; nothing a crawlable page renders lives there.
-  const PUBLIC_DIRS_ONLY_USED_BY_DISALLOWED_PAGES = new Set(['checkout'])
+  // Folders whose files only disallowed pages use (none today: the checkout's
+  // art was removed with its hero on 2026-10-21).
+  const PUBLIC_DIRS_ONLY_USED_BY_DISALLOWED_PAGES = new Set<string>([])
 
   it('allows every file and folder in public/ (CSS/JS/fonts/images must stay fetchable)', () => {
     const publicDir = path.join(process.cwd(), 'public')
