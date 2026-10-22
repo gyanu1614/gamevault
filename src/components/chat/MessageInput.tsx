@@ -17,10 +17,12 @@
  *    owns failure with an inline Retry), so nothing greys out mid-send
  *  - Character counter only when within 100 chars of the cap
  *  - Inline keyboard hint moved to a faint helper below the input
+ *  - Replying: a "Replying to" bar above the field (Esc or X cancels);
+ *    starting a reply puts the cursor in the field
  */
 
 import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent } from 'react'
-import { Send, Loader2, Paperclip, X, FileText } from 'lucide-react'
+import { Send, Loader2, Paperclip, X, FileText, Reply } from 'lucide-react'
 import { toast } from 'sonner'
 import { CHAT_ATTACHMENT_ACCEPT, validateChatAttachment } from '@/lib/chat/attachments'
 import { Textarea } from '@/components/ui/textarea'
@@ -42,6 +44,11 @@ interface MessageInputProps {
    * while a send is in flight.
    */
   optimistic?: boolean
+  /** The message the next send answers (its author + one line). */
+  replyingTo?: { id: string; name: string; snippet: string } | null
+  onCancelReply?: () => void
+  /** Container surface (defaults to bg-bg-raised). */
+  className?: string
 }
 
 export default function MessageInput({
@@ -51,6 +58,9 @@ export default function MessageInput({
   maxLength = 2000,
   allowAttachments = false,
   optimistic = false,
+  replyingTo = null,
+  onCancelReply,
+  className,
 }: MessageInputProps) {
   const [message, setMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -71,6 +81,12 @@ export default function MessageInput({
   }, [file])
 
   const canSend = (message.trim().length > 0 || !!file) && !isSending && !disabled
+
+  // Choosing Reply on a message: type straight away.
+  const replyId = replyingTo?.id ?? null
+  useEffect(() => {
+    if (replyId) textareaRef.current?.focus()
+  }, [replyId])
 
   const handlePick = (e: ChangeEvent<HTMLInputElement>) => {
     const picked = e.target.files?.[0] ?? null
@@ -116,6 +132,11 @@ export default function MessageInput({
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape' && replyingTo && onCancelReply) {
+      e.preventDefault()
+      onCancelReply()
+      return
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       void handleSend()
@@ -134,7 +155,26 @@ export default function MessageInput({
   const showCounter = remaining < 100
 
   return (
-    <div className="border-t border-border-subtle bg-bg-raised px-4 py-3">
+    <div className={cn('border-t border-border-subtle bg-bg-raised px-3 py-3 sm:px-4', className)}>
+      {replyingTo && (
+        <div className="mb-2 flex items-center gap-2.5 rounded-lg bg-bg-overlay py-1.5 pl-3 pr-1">
+          <Reply className="h-4 w-4 flex-shrink-0 text-lime-text" aria-hidden />
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="text-[12px] font-semibold text-text-primary">Replying to {replyingTo.name}</p>
+            <p className="truncate text-[12px] text-text-secondary">{replyingTo.snippet}</p>
+          </div>
+          {onCancelReply && (
+            <button
+              type="button"
+              onClick={onCancelReply}
+              className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-8 sm:w-8"
+              aria-label="Cancel reply"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
       {/* Picked file, waiting to be sent with the next message. */}
       {file && (
         <div className="mb-2 flex items-center gap-2.5 rounded-lg border border-border-subtle bg-bg-overlay p-2">

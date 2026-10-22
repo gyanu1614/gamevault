@@ -1,63 +1,31 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
-import { Camera, Shield } from 'lucide-react'
+import { Camera } from 'lucide-react'
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
 import { ChecksIcon } from '@phosphor-icons/react/dist/csr/Checks'
 import { ClockIcon } from '@phosphor-icons/react/dist/csr/Clock'
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
 import { FileTextIcon } from '@phosphor-icons/react/dist/csr/FileText'
 import { cn } from '@/lib/utils'
-import { linkifySegments } from '@/lib/chat/linkify'
 import { DELIVERY_EVIDENCE_LABEL } from '@/lib/chat/system-notice'
 import { deliveryState, type LocalFile, type LocalStatus } from '@/lib/chat/message-state'
+import type { ReactionSummary } from '@/lib/chat/reactions'
 import ChatAttachment from './ChatAttachment'
+import AdminMessageBubble from './AdminMessageBubble'
+import { ReactionChips } from './ReactionChips'
+import { ReplyQuote } from './ReplyQuote'
+import { clockTime, renderMarkdown } from './message-text'
+import { MessageHoverActions, type MessageActionHandlers } from './actions/MessageHoverActions'
+import { useLongPress } from './actions/use-long-press'
 
 /** Critically damped settle (no overshoot): a message arriving is not a
  *  gesture with momentum, so it must not bounce. */
 const SETTLE = { type: 'spring', bounce: 0, duration: 0.32 } as const
 
-/** Clock time under a bubble ("10:42 AM"); the day is on the divider. */
-function clockTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-}
-
 /** The label a file-only message stores (attachmentOnlyLabel). */
 function isAttachmentPlaceholder(content: string): boolean {
   return content === 'Sent a photo' || content === 'Sent a PDF'
-}
-
-/** Plain text with http(s) URLs rendered as tappable links (new tab). */
-function renderLinks(text: string, keyPrefix: string) {
-  return linkifySegments(text).map((seg, i) =>
-    seg.type === 'link' ? (
-      <a
-        key={`${keyPrefix}-${i}`}
-        href={seg.href}
-        target="_blank"
-        rel="noopener noreferrer nofollow ugc"
-        className="break-all font-medium text-lime-text underline underline-offset-2 hover:opacity-90"
-      >
-        {seg.value}
-      </a>
-    ) : (
-      <span key={`${keyPrefix}-${i}`}>{seg.value}</span>
-    ),
-  )
-}
-
-// Simple markdown renderer for bold text
-function renderMarkdown(text: string) {
-  // Convert **text** to <strong>text</strong>
-  const parts = text.split(/(\*\*.*?\*\*)/g)
-
-  return parts.map((part, index) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      const content = part.slice(2, -2)
-      return <strong key={index} className="font-semibold">{renderLinks(content, `b${index}`)}</strong>
-    }
-    return <span key={index}>{renderLinks(part, `t${index}`)}</span>
-  })
 }
 
 interface MessageBubbleProps {
@@ -91,6 +59,15 @@ interface MessageBubbleProps {
   statusText?: string | null
   /** Re-send a message that failed ("Not sent · Retry"). */
   onRetry?: (id: string) => void
+  /** For a reply: the message it answers. */
+  quote?: { name: string; snippet: string; onJump: (() => void) | null } | null
+  reactions?: ReactionSummary[]
+  /** React / Reply / Copy (desktop toolbar); null = none for this message. */
+  actions?: MessageActionHandlers | null
+  /** Touch long-press: open the action sheet for this message. */
+  onLongPress?: (() => void) | null
+  /** Briefly marked after jumping to it from a reply's quote. */
+  highlighted?: boolean
 }
 
 export default function MessageBubble({
@@ -106,75 +83,20 @@ export default function MessageBubble({
   isAdminView = false,
   statusText = null,
   onRetry,
+  quote = null,
+  reactions = [],
+  actions = null,
+  onLongPress = null,
+  highlighted = false,
 }: MessageBubbleProps) {
   const reduceMotion = useReducedMotion()
+  const longPress = useLongPress(() => onLongPress?.(), !!onLongPress)
   const hasFiles =
     (!!message.attachments && message.attachments.length > 0) ||
     (!!message.local_files && message.local_files.length > 0)
-  const formatTime = clockTime
 
   // Admin messages are centered (like Discord/WhatsApp system messages)
-  if (isAdminMessage) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-        className="flex justify-center mb-4"
-      >
-        <div className="flex flex-col items-center max-w-md">
-          {/* Compact Admin Header */}
-          <div className="flex items-center gap-2 mb-2">
-            {/* Avatar with Shield */}
-            <div className="relative">
-              {adminInfo?.avatar_url ? (
-                <img
-                  src={adminInfo.avatar_url}
-                  alt="Support"
-                  className="h-6 w-6 rounded-full ring-1 ring-blue-400/40"
-                />
-              ) : (
-                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                  <Shield className="h-3.5 w-3.5 text-white" />
-                </div>
-              )}
-              {/* Small verified badge overlay */}
-              <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-blue-500 border border-black flex items-center justify-center">
-                <Shield className="h-1.5 w-1.5 text-white" />
-              </div>
-            </div>
-
-            {/* Name & Badge - Inline */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-blue-400">
-                {adminInfo?.username || 'Support'}
-              </span>
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/25">
-                <Shield className="h-2.5 w-2.5 text-blue-400" />
-                <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">
-                  Support
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Message Content - Centered */}
-          <div className="w-full rounded-lg px-3 py-2 bg-blue-500/10 border border-blue-500/20 backdrop-blur-sm">
-            <p className="text-xs leading-relaxed whitespace-pre-wrap text-center text-gray-200">
-              {renderMarkdown(message.content)}
-            </p>
-          </div>
-
-          {/* Timestamp - Centered */}
-          <div className="mt-1.5">
-            <span className="text-[10px] text-text-tertiary">
-              {formatTime(message.created_at)}
-            </span>
-          </div>
-        </div>
-      </motion.div>
-    )
-  }
+  if (isAdminMessage) return <AdminMessageBubble message={message} adminInfo={adminInfo} />
 
   // For admin view, determine alignment based on buyer/seller
   // Buyer messages go RIGHT, Seller messages go LEFT
@@ -190,6 +112,7 @@ export default function MessageBubble({
   const isPending = state === 'sending'
   const isFailed = state === 'failed'
   const hidePlaceholder = hasFiles && isAttachmentPlaceholder(message.content)
+  const greenBubble = alignRight
 
   // Regular user messages (buyer/seller).
   // The optimistic bubble is drawn in its FINAL colours from the first
@@ -201,7 +124,13 @@ export default function MessageBubble({
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={reduceMotion ? { duration: 0.15 } : SETTLE}
-      className={cn('mb-3 flex gap-2', alignRight ? 'justify-end' : 'justify-start')}
+      data-message-id={message.id}
+      className={cn(
+        'group/msg flex gap-2 rounded-lg transition-colors duration-500',
+        showAvatar ? 'mt-3' : 'mt-1',
+        alignRight ? 'justify-end' : 'justify-start',
+        highlighted && 'bg-white/[0.05]',
+      )}
     >
       {/* Left-side avatar (theirs) or spacer */}
       {alignLeft && (
@@ -220,72 +149,84 @@ export default function MessageBubble({
       )}
 
       {/* Message Content */}
-      <div className={cn('flex min-w-0 max-w-[70%] flex-col', alignRight ? 'items-end' : 'items-start')}>
-        {/* Sender Name (for left-aligned messages or admin view) */}
-        {(alignLeft || isAdminView) && senderName && (
+      <div className={cn('flex min-w-0 max-w-[78%] flex-col sm:max-w-[70%]', alignRight ? 'items-end' : 'items-start')}>
+        {/* Sender name on the first message of their run. */}
+        {(alignLeft || isAdminView) && senderName && showAvatar && (
           <span className="mb-1 px-1 text-xs font-medium text-text-secondary">{senderName}</span>
         )}
 
-        {/* Rectangular bubble, 10px radius with a tighter 4px corner on
-            the tail side. Own = transparent success green, theirs =
-            neutral; fill only, no outline. */}
-        <div
-          className={cn(
-            'min-w-0 max-w-full px-3.5 py-2 text-text-primary [overflow-wrap:anywhere] transition-opacity duration-200 ease-out',
-            alignRight
-              ? 'rounded-[10px] rounded-tr-[4px] bg-[rgba(63,217,134,0.12)]'
-              : 'rounded-[10px] rounded-tl-[4px] bg-white/[0.06]',
-            isPending && 'opacity-60',
-          )}
-        >
-          {/* An image/PDF-only message stores a placeholder ("Sent a photo")
-              for the inbox preview; inside the bubble the file speaks for
-              itself. The seller's proof photo gets a small label. */}
-          {message.content.startsWith(DELIVERY_EVIDENCE_LABEL) ? (
-            <p className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-text-secondary">
-              <Camera className="h-3.5 w-3.5" aria-hidden />
-              {message.content}
-            </p>
-          ) : hidePlaceholder ? null : (
-            <p className="whitespace-pre-wrap text-[14px] leading-[1.5]">{renderMarkdown(message.content)}</p>
-          )}
-          {/* Attachments. This device's own copy while sending (and after,
-              so the picture never reloads); otherwise the stored files
-              (private, signed on render) and legacy image URLs. */}
-          {hasFiles && (
-            <div
-              className={cn(
-                'grid gap-1.5',
-                (message.local_files?.length ?? message.attachments?.length ?? 0) > 1 ? 'grid-cols-2' : 'grid-cols-1',
-                !hidePlaceholder && 'mt-2',
-              )}
-            >
-              {message.local_files && message.local_files.length > 0
-                ? message.local_files.map((f, i) =>
-                    f.kind === 'image' && f.url ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- local object URL
-                      <img
-                        key={`local-${i}`}
-                        src={f.url}
-                        alt=""
-                        className="max-h-60 w-[220px] max-w-full rounded-lg object-cover"
-                      />
-                    ) : (
-                      <span
-                        key={`local-${i}`}
-                        className="inline-flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-[12.5px] font-semibold text-text-primary"
-                      >
-                        <FileTextIcon className="h-4 w-4 text-lime-text" aria-hidden />
-                        PDF
-                      </span>
-                    ),
-                  )
-                : (message.attachments ?? []).map((value, i) => (
-                    <ChatAttachment key={`${value}-${i}`} value={value} />
-                  ))}
-            </div>
-          )}
+        <div className="relative max-w-full">
+          {/* Rectangular bubble, 10px radius with a tighter 4px corner on
+              the tail side. Own = success green, theirs = neutral grey;
+              fill only, no outline. Solid fills (not thin tints) so the
+              thread reads clearly on the card. */}
+          <div
+            {...longPress}
+            className={cn(
+              'min-w-0 max-w-full px-3.5 py-2 text-text-primary [overflow-wrap:anywhere] transition-opacity duration-200 ease-out',
+              greenBubble ? 'rounded-[10px] rounded-tr-[4px] bg-[#1F3B2E]' : 'rounded-[10px] rounded-tl-[4px] bg-[#2B2C33]',
+              isPending && 'opacity-60',
+              onLongPress && '[@media(pointer:coarse)]:select-none [@media(pointer:coarse)]:[-webkit-touch-callout:none]',
+            )}
+          >
+            {quote && <ReplyQuote name={quote.name} snippet={quote.snippet} own={greenBubble} onJump={quote.onJump} />}
+            {/* An image/PDF-only message stores a placeholder ("Sent a photo")
+                for the inbox preview; inside the bubble the file speaks for
+                itself. The seller's proof photo gets a small label. */}
+            {message.content.startsWith(DELIVERY_EVIDENCE_LABEL) ? (
+              <p className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-text-secondary">
+                <Camera className="h-3.5 w-3.5" aria-hidden />
+                {message.content}
+              </p>
+            ) : hidePlaceholder ? null : (
+              <p className="whitespace-pre-wrap text-[14px] leading-[1.5]">{renderMarkdown(message.content)}</p>
+            )}
+            {/* Attachments. This device's own copy while sending (and after,
+                so the picture never reloads); otherwise the stored files
+                (private, signed on render) and legacy image URLs. */}
+            {hasFiles && (
+              <div
+                className={cn(
+                  'grid gap-1.5',
+                  (message.local_files?.length ?? message.attachments?.length ?? 0) > 1 ? 'grid-cols-2' : 'grid-cols-1',
+                  !hidePlaceholder && 'mt-2',
+                )}
+              >
+                {message.local_files && message.local_files.length > 0
+                  ? message.local_files.map((f, i) =>
+                      f.kind === 'image' && f.url ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- local object URL
+                        <img
+                          key={`local-${i}`}
+                          src={f.url}
+                          alt=""
+                          className="max-h-60 w-[220px] max-w-full rounded-lg object-cover"
+                        />
+                      ) : (
+                        <span
+                          key={`local-${i}`}
+                          className="inline-flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-[12.5px] font-semibold text-text-primary"
+                        >
+                          <FileTextIcon className="h-4 w-4 text-lime-text" aria-hidden />
+                          PDF
+                        </span>
+                      ),
+                    )
+                  : (message.attachments ?? []).map((value, i) => (
+                      <ChatAttachment key={`${value}-${i}`} value={value} />
+                    ))}
+              </div>
+            )}
+          </div>
+
+          {actions && <MessageHoverActions side={alignRight ? 'left' : 'right'} {...actions} />}
         </div>
+
+        <ReactionChips
+          summary={reactions}
+          align={alignRight ? 'right' : 'left'}
+          onToggle={actions?.onReact ?? null}
+        />
 
         {/* Time + delivery status, muted, below the bubble. */}
         <div
@@ -329,7 +270,7 @@ export default function MessageBubble({
                 </span>
               )}
               {alignRight && isOwn && <span aria-hidden>·</span>}
-              <time dateTime={message.created_at}>{formatTime(message.created_at)}</time>
+              <time dateTime={message.created_at}>{clockTime(message.created_at)}</time>
             </>
           )}
         </div>

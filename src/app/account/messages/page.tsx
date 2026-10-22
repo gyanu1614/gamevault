@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import { normalizeOrderNumber } from '@/lib/orders/order-number'
 import { inboxOrderLabel } from '@/lib/chat/inbox-row'
 import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
+import { replySnippet, senderLabel } from '@/lib/chat/reply'
 import { useCurrencyMeta } from '@/hooks/use-currency-meta'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { accountInputCls } from '@/components/account/AccountSurface'
@@ -115,9 +116,26 @@ export default function MessagesPage() {
     sendMessage,
     retryMessage,
     setAtBottom,
+    reactions,
+    react,
+    replyToId,
+    setReplyTo,
   } = useConversationMessages(selectedConversationId, {
     attachOrderId: canAttach ? selectedConversation?.order?.id ?? null : null,
   })
+
+  // Reply bar in the composer: who wrote the message being answered.
+  const replyTarget = replyToId ? messages.find((m) => m.id === replyToId) : undefined
+  const replyingTo = replyTarget
+    ? {
+        id: replyTarget.id,
+        name: senderLabel(replyTarget.sender_id, user?.id ?? '', {
+          ...(selectedConversation?.buyer ? { [selectedConversation.buyer_id]: selectedConversation.buyer.username } : {}),
+          ...(selectedConversation?.seller ? { [selectedConversation.seller_id]: selectedConversation.seller.username } : {}),
+        }),
+        snippet: replySnippet(replyTarget),
+      }
+    : null
 
   const filteredConversations = conversations.filter((conv) => {
     if (tab === 'unread' && !((conv.unread_count ?? 0) > 0)) return false
@@ -442,6 +460,9 @@ export default function MessagesPage() {
                   isLoading={isLoadingMessages}
                   onRetry={retryMessage}
                   onAtBottomChange={setAtBottom}
+                  reactions={reactions}
+                  onReact={react}
+                  onReply={setReplyTo}
                 />
               </div>
 
@@ -452,6 +473,8 @@ export default function MessagesPage() {
                 placeholder="Type a message…"
                 allowAttachments={canAttach}
                 optimistic
+                replyingTo={replyingTo}
+                onCancelReply={() => setReplyTo(null)}
               />
             </motion.div>
           ) : (

@@ -177,5 +177,9 @@ export function useConversationMessages(
     sendMessage: thread.send,
     retryMessage: thread.retry,
     setAtBottom: thread.setAtBottom,
+    reactions: thread.reactions,
+    react: thread.react,
+    replyToId: thread.replyToId,
+    setReplyTo: thread.setReplyTo,
   }
 }

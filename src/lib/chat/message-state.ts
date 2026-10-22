@@ -26,6 +26,8 @@ export interface ChatRow {
   is_read: boolean
   read_at: string | null
   created_at: string
+  /** The message this one replies to (same conversation). */
+  reply_to_id?: string | null
 }
 
 export type LocalStatus = 'sending' | 'failed'
@@ -65,6 +67,7 @@ function sameRow(a: ChatMessage, b: ChatRow): boolean {
     a.is_read === b.is_read &&
     a.read_at === b.read_at &&
     a.created_at === b.created_at &&
+    (a.reply_to_id ?? null) === (b.reply_to_id ?? null) &&
     JSON.stringify(a.attachments ?? []) === JSON.stringify(b.attachments ?? [])
   )
 }
@@ -77,6 +80,7 @@ export function optimisticMessage(args: {
   senderId: string
   content: string
   localFiles?: LocalFile[]
+  replyToId?: string | null
   now?: Date
 }): ChatMessage {
   return {
@@ -88,6 +92,7 @@ export function optimisticMessage(args: {
     is_read: false,
     read_at: null,
     created_at: (args.now ?? new Date()).toISOString(),
+    reply_to_id: args.replyToId ?? null,
     local_status: 'sending',
     local_files: args.localFiles,
   }

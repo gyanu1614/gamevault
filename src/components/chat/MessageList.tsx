@@ -1,19 +1,22 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { toast } from 'sonner'
 import { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown'
-import { Loader2, PackageCheck, XCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import MessageBubble from './MessageBubble'
-import OrderMessageCard from './OrderMessageCard'
-import DisputeSystemCard from './DisputeSystemCard'
-import DisputeResolvedCard from './DisputeResolvedCard'
-import ChatNotice from './ChatNotice'
+import SystemNoticeRow from './SystemNoticeRow'
+import { MessageActionSheet } from './actions/MessageActionSheet'
+import type { MessageActionHandlers } from './actions/MessageHoverActions'
 import { createClient } from '@/lib/supabase/client'
 import { getAvatarUrl } from '@/lib/utils/avatar'
-import { isSystemMessage, parseSystemNotice } from '@/lib/chat/system-notice'
+import { isSystemMessage } from '@/lib/chat/system-notice'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import { lastOwnMessageId, statusLabel, type LocalFile, type LocalStatus } from '@/lib/chat/message-state'
+import { summarizeReactions, type ReactionRow } from '@/lib/chat/reactions'
+import { replySnippet, senderLabel } from '@/lib/chat/reply'
+import { dayKey, dayLabel } from '@/lib/chat/day-label'
 
 interface Message {
   id: string
@@ -24,6 +27,8 @@ interface Message {
   read_at?: string | null
   created_at: string
   attachments?: string[] | null
+  /** The message this one replies to. */
+  reply_to_id?: string | null
   /** Optimistic send state (order chat); unset once the server has it. */
   local_status?: LocalStatus
   local_files?: LocalFile[]
@@ -71,6 +76,23 @@ interface MessageListProps {
   onRetry?: (id: string) => void
   /** Whether the newest message is in view (drives mark-as-read). */
   onAtBottomChange?: (atBottom: boolean) => void
+  /** Every reaction in the thread (useChatThread). */
+  reactions?: ReactionRow[]
+  /** React / Reply are offered only when these are set (a party to an open
+   *  chat, or an admin). Copy Text is always there. */
+  onReact?: (messageId: string, emoji: string) => void
+  onReply?: (messageId: string) => void
+}
+
+function copyText(text: string) {
+  if (!navigator.clipboard) {
+    toast.error('Copy is not available in this browser.')
+    return
+  }
+  navigator.clipboard.writeText(text).then(
+    () => toast.success('Copied'),
+    () => toast.error('Could not copy the message.'),
+  )
 }
 
 export default function MessageList({
@@ -85,11 +107,14 @@ export default function MessageList({
   autoScroll = true,
   onRetry,
   onAtBottomChange,
+  reactions = [],
+  onReact,
+  onReply,
 }: MessageListProps) {
   // Chat scroll: opens at the newest message, follows new messages while
   // the reader is at the bottom, and leaves them alone once they scroll up
   // to read history (use-stick-to-bottom, spring-animated, resize-aware).
-  const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
+  const { scrollRef, contentRef, scrollToBottom, isAtBottom, stopScroll } = useStickToBottom({
     initial: 'instant',
     resize: 'smooth',
   })
@@ -194,18 +219,80 @@ export default function MessageList({
   }, [lastOwnReadAt])
   const lastOwnStatus = lastOwn ? statusLabel(lastOwn, now) : null
 
-  // Group messages by date
-  const groupedMessages = messages.reduce((groups, message) => {
-    const date = new Date(message.created_at).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
+  // Replies + reactions: lookups for the quote above a reply, the chips
+  // under a bubble, and the names a quote shows.
+  const byId = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages])
+  const names = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const [id, a] of Object.entries(adminUsers)) out[id] = a.username
+    if (otherUser) out[otherUser.id] = otherUser.username
+    if (order?.buyer) out[order.buyer.id] = order.buyer.username
+    if (order?.seller) out[order.seller.id] = order.seller.username
+    return out
+  }, [adminUsers, otherUser, order?.buyer, order?.seller])
+  const reactionsFor = useCallback(
+    (messageId: string) => summarizeReactions(reactions, messageId, currentUserId),
+    [reactions, currentUserId],
+  )
+  const myReaction = (messageId: string) =>
+    reactions.find((r) => r.message_id === messageId && r.user_id === currentUserId)?.emoji ?? null
 
-    if (!groups[date]) {
-      groups[date] = []
+  // Tapping a quote: centre the original in the thread and flash it. The
+  // thread's own scroller only (scrollIntoView would also move the page).
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+  const jumpTo = useCallback(
+    (id: string) => {
+      const scroller = scrollRef.current
+      const el = scroller?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`)
+      if (!scroller || !el) return
+      stopScroll()
+      const offset = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+      const top = scroller.scrollTop + offset - (scroller.clientHeight - el.offsetHeight) / 2
+      scroller.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? 'auto' : 'smooth' })
+      setHighlightId(id)
+    },
+    [scrollRef, stopScroll, reduceMotion],
+  )
+  useEffect(() => {
+    if (!highlightId) return
+    const t = setTimeout(() => setHighlightId(null), 1400)
+    return () => clearTimeout(t)
+  }, [highlightId])
+
+  /** React / Reply / Copy for one message; null when it has no actions yet. */
+  const actionsFor = (message: Message): MessageActionHandlers | null => {
+    if (message.local_status !== undefined) return null // not stored yet
+    const hasText = !((message.attachments?.length ?? 0) > 0 && /^Sent a (photo|PDF)$/.test(message.content))
+    return {
+      myReaction: myReaction(message.id),
+      onReact: onReact ? (emoji) => onReact(message.id, emoji) : null,
+      onReply: onReply ? () => onReply(message.id) : null,
+      onCopy: hasText ? () => copyText(message.content) : null,
     }
-    groups[date].push(message)
+  }
+
+  /** The quoted line above a reply (the original is in the loaded thread). */
+  const quoteFor = (message: Message) => {
+    if (!message.reply_to_id) return null
+    const original = byId.get(message.reply_to_id)
+    if (!original) return { name: 'Message', snippet: 'Earlier message', onJump: null }
+    return {
+      name: senderLabel(original.sender_id, currentUserId, names),
+      snippet: replySnippet(original),
+      onJump: () => jumpTo(original.id),
+    }
+  }
+
+  // Phone: one action sheet for the thread, opened by a long-press.
+  const [sheet, setSheet] = useState<{ id: string; open: boolean } | null>(null)
+  const sheetMessage = sheet ? byId.get(sheet.id) : undefined
+  const sheetActions = sheetMessage?.sender_id ? actionsFor(sheetMessage) : null
+
+  // Group messages by the viewer's local day ("Today", "Yesterday", "Oct 3").
+  const groupedMessages = messages.reduce((groups, message) => {
+    const key = dayKey(message.created_at)
+    if (!groups[key]) groups[key] = []
+    groups[key].push(message)
     return groups
   }, {} as Record<string, Message[]>)
 
@@ -240,7 +327,7 @@ export default function MessageList({
       ref={scrollRef}
       className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
     >
-    <div ref={contentRef} className="space-y-4 px-4 py-6">
+    <div ref={contentRef} className="space-y-2 px-3 pb-5 pt-3 sm:px-4">
       {/* V21/P5.c — Welcome banner shown only on empty state (no user
           messages yet). Once a real message lands, the banner is gone
           for good. Order context (id / item) lives in the chat header
@@ -264,18 +351,14 @@ export default function MessageList({
       )}
 
       {/* Messages grouped by date */}
-      {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-        <div key={date}>
-          {/* Date Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-bg-raised px-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
-                {date}
-              </span>
-            </div>
+      {Object.entries(groupedMessages).map(([key, dateMessages]) => (
+        <div key={key}>
+          {/* Day pill: sticks to the top of the thread while that day's
+              messages scroll under it. */}
+          <div className="pointer-events-none sticky top-2 z-[2] my-3 flex justify-center">
+            <span className="rounded-full bg-[#2B2C33]/90 px-3 py-1 text-[11.5px] font-semibold text-text-secondary shadow-[0_2px_8px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+              {dayLabel(dateMessages[0].created_at, now)}
+            </span>
           </div>
 
           {/* Messages for this date */}
@@ -287,46 +370,7 @@ export default function MessageList({
               // DropMarket notices (no sender): dispute cards. Anything
               // unrecognised from the system sender is not shown.
               if (isSystemMessage(message.sender_id)) {
-                const notice = parseSystemNotice(message.content)
-                if (notice?.type === 'dispute_opened') {
-                  return (
-                    <DisputeSystemCard key={message.id} category={notice.category ?? ''} reason={notice.reason ?? ''} />
-                  )
-                }
-                if (notice?.type === 'order_delivered') {
-                  return (
-                    <ChatNotice key={message.id} icon={PackageCheck} tone="lime" title="Order Delivered">
-                      {notice.seller ? `${notice.seller} marked the order delivered.` : 'The seller marked the order delivered.'}{' '}
-                      Buyer, please check you received your items, then confirm delivery.
-                    </ChatNotice>
-                  )
-                }
-                if (notice?.type === 'order_cancelled') {
-                  return (
-                    <ChatNotice
-                      key={message.id}
-                      icon={XCircle}
-                      tone="neutral"
-                      title={notice.by === 'system' ? 'Order Cancelled — Not Delivered' : 'Order Cancelled By The Seller'}
-                    >
-                      {notice.reason && <p>Reason: {notice.reason}</p>}
-                      {notice.note && <p className="line-clamp-2 text-text-tertiary">{notice.note}</p>}
-                      <p>The buyer was refunded to their Store Balance.</p>
-                    </ChatNotice>
-                  )
-                }
-                if (notice?.type === 'dispute_resolved') {
-                  return (
-                    <DisputeResolvedCard
-                      key={message.id}
-                      resolution={notice.resolution}
-                      notes={notice.notes ?? ''}
-                      refundAmount={notice.refundAmount}
-                      resolvedBy={notice.resolvedBy}
-                    />
-                  )
-                }
-                return null
+                return <SystemNoticeRow key={message.id} content={message.content} />
               }
               // Past the notice branch every message has a real author.
               const senderId = message.sender_id as string
@@ -395,6 +439,11 @@ export default function MessageList({
                   isAdminView={isAdminView}
                   statusText={message.id === lastOwnId && message.local_status === undefined ? lastOwnStatus : null}
                   onRetry={onRetry}
+                  quote={quoteFor(message)}
+                  reactions={reactionsFor(message.id)}
+                  actions={actionsFor(message)}
+                  onLongPress={message.local_status === undefined ? () => setSheet({ id: message.id, open: true }) : null}
+                  highlighted={highlightId === message.id}
                 />
               )
             })}
@@ -404,6 +453,16 @@ export default function MessageList({
 
     </div>
     </div>
+
+    <MessageActionSheet
+      open={!!sheet?.open && !!sheetActions}
+      onOpenChange={(open) => setSheet((cur) => (cur ? { ...cur, open } : cur))}
+      preview={sheetMessage ? { name: senderLabel(sheetMessage.sender_id, currentUserId, names), snippet: replySnippet(sheetMessage) } : null}
+      myReaction={sheetActions?.myReaction ?? null}
+      onReact={sheetActions?.onReact ?? null}
+      onReply={sheetActions?.onReply ?? null}
+      onCopy={sheetActions?.onCopy ?? null}
+    />
 
     {/* New messages arrived while scrolled up: a pill, not a jump. */}
     {/* Centred by a static wrapper: framer owns the button's transform. */}
