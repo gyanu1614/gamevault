@@ -138,8 +138,8 @@ async function sabRows(db: Db, now: number): Promise<AdminValueRow[]> {
   const id = await gameId(db, 'steal-a-brainrot')
   const [items, prices, ours] = await Promise.all([
     all<any>((f, t) => db.from('sab_brainrots').select('slug,name,rarity,image_path,image_status,how_to_get,created_at,released_at,is_active,needs_review').order('slug').range(f, t), 'sab_brainrots'),
-    // The plain brainrot's price row (no mutation).
-    all<any>((f, t) => db.from('sab_price_display').select('brainrot_slug,mutation_slug,average_usd,market_value_usd').or('mutation_slug.is.null,mutation_slug.eq.default').range(f, t), 'sab_price_display'),
+    // The plain brainrot's price row (mutation 'default', as the hub teaser reads it).
+    all<any>((f, t) => db.from('sab_price_display').select('brainrot_slug,average_usd,market_value_usd').eq('mutation_slug', 'default').range(f, t), 'sab_price_display'),
     ourPrices(db, id),
   ])
   const market = new Map(prices.map((p) => [p.brainrot_slug as string, num(p.average_usd) ?? num(p.market_value_usd)]))
