@@ -128,7 +128,8 @@ export async function readGameHealth(db: Db, game: ValuesHealthGame): Promise<Ga
     if (list.error) throw new Error(`${game.list.table}: ${list.error.message}`)
 
     const r = run.data?.[0]
-    const p = (price.data?.[0] as Record<string, string> | undefined)?.[game.price.column] ?? null
+    // The column name is config, so the row's type is not known statically.
+    const p = (price.data?.[0] as unknown as Record<string, string> | undefined)?.[game.price.column] ?? null
     return {
       lastCatalogueRun: r ? { startedAt: r.started_at as string, status: r.status as string } : null,
       lastPriceAt: p,

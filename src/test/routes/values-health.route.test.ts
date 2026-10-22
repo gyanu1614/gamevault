@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const postOpsAlert = vi.fn(async () => true)
+const postOpsAlert = vi.fn(async (_message: string) => true)
 const readGameHealth = vi.fn()
 vi.mock('@/lib/ops/discord-alert', () => ({ postOpsAlert }))
 vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: () => ({}) }))
