@@ -26,7 +26,7 @@ import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
 import { AdoptMeAbout, AdoptMeFormTable } from './_AdoptMeAbout'
-import { livePriceSpread, withoutStalePrices } from './_adoptMeAboutModel'
+import { livePriceSpread, petStory } from './_adoptMeAboutModel'
 import { priceHistorySummary } from '@/lib/values/history-summary'
 import { SelectedVariantProvider } from './_SelectedVariantContext'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -195,9 +195,17 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
     facts: [{ label: 'Rarity', value: meta.label }],
   }
   const faq = mergeFaqs(petFaq(pet), factFaqs({ name: pet.name, game, facts, cheapestUsd: refFrUsd }))
-  // The stored story without its old baked-in prices, plus one live line
-  // from the same numbers as the table (no more "$6.98" next to "$6.28").
-  const story = withoutStalePrices(pet.description)
+  // The stored story without its old baked-in prices (or, with no written
+  // description, the pet's facts), plus one live line from the same numbers as
+  // the table (no more "$6.98" next to "$6.28").
+  const story = petStory({
+    description: pet.description,
+    name: pet.name,
+    rarity: meta.label,
+    released: facts.released,
+    origin: facts.origin ?? pet.originDetail,
+    howToGetMethod: facts.howToGet?.method ?? null,
+  })
   const spread = livePriceSpread(pet.name, pet.variants)
   // The chart is browser-only; this line puts its numbers in the HTML.
   const history = headline ? priceHistorySummary(`${headline.label} ${pet.name}`, pet.priceHistory[headline.variant]) : null

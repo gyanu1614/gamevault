@@ -99,7 +99,7 @@ export default async function ValueItemRoute({ params }: ItemPageProps) {
     bindValueItemPriceTag(gameSlug, itemSlug),
   ])
 
-  // Adopt Me per-pet page — only publishable pets (has_page) render; anything
+  // Adopt Me per-pet page — every active pet renders; anything
   // thin or unpriced 404s rather than shipping an empty page.
   if (gameSlug === 'adopt-me') {
     const pet = await getAdoptMePet(itemSlug)

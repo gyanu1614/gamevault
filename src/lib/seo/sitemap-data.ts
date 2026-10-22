@@ -56,9 +56,9 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
       fetchAllRows<SitemapInput['sabBrainrots'][number]>((from, to) =>
         db.from('sab_brainrot_catalog').select('slug, updated_at').order('slug').range(from, to),
       ),
-      // Only PUBLISHABLE pets (has_page): a pet without a description 404s.
+      // Every ACTIVE pet has a page (2026-10-21); the value gate decides indexing.
       fetchAllRows<SitemapInput['adoptMePets'][number]>((from, to) =>
-        db.from('adopt_me_pets').select('slug, updated_at').eq('has_page', true).order('slug').range(from, to),
+        db.from('adopt_me_pets').select('slug, updated_at').eq('is_active', true).order('slug').range(from, to),
       ),
       fetchAllRows<{
         slug: string

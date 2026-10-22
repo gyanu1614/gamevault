@@ -76,7 +76,7 @@ async function loadCurrent(db: Db, source: ValueSource, gameSlug: string): Promi
   }
   if (source === 'adopt-me') {
     const [pets, values] = await Promise.all([
-      fetchAllRows<{ id: string; slug: string }>((f, t) => db.from('adopt_me_pets').select('id, slug').eq('has_page', true).order('id').range(f, t)),
+      fetchAllRows<{ id: string; slug: string }>((f, t) => db.from('adopt_me_pets').select('id, slug').eq('is_active', true).order('id').range(f, t)),
       fetchAllRows<{ pet_id: string; variant: string; cash_value_usd: number | null; reputable_count: number | null; is_estimated: boolean; last_priced_at: string | null }>(
         (f, t) =>
           db

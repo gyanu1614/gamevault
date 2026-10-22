@@ -117,6 +117,34 @@ export function withoutStalePrices(text: string): string {
   return sentences.filter((s) => !STALE_SENTENCE.test(s)).join(' ').trim()
 }
 
+const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a')
+
+/**
+ * The About text: the written description (minus its old baked-in prices), or,
+ * for a pet added from the wiki without one, its facts in plain sentences, so
+ * every active pet's page has a real paragraph (2026-10-21: no pet hidden).
+ */
+export function petStory(input: {
+  description: string | null
+  name: string
+  rarity: string
+  released: string | null
+  origin: string | null
+  howToGetMethod: string | null
+}): string {
+  const written = input.description?.trim() ? withoutStalePrices(input.description) : ''
+  if (written) return written
+  const rarity = input.rarity.toLowerCase()
+  const lead = [
+    `The ${input.name} is ${article(rarity)} ${rarity} pet in Adopt Me`,
+    input.released ? `released ${input.released}` : null,
+    input.origin ? `from the ${input.origin.replace(/^the\s+/i, '')}` : null,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  return [`${lead}.`, input.howToGetMethod].filter(Boolean).join(' ')
+}
+
 /** The live version of the old baked-in spread: same numbers as the Price by Form table. */
 export function livePriceSpread(_name: string, variants: AdoptMePetVariant[]): string | null {
   const ordered = VARIANTS.flatMap((c) => variants.filter((v) => v.variant === c))

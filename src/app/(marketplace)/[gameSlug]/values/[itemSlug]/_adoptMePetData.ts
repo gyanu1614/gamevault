@@ -3,9 +3,10 @@ import { createValueGameSharedReadClient, createValueItemReadClient, createValue
 import { fetchAllRows } from '@/lib/db/fetch-all'
 
 /**
- * Per-pet data for /adopt-me/values/{slug}. A pet is only servable when
- * has_page is true (active + a real description), so a thin or unpriced pet
- * 404s rather than publishing an empty page.
+ * Per-pet data for /adopt-me/values/{slug}. Every ACTIVE pet has a page
+ * (owner, 2026-10-21: no pet hidden). A pet without a written description
+ * still has its facts, How To Get, forms, prices and FAQ; whether Google
+ * indexes it is the value gate's call, never a 404.
  */
 
 import { VARIANTS as VARIANT_ORDER, VARIANT_LABEL, type Variant } from '../../calculator/_adoptMeCalcTypes'
@@ -48,7 +49,13 @@ export interface AdoptMePetDetail {
   originType: string | null
   originDetail: string | null
   imageUrl: string | null
-  description: string
+  /** Written description; null for a pet added from the wiki without one yet. */
+  description: string | null
+  /** YYYY-MM-DD from the wiki, when known. */
+  releasedAt: string | null
+  /** When the row was created (the New badge's fallback date). */
+  addedAt: string | null
+  hasHowToGet: boolean
   variants: AdoptMePetVariant[]
   /** Daily price history keyed by variant (may be empty until it accrues). */
   priceHistory: Record<string, PetPricePoint[]>
@@ -60,7 +67,7 @@ function num(v: number | string | null): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-/** Full detail for one pet, or null if it isn't publishable (has_page=false). */
+/** Full detail for one pet, or null if there is no such active pet. */
 export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | null> {
   // Tagged with this pet's price tag + the game tag: the publish step's
   // revalidateTag refreshes these responses, not just the page shell.
@@ -68,9 +75,9 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
 
   const { data: pet, error } = await (supabase as any)
     .from('adopt_me_pets')
-    .select('id,slug,name,rarity,obtainability,origin_type,origin_detail,image_url,description,has_page')
+    .select('id,slug,name,rarity,obtainability,origin_type,origin_detail,image_url,description,released_at,created_at,how_to_get')
     .eq('slug', slug)
-    .eq('has_page', true)
+    .eq('is_active', true)
     .maybeSingle()
 
   // A read error throws: returning null here made the page notFound(), and ISR
@@ -141,20 +148,23 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
     originType: pet.origin_type,
     originDetail: pet.origin_detail,
     imageUrl: pet.image_url,
-    description: pet.description,
+    description: pet.description ?? null,
+    releasedAt: pet.released_at ?? null,
+    addedAt: pet.created_at ?? null,
+    hasHowToGet: pet.how_to_get != null,
     variants,
     priceHistory,
   }
 }
 
-/** Slugs of all publishable pets — for generateStaticParams + similar-pets. */
+/** Slugs of every active pet (each has a page) — for generateStaticParams. */
 export async function getPublishablePetSlugs(): Promise<string[]> {
   const supabase = createValueListReadClient('adopt-me')
   const { data } = await fetchAllRows<{ slug: string }>((from, to) =>
     (supabase as any)
       .from('adopt_me_pets')
       .select('slug')
-      .eq('has_page', true)
+      .eq('is_active', true)
       .order('slug', { ascending: true })
       .range(from, to),
   )
@@ -162,9 +172,8 @@ export async function getPublishablePetSlugs(): Promise<string[]> {
 }
 
 /**
- * A few similar pets (same rarity) for internal linking. Gated on has_page, not
- * is_active — a "similar pet" link must go to a page that exists, or it's just
- * another soft-404. Falls back to same-rarity if that yields too few is fine:
+ * A few similar pets (same rarity) for internal linking. Active pets only —
+ * a "similar pet" link must go to a page that exists (every active pet has one). Falls back to same-rarity if that yields too few is fine:
  * an empty section self-hides rather than linking to dead pages.
  */
 export interface SimilarPet {
@@ -211,7 +220,7 @@ export async function getSimilarPets(
     (supabase as any)
       .from('adopt_me_pets')
       .select('id,slug,name,image_url,rarity')
-      .eq('has_page', true)
+      .eq('is_active', true)
       .order('id', { ascending: true })
       .range(from, to),
   )
