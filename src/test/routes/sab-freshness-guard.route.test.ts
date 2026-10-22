@@ -160,6 +160,20 @@ describe('ROUTE-014 — freshness thresholds are 2x cadence', () => {
     ).toBe(true)
   })
 
+  // 2026-10-21: the daily Vercel check (06:40 UTC) runs BEFORE that day's
+  // pricing run (GitHub starts it 5-7 h late, ~07:30 UTC), so it saw ~23 h old
+  // data against a 6 h threshold built for the old 3-hourly crawl and emailed a
+  // false "stopped advancing" alert every morning. The crawl is daily (T1).
+  it('the real hops are daily: a check just before the next run is not an alert', () => {
+    for (const c of FRESHNESS_CHECKS) {
+      expect(c.cadenceHours, c.table).toBe(24)
+      // The 2026-10-21 email: 22.66 h old at 06:40 UTC.
+      expect(evaluate(c, new Date(NOW - 22.66 * HOUR).toISOString(), NOW).stale, c.table).toBe(false)
+      // Two missed daily runs still alert.
+      expect(evaluate(c, new Date(NOW - 49 * HOUR).toISOString(), NOW).stale, c.table).toBe(true)
+    }
+  })
+
   it('flags the month-long freeze that motivated this guard', () => {
     const r = evaluate(check(), '2026-08-14T01:46:00.000Z', Date.parse('2026-09-13T00:00:00.000Z'))
     expect(r.stale).toBe(true)
@@ -212,7 +226,7 @@ describe('ROUTE-014 — route behaviour', () => {
   it('fails non-200 and emails admin@dropmarket.gg when a hop is stale', async () => {
     stubAllFresh(1)
     latestByTable.set('sab_price_display', {
-      value: new Date(NOW - 40 * HOUR).toISOString(),
+      value: new Date(NOW - 72 * HOUR).toISOString(),
     })
 
     const res = await GET(req())
@@ -295,7 +309,7 @@ describe('ROUTE-014 — route behaviour', () => {
   })
 
   it('reports every stale hop, not just the first', async () => {
-    const old = new Date(NOW - 40 * HOUR).toISOString()
+    const old = new Date(NOW - 72 * HOUR).toISOString()
     latestByTable.set('sab_market_evidence_display', { value: old })
     latestByTable.set('sab_price_display', { value: old })
     latestByTable.set('sab_market_raw_listings', { value: new Date(NOW - HOUR).toISOString() })
@@ -319,7 +333,7 @@ describe('ROUTE-014 — route behaviour', () => {
 
   it('still fails non-200 when the alert email throws (the red cron must not depend on Resend)', async () => {
     stubAllFresh(1)
-    latestByTable.set('sab_price_display', { value: new Date(NOW - 40 * HOUR).toISOString() })
+    latestByTable.set('sab_price_display', { value: new Date(NOW - 72 * HOUR).toISOString() })
     ;(sendAdminNoticeEmail as any).mockRejectedValueOnce(new Error('resend down'))
 
     const res = await GET(req())

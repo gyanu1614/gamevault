@@ -19,9 +19,9 @@ name: Values Pricing Daily
 # Cadence: once a day for every game, SAB included. The 12 h SAB cadence
 # (2026-09-22) predates changed-only revalidation, and nothing reads SAB
 # prices on a sub-daily promise: the freshness guard (ROUTE-014) runs in-job
-# right after the reprice and as the 06:40 UTC Vercel cron with a 6 h
-# threshold, so the window starts at 02:10 UTC and SAB (G2G → Eldorado →
-# expire → reprice) lands by ~04:30 even on a slow day. A second daily SAB
+# right after the reprice and as the 06:40 UTC Vercel cron, with a 48 h
+# threshold (2x the daily cadence; it was 6 h, which emailed a false alert
+# every morning because GitHub starts this 02:10 schedule 5-7 h late). A second daily SAB
 # run would double the ~70 runner minutes for a few hours of extra freshness
 # on a market whose prices move daily, and its changed-items revalidation
 # would mostly re-confirm the morning's numbers.
