@@ -15,7 +15,7 @@ import { useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  BookOpenText, CaretDown, GameController, MagnifyingGlass, Pause, PencilSimple, Play, Sparkle, Star, Trash, X,
+  BookOpenText, CaretDown, ChartLineUp, GameController, MagnifyingGlass, Pause, PencilSimple, Play, Sparkle, Star, Trash, X,
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { fetchAdminGames, toggleGameActive, deleteGame, toggleGamePopular, toggleGameSpotlight, toggleGameContentHub } from '@/lib/actions/admin-games'
@@ -27,6 +27,7 @@ import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { AdminEmpty, AdminLoadingRows, PageHeader, StatusBadge, adminBtn, adminFieldCls } from '../../components/kit'
 import { GameTile } from '../../components/GameTile'
+import { hasHubPage } from '@/lib/content/theme'
 import { AddGameDialog } from './AddGameDialog'
 import { TrendReviewCard } from './TrendReviewCard'
 
@@ -475,6 +476,16 @@ export default function GamesPageClient({
                                 <Play aria-hidden weight="bold" className="h-4 w-4" />
                               )}
                             </IconAction>
+                            {hasHubPage(game.slug, 'values') && (
+                              <Link
+                                href={`/admin/games/${game.id}/edit?tab=values`}
+                                aria-label={`${game.name} values`}
+                                title="Values"
+                                className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary"
+                              >
+                                <ChartLineUp aria-hidden weight="bold" className="h-4 w-4" />
+                              </Link>
+                            )}
                             <Link
                               href={`/admin/games/${game.id}/edit`}
                               aria-label={`Edit ${game.name}`}

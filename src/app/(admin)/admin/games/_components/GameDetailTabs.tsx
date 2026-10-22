@@ -13,6 +13,8 @@
  *   • Boosting     — tier ladder, avg delivery, instructions placeholder.
  *   • Fees         — seller commission per enabled category (fee engine
  *                    PR 5): live rate, scheduled rules, promos, risk band.
+ *   • Values       — hub games only: the values hub's items, what each is
+ *                    missing, and the daily new-items job's runs.
  *
  * Currency/Accounts/Boosting tabs are only shown when the matching
  * global category is enabled for this game — we don't surface config
@@ -31,8 +33,10 @@ import { AccountConfigForm } from './AccountConfigForm'
 import { BoostingConfigForm } from './BoostingConfigForm'
 import { SeoOverrideForm } from './SeoOverrideForm'
 import { FeesTab } from './FeesTab'
+import { ValuesTab } from './ValuesTab'
+import { hasHubPage } from '@/lib/content/theme'
 
-type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'fees' | 'seo'
+type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'fees' | 'seo' | 'values'
 
 // Mirrors the GameWizard's existing types so this file doesn't have
 // to import internal interfaces. The shapes come from
@@ -45,12 +49,16 @@ export default function GameDetailTabs({
   game,
   globalCategories,
   initialGameCategories,
+  initialTab,
 }: {
   game: Game
   globalCategories: GlobalCategory[]
   initialGameCategories: GameCategoryRow[]
+  /** ?tab= on the edit URL (the games list links straight to Values). */
+  initialTab?: string
 }) {
-  const [tab, setTab] = useState<Tab>('setup')
+  const hasValues = hasHubPage(String(game?.slug ?? ''), 'values')
+  const [tab, setTab] = useState<Tab>(initialTab === 'values' && hasValues ? 'values' : 'setup')
 
   // Which categories are enabled for this game (by global category slug).
   const enabledSlugs = new Set(
@@ -72,6 +80,7 @@ export default function GameDetailTabs({
     ...(hasBoosting ? [{ id: 'boosting' as Tab, label: 'Boosting' }] : []),
     { id: 'fees', label: 'Fees' },
     { id: 'seo', label: 'SEO' },
+    ...(hasValues ? [{ id: 'values' as Tab, label: 'Values' }] : []),
   ]
 
   return (
@@ -142,6 +151,8 @@ export default function GameDetailTabs({
         {tab === 'fees' && <FeesTab rows={initialGameCategories} gameName={game.name} />}
 
         {tab === 'seo' && <SeoOverrideForm gameId={game.id} gameName={game.name} />}
+
+        {tab === 'values' && hasValues && <ValuesTab gameSlug={game.slug} gameName={game.name} />}
       </div>
     </div>
   )
