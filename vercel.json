@@ -15,20 +15,5 @@
     { "path": "/api/cron/seo-indexnow", "schedule": "40 5 * * *" },
     { "path": "/api/cron/seo-gsc", "schedule": "20 6 * * *" },
     { "path": "/api/cron/seo-bing", "schedule": "40 7 * * *" }
-  ],
-  "rewrites": [
-    {
-      "source": "/media/:bucket(sab-brainrots|values-items|adopt-me-pets|category-icons|game-heroes|game-covers|listing-images|blog-images|attribute-icons)/:path*",
-      "destination": "https://cserfvellsliylifjkos.supabase.co/storage/v1/object/public/:bucket/:path*"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/media/(.*)",
-      "headers": [
-        { "key": "x-vercel-enable-rewrite-caching", "value": "1" },
-        { "key": "CDN-Cache-Control", "value": "max-age=2592000" }
-      ]
-    }
   ]
 }

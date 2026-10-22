@@ -30,7 +30,7 @@ export const RESERVED_GAME_SLUGS = new Set([
   'dev', 'early-seller', 'forgot-password', 'founding', 'kyc', 'listing-preview', 'listings',
   'login', 'notifications', 'orders', 'purchases', 'reviews', 'shop',
   'signup', 'signup-become-seller', 'support', 'wallet', 'wishlist',
-  'sell', 'seller', 'admin', 'test', 'test-connection', 'sitemaps',
+  'sell', 'seller', 'admin', 'test', 'test-connection', 'sitemaps', 'media',
   // (legal) group — all render at the top level
   'acceptable-use', 'aml', 'buyer-terms', 'chargebacks', 'company',
   'complaints', 'cookies', 'fees', 'ip', 'privacy', 'prohibited',
