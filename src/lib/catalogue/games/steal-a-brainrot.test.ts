@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import pages from './__fixtures__/sab-pages.json'
-import { parseAmount, parseSabPage, sabRarity, sabRow, stealABrainrot } from './steal-a-brainrot'
+import { firstImageFile, parseAmount, parseSabPage, sabRarity, sabRow, stealABrainrot } from './steal-a-brainrot'
 import type { WikiPage } from '../types'
 
 const page = (title: string) => (pages as WikiPage[]).find((p) => p.title === title)!
@@ -17,6 +17,18 @@ describe('SAB field parsers', () => {
     expect(parseAmount('$23.5B')).toBe(23_500_000_000)
     expect(parseAmount('78M')).toBe(78_000_000)
     expect(parseAmount('Unknown')).toBeNull()
+  })
+})
+
+describe('firstImageFile', () => {
+  // 2026-10-22 first prod fill: 10 brainrots list "normal|egg" art in image1, so the
+  // whole field was taken as one file name and no picture was copied.
+  it('takes the first file when the infobox lists several', () => {
+    expect(firstImageFile('<gallery>\nYetimatic.png|Brainrot\nYetimatic Egg.png|Egg\n</gallery>')).toBe('Yetimatic.png')
+    // What the first fill stored for those 10 rows: the retry must clean it too.
+    expect(firstImageFile('Yetimatic.png|Brainrot Yetimatic Egg.png|Egg')).toBe('Yetimatic.png')
+    expect(firstImageFile('File:Slushi Huski.png')).toBe('Slushi Huski.png')
+    expect(firstImageFile('  ')).toBeNull()
   })
 })
 
@@ -39,6 +51,13 @@ describe('parseSabPage', () => {
     expect(parseSabPage({ ...base, content: 'no infobox' }, UPDATES, '2026-10-21')).toBeNull()
     expect(parseSabPage({ ...base, content: base.content.replace('rarity=Secret', 'rarity=Celestial') }, UPDATES, '2026-10-21')).toBeNull()
     expect(parseSabPage({ ...base, content: base.content.replace('{{Obtainment|', '{{Obtainment|Upcoming=yes|') }, UPDATES, '2026-10-21')).toBeNull()
+  })
+  it('reads the first picture when the infobox lists normal and egg art', () => {
+    const base = page('Cobra Gelato')
+    // The real shape (Yetimatic, 2026-10-22): a <gallery> with one file per line.
+    const gallery = 'image1=<gallery>\nCobra Gelato.png|Brainrot\nCobra Gelato Egg.png|Egg\n</gallery>'
+    const item = parseSabPage({ ...base, content: base.content.replace('image1=Cobra Gelato.png', gallery) }, UPDATES, '2026-10-21')!
+    expect(item.imageFile).toBe('Cobra Gelato.png')
   })
   it('skips lucky blocks and event items: no income, or tagged Non-Indexable by the wiki', () => {
     const base = page('Cobra Gelato')
