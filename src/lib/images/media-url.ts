@@ -4,10 +4,10 @@
  *
  * Every <img> pointed at `<project>.supabase.co/storage/v1/object/public/...`,
  * so every visitor's download (cached or not) counted against Supabase's 5 GB
- * egress (2026-10-20 usage audit, A1). `/media/<bucket>/<path>` is an external
- * rewrite in vercel.json with rewrite caching on: the CDN keeps each file and
- * Supabase serves it about once per region; the transfer is Vercel's (Pro
- * includes 1 TB). `next dev` gets the same rewrite from next.config.js.
+ * egress (2026-10-20 usage audit, A1). `/media/<bucket>/<path>` is a route
+ * handler (src/app/media, lib/images/media-proxy) whose answers Vercel's CDN
+ * keeps: Supabase serves each file about once per region per deployment; the
+ * transfer is Vercel's (Pro includes 1 TB). Same route in `next dev`.
  *
  * Only buckets whose files never change in place are routed: content-hashed
  * art, listing photos and icons. Avatars and store banners are overwritten at
@@ -18,7 +18,7 @@
 
 export const MEDIA_PREFIX = '/media'
 
-/** Public buckets served through /media (vercel.json lists the same set). */
+/** Public buckets served through /media; the route 404s any other bucket. */
 export const MEDIA_BUCKETS = [
   'sab-brainrots',
   'values-items',
