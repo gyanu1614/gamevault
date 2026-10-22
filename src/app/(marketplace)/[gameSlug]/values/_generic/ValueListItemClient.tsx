@@ -59,6 +59,7 @@ export function ValueListItemHero({
   buy,
   sell,
   forms,
+  isNew,
 }: {
   name: string
   /** Rarity colour: price label. */
@@ -73,6 +74,8 @@ export function ValueListItemHero({
   buy: ItemBuy
   sell: { href: string; label: string }
   forms: ItemForm[] | null
+  /** Added in the last 14 days: the New tag. */
+  isNew?: boolean
 }) {
   const cta = useItemCta(buy, name)
 
@@ -99,6 +102,7 @@ export function ValueListItemHero({
         ) : undefined,
       }}
       title={name}
+      isNew={isNew}
       stats={stats.map((s) => ({
         label: s.label,
         value: s.color ? <span style={{ color: s.color }}>{s.value}</span> : s.value,

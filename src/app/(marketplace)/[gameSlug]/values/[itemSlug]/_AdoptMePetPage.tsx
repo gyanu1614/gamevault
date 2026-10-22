@@ -22,6 +22,7 @@ import {
   type AdoptMePetVariant,
 } from './_adoptMePetData'
 import AdoptMePetHero from './_AdoptMePetHero'
+import { isNewItem } from '@/lib/values/new-item'
 import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
@@ -286,6 +287,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
               imageUrl={pet.imageUrl}
               buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
               variants={pet.variants}
+              isNew={isNewItem({ releasedAt: pet.releasedAt, addedAt: pet.addedAt })}
             />
           </div>
         </div>

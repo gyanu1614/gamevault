@@ -26,3 +26,29 @@ describe('value item heroes', () => {
     }
   })
 })
+
+// Owner, 2026-10-21: "whenever we get new items ... we add a badge which shows new".
+describe('New tag on every values hub', () => {
+  it('each item page computes isNewItem and its hero hands it to ValueItemHero', () => {
+    const pages: Array<[page: string, hero: string]> = [
+      ['[itemSlug]/_SabItemPage.tsx', '[itemSlug]/_ItemHero.tsx'],
+      ['[itemSlug]/_AdoptMePetPage.tsx', '[itemSlug]/_AdoptMePetHero.tsx'],
+      ['_generic/ValueListItemBody.tsx', '_generic/ValueListItemClient.tsx'],
+    ]
+    for (const [page, hero] of pages) {
+      expect(read(page), page).toMatch(/isNew=\{isNewItem\(/)
+      expect(read(hero), hero).toMatch(/isNew=\{isNew\}/)
+    }
+    // Steal an Egg renders ValueItemHero itself.
+    expect(read('_generic/ValueItemPage.tsx')).toMatch(/isNew=\{isNewItem\(/)
+  })
+
+  it('each list loader computes the flag and each list card shows the tag', () => {
+    for (const loader of ['_sabBrainrots.ts', '_adoptMeData.ts', '_generic/valueListRows.ts']) {
+      expect(read(loader), loader).toMatch(/isNewItem\(/)
+    }
+    for (const card of ['_ValuesDirectoryClient.tsx', '_AdoptMeValuesClient.tsx', '_generic/ValueListClient.tsx', '_generic/ValuesHubPage.tsx']) {
+      expect(read(card), card).toMatch(/<NewTag \/>/)
+    }
+  })
+})

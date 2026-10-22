@@ -106,11 +106,6 @@ export function PopularTag() {
   )
 }
 
-/** "New" tag: released or added in the last 14 days (src/lib/values/new-item.ts). */
-export function NewTag() {
-  return <span className="rounded bg-lime-tint-bg px-1.5 py-0.5 text-[10px] font-semibold text-lime-text">New</span>
-}
-
 /** Rarity label in its colour (Title Case, no tracking). */
 export function RarityLabel({ label, color }: { label: string; color: string }) {
   return (

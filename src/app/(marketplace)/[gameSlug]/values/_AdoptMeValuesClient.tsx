@@ -25,6 +25,7 @@ import {
   ValueCard,
   VariantPill,
 } from '@/components/values/ValueCard'
+import { NewTag } from '@/components/values/NewTag'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePopoverField } from '@/components/values/ValuePopoverField'
@@ -350,6 +351,7 @@ function PetCard({
         <>
           <CardRank rank={rank} />
           {isPopular && <PopularTag />}
+          {pet.isNew && <NewTag />}
         </>
       }
       headerRight={<RarityLabel label={meta.label} color={meta.color} />}

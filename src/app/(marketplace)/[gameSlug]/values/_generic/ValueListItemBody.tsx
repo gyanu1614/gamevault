@@ -23,6 +23,7 @@ import { pointsOf, tradeCopy } from './valueListTrade'
 import { ValueCompare } from '@/components/values/ValueCompare'
 import { nearestByValue, type CompareItem } from '@/lib/values/compare'
 import { formatTradeValue } from '@/lib/values/trade-points'
+import { isNewItem } from '@/lib/values/new-item'
 
 /**
  * The streamed body of a value-list item page (Murder Mystery 2): hero, buy
@@ -175,6 +176,7 @@ export default async function ValueListItemBody({
           // Gun") overflow the 260px price column.
           sell={{ href: sellHref, label: 'Sell Yours For Cash' }}
           forms={forms}
+          isNew={isNewItem({ addedAt: item.addedAt })}
         />
       </div>
 

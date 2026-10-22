@@ -17,6 +17,7 @@ import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
 import { ValueItemHero } from '@/components/values/ValueItemHero'
+import { isNewItem } from '@/lib/values/new-item'
 import { HUB_GROUND, VALUE_BTN_SECONDARY } from '@/components/values/styles'
 
 /**
@@ -158,6 +159,7 @@ export default async function ValueItemPage({
         <ValueItemHero
           art={item.imageUrl ? { src: item.imageUrl, alt: item.name } : null}
           title={item.name}
+          isNew={isNewItem({ addedAt: item.addedAt })}
           stats={facts}
           price={
             hasPrice

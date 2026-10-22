@@ -44,6 +44,8 @@ export interface ValueItem {
   obtain: ValueObtainSource[]
   /** CC-BY-SA credit for art copied from a wiki. */
   imageAttribution: string | null
+  /** When the row was added (the catalogue job's insert): the New badge's fallback date. */
+  addedAt: string | null
   /** Null when nothing is published for this item — render "no price yet". */
   price: {
     cheapestUsd: number | null
@@ -89,6 +91,7 @@ type ItemRow = {
   origin: string | null
   obtain: unknown
   image_attribution: string | null
+  created_at: string | null
 }
 
 type PriceRow = {
@@ -143,7 +146,7 @@ async function gameIdFor(supabase: ReadClient, slug: string): Promise<string | n
 }
 
 const ITEM_COLUMNS =
-  'id,kind,slug,name,rarity,area,income_per_sec,image_url,is_priced,bracket_min,bracket_max,sort_order,source_item_id,item_type,base_item_id,release_year,origin,obtain,image_attribution'
+  'id,kind,slug,name,rarity,area,income_per_sec,image_url,is_priced,bracket_min,bracket_max,sort_order,source_item_id,item_type,base_item_id,release_year,origin,obtain,image_attribution,created_at'
 const PRICE_COLUMNS =
   'item_id,cheapest_usd,average_usd,market_low_usd,market_high_usd,sample_size,source_count,confidence_label,price_changed_at'
 
@@ -168,6 +171,7 @@ function toValueItem(row: ItemRow, p: PriceRow | undefined): ValueItem {
     origin: row.origin ?? null,
     obtain: Array.isArray(row.obtain) ? (row.obtain as ValueObtainSource[]) : [],
     imageAttribution: row.image_attribution ?? null,
+    addedAt: row.created_at ?? null,
     price: p
       ? {
           cheapestUsd: num(p.cheapest_usd),

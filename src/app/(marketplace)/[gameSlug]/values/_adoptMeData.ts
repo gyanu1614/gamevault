@@ -1,6 +1,7 @@
 import 'server-only'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
+import { isNewItem } from '@/lib/values/new-item'
 import type { AdoptMePetItem, AdoptMeVariantValue } from './_adoptMeListModel'
 
 /**
@@ -21,6 +22,8 @@ type PetRow = {
   image_url: string | null
   is_active: boolean
   demand_rank: number | string | null
+  released_at: string | null
+  created_at: string | null
 }
 type ValueRow = {
   pet_id: string
@@ -49,7 +52,7 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
     fetchAllRows<PetRow>((from, to) =>
       (supabase as any)
         .from('adopt_me_pets')
-        .select('id,slug,name,rarity,image_url,is_active,demand_rank')
+        .select('id,slug,name,rarity,image_url,is_active,demand_rank,released_at,created_at')
         .eq('is_active', true)
         .order('id', { ascending: true })
         .range(from, to),
@@ -78,6 +81,7 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
     valuesByPet.set(row.pet_id, list)
   }
 
+  const now = Date.now()
   return (petsRes.data ?? []).map((pet) => {
     const values = {} as Record<Variant, AdoptMeVariantValue | undefined>
     let topTradeValue = 0
@@ -112,6 +116,8 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
       // Every active pet has a page (2026-10-21); the list only holds active pets.
       hasPage: Boolean(pet.is_active),
       values,
+      // Only on new rows: the rest carry no key (rows.json's JSON sends them a null, read as not new).
+      ...(isNewItem({ releasedAt: pet.released_at, addedAt: pet.created_at }, now) ? { isNew: true } : null),
     }
   })
 }

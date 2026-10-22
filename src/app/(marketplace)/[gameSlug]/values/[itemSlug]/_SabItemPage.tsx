@@ -27,6 +27,7 @@ import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
 import { getItemFacts } from '@/lib/values/item-facts-data'
 import { itemFactsGame } from '@/lib/values/item-facts-config'
 import { factFaqs, factRows, mergeFaqs } from '@/lib/values/item-facts'
+import { isNewItem } from '@/lib/values/new-item'
 import { sabAbout } from '@/lib/sab/about'
 import { rarityMeta } from '@/lib/values/rarity'
 import ItemHero from './_ItemHero'
@@ -245,6 +246,7 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
             buy={{ itemSlug: brainrot.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
             priceHistory={priceHistory}
             updatedAt={priceMovedAt}
+            isNew={isNewItem({ releasedAt: facts.releasedAt, addedAt: facts.addedAt })}
           />
         </div>
       </section>

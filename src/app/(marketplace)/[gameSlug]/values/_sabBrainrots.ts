@@ -2,6 +2,7 @@ import 'server-only'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
 import type { BrainrotDirectoryItem, CardMutation } from './_sabListModel'
+import { isNewItem } from '@/lib/values/new-item'
 
 /**
  * Every Steal a Brainrot row for the value list. ONE loader for the page
@@ -93,13 +94,13 @@ export async function getSabBrainrots(): Promise<BrainrotDirectoryItem[]> {
         .range(from, to),
     ).then((data: unknown[]) => ({ data, error: null })),
 
-    // Real marketplace popularity (Eldorado usePopularItems ranking). Read
-    // straight from sab_brainrots so the hand-edited catalog view needn't change.
-    // The Popular tab sorts by this; null-rank items sort after ranked ones.
-    (supabase as any)
-      .from('sab_brainrots')
-      .select('id,popularity_rank')
-      .not('popularity_rank', 'is', null),
+    // Straight from sab_brainrots so the hand-edited catalog view needn't change:
+    // real marketplace popularity (Eldorado usePopularItems ranking; the Popular
+    // tab sorts by it, null-rank items after ranked ones) and the dates behind
+    // the New badge (released, else added, within 14 days). Paged: every row.
+    selectAllRows<{ id: string; popularity_rank: number | null; released_at: string | null; created_at: string | null }>((from, to) =>
+      (supabase as any).from('sab_brainrots').select('id,popularity_rank,released_at,created_at').order('id', { ascending: true }).range(from, to),
+    ).then((data: unknown[]) => ({ data, error: null })),
   ])
 
   const { defaults: defaultPriceRows, mutations: mutationPriceRows } =
@@ -119,10 +120,11 @@ export async function getSabBrainrots(): Promise<BrainrotDirectoryItem[]> {
       .map((row) => [row.brainrot_id, row]),
   )
 
-  const rankByBrainrot = new Map(
-    ((popularityResult?.data ?? []) as { id: string; popularity_rank: number }[])
-      .map((row) => [row.id, row.popularity_rank] as const),
-  )
+  const sabRows = (popularityResult?.data ?? []) as { id: string; popularity_rank: number | null; released_at: string | null; created_at: string | null }[]
+  const rankByBrainrot = new Map(sabRows.filter((r) => r.popularity_rank != null).map((row) => [row.id, row.popularity_rank as number] as const))
+  // Computed here, not on the client: rows.json carries one boolean, not two timestamps.
+  const now = Date.now()
+  const newBrainrots = new Set(sabRows.filter((r) => isNewItem({ releasedAt: r.released_at, addedAt: r.created_at }, now)).map((r) => r.id))
 
   // Per-mutation prices (real cheapest/average) keyed by brainrot then slug.
   const mutationPriceByBrainrot = new Map<
@@ -199,13 +201,16 @@ export async function getSabBrainrots(): Promise<BrainrotDirectoryItem[]> {
     const price = priceByBrainrot.get(brainrot.id)
     const popularityRank = rankByBrainrot.get(brainrot.id) ?? null
     const mutations = buildMutations(brainrot.id)
+    // Only on new rows: the rest carry no key (rows.json's JSON sends them a null, read as not new).
+    const isNew = newBrainrots.has(brainrot.id) ? { isNew: true } : null
 
-    if (!price) return { ...brainrot, popularity_rank: popularityRank, mutations }
+    if (!price) return { ...brainrot, popularity_rank: popularityRank, mutations, ...isNew }
 
     return {
       ...brainrot,
       popularity_rank: popularityRank,
       mutations,
+      ...isNew,
       display_price_usd: Number(price.market_value_usd),
       display_price_label: 'Average Current Market Price',
       display_price_source: 'public_market_estimate',

@@ -66,6 +66,8 @@ interface ItemHeroProps {
   updatedAt: string | null
   /** Daily price history keyed by mutation slug (may be empty until it accrues). */
   priceHistory: Record<string, PricePoint[]>
+  /** Released (else added) in the last 14 days: the New tag. */
+  isNew?: boolean
 }
 
 const formatTrendCash = (v: number) => formatCash(v) ?? `$${v}`
@@ -82,6 +84,7 @@ export default function ItemHero({
   buy,
   updatedAt,
   priceHistory,
+  isNew,
 }: ItemHeroProps) {
   const ordered = useMemo(
     () => [...mutations].sort((a, b) => mutationOrder(a.slug) - mutationOrder(b.slug)),
@@ -158,6 +161,7 @@ export default function ItemHero({
       accent={visual.color}
       art={{ src: imageUrl, alt: imageAlt || `${displayName} Steal a Brainrot`, pixelated: true }}
       title={displayName}
+      isNew={isNew}
       // Fixed row set so the hero height never shifts between mutations.
       // (Cheapest lives in the price column, so it's not repeated here.)
       stats={[

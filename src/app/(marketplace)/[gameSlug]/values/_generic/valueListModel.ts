@@ -25,6 +25,8 @@ export interface ValueListRow {
   trendPct: number | null
   /** The standard item this one is a form of (MM2: a Chroma → its base), or null. */
   baseItemId: string | null
+  /** Added in the last 14 days: the New badge (isNewItem). Absent = not new. */
+  isNew?: boolean
 }
 
 /** An item that exists in two forms (MM2: standard + Chroma), as both cards see it. */

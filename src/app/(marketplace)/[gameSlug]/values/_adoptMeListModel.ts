@@ -32,6 +32,8 @@ export interface AdoptMePetItem {
   /** True when a /adopt-me/values/{slug} page exists — only then is the row a link. */
   hasPage: boolean
   values: Record<Variant, AdoptMeVariantValue | undefined>
+  /** Released (else added) in the last 14 days: the New badge (isNewItem). Absent = not new. */
+  isNew?: boolean
 }
 
 export type AdoptMeView = 'popular' | 'all' | string

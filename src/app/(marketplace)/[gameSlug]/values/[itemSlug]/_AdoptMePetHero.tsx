@@ -32,6 +32,7 @@ export default function AdoptMePetHero({
   imageUrl,
   buy,
   variants,
+  isNew,
 }: {
   name: string
   rarityLabel: string
@@ -41,6 +42,8 @@ export default function AdoptMePetHero({
   /** DropMarket's own live stock for this pet (drives the buy button). */
   buy: { itemSlug: string; categorySlug: string; stock: ItemStock | null }
   variants: AdoptMePetVariant[]
+  /** Released (else added) in the last 14 days: the New tag. */
+  isNew?: boolean
 }) {
   // Selection is SHARED via context — the callout, stats strip and price chart
   // all read it, so picking a form here reprices the whole page below.
@@ -110,6 +113,7 @@ export default function AdoptMePetHero({
         ) : undefined,
       }}
       title={displayName}
+      isNew={isNew}
       // The pet's facts (owner, 2026-10-12). Listings tracked stays out of the
       // card: the page's structured data (valuePage offers) still carries it.
       stats={[

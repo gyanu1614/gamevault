@@ -22,6 +22,7 @@ import {
   ValueCard,
   VariantPill,
 } from '@/components/values/ValueCard'
+import { NewTag } from '@/components/values/NewTag'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
@@ -441,6 +442,7 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
     <ValueCard
       href={href}
       buySlug={brainrot.slug}
+      headerLeft={brainrot.isNew ? <NewTag /> : undefined}
       headerRight={<RarityLabel label={rarity.label} color={rarity.color} />}
       imageSrc={brainrot.image_url}
       imageAlt={`${brainrot.name} Steal a Brainrot`}

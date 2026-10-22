@@ -23,6 +23,7 @@ import { DiamondIcon } from '@phosphor-icons/react/dist/csr/Diamond'
 import Link from '@/components/navigation/AppLink'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { CardRank, PriceStatPair, RarityLabel, ValueCard } from '@/components/values/ValueCard'
+import { NewTag } from '@/components/values/NewTag'
 import { ChromaFlipButton, ChromaWord, type CardForm } from '@/components/values/ChromaFlipButton'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
@@ -358,6 +359,8 @@ function ItemCard({
         <>
           <CardRank rank={rank} />
           {typeLabel && <span className="truncate text-[11px] font-medium text-text-tertiary">{typeLabel}</span>}
+          {/* The card is the item: New when either form is (a new Chroma rides on its standard's card). */}
+          {(forms ? forms.standard.isNew || forms.chroma.isNew : row.isNew) && <NewTag />}
         </>
       }
       headerRight={
