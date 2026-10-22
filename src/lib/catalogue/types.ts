@@ -121,11 +121,19 @@ export interface CatalogueAdapter {
   prepare?(wiki: WikiClient): Promise<Record<string, unknown>>
   /** One page → an item, or null when the page is not one. Pure. */
   parse(page: WikiPage, ctx: ParseContext): ParsedItem | null
+  /**
+   * Wiki reads only NEW items need (MM2: a gamepass or event page's price),
+   * run after the guards pass and before the insert; returns the items to insert.
+   */
+  enrich?(items: ParsedItem[], wiki: WikiClient, ctx: ParseContext): Promise<ParsedItem[]>
   loadKnown(db: Db): Promise<KnownItem[]>
   /** Insert-only (on conflict do nothing); returns the slugs actually inserted. */
   insert(db: Db, items: ParsedItem[], images: ImageStore): Promise<string[]>
-  /** Retries images for rows this pipeline added without one; returns the slugs fixed. */
-  fixMissingImages?(db: Db, images: ImageStore): Promise<string[]>
+  /**
+   * Retries images for rows this pipeline added without one; returns the slugs
+   * fixed. Gets the wiki because generic values_items rows store no file name.
+   */
+  fixMissingImages?(db: Db, images: ImageStore, wiki: WikiClient): Promise<string[]>
 }
 
 export interface CatalogueGame {
