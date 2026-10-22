@@ -7,6 +7,7 @@
 import type { ValueHowToGet } from './how-to-get'
 import { howToGetFaqs } from './how-to-get-copy'
 import type { ItemFactsGame } from './item-facts-config'
+import { isNewIndexable } from './new-item'
 
 export interface ItemFacts {
   /** "2022", or "27 October 2022" when the day is known. */
@@ -14,9 +15,21 @@ export interface ItemFacts {
   /** Where it came from, as a name: "Halloween Event (2022)", "Fossil Egg", "Knife Box 2". */
   origin: string | null
   howToGet: ValueHowToGet | null
+  /** The raw release date (YYYY-MM-DD) when the table has one; for the New rules. */
+  releasedAt?: string | null
+  /** When the row was created; the New rules' fallback date. */
+  addedAt?: string | null
 }
 
 export const NO_FACTS: ItemFacts = { released: null, origin: null, howToGet: null }
+
+/** The Google rule from an item's facts: new (30 days) with a How To Get and release info. */
+export function factsNewIndexable(facts: ItemFacts, now: number = Date.now()): boolean {
+  return isNewIndexable(
+    { releasedAt: facts.releasedAt ?? null, addedAt: facts.addedAt ?? null, hasHowToGet: facts.howToGet != null, hasReleaseInfo: facts.released != null },
+    now,
+  )
+}
 
 type Faq = { q: string; a: string }
 

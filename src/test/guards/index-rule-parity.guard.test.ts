@@ -83,7 +83,7 @@ describe('value-page data gate: one rule for robots meta AND sitemap (growth poi
   it('the sitemap lists value pages through the same valuePageVerdict', () => {
     const builder = read('src/lib/seo/sitemap-builder.ts')
     expect(builder).toMatch(/valuePageVerdict\(/)
-    expect(builder).toMatch(/valueItemListed\(input, game, r\.slug, true\)/)
+    expect(builder).toMatch(/valueItemListed\(input, game, r\.slug, true, r\.newIndexable\)/)
     expect(builder).toMatch(/valueItemListed\(input, i\.gameSlug, i\.slug, isValueItemIndexable/)
   })
 

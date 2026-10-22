@@ -54,6 +54,8 @@ export async function getValuePageGate(
   gameSlug: string,
   itemSlug: string,
   legacyIndexable: boolean,
+  /** isNewIndexable for the item (a new item with facts ranks before it is priced). */
+  newIndexable = false,
 ): Promise<ValuePageGate> {
   const [evidence, config] = await Promise.all([
     readValuePageEvidence(gameSlug, itemSlug),
@@ -65,6 +67,7 @@ export async function getValuePageGate(
     // A failed evidence read (undefined) must not noindex: treat it as report mode.
     mode: evidence === undefined ? 'report' : config.mode,
     override: config.overrides.get(`/${gameSlug}/values/${itemSlug}`) ?? null,
+    newIndexable,
   })
   return { ...verdict, evidence: evidence ?? null }
 }

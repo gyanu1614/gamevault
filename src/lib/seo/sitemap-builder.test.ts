@@ -248,6 +248,25 @@ describe('the value-page data gate (growth point 28)', () => {
     expect(all).toContain(`${BASE}/adopt-me/values/bat-dragon`)
   })
 
+  // Owner, 2026-10-21: a new item with How To Get + release info ranks before it has prices.
+  it('lists a NEW item with facts once enforced, even unpriced and without evidence', () => {
+    const base = fixture()
+    const all = urls({
+      ...gate({ mode: 'enforce' }),
+      sabBrainrots: [...base.sabBrainrots, { slug: 'slushi-huski', updated_at: null, newIndexable: true }],
+      adoptMePets: [...base.adoptMePets, { slug: 'shoebill', updated_at: null, newIndexable: true }],
+      pipelineItems: [
+        ...base.pipelineItems,
+        { gameSlug: 'murder-mystery-2', slug: 'emberbow', rarity: 'Ancient', priceChangedAt: null, sampleSize: null, newIndexable: true },
+        { gameSlug: 'murder-mystery-2', slug: 'old-unpriced', rarity: 'Common', priceChangedAt: null, sampleSize: null, newIndexable: false },
+      ],
+    })
+    expect(all).toContain(`${BASE}/steal-a-brainrot/values/slushi-huski`)
+    expect(all).toContain(`${BASE}/adopt-me/values/shoebill`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/emberbow`)
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/values/old-unpriced`)
+  })
+
   it('keeps a failing page Google has indexed (protected), and obeys the owner overrides in any mode', () => {
     const evidence = new Map(fixture().valueGate.evidence)
     evidence.set('steal-a-brainrot/tralalero', { ...evidence.get('steal-a-brainrot/tralalero')!, isProtected: true })

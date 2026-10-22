@@ -294,7 +294,7 @@ export async function getValueItemFacts(gameSlug: string, itemSlug: string): Pro
   if (!gameId) return NO_FACTS
   const { data, error } = await (supabase as any)
     .from('values_items')
-    .select('release_year,origin,how_to_get')
+    .select('release_year,origin,how_to_get,created_at')
     .eq('game_id', gameId)
     .eq('slug', itemSlug)
     .eq('is_enabled', true)
@@ -308,6 +308,9 @@ export async function getValueItemFacts(gameSlug: string, itemSlug: string): Pro
     released: releasedLabel({ year: data.release_year }),
     origin: typeof data.origin === 'string' && data.origin.trim() ? data.origin.trim() : null,
     howToGet: parseHowToGet(data.how_to_get),
+    // A year is not a date: the New rules fall back to when we added the item.
+    releasedAt: null,
+    addedAt: typeof data.created_at === 'string' ? data.created_at : null,
   }
 }
 
