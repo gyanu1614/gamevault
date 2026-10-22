@@ -136,7 +136,8 @@ describe('listing mutations revalidate the category surfaces', () => {
       // live path is createCheckout → transition(), pinned below.
       'src/lib/actions/sell-wizard.ts',
       'src/lib/actions/seller-presence.ts',
-      'src/lib/api/seller-compatible.ts',
+      // The browser seller API (split from lib/api/seller-compatible.ts, 2026-10-20).
+      'src/lib/api/seller/listings.ts',
       'src/lib/escrow/transition.ts',
       // Step 4: the shared insert seam (exempt from calling the seam itself —
       // see EXEMPT above — but still a writer, so it is pinned here).
