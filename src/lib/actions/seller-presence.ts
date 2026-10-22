@@ -267,7 +267,8 @@ export async function getPausedSellerIds(): Promise<string[]> {
 
 // Step 7b — identical on every category page (~600 prerendered at build), so
 // it is one tagged cache entry instead of one read per page. setStorePaused
-// revalidates PAUSED_SELLERS_TAG; the hourly revalidate is the backstop.
+// revalidates PAUSED_SELLERS_TAG; the daily revalidate is the backstop (an
+// hourly one capped every page that reads this at one hour, 2026-10-20).
 const readPausedSellerIds = unstable_cache(
   async (): Promise<string[]> => {
     try {
@@ -285,7 +286,7 @@ const readPausedSellerIds = unstable_cache(
     }
   },
   ['paused-seller-ids'],
-  { tags: [PAUSED_SELLERS_TAG], revalidate: 3600 },
+  { tags: [PAUSED_SELLERS_TAG], revalidate: 86400 },
 )
 // Per-render memo: one read per render even when the data cache is skipped
 // (nested unstable_cache, on-demand ISR). Module-local — a 'use server' file

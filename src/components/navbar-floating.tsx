@@ -284,8 +284,9 @@ export function Navbar({
   }, [mobileMenuOpen, inAccountArea, user])
 
   // Admin-curated spotlight games for the mobile menu grid. Only fetched
-  // once the menu opens so it costs nothing for users who never open it.
-  const { data: spotlightGames = [] } = useSpotlightGames()
+  // once the menu opens so it costs nothing for users who never open it
+  // (React Query keeps the result for later opens).
+  const { data: spotlightGames = [] } = useSpotlightGames({ enabled: mobileMenuOpen })
 
   // Live filter for the category sub-screen's game list. Cleared whenever
   // the sub-screen changes (or the whole menu closes) so each category
@@ -735,13 +736,16 @@ export function Navbar({
   // here and passed to GlobalSearch so the dropdown can show e.g. the
   // Robux icon next to the Robux row.
   const { data: catConfigData } = useQuery({
-    queryKey: ['nav-category-configs'],
+    queryKey: ['nav-category-icons'],
     queryFn: async () => {
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
+      // Only the icon URL (the config jsonb also carries FAQ, steps, bundles…:
+      // reading it whole cost 0.2–1 MB per visitor per load).
       const { data } = await supabase
         .from('category_configs')
-        .select('game_id, category_type, config')
+        .select('game_id, category_type, currency_icon_url:config->>currency_icon_url')
+        .not('config->>currency_icon_url', 'is', null)
       return data || []
     },
     staleTime: 1000 * 60 * 5,
@@ -2295,7 +2299,7 @@ function GlobalSearch({
   const catIconMap = useMemo(() => {
     const m = new Map<string, string>()
     for (const row of (catConfigData ?? []) as any[]) {
-      const url = row?.config?.currency_icon_url
+      const url = row?.currency_icon_url
       if (url && row.game_id && row.category_type) {
         m.set(`${row.game_id}:${row.category_type}`, url)
       }

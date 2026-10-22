@@ -1,5 +1,5 @@
 import 'server-only'
-import { createValueItemReadClient, createValueListReadClient } from '@/lib/values/read-client'
+import { createValueGameSharedReadClient, createValueItemReadClient, createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 
 /**
@@ -198,10 +198,12 @@ export async function getSimilarPets(
   refFrUsd: number | null,
   limit = 14,
 ): Promise<{ similar: SimilarPet[]; pool: SimilarPet[] }> {
-  // Read ON the current pet's page, so under ITS tags (never the game price
-  // tag — see lib/values/revalidation.ts): sibling prices in the rail refresh
-  // when this pet's page is republished or on a full refresh.
-  const supabase = createValueItemReadClient('adopt-me', excludeSlug)
+  // The pool is IDENTICAL on every pet page, so it is read through the shared
+  // game client (one cache entry for all ~500 pages, never the per-pet tags or
+  // the game price tag; lib/values/read-client.ts) with no per-pet filter:
+  // the current pet is dropped in memory. Sibling prices refresh daily or on a
+  // full refresh (2026-10-20 usage audit).
+  const supabase = createValueGameSharedReadClient('adopt-me')
 
   // Pull every page-having pet once, with its FR cash, so we can rank in memory
   // by rarity + value proximity. Paged — the catalog can pass 1000 rows.
@@ -210,17 +212,16 @@ export async function getSimilarPets(
       .from('adopt_me_pets')
       .select('id,slug,name,image_url,rarity')
       .eq('has_page', true)
-      .neq('slug', excludeSlug)
       .order('id', { ascending: true })
       .range(from, to),
   )
-  const pets = (petRows ?? []) as Array<{
+  const pets = ((petRows ?? []) as Array<{
     id: string
     slug: string
     name: string
     image_url: string | null
     rarity: string
-  }>
+  }>).filter((p) => p.slug !== excludeSlug)
   if (!pets.length) return { similar: [], pool: [] }
 
   // Every FR row, paged, matched in memory: an `.in('pet_id', …)` over the

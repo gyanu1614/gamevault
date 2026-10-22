@@ -30,7 +30,10 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { seoMeta } from '@/lib/seo/fit'
 
-export const revalidate = 3600
+// The publish step refreshes this page on every price move (values-revalidate);
+// the window is a daily backstop (hourly rebuilt it on every visit an hour
+// after the last render, re-reading the catalogue; 2026-10-20 usage audit).
+export const revalidate = 86400
 /**
  * Closed set: generateStaticParams lists every slug this route serves, so an
  * unknown slug is a static 404 with no function invocation (Step 7a — the

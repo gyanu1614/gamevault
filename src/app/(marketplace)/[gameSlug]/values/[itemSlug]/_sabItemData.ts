@@ -5,6 +5,7 @@
  * price:<game>:<item>) and a price crawl refreshes exactly these responses.
  */
 import { createValueItemReadClient } from '@/lib/values/read-client'
+import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import type { MutationOption } from './_ItemHero'
 
 /** The game the sab_* tables price — the tag game of every SAB read below. */
@@ -283,16 +284,24 @@ export async function getPriceHistory(
   brainrotId: string,
 ): Promise<Record<string, { date: string; median: number }[]>> {
   const supabase = createValueItemReadClient(SAB_GAME, itemSlug)
-  const { data, error } = await (supabase as any)
-    .from('sab_price_history')
-    .select('mutation_slug:mutation_id,history_date,median_usd,sab_mutations(slug)')
-    .eq('brainrot_id', brainrotId)
-    .order('history_date', { ascending: true })
-
-  if (error || !data) return {}
+  // The WHOLE history (the chart has an "All" range), by keyset on the unique
+  // (history_date, mutation_id) within this brainrot. One unlimited request was
+  // capped at 1,000 rows oldest-first, so after ~71 days × 14 mutations the
+  // newest days fell off the chart (2026-10-20 usage audit).
+  let data: any[]
+  try {
+    data = await selectAllByKey<any>(supabase, {
+      table: 'sab_price_history',
+      columns: 'history_date,median_usd,mutation_id,sab_mutations(slug)',
+      key: ['history_date', 'mutation_id'],
+      filter: (q) => q.eq('brainrot_id', brainrotId),
+    })
+  } catch {
+    return {}
+  }
 
   const bySlug: Record<string, { date: string; median: number }[]> = {}
-  for (const row of data as any[]) {
+  for (const row of data) {
     const slug = row.sab_mutations?.slug
     const median = asNumber(row.median_usd)
     if (!slug || median == null) continue

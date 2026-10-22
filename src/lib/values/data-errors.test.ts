@@ -20,10 +20,13 @@ function builder(result: () => Result) {
   return b
 }
 
+const fakeReadClient = () => ({
+  from: (table: string) => builder(() => (table === 'games' ? gamesResult : itemsResult)),
+})
 vi.mock('@/lib/values/read-client', () => ({
-  createValuesReadClient: () => ({
-    from: (table: string) => builder(() => (table === 'games' ? gamesResult : itemsResult)),
-  }),
+  createValuesReadClient: fakeReadClient,
+  createValueItemReadClient: fakeReadClient,
+  createValueGameSharedReadClient: fakeReadClient,
 }))
 
 beforeEach(() => {
@@ -41,6 +44,11 @@ describe('values loaders on a database error', () => {
     const { getValueItems } = await import('./data')
     itemsResult = { data: null, error: { message: 'connection timeout' } }
     await expect(getValueItems('murder-mystery-2')).rejects.toThrow(/values read failed/)
+  })
+  it('an items read error on an ITEM page (shared catalogue + own row) throws too', async () => {
+    const { getValueItems } = await import('./data')
+    itemsResult = { data: null, error: { message: 'connection timeout' } }
+    await expect(getValueItems('murder-mystery-2', { itemSlug: 'harvester' })).rejects.toThrow(/values read failed/)
   })
   it('a game that truly does not exist is still an empty list (a real 404)', async () => {
     const { getValueItems } = await import('./data')

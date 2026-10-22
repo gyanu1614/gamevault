@@ -15,7 +15,10 @@ import { loadValueListRows, valueListGames } from '../_listRows'
 
 // Literals: Next reads segment config statically (see CLAUDE.md).
 export const dynamic = 'force-static'
-export const revalidate = 3600
+// The publish step refreshes this page on every price move (values-revalidate);
+// the window is a daily backstop (hourly rebuilt it on every visit an hour
+// after the last render, re-reading the catalogue; 2026-10-20 usage audit).
+export const revalidate = 86400
 export const dynamicParams = false
 
 export function generateStaticParams() {

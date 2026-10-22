@@ -1,5 +1,9 @@
 import 'server-only'
-import { createValuesReadClient } from '@/lib/values/read-client'
+import {
+  createValueGameSharedReadClient,
+  createValueItemReadClient,
+  createValuesReadClient,
+} from '@/lib/values/read-client'
 import { parseHowToGet } from '@/lib/values/how-to-get'
 import { NO_FACTS, releasedLabel, type ItemFacts } from '@/lib/values/item-facts'
 
@@ -138,86 +142,135 @@ async function gameIdFor(supabase: ReadClient, slug: string): Promise<string | n
   return data?.id ?? null
 }
 
-/**
- * Every enabled item for a game, with its published price attached.
- * Items without a price keep `price: null` — the caller renders "no market
- * price yet" rather than a zero.
- */
-export async function getValueItems(
-  gameSlug: string,
-  opts: {
-    kinds?: Array<ValueItem['kind']>
-    /** The item page reading this list — picks that item's cache tags. */
-    itemSlug?: string | null
-  } = {},
-): Promise<ValueItem[]> {
-  const { kinds, itemSlug } = opts
-  const supabase = createValuesReadClient({ gameSlug, itemSlug })
-  const gameId = await gameIdFor(supabase, gameSlug)
-  if (!gameId) return []
+const ITEM_COLUMNS =
+  'id,kind,slug,name,rarity,area,income_per_sec,image_url,is_priced,bracket_min,bracket_max,sort_order,source_item_id,item_type,base_item_id,release_year,origin,obtain,image_attribution'
+const PRICE_COLUMNS =
+  'item_id,cheapest_usd,average_usd,market_low_usd,market_high_usd,sample_size,source_count,confidence_label,price_changed_at'
 
+function toValueItem(row: ItemRow, p: PriceRow | undefined): ValueItem {
+  return {
+    id: row.id,
+    kind: row.kind,
+    slug: row.slug,
+    name: row.name,
+    rarity: row.rarity,
+    area: row.area,
+    incomePerSec: num(row.income_per_sec),
+    imageUrl: row.image_url,
+    isPriced: row.is_priced,
+    bracketMin: num(row.bracket_min),
+    bracketMax: num(row.bracket_max),
+    sortOrder: row.sort_order,
+    sourceItemId: row.source_item_id,
+    itemType: row.item_type ?? null,
+    baseItemId: row.base_item_id ?? null,
+    releaseYear: row.release_year ?? null,
+    origin: row.origin ?? null,
+    obtain: Array.isArray(row.obtain) ? (row.obtain as ValueObtainSource[]) : [],
+    imageAttribution: row.image_attribution ?? null,
+    price: p
+      ? {
+          cheapestUsd: num(p.cheapest_usd),
+          averageUsd: num(p.average_usd),
+          lowUsd: num(p.market_low_usd),
+          highUsd: num(p.market_high_usd),
+          sampleSize: p.sample_size ?? 0,
+          sourceCount: p.source_count ?? 0,
+          confidenceLabel: p.confidence_label,
+          priceChangedAt: p.price_changed_at,
+        }
+      : null,
+  }
+}
+
+/** Every enabled item of the game (optionally of some kinds) with its price, in sort order. */
+async function readCatalogue(
+  supabase: ReadClient,
+  gameId: string,
+  kinds: Array<ValueItem['kind']> | undefined,
+): Promise<ValueItem[]> {
   const [items, prices] = await Promise.all([
     selectAll<ItemRow>((from, to) => {
-      let q = (supabase as any)
-        .from('values_items')
-        .select(
-          'id,kind,slug,name,rarity,area,income_per_sec,image_url,is_priced,bracket_min,bracket_max,sort_order,source_item_id,item_type,base_item_id,release_year,origin,obtain,image_attribution',
-        )
-        .eq('game_id', gameId)
-        .eq('is_enabled', true)
+      let q = (supabase as any).from('values_items').select(ITEM_COLUMNS).eq('game_id', gameId).eq('is_enabled', true)
       if (kinds?.length) q = q.in('kind', kinds)
-      return q.order('sort_order', { ascending: true }).range(from, to)
+      // id breaks sort_order ties, so page seams never skip or repeat a row.
+      return q.order('sort_order', { ascending: true }).order('id', { ascending: true }).range(from, to)
     }),
     selectAll<PriceRow>((from, to) =>
       (supabase as any)
         .from('values_prices')
-        .select(
-          'item_id,cheapest_usd,average_usd,market_low_usd,market_high_usd,sample_size,source_count,confidence_label,price_changed_at',
-        )
+        .select(PRICE_COLUMNS)
         .eq('game_id', gameId)
         .order('item_id', { ascending: true })
         .range(from, to),
     ),
   ])
-
   const priceByItem = new Map(prices.map((p) => [p.item_id, p]))
+  return items.map((row) => toValueItem(row, priceByItem.get(row.id)))
+}
 
-  return items.map((row) => {
-    const p = priceByItem.get(row.id)
-    return {
-      id: row.id,
-      kind: row.kind,
-      slug: row.slug,
-      name: row.name,
-      rarity: row.rarity,
-      area: row.area,
-      incomePerSec: num(row.income_per_sec),
-      imageUrl: row.image_url,
-      isPriced: row.is_priced,
-      bracketMin: num(row.bracket_min),
-      bracketMax: num(row.bracket_max),
-      sortOrder: row.sort_order,
-      sourceItemId: row.source_item_id,
-      itemType: row.item_type ?? null,
-      baseItemId: row.base_item_id ?? null,
-      releaseYear: row.release_year ?? null,
-      origin: row.origin ?? null,
-      obtain: Array.isArray(row.obtain) ? (row.obtain as ValueObtainSource[]) : [],
-      imageAttribution: row.image_attribution ?? null,
-      price: p
-        ? {
-            cheapestUsd: num(p.cheapest_usd),
-            averageUsd: num(p.average_usd),
-            lowUsd: num(p.market_low_usd),
-            highUsd: num(p.market_high_usd),
-            sampleSize: p.sample_size ?? 0,
-            sourceCount: p.source_count ?? 0,
-            confidenceLabel: p.confidence_label,
-            priceChangedAt: p.price_changed_at,
-          }
-        : null,
-    }
-  })
+/** ONE enabled item with its price (null: not found, disabled, or not of `kinds`). */
+async function readOneItem(
+  supabase: ReadClient,
+  gameId: string,
+  itemSlug: string,
+  kinds: Array<ValueItem['kind']> | undefined,
+): Promise<ValueItem | null> {
+  let q = (supabase as any)
+    .from('values_items')
+    .select(ITEM_COLUMNS)
+    .eq('game_id', gameId)
+    .eq('slug', itemSlug)
+    .eq('is_enabled', true)
+  if (kinds?.length) q = q.in('kind', kinds)
+  const { data: rows, error } = await q.limit(1)
+  if (error) throw new Error(`values read failed: ${error.message ?? String(error)}`)
+  const row = (rows ?? [])[0] as ItemRow | undefined
+  if (!row) return null
+  const { data: priceRows, error: priceError } = await (supabase as any)
+    .from('values_prices')
+    .select(PRICE_COLUMNS)
+    .eq('item_id', row.id)
+    .limit(1)
+  if (priceError) throw new Error(`values read failed: ${priceError.message ?? String(priceError)}`)
+  return toValueItem(row, ((priceRows ?? []) as PriceRow[])[0])
+}
+
+/**
+ * Every enabled item for a game, with its published price attached.
+ * Items without a price keep `price: null` — the caller renders "no market
+ * price yet" rather than a zero.
+ *
+ * On an item page (`itemSlug`) the catalogue is the game's SHARED cached copy
+ * (one entry for every item page, 2026-10-20 usage audit) and the page's own
+ * item is a one-row read under its item tags, so its price is always current.
+ */
+export async function getValueItems(
+  gameSlug: string,
+  opts: {
+    kinds?: Array<ValueItem['kind']>
+    /** The item page reading this list — its own row is read under its tags. */
+    itemSlug?: string | null
+  } = {},
+): Promise<ValueItem[]> {
+  const { kinds, itemSlug } = opts
+  if (!itemSlug) {
+    const list = createValuesReadClient({ gameSlug })
+    const gameId = await gameIdFor(list, gameSlug)
+    return gameId ? readCatalogue(list, gameId, kinds) : []
+  }
+
+  const shared = createValueGameSharedReadClient(gameSlug)
+  const gameId = await gameIdFor(shared, gameSlug)
+  if (!gameId) return []
+  const [catalogue, own] = await Promise.all([
+    readCatalogue(shared, gameId, kinds),
+    readOneItem(createValueItemReadClient(gameSlug, itemSlug), gameId, itemSlug, kinds),
+  ])
+  // The fresh row wins; a missing one (disabled since the shared copy) is dropped.
+  const others = catalogue.filter((i) => i.slug !== itemSlug)
+  if (!own) return others
+  return [...others, own].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id))
 }
 
 export async function getValueItem(

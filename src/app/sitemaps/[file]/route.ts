@@ -15,7 +15,9 @@ import { loadSitemapSections, sitemapSectionIds } from '@/lib/seo/sitemap-sectio
 import { renderUrlset } from '@/lib/seo/sitemap-xml'
 import type { SitemapSection } from '@/lib/seo/sitemap-builder'
 
-export const revalidate = 3600
+// Each rebuild loads the whole sitemap input; IndexNow announces new pages
+// at once, so six hours is fresh enough (was hourly; 2026-10-20 usage audit).
+export const revalidate = 21600
 export const dynamicParams = false
 
 export function generateStaticParams() {

@@ -24,12 +24,20 @@ const VIEW_ROWS = ['alpha', 'beta', 'gamma'].map((slug, i) => ({
   source_count: 2, confidence_label: 'high', is_trade_ready: true, is_public_estimate: false,
   price_updated_at: '2026-10-01T00:00:00Z',
 }))
+const upserts: { table: string; rows: unknown[]; options: unknown }[] = []
 function fakeAdmin() {
   const from = (table: string) => {
     const b: any = {}
-    for (const m of ['select', 'eq', 'order']) b[m] = () => b
-    b.range = async () => ({ data: table === 'sab_price_display' ? VIEW_ROWS : [], error: null })
-    b.upsert = async () => ({ error: null })
+    for (const m of ['select', 'eq', 'order', 'gt', 'or']) b[m] = () => b
+    // Keyset read: one short page holds the fixture. OFFSET paging is a failure.
+    b.limit = async () => ({ data: table === 'sab_price_display' ? VIEW_ROWS : [], error: null })
+    b.range = () => {
+      throw new Error(`OFFSET paging on ${table}`)
+    }
+    b.upsert = async (rows: unknown[], options: unknown) => {
+      upserts.push({ table, rows, options })
+      return { error: null }
+    }
     b.then = (resolve: (v: unknown) => unknown) =>
       Promise.resolve({ data: table === 'sab_price_display' ? VIEW_ROWS : [], error: null }).then(resolve)
     return b
@@ -49,6 +57,7 @@ describe('snapshot-sab-prices cron', () => {
     revalidatePath.mockClear()
     runEvidenceRefresh.mockClear()
     submitIndexNow.mockClear()
+    upserts.length = 0
   })
 
   it('refreshes the SEO evidence (the change detector), once, for steal-a-brainrot', async () => {
@@ -64,18 +73,22 @@ describe('snapshot-sab-prices cron', () => {
     expect(submitIndexNow).not.toHaveBeenCalled()
   })
 
-  it('still busts the ISR cache for the hubs and every price page', async () => {
+  // 2026-10-20 usage audit (A6): re-rendering all ~500 SAB price pages every
+  // day undid the changed-only publish. The pricing publish revalidates the
+  // items whose price moved (and the list pages); the evidence refresh above
+  // revalidates the pages whose evidence moved.
+  it('does not re-render every price page', async () => {
     await runCron()
-    const paths = revalidatePath.mock.calls.map((c) => c[0])
-    expect(paths).toEqual(
-      expect.arrayContaining([
-        '/steal-a-brainrot',
-        '/steal-a-brainrot/values',
-        '/steal-a-brainrot/calculator',
-        '/steal-a-brainrot/values/alpha',
-        '/steal-a-brainrot/values/gamma',
-      ]),
-    )
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('records today without overwriting a row the reprice already wrote', async () => {
+    const { body } = await runCron()
+    const history = upserts.filter((u) => u.table === 'sab_price_history')
+    expect(history).toHaveLength(1)
+    expect(history[0].rows).toHaveLength(3)
+    expect(history[0].options).toMatchObject({ onConflict: 'brainrot_id,mutation_id,history_date', ignoreDuplicates: true })
+    expect(body.captured).toBe(3)
   })
 
   it('the response does not claim a "pinged" batch any more', async () => {

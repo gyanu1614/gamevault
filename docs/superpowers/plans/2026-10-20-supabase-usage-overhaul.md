@@ -52,21 +52,22 @@ Target: DB ≈ 380–450 MB. Script: `docs/handoff/supabase-space-cleanup-2026-1
 - [x] 1.12 **Pricing workflow order**: checked, no change. With 1.1 the G2G import no longer runs the heavy chain; the SAB reprice runs alone at the end of `sab` and `adopt-me` already `needs: sab`. Serialising SAE/MM2 would only lengthen the run.
 
 ## Phase 2 — Pages and caching (PR B: RELEASE)
-- [ ] 2.1 **Footer 1-hour cap** (A2/A5): resolve test-seller ids inside the cached callback, raise to 86400. Test: build manifest shows 604800/86400 (local stack build), and a unit test that the footer's cache entry has no 3600 window.
-- [ ] 2.2 **Nightly revalidate cron** (A5): category and hub route patterns only, no site-wide tags.
-- [ ] 2.3 **SAB snapshot cron** (A6/B5): drop the 498-path `revalidatePath` loop and the duplicate history write.
-- [ ] 2.4 **Value item pages** (A4): one shared per-game catalogue read (single cache entry), history capped to a date window, SAB history ordered newest-first (fixes the "oldest 1000 rows" chart bug).
-- [ ] 2.5 **List pages** (A13): `/adopt-me/blog` stat strip and calculators read bounded windows.
-- [ ] 2.6 **Sitemaps** (A8/A13): one cached sitemap input shared by the 10 sections.
-- [ ] 2.7 **/browse** (A7): explicit columns instead of `*` + full joined rows (pagination already merged in #210).
-- [ ] 2.8 **Navbar** (A11): `config->>currency_icon_url` instead of the whole `category_configs`; spotlight games only when the menu opens.
-- [ ] 2.9 **/shop/[slug]** (A12): revalidate 3600 + tag revalidation.
-- [ ] 2.10 **Listing views** (C7): counter in its own small table (no listings row rewrite); drop the two `view_count` indexes. Migration + action change.
-- [ ] 2.11 **Value beacons** (C8): stop the DB insert per view (PostHog already records it), or batch.
+- [x] 2.1 **Footer 1-hour cap** (A2/A5): resolve test-seller ids inside the cached callback, raise to 86400. Test: build manifest shows 604800/86400 (local stack build), and a unit test that the footer's cache entry has no 3600 window.
+- [x] 2.2 **Nightly revalidate cron** (A5): category and hub route patterns only, no site-wide tags.
+- [x] 2.3 **SAB snapshot cron** (A6/B5): drop the 498-path `revalidatePath` loop and the duplicate history write.
+- [x] 2.4 **Value item pages** (A4): one shared per-game catalogue read (single cache entry), history capped to a date window, SAB history ordered newest-first (fixes the "oldest 1000 rows" chart bug).
+- [x] 2.5 **List pages** (values hub, rows.json, calculators, price index: daily backstop, refreshed on publish; blog stays hourly) (A13): `/adopt-me/blog` stat strip and calculators read bounded windows.
+- [x] 2.6 **Sitemaps** (6 h window instead of a shared cache: one input per section per 6 h) (A8/A13): one cached sitemap input shared by the 10 sections.
+- [x] 2.7 **/browse** (A7): explicit columns instead of `*` + full joined rows (pagination already merged in #210).
+- [x] 2.8 **Navbar** (A11): `config->>currency_icon_url` instead of the whole `category_configs`; spotlight games only when the menu opens.
+- [ ] 2.9 **/shop/[slug]** — DEFERRED: needs a per-seller tag wired through listing, review and order paths; low traffic today (A12): revalidate 3600 + tag revalidation.
+- [ ] 2.10 **Listing views** — DEFERRED: 277 listings, the row rewrite is cheap at this size; revisit past ~10k listings (C7): counter in its own small table (no listings row rewrite); drop the two `view_count` indexes. Migration + action change.
+- [ ] 2.11 **Value beacons** — DEFERRED: value_funnel_events feeds the admin funnel; add retention instead (owner call) (C8): stop the DB insert per view (PostHog already records it), or batch.
 - [ ] 2.12 After release: confirm in API logs that cached reads (`rpc/footer_game_activity`) run ~1–2×/day (A3).
 
 ## Phase 3 — Images (PR C: RELEASE + one backfill)
 - [ ] 3.1 Footer and nav icons use the existing `-64.webp` variant.
+- [x] 3.0 **/media proxy** (PR C): art and listing photos served through vercel.json's cached rewrite; Supabase serves each file ~once per region.
 - [ ] 3.2 Thumbnails at upload (listing images, values art, blog covers) + an owner-run backfill script; cards use thumbnails.
 - [ ] 3.3 Store banner cache header; static art (hero, item art) served by Vercel where it is fixed.
 

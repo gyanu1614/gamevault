@@ -44,12 +44,22 @@ describe('nightly listing-page revalidate', () => {
       ['/(marketplace)/[gameSlug]', 'page'],
     ])
     expect(revalidateTag.mock.calls.map((c) => c[0]).sort()).toEqual([
-      'games:directory',
       'listings:home',
-      'profiles:test-sellers',
       'seller-presence:paused',
     ])
     expect(body.ok).toBe(true)
+  })
+
+  // 2026-10-20 usage audit (A5): the footer reads the game directory and the
+  // test-seller ids on EVERY page, and unstable_cache adds its tags to the
+  // render, so revalidating either tag here marked all ~2,400 pages (plus every
+  // on-demand listing, item and shop page) stale every night. Both are already
+  // revalidated by the admin actions that change them.
+  it('never revalidates the tags the footer puts on every page', async () => {
+    await get('Bearer test-secret')
+    const tags = revalidateTag.mock.calls.map((c) => c[0])
+    expect(tags).not.toContain('games:directory')
+    expect(tags).not.toContain('profiles:test-sellers')
   })
 
   it('rejects a missing or wrong bearer without touching the cache', async () => {
