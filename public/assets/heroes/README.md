@@ -14,8 +14,10 @@ page uses it. No code change needed when you only replace a file.
 | `founding.avif` | Become a Seller (`/founding`); also the old seller application + seller status pages |
 | `sell.avif` | Sell wizard (`/sell/new`, `/sell/edit`, `/sell/bulk`). A copy of `founding.avif` (owner 2026-10-10) so the seller journey keeps one look; replace it to give the wizard its own art. |
 | `order.avif` | Order detail page |
-| `checkout.webp` | Checkout (shown darker than the others) |
 | `marketplace.avif` (again) | Also the blog's shared wallpaper (blog home + every article), heavily dimmed |
+
+Checkout has no hero art (owner 2026-10-21): a flat neutral page reads as
+more trustworthy at the moment of payment.
 
 Per-game heroes (Adopt Me, Steal a Brainrot, …) are NOT files here. Upload
 those in Admin → Games → Hero Background; they are stored in the database.

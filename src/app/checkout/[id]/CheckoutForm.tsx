@@ -37,26 +37,21 @@ import {
   Info,
   Loader2,
   Lock,
-  LogOut,
-  Settings,
-  Landmark,
-  LifeBuoy,
-  ShieldCheck,
   Tag,
   TriangleAlert,
-  Undo2,
   X,
 } from 'lucide-react'
 
 import GppGoodRoundedIcon from '@mui/icons-material/GppGoodRounded'
-import HttpsRoundedIcon from '@mui/icons-material/HttpsRounded'
 import { createCheckout, quoteCheckoutMethods } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
 import { orderMethodsForRegion, regionForCountry } from '@/lib/payments/regions'
 import { countryName, flagEmoji } from '@/lib/geo/countries'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { clampCheckoutQty } from './qty'
-import { MARK_SLOT, markSize, toRow, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { TILE_SLOT, markSize, toRow, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustList, TrustSeals } from './_trust'
+import type { SiteRating } from '@/lib/reviews/site-rating'
 import { lowestFeeMethodId } from '@/lib/payments/lowest-fee'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
@@ -332,71 +327,6 @@ function Callout({
   )
 }
 
-/** A — quiet inline trust signals (no chrome; they live in the trust
- *  band's header row). */
-function TrustChips() {
-  const item = 'inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] font-semibold'
-  const ic = { color: T.accentText } as const
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-      <span className={item} style={{ color: T.ink }}>
-        <ShieldCheck className="h-3.5 w-3.5 shrink-0" style={ic} /> SafeDrop Guarantee
-      </span>
-      <span className={item} style={{ color: T.ink }}>
-        <BadgeCheck className="h-3.5 w-3.5 shrink-0" style={ic} /> ID-Verified Sellers
-      </span>
-      <Link
-        href="/refunds"
-        className={`${item} underline-offset-2 transition-colors hover:underline`}
-        style={{ color: T.ink }}
-      >
-        <Undo2 className="h-3.5 w-3.5 shrink-0" style={ic} /> Refund Policy
-      </Link>
-    </div>
-  )
-}
-
-/** C — thin full-width checkout footer: company identity, payment
- *  security line, support + legal links. Edge-to-edge with a top hairline;
- *  content aligns to the checkout container. */
-function CompanyStrip() {
-  const link = 'transition-colors hover:text-[#56B87F]'
-  return (
-    <footer className="border-t" style={{ borderColor: T.lineSubtle, background: T.page }}>
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col items-center justify-between gap-2.5 px-4 py-4 sm:px-10 lg:flex-row lg:py-3.5">
-        <div className="flex flex-col items-center gap-2 lg:flex-row lg:gap-6">
-          <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Landmark className="h-4 w-4 shrink-0" style={{ color: T.ink2 }} />
-            <span>
-              <b className="font-semibold" style={{ color: T.ink }}>DropMarket Ltd</b>
-              <span className="hidden sm:inline"> · Registered In The United Kingdom · Company No. 17309867</span>
-              <span className="sm:hidden"> · Registered In The UK</span>
-            </span>
-          </span>
-          <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Lock className="h-4 w-4 shrink-0" style={{ color: T.ink2 }} />
-            <span>
-              Secured By <b className="font-semibold" style={{ color: T.ink }}>DropMarket Payments</b>
-            </span>
-          </span>
-        </div>
-        <nav className="flex items-center gap-4 text-[11.5px] font-medium" style={{ color: T.ink2 }}>
-          <Link href="/support" className={`${link} flex items-center gap-1.5`}>
-            <LifeBuoy className="h-3.5 w-3.5" style={{ color: T.ink2 }} />
-            Support
-          </Link>
-          <span aria-hidden className="h-3 w-px" style={{ background: T.line }} />
-          <Link href="/terms" className={link}>Terms</Link>
-          <Link href="/refunds" className={link}>Refunds</Link>
-          <Link href="/privacy" className={link}>Privacy</Link>
-        </nav>
-      </div>
-      {/* clearance for the mobile sticky pay bar */}
-      <div className="h-20 lg:hidden" />
-    </footer>
-  )
-}
-
 // Local-method rows (icon, buyer notes, logo, flag) come from ./_method-ui.
 type PayMethodId = 'crypto' | (string & {})
 
@@ -422,9 +352,11 @@ interface CheckoutFormProps {
   /** Back from a provider page with this listing's order still unpaid
    *  (?order=<id> on the URL): say so above the methods. */
   unfinishedPayment?: boolean
+  /** Real average of visible buyer reviews; null hides the rating card. */
+  siteRating?: SiteRating | null
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false, siteRating = null }: CheckoutFormProps) {
   const router = useRouter()
 
   // Flat selector (checkout regions, 2026-09-26): the buyer's own-country
@@ -805,66 +737,69 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
-  /** Right-hand pick mark: an empty ring, or a filled forest disc with a tick. */
-  const pickMark = (checked: boolean) => (
+  /** Left-hand radio: an empty ring, or the brand-green ring with a dot. */
+  const radio = (checked: boolean) => (
     <span
       aria-hidden
-      className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full transition-colors"
-      style={checked ? { background: T.forest } : { boxShadow: `inset 0 0 0 1.5px ${T.disLine}` }}
+      className="grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors"
+      style={{ boxShadow: `inset 0 0 0 2px ${checked ? T.accentText : 'rgba(255,255,255,0.32)'}` }}
     >
-      {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+      {checked && <span className="h-2.5 w-2.5 rounded-full" style={{ background: T.accentText }} />}
     </span>
   )
 
-  /** Glass row (owner 2026-10-19): a see-through pane over the hero art, a
-   *  hairline edge and a soft top sheen; the pick brightens and takes the
-   *  green ring. */
+  /** Row (owner 2026-10-21, Eldorado shape): radio, name and one line, the
+   *  brand logo in a tile at the right. Flat on the neutral page; the pick
+   *  takes the green ring. */
   const rowClass = (checked: boolean) =>
     cn(
-      'rounded-md bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0)_70%)] backdrop-blur-xl backdrop-saturate-150 transition-[background-color,box-shadow] duration-150',
-      checked ? 'bg-white/[0.085]' : 'bg-white/[0.035] hover:bg-white/[0.06]'
+      'rounded-md transition-[background-color,box-shadow] duration-150',
+      checked ? 'bg-[rgba(86,184,127,0.06)]' : 'bg-white/[0.03] hover:bg-white/[0.05]'
     )
   const rowSurface = (checked: boolean) =>
-    checked
-      ? `inset 0 0 0 1.5px ${T.accentText}, inset 0 1px 0 rgba(255,255,255,0.10), 0 0 0 4px rgba(86,184,127,0.10), 0 10px 28px rgba(0,0,0,0.30)`
-      : `inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 22px rgba(0,0,0,0.20)`
+    checked ? `inset 0 0 0 1.5px ${T.accentText}` : 'inset 0 0 0 1px rgba(255,255,255,0.09)'
 
-  /** The brand mark itself on the glass, no tile, every mark one optical size
-   *  (markSize); the row's icon when a method has no mark. */
-  const markSlot = (mark: LocalMethodRow['mark'], Icon: MethodIcon) => {
-    const size = mark && markSize(mark.aspect)
-    return (
-      <span className="flex shrink-0 items-center justify-center" style={MARK_SLOT}>
-        {mark && size ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={mark.logo} alt="" width={size.width} height={size.height} style={size} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
-        ) : (
-          <Icon className="h-6 w-6" strokeWidth={1.75} style={{ color: '#C9D1DA' }} />
-        )}
-      </span>
+  /** The brand mark in a tile at the right of the row (the row's icon when a
+   *  method has no mark); every mark at one optical size inside the tile. */
+  const logoTile = (children: React.ReactNode, key?: string) => (
+    <span key={key} className="grid h-9 w-[60px] shrink-0 place-items-center rounded-md bg-white/[0.07] ring-1 ring-inset ring-white/[0.06]">
+      {children}
+    </span>
+  )
+  const markTile = (mark: LocalMethodRow['mark'], Icon: MethodIcon) => {
+    const size = mark && markSize(mark.aspect, TILE_SLOT)
+    return logoTile(
+      mark && size ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={mark.logo} alt="" width={size.width} height={size.height} style={size} />
+      ) : (
+        <Icon className="h-5 w-5" strokeWidth={1.75} style={{ color: '#C9D1DA' }} />
+      )
     )
   }
 
-  const rowButton = 'flex w-full items-center gap-3.5 rounded-md px-4 py-[15px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+  const rowButton = 'flex min-h-[56px] w-full items-center gap-3.5 rounded-md px-4 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+
+  // Name only (owner 2026-10-21): the logo and the provider page say the rest.
+  const rowText = (label: string) => (
+    <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+      {label}
+    </span>
+  )
 
   const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
     return (
       <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
         <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
-          {markSlot(m.mark, m.Icon)}
-          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
-            {m.label}
-          </span>
+          {radio(checked)}
+          {rowText(m.label)}
           {m.id === lowestFeeId && (
-            <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4"
-              style={{ background: T.limeTint, color: T.accentText }}
-            >
+            <span className="shrink-0 text-[12px] font-semibold" style={{ color: TRUST_BLUE }}>
               Lowest Fee
             </span>
           )}
-          {pickMark(checked)}
+          {markTile(m.mark, m.Icon)}
         </button>
       </div>
     )
@@ -875,15 +810,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const cryptoRow = cryptoMethod && (
     <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
       <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
-        {/* The coins themselves, overlapped, in the same slot as the marks. */}
-        <span className="flex shrink-0 items-center justify-center" style={MARK_SLOT}>
-          <Image src="/crypto/btc.svg" alt="" width={26} height={26} unoptimized className="relative z-[1] drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
-          <Image src="/crypto/usdt.svg" alt="" width={26} height={26} unoptimized className="-ml-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
+        {radio(cryptoChecked)}
+        {rowText('Crypto')}
+        <span className="flex shrink-0 gap-1.5">
+          {COINS.map((c) =>
+            logoTile(<Image src={c.icon} alt="" width={22} height={22} unoptimized />, c.value)
+          )}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
-          Crypto
-        </span>
-        {pickMark(cryptoChecked)}
       </button>
       {cryptoChecked && (
         <div className="border-t px-4 pb-4 pt-3.5" style={{ borderColor: T.line }}>
@@ -897,7 +830,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   //    buyers never touch it; a wrong geo (VPN, travel) is one tap to fix.
   //    A searchable list on desktop, a bottom sheet on phones. ──
   const countryLine = (
-    <p className="flex flex-wrap items-center gap-x-1.5 text-body-sm" style={{ color: T.ink2 }}>
+    <p className="flex flex-wrap items-center gap-x-1.5 text-[13px]" style={{ color: T.ink2 }}>
       <span>Paying from</span>
       <span className="font-semibold" style={{ color: T.ink }}>
         {country ? `${flagEmoji(country)} ${countryName(country)}` : '🌍 Another Country'}
@@ -968,7 +901,6 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           </AnimatePresence>
         </div>
       )}
-      {countryLine}
     </div>
   )
 
@@ -1018,7 +950,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               type="button"
               onClick={() => setCodeOpen((v) => !v)}
               className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
-              style={{ color: T.forest2 }}
+              style={{ color: T.ink }}
             >
               <Tag className="h-3.5 w-3.5" />
               Have A Discount Code?
@@ -1124,7 +1056,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   const summaryCard = (compact = false) => (
-    <div className="rounded-lg border p-5 backdrop-blur-md" style={{ borderColor: T.lineSubtle, background: T.glass, boxShadow: '0 18px 44px rgba(0,0,0,0.35)' }}>
+    <div className="rounded-lg border border-white/[0.08] bg-white/[0.035] p-5">
       {/* Item */}
       <div className="flex items-center gap-3.5">
         <Image
@@ -1150,33 +1082,32 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         </div>
       </div>
 
-      {/* Spec rows — full card width */}
-      <div className="mt-3 divide-y text-[12.5px]">
-        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
-          <span style={{ color: T.ink2 }}>Delivery Time</span>
-          <span className="font-medium" style={{ color: T.ink }}>
-            {fmtDelivery(deliveryTime)}
-          </span>
-        </div>
-        {deliveryMethod && (
-          <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
-            <span style={{ color: T.ink2 }}>Delivery Method</span>
-            <span className="inline-flex items-center gap-1 font-medium" style={{ color: T.ink }}>
-              {deliveryMethod.label}
-              <DeliveryMethodInfo label={deliveryMethod.label} description={deliveryMethod.description} />
-            </span>
+      {/* At a glance (owner 2026-10-21): one hairline-divided strip, no
+          boxes inside the card. */}
+      <dl className="mt-3.5 grid grid-cols-3 divide-x divide-white/[0.08] rounded-md bg-white/[0.03] py-1.5">
+        {[
+          { k: 'Delivery', v: fmtDelivery(deliveryTime) },
+          { k: 'Quantity', v: quantity.toLocaleString() },
+          { k: 'Protection', v: 'Included' },
+        ].map((x) => (
+          <div key={x.k} className="min-w-0 px-3 text-center">
+            <dt className="text-[11px] leading-tight" style={{ color: T.ink2 }}>{x.k}</dt>
+            <dd className="truncate text-[12.5px] font-semibold leading-snug" style={{ color: T.ink }}>{x.v}</dd>
           </div>
-        )}
-        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
-          <span style={{ color: T.ink2 }}>Quantity</span>
-          <span className="font-medium" style={{ color: T.ink }}>
-            {quantity.toLocaleString()}
+        ))}
+      </dl>
+      {deliveryMethod && (
+        <div className="mt-3 flex items-center justify-between gap-4 text-[12.5px]">
+          <span style={{ color: T.ink2 }}>Delivery Method</span>
+          <span className="inline-flex items-center gap-1 font-medium" style={{ color: T.ink }}>
+            {deliveryMethod.label}
+            <DeliveryMethodInfo label={deliveryMethod.label} description={deliveryMethod.description} />
           </span>
         </div>
-      </div>
+      )}
 
       {/* Seller */}
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-4 flex items-center gap-3 border-t pt-4" style={{ borderColor: T.line }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={getAvatarUrl(seller.avatar_url, sellerName)}
@@ -1222,7 +1153,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             className="underline underline-offset-2 transition-colors hover:text-[#56B87F]"
             style={{ color: T.ink2 }}
           >
-            Terms of Service
+            Terms of Use
           </Link>{' '}
           and{' '}
           <Link
@@ -1238,74 +1169,40 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   return (
-    <div className="relative min-h-screen">
+    // Neutral ground (owner 2026-10-21): no hero art, no game art behind the
+    // form; a flat grey page so the payment is the only thing on it.
+    <div className="relative min-h-screen bg-[#16171B]">
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
-      {/* Faint game art in the top-left corner, fading out by mid-page —
-          the listing page's ambience carried into checkout. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-16 h-[620px] overflow-hidden">
-        <Image
-          src={listing.game?.image_url || '/hero/home.avif'}
-          alt=""
-          fill
-          unoptimized
-          className="select-none object-cover object-left-top opacity-[0.16]"
-          style={{
-            maskImage: 'radial-gradient(75% 85% at 10% 0%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 74%)',
-            WebkitMaskImage: 'radial-gradient(75% 85% at 10% 0%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 74%)',
-          }}
-        />
-      </div>
-
-      <div className="relative mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10 lg:pb-14">
+      <div className="relative mx-auto w-full max-w-[1040px] px-4 pb-10 pt-7 sm:px-6 lg:pb-14">
         {/* Header row */}
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              aria-label="Go Back"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-[#1D1E23] transition-colors hover:bg-[#24252B]"
-              style={{ borderColor: T.line, color: T.ink }}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <GppGoodRoundedIcon className="shrink-0" style={{ fontSize: 24, color: T.accentText }} />
-            {/* Phone: smaller + nowrap so the title never breaks into two
-                lines beside the SSL chip. Desktop (sm:) unchanged. */}
-            <span
-              className="whitespace-nowrap text-[18px] font-bold sm:text-[24px]"
-              style={{ color: T.ink }}
-            >
-              Secure Checkout
-            </span>
-          </span>
-          <span
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-[#1D1E23] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            aria-label="Go Back"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-white/[0.04] transition-colors hover:bg-white/[0.08]"
             style={{ borderColor: T.line, color: T.ink }}
           >
-            <HttpsRoundedIcon style={{ fontSize: 16, color: T.accentText }} />
-            {/* Phone: short label; desktop keeps the full one. */}
-            <span className="sm:hidden">SSL Secure</span>
-            <span className="hidden sm:inline">256-Bit SSL Secure</span>
-          </span>
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <GppGoodRoundedIcon className="shrink-0" style={{ fontSize: 24, color: TRUST_BLUE }} />
+          <h1 className="whitespace-nowrap text-[20px] font-bold sm:text-[24px]" style={{ color: T.ink }}>
+            Secure Checkout
+          </h1>
         </div>
 
-        {/* Two columns (desktop) / stacked with summary first (mobile) */}
-        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
+        {/* Two columns (desktop) / stacked with the order first (mobile) */}
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_392px] lg:gap-8">
           {/* Phones: the compact order strip first */}
           <div className="lg:hidden">{orderStrip}</div>
 
           <div>
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[21px] font-bold leading-tight" style={{ color: T.ink }}>
-                  Payment
-                </p>
-                <p className="mt-0.5 text-[13px]" style={{ color: T.ink2 }}>
-                  All transactions are secure and encrypted.
-                </p>
-              </div>
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 className="text-[18px] font-bold" style={{ color: T.ink }}>
+                Payment Method
+              </h2>
+              {countryLine}
             </div>
             {paymentList}
             {payError && (
@@ -1313,100 +1210,69 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             )}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
-            <div className="mt-4 rounded-lg border px-4 pb-4 pt-1 backdrop-blur-md lg:hidden" style={{ borderColor: T.lineSubtle, background: T.glass }}>
+            <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.035] px-4 pb-4 pt-1 lg:hidden">
               {promoSection}
               {moneySummary}
             </div>
-            {/* Trust signals at the moment of commitment. */}
-            <div className="mt-5 flex justify-center">
-              <TrustChips />
+            {/* Security seals at the moment of commitment. */}
+            <div className="mt-6">
+              <TrustSeals />
             </div>
           </div>
 
-          {/* Desktop: summary column */}
-          <div className="hidden lg:block">{summaryCard()}</div>
-        </div>
-
-        {/* Trust hero band — centered title above, then a full-width strip:
-            mirrored sky art behind everything under one smooth ivory wash,
-            strong at the left, opening to color at the right. */}
-        <h2 className="mb-5 mt-16 text-center text-heading" style={{ color: T.ink }}>
-          How Your Order Works
-        </h2>
-        <div
-          className="relative overflow-hidden rounded-md px-5 py-5 sm:px-8 sm:py-6"
-          style={{ background: T.ivory, boxShadow: `inset 0 0 0 1px ${T.line}` }}
-        >
-          {/* Full-bleed art (mirrored so the sky, not the cliff, sits
-              behind the content) under one smooth left-to-right ivory wash:
-              strong where text lives, fading to vivid art at the right. */}
-          <Image
-            src="/checkout/trust-hero.jpg"
-            alt=""
-            aria-hidden
-            fill
-            unoptimized
-            className="pointer-events-none -scale-x-100 select-none object-cover object-[50%_10%]"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 hidden sm:block"
-            style={{
-              background:
-                'linear-gradient(90deg, rgba(23,27,33,0.94) 0%, rgba(23,27,33,0.88) 50%, rgba(23,27,33,0.7) 82%, rgba(23,27,33,0.42) 100%)',
-            }}
-          />
-          {/* Phones: rows span the full width, so the wash is uniform. */}
-          <div
-            aria-hidden
-            className="absolute inset-0 sm:hidden"
-            style={{ background: 'rgba(23,27,33,0.9)' }}
-          />
-          <div className="relative">
-            <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
-              {[
-                {
-                  icon: '/icons/set/card.svg',
-                  title: 'Choose Payment Method',
-                  sub: 'Every payment is encryption-protected.',
-                },
-                {
-                  icon: '/icons/set/package.svg',
-                  title: 'Wait for Delivery',
-                  sub: 'Your seller preps the order. Chat live anytime.',
-                },
-                {
-                  icon: '/icons/set/verified.svg',
-                  title: 'Order Delivered',
-                  sub: 'Check your items and confirm delivery.',
-                },
-                {
-                  icon: '/icons/set/refund.svg',
-                  title: 'Item Not Received?',
-                  sub: '100% refund, guaranteed.',
-                },
-              ].map((step) => (
-                <li key={step.title} className="flex items-start gap-3.5">
-                  {/* The silver-glass mark on its own: no tile, no green
-                      (owner 2026-10-19: no box in box). */}
-                  <SilverIcon src={step.icon} alt="" className="h-10 w-10" />
-                  <div>
-                    <p className="text-[14px] font-bold leading-snug" style={{ color: T.ink }}>
-                      {step.title}
-                    </p>
-                    <p className="mt-1 text-[12.5px] leading-snug" style={{ color: '#B4BEC9' }}>
-                      {step.sub}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+          {/* Summary column: the order and Pay, then the rating and the
+              reasons to trust it. Phones get the last two under the seals. */}
+          <div className="flex flex-col gap-3.5">
+            <div className="hidden lg:block">{summaryCard()}</div>
+            <BuyerRating rating={siteRating} />
+            <TrustList />
           </div>
         </div>
 
+        <h2 className="mb-5 mt-16 text-center text-heading" style={{ color: T.ink }}>
+          How Your Order Works
+        </h2>
+        <div className="rounded-lg border border-white/[0.08] bg-white/[0.035] px-5 py-5 sm:px-8 sm:py-6">
+          <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
+            {[
+              {
+                icon: '/icons/set/card.svg',
+                title: 'Choose Payment Method',
+                sub: 'Every payment is encryption-protected.',
+              },
+              {
+                icon: '/icons/set/package.svg',
+                title: 'Wait for Delivery',
+                sub: 'Your seller preps the order. Chat live anytime.',
+              },
+              {
+                icon: '/icons/set/verified.svg',
+                title: 'Order Delivered',
+                sub: 'Check your items and confirm delivery.',
+              },
+              {
+                icon: '/icons/set/refund.svg',
+                title: 'Item Not Received?',
+                sub: '100% refund, guaranteed.',
+              },
+            ].map((step) => (
+              <li key={step.title} className="flex items-start gap-3.5">
+                <SilverIcon src={step.icon} alt="" className="h-10 w-10" />
+                <div>
+                  <p className="text-[14px] font-bold leading-snug" style={{ color: T.ink }}>
+                    {step.title}
+                  </p>
+                  <p className="mt-1 text-[12.5px] leading-snug" style={{ color: '#B4BEC9' }}>
+                    {step.sub}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
 
-      <CompanyStrip />
+      <CheckoutFooter />
 
       {/* Mobile sticky pay bar. Bottom padding hugs the browser chrome:
           12px base, or the home-indicator inset when the browser bar sits

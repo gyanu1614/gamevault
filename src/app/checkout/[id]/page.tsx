@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { isUuid } from '@/lib/ids'
 import { CheckoutForm } from './CheckoutForm'
-import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
+import { getSiteRating } from '@/lib/reviews/site-rating'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 import BuyingOpensSoon from './_BuyingOpensSoon'
 import { eligibleMethods, toClientMethods } from '@/lib/payments/eligibility'
@@ -186,22 +186,19 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // the client. Fails closed: a quote error is a page error, not a default fee.
   const quantity = clampCheckoutQty(listing, parsedQty, !!bundleSummary)
   const subtotal = round2(Number(listing.price) * quantity)
-  const eligibility = await eligibleMethods({
-    buyerId: user?.id ?? null,
-    currency: (listing.currency as string | null) || 'USD',
-    country: buyerCountry,
-    subtotalMinor: BigInt(Math.round(subtotal * 100)),
-  })
+  const [eligibility, siteRating] = await Promise.all([
+    eligibleMethods({
+      buyerId: user?.id ?? null,
+      currency: (listing.currency as string | null) || 'USD',
+      country: buyerCountry,
+      subtotalMinor: BigInt(Math.round(subtotal * 100)),
+    }),
+    getSiteRating(),
+  ])
 
   return (
-    // V19/P24/P7.bb — Full-bleed checkout: no max-width container, no
-    // Back chip. The CheckoutForm's two halves now extend edge-to-edge
-    // of the viewport. Browser back handles return navigation.
-    // Hero backdrop (owner, 2026-10-08): the checkout art, a step darker than
-    // other pages (hero-dim-strong) so the payment form stays the focus.
+    // Neutral page (owner 2026-10-21): no hero art behind the checkout.
     <main className="w-full">
-      <HeroBackdropPreload name="checkout" ext="webp" />
-      <HeroBackdrop name="checkout" ext="webp" navbarOffset={0} className="hero-dim-strong">
       <CheckoutForm
         methods={toClientMethods(eligibility.methods)}
         listing={listing}
@@ -213,8 +210,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         buyerCountry={buyerCountry}
         deliveryMethod={deliveryMethod}
         unfinishedPayment={unfinishedPayment}
+        siteRating={siteRating}
       />
-      </HeroBackdrop>
     </main>
   )
 }

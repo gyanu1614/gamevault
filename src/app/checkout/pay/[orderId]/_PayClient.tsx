@@ -1,14 +1,14 @@
 'use client'
 
 /**
- * PayClient: the native BTCPay payment page (2026-10 revamp).
+ * PayClient: the native BTCPay payment page.
  *
- *   · main column: amount to send (the hero, with copy), the expiry chip,
- *     the QR, the deposit address with copy + network chip, Open In Wallet,
- *     a one-line network note, then "safe to close" + Cancel Order;
- *   · side column: order summary (item, order number, money rows) and the
- *     payment status timeline, then SafeDrop + help/policy links.
- * Phone: one column, amount + QR first, status next, then the summary.
+ * White hosted-invoice layout (owner 2026-10-21, the CoinGate / Cryptomus
+ * look, our own build): one centred card. The order total heads it with an
+ * Order Info toggle; then the coin + network, the countdown, the exact amount
+ * to send, the QR, the address and Open In Wallet; a progress bar; "safe to
+ * close" + Cancel Order. Help, terms and SafeDrop sit under the card.
+ * UI pieces live in ./_pay-ui.
  *
  * Display-only state machine; the verified webhook is the sole authority
  * for marking the order paid:
@@ -20,29 +20,39 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from '@/components/navigation/AppLink'
-import { Drawer } from 'vaul'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { toast } from 'sonner'
 import { ArrowClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowClockwise'
-import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
+import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
 import { CircleNotchIcon } from '@phosphor-icons/react/dist/csr/CircleNotch'
 import { ClockIcon } from '@phosphor-icons/react/dist/csr/Clock'
-import { CopyIcon } from '@phosphor-icons/react/dist/csr/Copy'
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
+import { LockKeyIcon } from '@phosphor-icons/react/dist/csr/LockKey'
 import { ShieldCheckIcon } from '@phosphor-icons/react/dist/csr/ShieldCheck'
 import { WalletIcon } from '@phosphor-icons/react/dist/csr/Wallet'
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
 import { getPaymentPageStatus } from '@/lib/actions/payment-page'
 import { retryOrderPayment } from '@/lib/actions/checkout'
 import { cancelOrder } from '@/lib/actions/orders'
-import { MARKET_CARD } from '@/lib/ui/surfaces'
-import { accountBtn } from '@/components/account/AccountSurface'
 import { cn } from '@/lib/utils'
-import { CheckoutNavbar } from '../../_components/CheckoutNavbar'
 import { nextPollDelayMs, countdownShouldContinue, POLL_BASE_MS } from './poll-policy'
 import { qrPayload, walletDeepLink } from './qr'
 import { PaymentQr } from './_PaymentQr'
+import {
+  CopyButton,
+  ExpiryChip,
+  HelpDrawer,
+  Note,
+  PayStepper,
+  StatePanel,
+  SummaryRow,
+  btn,
+  copyText,
+  fmtCrypto,
+  shortTx,
+  type PayStep,
+} from './_pay-ui'
 
 export interface PayMethod {
   id: string
@@ -73,382 +83,7 @@ export interface PaySummary {
   total: number
 }
 
-type ViewState = 'waiting' | 'seen' | 'confirming' | 'paid' | 'partial' | 'expired' | 'unreachable'
-
-const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
-
-function fmtCountdown(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(s / 60)
-  return `${m}:${String(s % 60).padStart(2, '0')}`
-}
-
-function fmtTime(iso: string | null): string {
-  if (!iso) return ''
-  try {
-    return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-  } catch {
-    return ''
-  }
-}
-
-/** Trim a crypto decimal string for display (drop trailing zeros, keep ≤8 dp). */
-function fmtCrypto(v: string | undefined): string {
-  if (!v) return ''
-  const n = Number(v)
-  if (!Number.isFinite(n)) return v
-  return n.toFixed(8).replace(/\.?0+$/, '')
-}
-
-function shortTx(tx?: string | null): string {
-  if (!tx) return ''
-  return `${tx.slice(0, 6)}…${tx.slice(-4)}`
-}
-
-/** execCommand fallback for insecure contexts (http over LAN IP, older
- *  webviews) where navigator.clipboard is unavailable. */
-function legacyCopy(value: string): boolean {
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = value
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    ta.setSelectionRange(0, value.length)
-    const ok = document.execCommand('copy')
-    document.body.removeChild(ta)
-    return ok
-  } catch {
-    return false
-  }
-}
-
-/** Copy to the clipboard. Inline buttons show their own "Copied"; a toast
- *  only when asked (or on failure). */
-async function copyText(value: string, label: string, opts: { toast?: boolean } = {}) {
-  const ok = async () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(value)
-      return true
-    }
-    return legacyCopy(value)
-  }
-  let done = false
-  try {
-    done = await ok()
-  } catch {
-    done = legacyCopy(value)
-  }
-  if (done) {
-    if (opts.toast) toast.success(`${label} Copied`)
-    return true
-  }
-  toast.error('Copy Failed. Select The Text Manually')
-  return false
-}
-
-// ─── Small pieces ───────────────────────────────────────────────────
-
-function CopyButton({
-  value,
-  label,
-  className,
-}: {
-  value: string
-  label: string
-  className?: string
-}) {
-  const [copied, setCopied] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout>>()
-  useEffect(() => () => clearTimeout(timer.current), [])
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        if (await copyText(value, label)) {
-          setCopied(true)
-          clearTimeout(timer.current)
-          timer.current = setTimeout(() => setCopied(false), 1600)
-        }
-      }}
-      aria-label={copied ? `${label} Copied` : `Copy ${label}`}
-      className={cn(accountBtn.secondary, 'h-10 min-w-[92px]', FOCUS, className)}
-    >
-      {copied ? (
-        <CheckIcon className="h-4 w-4 text-lime-text" weight="bold" aria-hidden />
-      ) : (
-        <CopyIcon className="h-4 w-4 text-text-secondary" aria-hidden />
-      )}
-      <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
-    </button>
-  )
-}
-
-function ExpiryChip({ remainingMs }: { remainingMs: number }) {
-  const low = remainingMs < 60_000
-  return (
-    <span
-      role="timer"
-      className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] font-medium tabular-nums',
-        low ? 'text-warning' : 'text-text-secondary'
-      )}
-    >
-      <ClockIcon className="h-4 w-4" aria-hidden />
-      <span suppressHydrationWarning>Expires In {fmtCountdown(remainingMs)}</span>
-    </span>
-  )
-}
-
-/** One calm inline status line under the amount (seen / partial). */
-function StatusNote({
-  tone,
-  icon,
-  children,
-}: {
-  tone: 'live' | 'warn'
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className="mt-4 flex items-start gap-2.5 text-[14px] leading-relaxed text-text-primary">
-      <span className={cn('mt-[3px] shrink-0', tone === 'live' ? 'text-lime-text' : 'text-warning')}>{icon}</span>
-      <div className="min-w-0">{children}</div>
-    </div>
-  )
-}
-
-/** Confirming / paid / expired / unreachable: the main column's state screen. */
-function StatePanel({
-  icon,
-  title,
-  children,
-  action,
-}: {
-  icon: React.ReactNode
-  title: string
-  children: React.ReactNode
-  action?: React.ReactNode
-}) {
-  return (
-    <div className="px-5 py-8 sm:px-8 sm:py-10">
-      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/[0.06]">{icon}</span>
-      <h2 className="mt-5 text-[20px] font-semibold leading-tight tracking-[-0.01em] text-text-primary sm:text-[22px]">
-        {title}
-      </h2>
-      <div className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-text-secondary">{children}</div>
-      {action && <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">{action}</div>}
-    </div>
-  )
-}
-
-function SummaryRow({
-  label,
-  children,
-  strong,
-}: {
-  label: React.ReactNode
-  children: React.ReactNode
-  strong?: boolean
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-t border-white/[0.07] py-3 first:border-t-0">
-      <span className={cn('text-[13.5px]', strong ? 'font-semibold text-text-primary' : 'text-text-secondary')}>
-        {label}
-      </span>
-      <span
-        className={cn(
-          'tabular-nums text-text-primary',
-          strong ? 'text-[16px] font-semibold' : 'text-[13.5px] font-medium'
-        )}
-      >
-        {children}
-      </span>
-    </div>
-  )
-}
-
-// ─── Status timeline ────────────────────────────────────────────────
-
-type StepState = 'done' | 'current' | 'upcoming'
-
-function StepDot({ state, warn, reduce }: { state: StepState; warn?: boolean; reduce: boolean }) {
-  if (state === 'done') {
-    return (
-      <span className="grid h-4 w-4 place-items-center rounded-full bg-white/[0.10]">
-        <CheckIcon className="h-2.5 w-2.5 text-text-primary" weight="bold" aria-hidden />
-      </span>
-    )
-  }
-  if (state === 'current') {
-    const color = warn ? 'bg-warning' : 'bg-lime-text'
-    return (
-      <span className="relative grid h-4 w-4 place-items-center">
-        {!reduce && (
-          <motion.span
-            aria-hidden
-            className={cn('absolute inset-0 rounded-full', color)}
-            initial={{ opacity: 0.35, scale: 0.6 }}
-            animate={{ opacity: 0, scale: 1.6 }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
-          />
-        )}
-        <span className={cn('relative h-2 w-2 rounded-full', color)} />
-      </span>
-    )
-  }
-  return (
-    <span className="grid h-4 w-4 place-items-center">
-      <span className="h-2 w-2 rounded-full bg-white/[0.14]" />
-    </span>
-  )
-}
-
-function StatusTimeline({
-  view,
-  createdAt,
-  seenAt,
-  confirmedAt,
-  seenTx,
-  networkName,
-  confirmEta,
-}: {
-  view: ViewState
-  createdAt: string | null
-  seenAt: string | null
-  confirmedAt: string | null
-  seenTx: string | null
-  networkName: string | null
-  confirmEta: string | null
-}) {
-  const reduce = useReducedMotion() ?? false
-
-  if (view === 'expired' || view === 'unreachable') {
-    return (
-      <ol aria-label="Payment Status" className="space-y-4">
-        <li className="flex gap-3">
-          <StepDot state="done" reduce={reduce} />
-          <div className="-mt-0.5 flex min-w-0 flex-1 justify-between gap-3 text-[13.5px]">
-            <span className="text-text-secondary">Invoice Created</span>
-            <span className="tabular-nums text-text-tertiary">{fmtTime(createdAt)}</span>
-          </div>
-        </li>
-        <li className="flex gap-3" aria-current="step">
-          <span className="grid h-4 w-4 place-items-center">
-            <span className="h-2 w-2 rounded-full bg-text-tertiary" />
-          </span>
-          <div className="-mt-0.5 min-w-0 flex-1">
-            <p className="text-[13.5px] font-semibold text-text-primary">
-              {view === 'unreachable' ? 'Payment Service Unreachable' : 'Invoice Expired'}
-            </p>
-            <p className="mt-0.5 text-[13px] leading-relaxed text-text-tertiary">Nothing was charged.</p>
-          </div>
-        </li>
-      </ol>
-    )
-  }
-
-  const current = view === 'paid' ? 4 : view === 'confirming' ? 3 : view === 'seen' ? 2 : 1
-  const steps: Array<{ label: string; meta?: string; note?: string; warn?: boolean }> = [
-    { label: 'Invoice Created', meta: fmtTime(createdAt) },
-    view === 'partial'
-      ? {
-          label: 'Partial Payment Received',
-          note: 'Send the remaining amount to the same address.',
-          warn: true,
-        }
-      : {
-          label: current > 1 ? 'Payment Sent' : 'Waiting For Payment',
-          note: networkName
-            ? `Watching the ${networkName} network. Your payment shows up here seconds after you send it.`
-            : 'Watching the network. Your payment shows up here seconds after you send it.',
-        },
-    {
-      label: 'Seen On Network',
-      meta: current > 2 ? fmtTime(seenAt) : undefined,
-      note: seenTx ? `Tx ${shortTx(seenTx)}` : 'Confirming now.',
-    },
-    {
-      label: view === 'confirming' ? 'Confirming' : 'Confirmed',
-      meta: view === 'paid' ? fmtTime(confirmedAt) : undefined,
-      note: confirmEta
-        ? `${confirmEta.charAt(0).toUpperCase()}${confirmEta.slice(1)}${networkName ? ` on ${networkName}` : ''}.`
-        : 'Usually just a few minutes.',
-    },
-  ]
-
-  return (
-    <ol aria-label="Payment Status">
-      {steps.map((s, i) => {
-        const state: StepState = i < current ? 'done' : i === current ? 'current' : 'upcoming'
-        const last = i === steps.length - 1
-        return (
-          <li key={i} className="relative flex gap-3 pb-4 last:pb-0" aria-current={state === 'current' ? 'step' : undefined}>
-            {!last && <span aria-hidden className="absolute bottom-0 left-[7.5px] top-5 w-px bg-white/[0.08]" />}
-            <StepDot state={state} warn={s.warn} reduce={reduce} />
-            <div className="-mt-0.5 min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-3">
-                <span
-                  className={cn(
-                    'text-[13.5px]',
-                    state === 'current' && 'font-semibold text-text-primary',
-                    state === 'done' && 'text-text-secondary',
-                    state === 'upcoming' && 'text-text-tertiary'
-                  )}
-                >
-                  {s.label}
-                </span>
-                {s.meta && state === 'done' && (
-                  <span className="shrink-0 text-[12.5px] tabular-nums text-text-tertiary">{s.meta}</span>
-                )}
-              </div>
-              {state === 'current' && s.note && (
-                <p className="mt-0.5 text-[13px] leading-relaxed text-text-tertiary">{s.note}</p>
-              )}
-            </div>
-          </li>
-        )
-      })}
-    </ol>
-  )
-}
-
-function HelpDrawer({ trigger }: { trigger: React.ReactNode }) {
-  return (
-    <Drawer.Root>
-      <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
-      <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
-        <Drawer.Content
-          aria-describedby={undefined}
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[520px] rounded-t-lg bg-bg-raised p-6 pb-9 text-text-primary"
-        >
-          <div className="mx-auto mb-5 h-1.5 w-10 rounded-full bg-white/[0.14]" />
-          <Drawer.Title className="text-[16px] font-semibold">Payment Help</Drawer.Title>
-          <div className="mt-4 space-y-4 text-[14px] leading-relaxed text-text-secondary">
-            <p>
-              <span className="font-semibold text-text-primary">How long does it take?</span> Crypto payments
-              are usually detected within seconds of sending and confirmed within a few minutes.
-            </p>
-            <p>
-              <span className="font-semibold text-text-primary">Sent slightly too little?</span> Exchange
-              withdrawal fees can shave the amount. This page shows the small remainder to send.
-            </p>
-            <p>
-              <span className="font-semibold text-text-primary">Invoice expired after you paid?</span> Payments
-              are never lost. Contact us and we’ll sort it right away.
-            </p>
-            <a href="mailto:support@dropmarket.gg" className={cn(accountBtn.primary, 'h-11 px-5', FOCUS)}>
-              Contact Support
-            </a>
-          </div>
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
-  )
-}
+export type ViewState = 'waiting' | 'seen' | 'confirming' | 'paid' | 'partial' | 'expired' | 'unreachable'
 
 // ─── Main component ─────────────────────────────────────────────────
 
@@ -467,8 +102,7 @@ export default function PayClient({
   createdAt,
   methods,
   initialMethodId,
-  user,
-  buyerProfile,
+  previewView,
 }: {
   orderId: string
   orderNumber: string | null
@@ -486,6 +120,8 @@ export default function PayClient({
   initialMethodId?: string | null
   user?: { email?: string | null } | null
   buyerProfile?: { username: string | null; avatar_url: string | null } | null
+  /** /dev/crypto-pay-preview only: start in this view (never set by the real page). */
+  previewView?: ViewState
 }) {
   const router = useRouter()
   const reduce = useReducedMotion() ?? false
@@ -499,7 +135,8 @@ export default function PayClient({
           ? 'unreachable'
           : 'expired'
 
-  const [view, setView] = useState<ViewState>(initialView)
+  const [view, setView] = useState<ViewState>(previewView ?? initialView)
+  const [orderOpen, setOrderOpen] = useState(false)
   const [selectedId] = useState(initialMethodId ?? methods[0]?.id ?? '')
   const [liveDue, setLiveDue] = useState<Record<string, { due?: string; totalPaid?: string }>>({})
   const [seenTx, setSeenTx] = useState<string | null>(null)
@@ -549,7 +186,7 @@ export default function PayClient({
   // a payment can land, ×2 backoff to 60 s in expired / unreachable, and
   // nothing at all once paid. Schedule in poll-policy.ts.
   useEffect(() => {
-    if (view === 'paid') return
+    if (view === 'paid' || previewView) return
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let delay = nextPollDelayMs(view, POLL_BASE_MS) ?? POLL_BASE_MS
@@ -613,7 +250,7 @@ export default function PayClient({
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [orderId, router, view])
+  }, [orderId, router, view, previewView])
 
   const freshInvoice = useCallback(async () => {
     setRetrying(true)
@@ -669,12 +306,9 @@ export default function PayClient({
   const phase: 'pay' | 'confirming' | 'paid' | 'expired' | 'unreachable' =
     livePay ? 'pay' : view
   const canCancel = view === 'waiting' || view === 'unreachable'
-  const netChip = selected?.network ?? selected?.networkName ?? null
-  const payingWith = selected
-    ? selected.networkName && !selected.label.includes(selected.networkName)
-      ? `Pay with ${selected.label} on ${selected.networkName}`
-      : `Pay with ${selected.label}`
-    : null
+  // The chain label, unless it only repeats the coin ("Bitcoin" on Bitcoin).
+  const netName = selected?.networkName ?? selected?.network ?? null
+  const netChip = netName && netName !== selected?.label ? netName : null
   const announce =
     view === 'paid'
       ? 'Payment confirmed.'
@@ -697,94 +331,98 @@ export default function PayClient({
     transition: { duration: reduce ? 0 : 0.18, ease: 'easeOut' },
   } as const
 
-  // ── Main column bodies ────────────────────────────────────────────
+
+  // Progress under the card: created → sent → seen → confirmed.
+  const steps: PayStep[] = [
+    { label: 'Created' },
+    view === 'partial' ? { label: 'Partial', warn: true } : { label: 'Sent' },
+    { label: 'Seen' },
+    { label: 'Confirmed' },
+  ]
+  const stepNow = view === 'paid' ? 4 : view === 'confirming' ? 3 : view === 'seen' ? 2 : 1
+
+  // ── Card bodies ───────────────────────────────────────────────────
   const payBody = selected ? (
-    <>
-      {/* Amount: the hero */}
-      <div className="p-5 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-          <p className="text-[13.5px] font-medium text-text-secondary">
-            {view === 'partial' ? 'Remaining To Send' : 'Send Exactly'}
-          </p>
-          {expiresAt && <ExpiryChip remainingMs={remainingMs} />}
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-3">
-          <p className="min-w-0 text-text-primary">
-            <span className="select-all break-all text-[34px] font-bold leading-[1.05] tracking-[-0.02em] tabular-nums sm:text-[40px]">
-              {dueDisplay}
-            </span>{' '}
-            <span className="text-[18px] font-semibold text-text-secondary sm:text-[20px]">{selected.short}</span>
+    <div className="space-y-5 px-5 pb-6 pt-5 sm:px-6">
+      {/* Coin + network, and the clock */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-2">
+          {selected.icon && <Image src={selected.icon} alt="" width={24} height={24} unoptimized className="h-6 w-6 shrink-0" />}
+          <span className="truncate text-[14px] font-semibold text-[#0E1116]">{selected.label}</span>
+          {netChip && (
+            <span className="shrink-0 rounded-md bg-[#F6F7F9] px-2 py-0.5 text-[12px] font-medium text-[#4B5563]">{netChip}</span>
+          )}
+        </span>
+        {expiresAt && <ExpiryChip remainingMs={remainingMs} />}
+      </div>
+
+      {/* Exact amount to send */}
+      <div>
+        <p className="text-[12.5px] font-medium text-[#8A94A3]">{view === 'partial' ? 'Remaining To Send' : 'Send Exactly'}</p>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <p className="min-w-0 text-[#0E1116]">
+            <span className="select-all break-all text-[26px] font-bold leading-tight tracking-[-0.01em] tabular-nums">{dueDisplay}</span>{' '}
+            <span className="text-[16px] font-semibold text-[#4B5563]">{selected.short}</span>
           </p>
           <CopyButton value={dueDisplay} label="Amount" />
         </div>
-        <p className="mt-2 text-[13px] tabular-nums text-text-tertiary">
-          {money(invoiceAmount)}
-          {rateLine ? ` · Rate locked at ${rateLine}` : ''}
-        </p>
-
-        {view === 'seen' && (
-          <StatusNote tone="live" icon={<CheckCircleIcon className="h-4 w-4" weight="fill" aria-hidden />}>
-            Payment seen on the network. Confirming now.
-          </StatusNote>
-        )}
-        {view === 'partial' && (
-          <StatusNote tone="warn" icon={<WarningCircleIcon className="h-4 w-4" weight="fill" aria-hidden />}>
-            Partial payment received. Send the remaining{' '}
-            <span className="font-semibold tabular-nums">
-              {dueDisplay} {selected.short}
-            </span>{' '}
-            to the same address. Exchange fees often cause this, nothing is lost.
-          </StatusNote>
-        )}
+        {rateLine && <p className="mt-1 text-[12.5px] tabular-nums text-[#8A94A3]">Rate locked at {rateLine}</p>}
       </div>
 
-      {/* QR + address */}
-      <div className="grid grid-cols-1 gap-6 border-t border-white/[0.07] p-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8 sm:p-8">
-        <div className="justify-self-center sm:justify-self-start">
+      {view === 'seen' && (
+        <Note tone="live" icon={<CheckCircleIcon className="h-4 w-4" weight="fill" aria-hidden />}>
+          Payment seen on the network{seenTx ? ` (Tx ${shortTx(seenTx)})` : ''}. Confirming now.
+        </Note>
+      )}
+      {view === 'partial' && (
+        <Note tone="warn" icon={<WarningCircleIcon className="h-4 w-4" weight="fill" aria-hidden />}>
+          Partial payment received. Send the remaining{' '}
+          <span className="font-semibold tabular-nums">
+            {dueDisplay} {selected.short}
+          </span>{' '}
+          to the same address. Exchange fees often cause this, nothing is lost.
+        </Note>
+      )}
+
+      {/* QR */}
+      <div className="flex justify-center">
+        <div className="rounded-xl border border-[#E6E8EC] p-3">
           <PaymentQr
             payload={qrPayload(selected)}
             logo={selected.icon}
             label={`QR code to pay ${dueDisplay} ${selected.short}${selected.networkName ? ` on ${selected.networkName}` : ''}`}
           />
         </div>
-        <div className="flex min-w-0 flex-col">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[13.5px] font-medium text-text-secondary">{selected.short} Address</p>
-            {netChip && (
-              <span className="inline-flex h-6 items-center rounded-full bg-white/[0.06] px-2.5 text-[12px] font-medium text-text-secondary">
-                {netChip}
-              </span>
-            )}
-          </div>
-          <p className="mt-2 select-all break-all font-mono text-[14px] leading-relaxed text-text-primary sm:text-[15px]">
-            {selected.address}
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap">
-            <CopyButton value={selected.address} label="Address" className="w-full sm:w-auto" />
-            <button
-              type="button"
-              onClick={() => void openInWallet()}
-              className={cn(accountBtn.primary, 'h-10 w-full sm:w-auto', FOCUS)}
-            >
-              <WalletIcon className="h-4 w-4" aria-hidden />
-              Open In Wallet
-            </button>
-          </div>
-          {selected.networkWarning && (
-            <p className="mt-5 flex items-start gap-2 text-[13px] leading-relaxed text-text-secondary sm:mt-auto sm:pt-5">
-              <InfoIcon className="mt-[2px] h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
-              <span>{selected.networkWarning}</span>
-            </p>
-          )}
+      </div>
+
+      {/* Address */}
+      <div>
+        <p className="text-[12.5px] font-medium text-[#8A94A3]">
+          {selected.short} Address{netChip ? ` (${netChip})` : ''}
+        </p>
+        <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-[#E6E8EC] bg-[#F6F7F9] py-1.5 pl-3 pr-1.5">
+          <p className="min-w-0 flex-1 select-all break-all font-mono text-[13px] leading-relaxed text-[#0E1116]">{selected.address}</p>
+          <CopyButton value={selected.address} label="Address" compact />
         </div>
       </div>
-    </>
+
+      <button type="button" onClick={() => void openInWallet()} className={cn(btn.primary, 'h-11 w-full')}>
+        <WalletIcon className="h-4 w-4" aria-hidden />
+        Open In Wallet
+      </button>
+
+      {selected.networkWarning && (
+        <Note tone="info" icon={<InfoIcon className="h-4 w-4" aria-hidden />}>
+          {selected.networkWarning}
+        </Note>
+      )}
+    </div>
   ) : (
     <StatePanel
-      icon={<WarningCircleIcon className="h-5 w-5 text-text-secondary" aria-hidden />}
+      icon={<WarningCircleIcon className="h-6 w-6 text-[#4B5563]" aria-hidden />}
       title="Payment Details Unavailable"
       action={
-        <button type="button" onClick={() => router.refresh()} className={cn(accountBtn.secondary, 'h-11 px-5', FOCUS)}>
+        <button type="button" onClick={() => router.refresh()} className={cn(btn.secondary, 'h-11 px-5')}>
           <ArrowClockwiseIcon className="h-4 w-4" aria-hidden />
           Reload
         </button>
@@ -796,7 +434,8 @@ export default function PayClient({
 
   const confirmingBody = (
     <StatePanel
-      icon={<CircleNotchIcon className="h-5 w-5 text-lime-text motion-safe:animate-spin" aria-hidden />}
+      tone="live"
+      icon={<CircleNotchIcon className="h-6 w-6 text-[#2563EB] motion-safe:animate-spin" aria-hidden />}
       title="Payment Received, Confirming"
     >
       {selected?.confirmEta
@@ -808,22 +447,23 @@ export default function PayClient({
 
   const paidBody = (
     <StatePanel
-      icon={<CheckCircleIcon className="h-6 w-6 text-lime-text" weight="fill" aria-hidden />}
+      tone="good"
+      icon={<CheckCircleIcon className="h-8 w-8 text-[#1F7A4D]" weight="fill" aria-hidden />}
       title="Payment Confirmed"
       action={
         <>
           <button
             type="button"
             onClick={() => router.replace(`/account/orders/${orderId}?paid=1`)}
-            className={cn(accountBtn.primary, 'h-11 px-5', FOCUS)}
+            className={cn(btn.primary, 'h-11 w-full')}
           >
-            View Your Item
+            View Your Order
           </button>
-          <span className="text-[13px] text-text-tertiary">Taking you to your order…</span>
+          <span className="text-[13px] text-[#8A94A3]">Taking you to your order…</span>
         </>
       }
     >
-      {listingTitle} is on its way to your inventory. Receipt emailed.
+      {listingTitle} is paid. Receipt emailed.
     </StatePanel>
   )
 
@@ -831,20 +471,15 @@ export default function PayClient({
     <StatePanel
       icon={
         view === 'unreachable' ? (
-          <WarningCircleIcon className="h-5 w-5 text-text-secondary" aria-hidden />
+          <WarningCircleIcon className="h-6 w-6 text-[#4B5563]" aria-hidden />
         ) : (
-          <ClockIcon className="h-5 w-5 text-text-secondary" aria-hidden />
+          <ClockIcon className="h-6 w-6 text-[#4B5563]" aria-hidden />
         )
       }
       title={view === 'unreachable' ? 'Payment Service Unreachable' : 'Invoice Expired'}
       action={
         <>
-          <button
-            type="button"
-            onClick={() => void freshInvoice()}
-            disabled={retrying}
-            className={cn(accountBtn.primary, 'h-11 px-5', FOCUS)}
-          >
+          <button type="button" onClick={() => void freshInvoice()} disabled={retrying} className={cn(btn.primary, 'h-11 w-full')}>
             {retrying ? (
               <CircleNotchIcon className="h-4 w-4 motion-safe:animate-spin" aria-hidden />
             ) : (
@@ -852,10 +487,7 @@ export default function PayClient({
             )}
             {view === 'unreachable' ? 'Try Again' : 'Get A Fresh Invoice'}
           </button>
-          <Link
-            href="/support"
-            className={cn('rounded-sm text-[13.5px] text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
-          >
+          <Link href="/support" className={btn.link}>
             Already Sent? Contact Support
           </Link>
         </>
@@ -867,188 +499,168 @@ export default function PayClient({
     </StatePanel>
   )
 
-  const body =
-    phase === 'pay'
-      ? payBody
-      : phase === 'confirming'
-        ? confirmingBody
-        : phase === 'paid'
-          ? paidBody
-          : retryBody
+  const body = phase === 'pay' ? payBody : phase === 'confirming' ? confirmingBody : phase === 'paid' ? paidBody : retryBody
+  const showSteps = phase === 'pay' || phase === 'confirming' || phase === 'paid'
 
   return (
-    <div className="min-h-[100dvh] bg-bg-base">
-      <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
+    <div className="min-h-[100dvh] bg-[#F4F5F7] text-[#0E1116]">
+      {/* Light header: logo + a secure-payment mark (no menu on a payment page) */}
+      <header className="border-b border-[#E6E8EC] bg-white">
+        <div className="mx-auto flex h-14 w-full max-w-[960px] items-center justify-between px-4 sm:px-6">
+          <Link href="/" className={cn('inline-flex items-center gap-2 rounded-sm', 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/50')}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-mark-ink.png" alt="" width={24} height={24} className="h-6 w-6" />
+            <span className="text-[15px] font-bold">DropMarket</span>
+          </Link>
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4B5563]">
+            <LockKeyIcon className="h-4 w-4 text-[#2563EB]" weight="duotone" aria-hidden />
+            Secure Payment
+          </span>
+        </div>
+      </header>
 
-      <div className="mx-auto w-full max-w-[1080px] px-4 pb-16 pt-6 sm:px-6 sm:pt-10 lg:px-8">
-        {/* No back button: leaving is a decision, and Cancel Order below
-            the payment is the honest exit. */}
-        <header>
-          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.015em] text-text-primary sm:text-[28px]">
-            Complete Your Payment
-          </h1>
-          {payingWith && <p className="mt-1.5 text-[14px] text-text-secondary">{payingWith}</p>}
-        </header>
+      <main className="mx-auto w-full max-w-[480px] px-4 pb-16 pt-6 sm:pt-10">
         <p className="sr-only" aria-live="polite">
           {announce}
         </p>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
-          {/* ── Main column: payment ── */}
-          <section aria-label="Payment" className={cn(MARKET_CARD, 'min-w-0 overflow-hidden rounded-lg')}>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div key={phase} {...fade}>
-                {body}
-              </motion.div>
-            </AnimatePresence>
-
-            {(livePay || canCancel) && (
-              <div className="flex flex-col gap-3 border-t border-white/[0.07] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-                {livePay ? (
-                  <p className="text-[13px] leading-relaxed text-text-tertiary">
-                    Safe to close this page. We keep watching and email you the moment it confirms.
-                  </p>
-                ) : (
-                  <span />
-                )}
-                {canCancel &&
-                  (!confirmingCancel ? (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingCancel(true)}
-                      className={cn(
-                        '-mx-2 self-start rounded-md px-2 py-1.5 text-[13.5px] font-medium text-text-secondary transition-colors hover:text-error sm:self-auto',
-                        FOCUS
+        <section
+          aria-label="Payment"
+          className="overflow-hidden rounded-2xl border border-[#E6E8EC] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_rgba(16,24,40,0.06)]"
+        >
+          {/* Order total heads the card */}
+          <div className="border-b border-[#E6E8EC] px-5 pb-4 pt-6 text-center sm:px-6">
+            <p className="text-[12.5px] text-[#8A94A3]">
+              DropMarket{orderNumber ? ` · Order ${orderNumber}` : ''}
+            </p>
+            <p className="mt-1 text-[30px] font-bold leading-tight tracking-[-0.02em] tabular-nums">
+              {money(invoiceAmount)} <span className="text-[16px] font-semibold text-[#4B5563]">{currency.toUpperCase()}</span>
+            </p>
+            {phase === 'pay' && selected && (
+              <p className="mt-0.5 text-[13px] tabular-nums text-[#4B5563]">
+                ≈ {dueDisplay} {selected.short}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => setOrderOpen((v) => !v)}
+              aria-expanded={orderOpen}
+              className={cn(btn.secondary, 'mt-3 h-8 px-3 text-[12.5px]')}
+            >
+              <InfoIcon className="h-3.5 w-3.5" aria-hidden />
+              Order Info
+              <CaretDownIcon className={cn('h-3.5 w-3.5 transition-transform', orderOpen && 'rotate-180')} aria-hidden />
+            </button>
+            <AnimatePresence initial={false}>
+              {orderOpen && (
+                <motion.div
+                  initial={reduce ? false : { height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  transition={{ duration: reduce ? 0 : 0.2, ease: 'easeOut' }}
+                  className="overflow-hidden text-left"
+                >
+                  <div className="mt-4 rounded-xl bg-[#F6F7F9] p-4">
+                    <div className="flex items-start gap-3">
+                      {itemImage ? (
+                        <Image src={itemImage} alt="" width={44} height={44} unoptimized className="h-11 w-11 shrink-0 rounded-md bg-white object-cover" />
+                      ) : (
+                        <span aria-hidden className="h-11 w-11 shrink-0 rounded-md bg-white" />
                       )}
-                    >
-                      Cancel Order
-                    </button>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span className="text-[13.5px] text-text-secondary">
-                        Cancel this order? Nothing has been charged.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingCancel(false)}
-                        disabled={cancelling}
-                        className={cn(accountBtn.secondary, 'h-10', FOCUS)}
-                      >
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-[#0E1116]">{listingTitle}</p>
+                        {gameName && <p className="mt-0.5 truncate text-[12.5px] text-[#4B5563]">{gameName}</p>}
+                      </div>
+                    </div>
+                    <div className="mt-3 border-t border-[#E6E8EC] pt-2">
+                      {summary.itemPrice != null && (
+                        <SummaryRow label={summary.quantity > 1 ? `Item Price × ${summary.quantity}` : 'Item Price'}>
+                          {money(summary.itemPrice)}
+                        </SummaryRow>
+                      )}
+                      {summary.serviceFee != null && summary.serviceFee > 0 && <SummaryRow label="Service Fee">{money(summary.serviceFee)}</SummaryRow>}
+                      {summary.promoDiscount > 0 && <SummaryRow label="Discount">−{money(summary.promoDiscount)}</SummaryRow>}
+                      {summary.storeCredit > 0 && <SummaryRow label="Store Credit">−{money(summary.storeCredit)}</SummaryRow>}
+                      <SummaryRow label="Total" strong>
+                        {money(invoiceAmount)}
+                      </SummaryRow>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={phase} {...fade}>
+              {body}
+            </motion.div>
+          </AnimatePresence>
+
+          {showSteps && (
+            <div className="border-t border-[#E6E8EC] px-5 py-4 sm:px-6">
+              <PayStepper steps={steps} current={stepNow} />
+            </div>
+          )}
+
+          {(livePay || canCancel) && (
+            <div className="flex flex-col gap-3 border-t border-[#E6E8EC] bg-[#FBFBFC] px-5 py-4 sm:px-6">
+              {livePay && (
+                <p className="text-[12.5px] leading-relaxed text-[#8A94A3]">
+                  Safe to close this page. We keep watching and email you the moment it confirms.
+                </p>
+              )}
+              {canCancel &&
+                (!confirmingCancel ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingCancel(true)}
+                    className={cn('-mx-1 self-start rounded-md px-1 py-1 text-[13px] font-semibold text-[#4B5563] transition-colors hover:text-[#B42318]', btn.link)}
+                  >
+                    Cancel Order
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    <span className="text-[13px] text-[#4B5563]">Cancel this order? Nothing has been charged.</span>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setConfirmingCancel(false)} disabled={cancelling} className={cn(btn.secondary, 'h-10 flex-1')}>
                         Keep Waiting
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleCancelOrder()}
-                        disabled={cancelling}
-                        className={cn(accountBtn.danger, 'h-10', FOCUS)}
-                      >
+                      <button type="button" onClick={() => void handleCancelOrder()} disabled={cancelling} className={cn(btn.danger, 'h-10 flex-1')}>
                         {cancelling && <CircleNotchIcon className="h-4 w-4 motion-safe:animate-spin" aria-hidden />}
                         Yes, Cancel It
                       </button>
                     </div>
-                  ))}
-              </div>
-            )}
-          </section>
-
-          {/* ── Side column: status + summary + policy ── */}
-          <aside className="flex min-w-0 flex-col gap-4" aria-label="Order">
-            <section aria-label="Payment Status" className={cn(MARKET_CARD, 'order-1 rounded-lg p-5 lg:order-2')}>
-              <h2 className="mb-4 text-[14px] font-semibold text-text-primary">Payment Status</h2>
-              <StatusTimeline
-                view={view}
-                createdAt={createdAt}
-                seenAt={stamps.current.seen ?? null}
-                confirmedAt={stamps.current.confirmed ?? null}
-                seenTx={seenTx}
-                networkName={selected?.networkName ?? null}
-                confirmEta={selected?.confirmEta ?? null}
-              />
-            </section>
-
-            <section aria-label="Order Summary" className={cn(MARKET_CARD, 'order-2 rounded-lg p-5 lg:order-1')}>
-              <div className="flex items-start gap-3.5">
-                {itemImage ? (
-                  <Image
-                    src={itemImage}
-                    alt=""
-                    width={52}
-                    height={52}
-                    unoptimized
-                    className="h-[52px] w-[52px] shrink-0 rounded-md bg-white/[0.04] object-cover"
-                  />
-                ) : (
-                  <span aria-hidden className="h-[52px] w-[52px] shrink-0 rounded-md bg-white/[0.04]" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-text-primary">
-                    {listingTitle}
-                  </p>
-                  {gameName && <p className="mt-0.5 truncate text-[13px] text-text-secondary">{gameName}</p>}
-                  {orderNumber && (
-                    <p className="mt-0.5 select-all text-[12.5px] tabular-nums text-text-tertiary">
-                      Order {orderNumber}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="mt-4 border-t border-white/[0.07] pt-1">
-                {summary.itemPrice != null && (
-                  <SummaryRow label={summary.quantity > 1 ? `Item Price × ${summary.quantity}` : 'Item Price'}>
-                    {money(summary.itemPrice)}
-                  </SummaryRow>
-                )}
-                {summary.serviceFee != null && summary.serviceFee > 0 && (
-                  <SummaryRow label="Service Fee">{money(summary.serviceFee)}</SummaryRow>
-                )}
-                {summary.promoDiscount > 0 && (
-                  <SummaryRow label="Discount">−{money(summary.promoDiscount)}</SummaryRow>
-                )}
-                {summary.storeCredit > 0 && (
-                  <SummaryRow label="Store Credit">−{money(summary.storeCredit)}</SummaryRow>
-                )}
-                <SummaryRow label="Total" strong>
-                  {money(invoiceAmount)}
-                </SummaryRow>
-              </div>
-            </section>
-
-            <div className="order-3 px-1 pt-1">
-              <p className="flex items-start gap-2 text-[13px] leading-relaxed text-text-secondary">
-                <ShieldCheckIcon className="mt-[2px] h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
-                <span>
-                  Covered by <span className="font-medium text-text-primary">SafeDrop Protection</span>. Item
-                  guaranteed or full refund.
-                </span>
-              </p>
-              <nav aria-label="Help And Policies" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 pl-6 text-[13px]">
-                <HelpDrawer
-                  trigger={
-                    <button
-                      type="button"
-                      className={cn('rounded-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
-                    >
-                      Payment Help
-                    </button>
-                  }
-                />
-                <Link
-                  href="/terms"
-                  className={cn('rounded-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
-                >
-                  Terms
-                </Link>
-                <Link
-                  href="/refunds"
-                  className={cn('rounded-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
-                >
-                  Refund Policy
-                </Link>
-              </nav>
+                  </div>
+                ))}
             </div>
-          </aside>
+          )}
+        </section>
+
+        {/* Under the card: protection, help and the legal links */}
+        <div className="mt-5 flex flex-col items-center gap-3 text-center">
+          <p className="flex items-center gap-1.5 text-[12.5px] text-[#4B5563]">
+            <ShieldCheckIcon className="h-4 w-4 text-[#2563EB]" weight="duotone" aria-hidden />
+            Covered by <span className="font-semibold text-[#0E1116]">SafeDrop Protection</span>
+          </p>
+          <nav aria-label="Help And Policies" className="flex flex-wrap justify-center gap-x-5 gap-y-1.5">
+            <HelpDrawer
+              trigger={
+                <button type="button" className={btn.link}>
+                  Payment Help
+                </button>
+              }
+            />
+            <Link href="/terms" className={btn.link}>
+              Terms of Use
+            </Link>
+            <Link href="/refunds" className={btn.link}>
+              Refund Policy
+            </Link>
+          </nav>
+          <p className="text-[11.5px] text-[#8A94A3]">© {new Date().getFullYear()} DropMarket Ltd · Company No. 17309867</p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
