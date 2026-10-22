@@ -56,3 +56,21 @@ export function buyPanel(input: {
     saveUsd: null,
   }
 }
+
+/**
+ * The hero headline when there is no price (owner, 2026-10-21; every hub):
+ * the trade value when there is one, else "No Trades Yet", labelled New for an
+ * item released or added in the last 14 days (isNewItem).
+ */
+export function noPriceFallback({
+  tradeValue,
+  tradeLabel = 'Value',
+  isNew,
+}: {
+  tradeValue?: string | null
+  tradeLabel?: string
+  isNew: boolean
+}): { label: string; value: string } {
+  if (tradeValue) return { label: tradeLabel, value: tradeValue }
+  return { label: isNew ? 'New' : 'Value', value: 'No Trades Yet' }
+}

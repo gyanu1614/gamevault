@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isNewItem, NEW_ITEM_DAYS } from './new-item'
+import { isNewIndexable, isNewItem, NEW_ITEM_DAYS } from './new-item'
 
 const NOW = Date.parse('2026-10-22T12:00:00Z')
 
@@ -19,5 +19,18 @@ describe('isNewItem (owner, 2026-10-21: a New badge for items from the wiki)', (
     expect(isNewItem({}, NOW)).toBe(false)
     expect(isNewItem({ releasedAt: 'soon' }, NOW)).toBe(false)
     expect(isNewItem({ releasedAt: '2026-11-30' }, NOW)).toBe(false)
+  })
+})
+
+describe('isNewIndexable (owner, 2026-10-21: new items with facts may rank before they have prices)', () => {
+  const facts = { hasHowToGet: true, hasReleaseInfo: true }
+  it('new within 30 days AND How To Get AND release info', () => {
+    expect(isNewIndexable({ ...facts, releasedAt: '2026-10-01' }, NOW)).toBe(true)
+    expect(isNewIndexable({ ...facts, releasedAt: null, addedAt: '2026-09-25T00:00:00Z' }, NOW)).toBe(true)
+    expect(isNewIndexable({ ...facts, releasedAt: '2026-09-10' }, NOW)).toBe(false)
+  })
+  it('never without the facts that make the page worth reading', () => {
+    expect(isNewIndexable({ hasHowToGet: false, hasReleaseInfo: true, releasedAt: '2026-10-20' }, NOW)).toBe(false)
+    expect(isNewIndexable({ hasHowToGet: true, hasReleaseInfo: false, releasedAt: '2026-10-20' }, NOW)).toBe(false)
   })
 })

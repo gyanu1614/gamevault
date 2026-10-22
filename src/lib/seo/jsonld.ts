@@ -164,6 +164,36 @@ export function blogCollection({
 }
 
 /**
+ * A value page's Product, from OUR live listings only (2026-10-22): null when
+ * DropMarket has no stock, so an external market price is never published as
+ * an InStock offer on a page that does not sell it. Low = our cheapest listing,
+ * high = the highest offer we know of (never below low).
+ */
+export function ownStockProduct(input: {
+  name: string
+  description: string
+  brand: string
+  url: string
+  image?: string | null
+  stock: { total: number; minPriceUsd: number | null } | null
+  offerPrices: number[]
+}) {
+  const { stock } = input
+  if (!stock || stock.total <= 0 || stock.minPriceUsd == null) return null
+  const high = Math.max(stock.minPriceUsd, ...input.offerPrices.filter((p) => Number.isFinite(p)))
+  return productAggregate({
+    name: input.name,
+    description: input.description,
+    brand: input.brand,
+    lowPrice: stock.minPriceUsd,
+    highPrice: high,
+    offerCount: stock.total,
+    url: input.url,
+    image: input.image,
+  })
+}
+
+/**
  * Product with an AggregateOffer across live listings.
  * CALLER GUARANTEES offerCount > 0 — never call this on empty pages.
  */
