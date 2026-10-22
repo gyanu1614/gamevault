@@ -8,8 +8,12 @@ import { createAnonClient } from '@/lib/supabase/anon'
  * below MIN_REVIEWS the card is not shown at all, never padded or faked.
  *
  * Cookie-free (anon client: visible reviews are public under RLS) and cached
- * for an hour, so a checkout render costs no database read on a warm cache.
+ * for a day, so a checkout render costs no database read on a warm cache.
  * Reads one integer column, capped, so the cost stays flat as reviews grow.
+ *
+ * A day, not an hour: an average over every review barely moves in a day, and
+ * a sub-day window would pull any ISR page that ever shows this card into the
+ * same refresh (data-cache-windows guard).
  */
 
 export const MIN_REVIEWS = 10
@@ -40,5 +44,5 @@ export const getSiteRating = unstable_cache(
     return summariseRatings(data.map((r: { rating: number }) => Number(r.rating)))
   },
   ['site-buyer-rating'],
-  { revalidate: 3600 },
+  { revalidate: 86400 },
 )
