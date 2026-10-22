@@ -14,8 +14,13 @@
  * carries their SEO; it is complete with zero listings because it targets
  * sellers, not buyers. Games with a content theme keep their per-game accent
  * and top-values teaser; everything else renders on DEFAULT_THEME with the
- * teaser absent (getHubTopValues returns [] for them). Cash claims stay honest
- * per game (SAB = live reputable listings; Adopt Me = estimated until real data lands).
+ * teaser absent. Cash claims stay honest per game.
+ *
+ * Data-led (values platform Step E, owner 2026-10-21): each section renders
+ * only when its game has the data (_sellData.ts) — the items players sell and
+ * what they sell for (values hubs), live offers per category, players online —
+ * and the title, description and FAQ are written from the same numbers
+ * (lib/sell/sell-copy.ts). No fee anywhere: sellers see it when they list.
  */
 
 import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
@@ -25,15 +30,12 @@ import { notFound } from 'next/navigation'
 import { IconRosetteDiscountCheck, IconShieldCheck, IconSearch, IconArrowRight, IconCheck, IconUserPlus, IconListDetails, IconCash } from '@tabler/icons-react'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { isGameSellPageIndexable } from '@/lib/games/indexability'
-import { getPairHeadlineRate } from '@/lib/fees/public-rates'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { HubHero } from '@/components/content/HubHero'
 import { getHubNavData } from '@/lib/content/hubNav'
-import { getGameContentTheme, CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
-import { createAnonClient } from '@/lib/supabase/anon'
-import { cache } from 'react'
-import { getHubTopValues } from '../blog/_hubData'
+import { getGameContentTheme, CONTENT_HUB_GAME_SLUGS, hasHubPage } from '@/lib/content/theme'
+import { sellDescription, sellFaq, sellTitle, type SellCopyInput } from '@/lib/sell/sell-copy'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { HubCtaBand } from '@/components/content/HubCtaBand'
@@ -43,6 +45,8 @@ import { SpotlightCard } from '@/components/ui/spotlight-card'
 import { foundingHref } from '@/lib/seo/founding-href'
 import { seoMeta } from '@/lib/seo/fit'
 import { getGameSellerGuide } from '@/lib/blog/db'
+import { loadSellPage } from './_sellData'
+import { CheckYourPrice, SellCategories, SellItemGrid, SellPlayers } from './_SellSections'
 
 const AMBER = '#F5C451'
 
@@ -58,82 +62,40 @@ export function generateStaticParams() {
   return CONTENT_HUB_GAME_SLUGS.map((gameSlug) => ({ gameSlug }))
 }
 
-/**
- * The game row behind this page. Cached per request so generateMetadata and
- * the page body share ONE query. Also supplies the sell page's indexability
- * inputs (enabled category count).
- */
-const getSellPageGame = cache(async (gameSlug: string) => {
-  const supabase = createAnonClient()
-  const { data: game } = (await supabase
-    .from('games')
-    .select('id, name, slug, seo_indexable')
-    .eq('slug', gameSlug)
-    .eq('is_active', true)
-    .maybeSingle()) as unknown as {
-    data: { id: string; name: string; slug: string; seo_indexable: boolean | null } | null
-  }
-  if (!game) return null
-
-  const { data: cats } = (await supabase
-    .from('game_categories')
-    .select('id, slug, type')
-    .eq('game_id', game.id)
-    .eq('is_enabled', true)
-    .order('sort_order', { ascending: true })) as unknown as {
-    data: { id: string; slug: string; type: string | null }[] | null
-  }
-  const categories = cats ?? []
-
-  return {
-    ...game,
-    enabledCategoryCount: categories.length,
-    // The category the title advertises. Currency first, then items, then
-    // accounts: a game that trades currency is searched as "sell <game> gold",
-    // not "sell <game> accounts", and accounts are the fallback rather than
-    // the default (they also carry the highest fee, so leading with them
-    // quotes sellers the worst rate the game offers).
-    primaryCategory:
-      categories.find((c) => c.type === 'currency') ??
-      categories.find((c) => c.type === 'items') ??
-      categories.find((c) => c.type === 'account') ??
-      categories[0] ??
-      null,
-  }
-})
-
 interface PageProps {
   params: Promise<{ gameSlug: string }>
 }
 
+/** The copy builder's input, from the page's own data. */
+function copyInput(gameSlug: string, data: NonNullable<Awaited<ReturnType<typeof loadSellPage>>>): SellCopyInput {
+  return {
+    gameSlug,
+    name: data.name,
+    noun: data.noun,
+    tier: data.tier,
+    pricedCount: data.pricedCount,
+    valuable: data.valuable,
+    offers: data.offers,
+    categories: data.categories,
+    players: data.players,
+  }
+}
+
 async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
-  const game = await getSellPageGame(gameSlug)
-  if (!game) return { title: 'Not Found' }
-  // A themed game keeps its curated display name; everything else uses the
-  // games row, so the copy reads naturally for all 233 seeded titles.
-  const theme = getGameContentTheme(gameSlug)
-  const name = CONTENT_HUB_GAME_SLUGS.includes(gameSlug) ? theme.name : game.name
+  const data = await loadSellPage(gameSlug)
+  if (!data) return { title: 'Not Found' }
 
   const indexable = isGameSellPageIndexable({
-    enabledCategoryCount: game.enabledCategoryCount,
-    seoIndexable: game.seo_indexable,
+    enabledCategoryCount: data.game.enabledCategoryCount,
+    seoIndexable: data.game.seo_indexable,
   })
 
-  // Bare title — the root layout template appends "| DropMarket".
-  // Step 1 deliverable 5 title pattern: "Sell {Game} {Category} — {rate}% fee".
-  // The rate is the resolver's headline answer for the primary pair
-  // (p_seller_id NULL, fee engine PR 5 D2), cached under FEE_RULES_TAG and
-  // republished by every admin fee write — never a constant, never stale.
-  const primary = game.primaryCategory
-  const categoryWord = primary
-    ? ({ account: 'Accounts', items: 'Items', currency: 'Currency', top_up: 'Top-Ups' } as Record<string, string>)[
-        primary.type ?? ''
-      ] ?? 'Items'
-    : 'Items'
-  const rate = primary ? await getPairHeadlineRate(primary.id) : null
-  const title = rate != null ? `Sell ${name} ${categoryWord} — ${rate}% fee` : `Sell ${name} ${categoryWord} for Real Money`
-  const description = `Turn your ${name} inventory into real cash. List on DropMarket, sell with SafeDrop protection even if a buyer ghosts, and founding sellers get a discounted rate for their first year. Here's how to start.`
+  // Bare title — the root layout template appends "| DropMarket". No fee in
+  // the title or the description (owner, 2026-10-21).
+  const input = copyInput(gameSlug, data)
+  const title = sellTitle(input)
+  const description = sellDescription(input)
 
   return {
     title,
@@ -144,7 +106,7 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     alternates: { canonical: `/${gameSlug}/sell` },
     openGraph: {
       images: DEFAULT_OG_IMAGES,
-      title: `Sell ${name} for Real Money`,
+      title,
       description,
       url: `/${gameSlug}/sell`,
       type: 'website',
@@ -154,42 +116,22 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
 
 export default async function SellLandingPage({ params }: PageProps) {
   const { gameSlug } = await params
-  const game = await getSellPageGame(gameSlug)
-  if (!game) notFound()
+  const data = await loadSellPage(gameSlug)
+  if (!data) notFound()
 
   const theme = getGameContentTheme(gameSlug)
-  const [hubNav, topPets, ctaImage, guide, rate] = await Promise.all([
+  const [hubNav, ctaImage, guide] = await Promise.all([
     getHubNavData(gameSlug),
-    // Returns [] for any game without a values hub, so the teaser section
-    // below simply doesn't render for the seeded `listed` catalogue.
-    getHubTopValues(gameSlug, 3),
     // The game's ONE CTA image (admin upload → static art) for both bands.
     getGameCtaImage(gameSlug),
     // The game's seller guide post, linked under How It Works when there is one.
     getGameSellerGuide(gameSlug),
-    // The headline commission for the primary pair (cached under FEE_RULES_TAG), for the FAQ.
-    game.primaryCategory ? getPairHeadlineRate(game.primaryCategory.id) : Promise.resolve(null),
   ])
-  const name = CONTENT_HUB_GAME_SLUGS.includes(gameSlug) ? theme.name : game.name
-
-  const FAQ = [
-    {
-      q: `How do I sell ${name} for real money?`,
-      a: `Sign up as a seller, then list your ${name} items with an accurate price and delivery time. When a buyer orders, the order is SafeDrop protected; you deliver in-game, they confirm, and the money goes to your Seller Balance to withdraw.`,
-    },
-    {
-      q: `What does it cost to sell?`,
-      a: `There's no listing fee — you only pay ${rate != null ? `a ${rate}% commission` : 'a commission'} when an item sells, and it drops as your seller rank goes up. Founding sellers (the first 100) get a discounted rate for their first year, applied automatically to every sale.`,
-    },
-    {
-      q: `Is it safe to sell here?`,
-      a: `Yes. SafeDrop protects you from buyers who pay then vanish, and all communication and delivery stay on-platform where every order is covered.`,
-    },
-    {
-      q: `How do I get paid?`,
-      a: `When the buyer confirms delivery, the money goes to your Seller Balance. You withdraw it to your payout method whenever you like.`,
-    },
-  ]
+  const { name, noun } = data
+  const hasValues = hasHubPage(gameSlug, 'values')
+  // Adopt Me quotes one form per pet; the tiles name it only when it differs.
+  const defaultForm = data.top[0]?.form ?? null
+  const FAQ = sellFaq(copyInput(gameSlug, data))
 
   return (
     <main className="relative min-h-screen bg-[#0C0F0E]">
@@ -208,10 +150,11 @@ export default async function SellLandingPage({ params }: PageProps) {
             Calculator / Blog); the amber eyebrow and CTA are page-specific
             slots. */}
         <HubHero
-          title={`Sell ${name} For Cash`}
+          // The H1 follows the title tag (sell-copy sellTitle), in Title Case.
+          title={`Sell ${name} ${noun} For Real Money`}
           lead={
             <>
-              Got {name} items to sell? You&apos;re in the right place. Become a
+              Got {name} {noun.toLowerCase()} to sell? You&apos;re in the right place. Become a
               seller, list them, make the sale — and cash out. Every payout is
               protected.
             </>
@@ -248,6 +191,20 @@ export default async function SellLandingPage({ params }: PageProps) {
           GameHeroBackdrop (like Values/Blog) so there's no seam/dark line where
           the hero backdrop would otherwise end. */}
       <div className="relative mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+        {/* What is true for THIS game, richest data first; each block renders only with its data. */}
+        {data.players && <SellPlayers players={data.players} />}
+        <SellItemGrid
+          title={`Top ${name} ${noun} To Sell Now`}
+          sub={defaultForm ? `What players are buying, at today's ${defaultForm} price.` : "What players are buying, at today's price."}
+          items={data.top}
+          defaultForm={defaultForm}
+        />
+        {data.searchable && data.pricedCount > 0 && (
+          <CheckYourPrice gameSlug={gameSlug} name={name} noun={noun} pricedCount={data.pricedCount} accent={theme.accent} />
+        )}
+        <SellItemGrid title={`Just Added To ${name}`} sub={`New ${noun.toLowerCase()} from the last two weeks.`} items={data.fresh} defaultForm={defaultForm} />
+        <SellCategories gameSlug={gameSlug} name={name} categories={data.categories} />
+
         {/* Why sell here — three cards, wider + separated (gap, not hairline). */}
         <section className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-3">
           {[
@@ -273,7 +230,8 @@ export default async function SellLandingPage({ params }: PageProps) {
               icon: IconSearch,
               title: `Free Buyer Traffic, No Upfront Cost`,
               points: [
-                `Our ${name} value pages rank on Google — buyers find you.`,
+                // Only a values hub has value pages to point at.
+                hasValues ? `Our ${name} value pages rank on Google — buyers find you.` : `Our ${name} pages rank on Google — buyers find you.`,
                 'Get free traffic straight to your listings, every day.',
                 'Free to join. Costs you nothing to get started.',
               ],
@@ -342,47 +300,17 @@ export default async function SellLandingPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Step 2 — list your pets, with a real top-pets grid (listing table look). */}
+            {/* Step 2 — list your items (the real items and prices are in the grid above). */}
             <div className="flex items-start gap-4">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#1E2723] bg-[#0E1310] text-[#8FBF9C]">
                 <IconListDetails className="h-[16px] w-[16px]" stroke={1.75} />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-[#F1F3F1]">List Your {name} Items</h3>
+                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-[#F1F3F1]">List Your {name} {noun}</h3>
                 <p className="mt-1 text-[13.5px] leading-relaxed text-[#98A398]">
                   Price against the live market, set a delivery window, and publish.
                   No listing fee — you only pay when something sells.
                 </p>
-                {topPets.length > 0 && (
-                  <div className="mt-4 grid grid-cols-3 gap-3">
-                    {/* Each one links to its value page: what it sells for, and how it compares. */}
-                    {topPets.map((pet) => (
-                      <Link
-                        key={pet.slug}
-                        href={`/${gameSlug}/values/${pet.slug}`}
-                        className="flex flex-col items-center border border-[#1A211A] bg-[#0E1310] p-3 text-center transition-colors hover:border-[#2A352B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                      >
-                        {pet.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={pet.imageUrl}
-                            alt={pet.name}
-                            loading="lazy"
-                            className="h-14 w-14 object-contain sm:h-16 sm:w-16"
-                          />
-                        ) : (
-                          <div className="h-14 w-14 bg-[#151B15] sm:h-16 sm:w-16" />
-                        )}
-                        <p className="mt-2 line-clamp-1 w-full text-[12px] font-semibold text-[#E4EAE2]">
-                          {pet.name}
-                        </p>
-                        <p className="mt-0.5 font-mono text-[12px] tabular-nums text-[#8FBF9C]">
-                          {pet.priceLabel}
-                        </p>
-                      </Link>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -418,7 +346,9 @@ export default async function SellLandingPage({ params }: PageProps) {
         )}
 
         {/* Price-it-first — reuse the shared HubCtaBand at full hub width
-            (max-w-7xl, like the Values page modal). */}
+            (max-w-7xl, like the Values page modal). Only a values hub has a
+            values page to send them to. */}
+        {hasValues && (
         <div className="mt-16">
           <HubCtaBand
             gameSlug={gameSlug}
@@ -430,6 +360,7 @@ export default async function SellLandingPage({ params }: PageProps) {
             className=""
           />
         </div>
+        )}
 
         {/* FAQ — reuse the shared FaqCards accordion (same as calculator page). */}
         <section className="mx-auto mt-16 max-w-3xl">

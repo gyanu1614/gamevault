@@ -42,6 +42,10 @@ const ANON_DEFINER_ALLOWLIST = [
   // publishes (rank/founding badge). Writes nothing. docs/design/fee-engine.md §2.5.
   'resolve_seller_fee',
   'sab_public_price_catalog_rows',
+  // /[game]/sell (values platform Step E, public_game_players migration): two
+  // aggregate numbers (players now, 7-day peak) for one game from the trend
+  // radar's captures. Read-only; the tables stay service-role only.
+  'public_game_players',
 ]
 /** …and the only ones a plain signed-in user may execute (auth.uid()-scoped or moderator-asserted). */
 const AUTHENTICATED_DEFINER_ALLOWLIST = [
