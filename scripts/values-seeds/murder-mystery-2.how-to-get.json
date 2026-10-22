@@ -3364,5 +3364,128 @@
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "emberbow",
+    "name": "Emberbow",
+    "status": "seasonal",
+    "method": "Final reward of the Halloween 2026 battle pass, bought after tier 30.",
+    "costs": "100,000 Candies",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Emberbow",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
+  },
+  {
+    "slug": "chroma-emberbow",
+    "name": "Chroma Emberbow",
+    "status": "seasonal",
+    "method": "Rare alternate reward when buying the Emberbow at the end of the Halloween 2026 battle pass.",
+    "costs": "100,000 Candies for the Emberbow",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "One of the first two Chroma ancients. The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Emberbow",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
+  },
+  {
+    "slug": "emberscythe",
+    "name": "Emberscythe",
+    "status": "seasonal",
+    "method": "Crafted in the Halloween 2026 Cauldron from an Emberbow and an Embersickle.",
+    "costs": "1 Emberbow + 1 Embersickle",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Emberscythe",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
+  },
+  {
+    "slug": "chroma-emberscythe",
+    "name": "Chroma Emberscythe",
+    "status": "seasonal",
+    "method": "Low-chance result when crafting Emberscythe in the Halloween 2026 Cauldron.",
+    "costs": "1 Emberbow + 1 Embersickle per craft",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "One of the first two Chroma ancients. The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Emberscythe",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
+  },
+  {
+    "slug": "embersickle",
+    "name": "Embersickle",
+    "status": "seasonal",
+    "method": "Unboxed from the 2026 Halloween Box during the Halloween Event 2026.",
+    "costs": "600 Candies or 1 Halloween Key per box",
+    "odds": "0.2% per box",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Embersickle",
+      "https://murder-mystery-2.fandom.com/wiki/2026_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
+  },
+  {
+    "slug": "chroma-embersickle",
+    "name": "Chroma Embersickle",
+    "status": "seasonal",
+    "method": "Rarer drop from the 2026 Halloween Box during the Halloween Event 2026.",
+    "costs": "600 Candies or 1 Halloween Key per box",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Embersickle",
+      "https://murder-mystery-2.fandom.com/wiki/2026_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
+  },
+  {
+    "slug": "mortal",
+    "name": "Mortal",
+    "status": "seasonal",
+    "method": "Bought with Robux in the Mortal Bundle during Halloween 2026, or on its own.",
+    "costs": "3,399 Robux (Mortal Bundle, with Immortal) or 1,699 Robux on its own",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Mortal",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
+  },
+  {
+    "slug": "immortal",
+    "name": "Immortal",
+    "status": "seasonal",
+    "method": "Bought with Robux in the Mortal Bundle during Halloween 2026, or on its own.",
+    "costs": "3,399 Robux (Mortal Bundle, with Mortal) or 1,699 Robux on its own",
+    "released": "2026 (Halloween Event 2026, Oct 18 - Nov 16 2026)",
+    "note": "The Halloween 2026 event runs until Nov 16, 2026. After that, trading or buying is the only way.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Immortal",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-22"
   }
 ]
