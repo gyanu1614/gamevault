@@ -75,7 +75,7 @@ export function createWikiClient(options: WikiClientOptions): WikiClient {
 
     async listPages(q: WikiListQuery) {
       const out: ListedPage[] = []
-      const params =
+      const params: Record<string, string> =
         q.list === 'categorymembers'
           ? { action: 'query', list: 'categorymembers', cmtitle: q.title, cmlimit: '500', cmtype: 'page', cmnamespace: '0' }
           : { action: 'query', list: 'embeddedin', eititle: q.title, eilimit: '500', einamespace: '0' }
@@ -111,7 +111,7 @@ export function createWikiClient(options: WikiClientOptions): WikiClient {
         await paged(params, (b) => {
           for (const p of b.query?.pages ?? []) {
             if (p.missing || p.invalid) continue
-            const page = pages.get(p.pageid) ?? { pageId: p.pageid, title: p.title, revisionId: null, content: '', categories: [] }
+            const page: WikiPage = pages.get(p.pageid) ?? { pageId: p.pageid, title: p.title, revisionId: null, content: '', categories: [] }
             const rev = p.revisions?.[0]
             if (rev && !page.content) {
               page.content = rev.slots?.main?.content ?? ''
