@@ -4,7 +4,8 @@
  * The value list for a values_* list hub (Murder Mystery 2 first): Adopt Me's
  * toolbar → filter tiles → "Showing" line → card grid → pagination, on the
  * shared values kit. No variant axis (a Chroma is its own item), so the
- * toolbar is search + sort.
+ * toolbar is search + sort. One card per item: a Chroma rides on its standard
+ * item's card behind the flip button (collapseForms); its page is unchanged.
  *
  * URL-driven, static-first: the prerendered HTML holds the default first page;
  * SearchParamsBridge seeds q / view / sort / page after hydration, and changes
@@ -22,7 +23,7 @@ import { DiamondIcon } from '@phosphor-icons/react/dist/csr/Diamond'
 import Link from '@/components/navigation/AppLink'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { CardRank, PriceStatPair, RarityLabel, ValueCard } from '@/components/values/ValueCard'
-import { VariantSelector } from '@/components/values/VariantSelector'
+import { ChromaFlipButton, ChromaWord, type CardForm } from '@/components/values/ChromaFlipButton'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
@@ -36,6 +37,7 @@ import type { InitialValueList } from '@/lib/values/lazy-list'
 import { useValueListRows } from '@/lib/values/useValueListRows'
 import { ValueCardSkeleton } from './ValueListSkeleton'
 import {
+  collapseForms,
   filterSortValueRows,
   pairForms,
   valueListTabCounts,
@@ -83,7 +85,8 @@ export default function ValueListClient({
   const { tabs, itemTypeLabels, pageRarities, searchPlaceholder, imageSource } = hub
   // First page from the HTML, every row once rows.json lands (a few hundred ms).
   const { rows, ready, failed, retry } = useValueListRows<ValueListRow>(gameSlug, initial)
-  // Items in two forms (MM2: standard + Chroma) → the card's Standard / Chroma switch.
+  // Items in two forms (MM2: standard + Chroma) → the card's flip button. Paired over
+  // ALL rows, so a collapsed Chroma is still one tap away.
   const forms = useMemo(() => pairForms(rows), [rows])
   const reduceMotion = useReducedMotion()
   const listTopRef = useRef<HTMLDivElement>(null)
@@ -138,8 +141,10 @@ export default function ValueListClient({
   const filtered = useMemo(() => {
     if (!ready) return rows
     const tab = view === DEFAULT_VIEW ? null : visibleTabs.find((t) => t.key === view) ?? null
-    return filterSortValueRows(rows, { query, tab, sort })
+    return collapseForms(filterSortValueRows(rows, { query, tab, sort }))
   }, [rows, ready, query, view, sort, visibleTabs])
+  // "All" counts cards, not rows; the first page's total is already collapsed (ValueListPage).
+  const allCount = useMemo(() => (ready ? collapseForms(rows).length : initial.total), [ready, rows, initial.total])
   const filteredCount = ready ? filtered.length : initial.total
 
   const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE))
@@ -169,7 +174,7 @@ export default function ValueListClient({
   }, [seeded, query, view, sort, safePage])
 
   const filterOptions = [
-    { key: DEFAULT_VIEW, label: 'All', color: '#9AA6A0', count: ready ? rows.length : initial.total },
+    { key: DEFAULT_VIEW, label: 'All', color: '#9AA6A0', count: allCount },
     ...visibleTabs.map((t) => ({ key: t.key, label: t.label, color: t.color, count: t.count })),
   ]
 
@@ -342,7 +347,7 @@ function ItemCard({
 }) {
   // Start on the card's own form (a Chroma card has a base); the pair may only
   // arrive with the full list, after the first page renders.
-  const [form, setForm] = useState<'standard' | 'chroma'>(listed.baseItemId ? 'chroma' : 'standard')
+  const [form, setForm] = useState<CardForm>(listed.baseItemId ? 'chroma' : 'standard')
   const row = forms ? forms[form] : listed
   const rarity = row.rarity ? rarityMeta(gameSlug, row.rarity) : null
   const priced = row.cheapestUsd != null
@@ -360,7 +365,15 @@ function ItemCard({
           {typeLabel && <span className="truncate text-[11px] font-medium text-text-tertiary">{typeLabel}</span>}
         </>
       }
-      headerRight={rarity ? <RarityLabel label={rarity.label} color={rarity.color} /> : undefined}
+      headerRight={
+        rarity && row.rarity?.toLowerCase() === 'chroma' ? (
+          <span className="text-[11px] font-semibold">
+            <ChromaWord>{rarity.label}</ChromaWord>
+          </span>
+        ) : rarity ? (
+          <RarityLabel label={rarity.label} color={rarity.color} />
+        ) : undefined
+      }
       imageSrc={row.imageUrl}
       imageAlt={`${row.name}${typeLabel ? ` ${typeLabel.toLowerCase()}` : ''} in ${gameName}`}
       name={row.name}
@@ -382,7 +395,15 @@ function ItemCard({
           </span>
         ) : undefined
       }
-      control={forms ? <FormSwitch gameSlug={gameSlug} form={form} onChange={setForm} /> : undefined}
+      control={
+        forms ? (
+          <ChromaFlipButton
+            form={form}
+            onToggle={() => setForm((f) => (f === 'chroma' ? 'standard' : 'chroma'))}
+            chromaLabel={rarityMeta(gameSlug, 'Chroma').label}
+          />
+        ) : undefined
+      }
       footer={
         <PriceStatPair
           empty={priced ? null : 'No Price Yet'}
@@ -392,30 +413,6 @@ function ItemCard({
           ]}
         />
       }
-    />
-  )
-}
-
-/** The card's two forms as one row of chips (no popup: two options are one tap). */
-function FormSwitch({ gameSlug, form, onChange }: { gameSlug: string; form: 'standard' | 'chroma'; onChange: (f: 'standard' | 'chroma') => void }) {
-  const chroma = rarityMeta(gameSlug, 'Chroma')
-  return (
-    <VariantSelector
-      size="xs"
-      labels={false}
-      fill
-      groups={[
-        {
-          id: 'form',
-          label: 'Form',
-          mode: 'single',
-          options: [
-            { key: 'standard', label: 'Standard', color: '#C9CCD2', active: form === 'standard' },
-            { key: 'chroma', label: chroma.label, color: chroma.color, active: form === 'chroma' },
-          ],
-        },
-      ]}
-      onSelect={(_, key) => onChange(key === 'chroma' ? 'chroma' : 'standard')}
     />
   )
 }
