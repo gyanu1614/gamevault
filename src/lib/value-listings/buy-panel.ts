@@ -7,6 +7,7 @@
  * clearly under it. Without our stock the headline is the TYPICAL market price
  * (never the cheapest relabelled as "Market Price"). Pure.
  */
+import type { ReactNode } from 'react'
 import type { BuyState } from './buy-state'
 import { marketSecondaryUsd } from '@/lib/values/pricing'
 
@@ -67,10 +68,11 @@ export function noPriceFallback({
   tradeLabel = 'Value',
   isNew,
 }: {
-  tradeValue?: string | null
+  /** A formatted trade value: text, or rendered (Adopt Me's points + frosts). */
+  tradeValue?: ReactNode
   tradeLabel?: string
   isNew: boolean
-}): { label: string; value: string } {
+}): { label: string; value: ReactNode } {
   if (tradeValue) return { label: tradeLabel, value: tradeValue }
   return { label: isNew ? 'New' : 'Value', value: 'No Trades Yet' }
 }

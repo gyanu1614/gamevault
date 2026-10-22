@@ -52,3 +52,27 @@ describe('New tag on every values hub', () => {
     }
   })
 })
+
+// Owner, 2026-10-21: one price rule — our listing, else market, else Value — and nothing hidden.
+describe('one headline rule and honest product data on every values hub', () => {
+  const heroes = ['[itemSlug]/_ItemHero.tsx', '[itemSlug]/_AdoptMePetHero.tsx', '_generic/ValueListItemClient.tsx']
+
+  it('every hero hands its no-price headline to noPriceFallback', () => {
+    for (const f of heroes) expect(read(f), f).toMatch(/fallback=\{noPriceFallback\(/)
+    // Steal an Egg uses the same client hero as MM2 (On DropMarket first, then market, then Value).
+    expect(read('_generic/ValueItemPage.tsx')).toMatch(/<ValueListItemHero\b/)
+  })
+
+  it('Product JSON-LD comes only from our own stock (ownStockProduct), never an external price', () => {
+    const pages = ['[itemSlug]/_SabItemPage.tsx', '[itemSlug]/_AdoptMePetPage.tsx', '_generic/ValueListItemBody.tsx', '_generic/ValueItemPage.tsx']
+    for (const f of pages) {
+      const src = read(f)
+      expect(src, f).toMatch(/ownStockProduct\(/)
+      expect(src, f).not.toMatch(/productAggregate\(/)
+      expect(src, f).not.toMatch(/'@type': 'Offer'/)
+    }
+    expect(read('_generic/ValueListItemPage.tsx')).not.toMatch(/productAggregate\(/)
+    // SAB's external, stale listing count no longer decides whether there is an offer.
+    expect(read('[itemSlug]/_SabItemPage.tsx')).not.toMatch(/active_listing_count > 0/)
+  })
+})

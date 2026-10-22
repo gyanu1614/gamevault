@@ -60,4 +60,10 @@ describe('value hero buy panel', () => {
     )
     expect(t).toContain('Trade Value 1,450 pts')
   })
+
+  it('with no price and no fallback, uses the one no-price rule (never "No data yet")', () => {
+    const t = text(renderToStaticMarkup(createElement(ValueBuyPanel, { cta: none, itemName: 'Bat Dragon', marketUsd: null, cheapestUsd: null, sell })))
+    expect(t).toContain('Value No Trades Yet')
+    expect(t).not.toContain('No data yet')
+  })
 })

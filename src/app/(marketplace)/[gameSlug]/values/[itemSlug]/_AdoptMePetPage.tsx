@@ -8,7 +8,7 @@ import Link from '@/components/navigation/AppLink'
 import { withArticle } from '@/lib/text/article'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
-import { JsonLd, breadcrumbList, faqPage, valuePage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, ownStockProduct, valuePage } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { AdoptMePriceTrend } from './_AdoptMePriceTrend'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -208,6 +208,15 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
     howToGetMethod: facts.howToGet?.method ?? null,
   })
   const spread = livePriceSpread(pet.name, pet.variants)
+  const productLd = ownStockProduct({
+    name: `${pet.name} — Adopt Me`,
+    description: story.slice(0, 300),
+    brand: 'Adopt Me',
+    url: `/adopt-me/values/${pet.slug}`,
+    image: pet.imageUrl,
+    stock: buyData?.stock ?? null,
+    offerPrices: (buyData?.offers ?? []).map((o) => o.pricePerUnit),
+  })
   // The chart is browser-only; this line puts its numbers in the HTML.
   const history = headline ? priceHistorySummary(`${headline.label} ${pet.name}`, pet.priceHistory[headline.variant]) : null
 
@@ -239,25 +248,9 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           },
         })}
       />
-      {/* Product + Offer: the cash value is the Offer. Only emitted when we hold
-          a real (non-null) cash number; an estimated/null price is not an offer. */}
-      {fr?.cashUsd != null && (
-        <JsonLd
-          data={{
-            '@context': 'https://schema.org',
-            '@type': 'Product',
-            name: `${pet.name} (Fly Ride) — Adopt Me`,
-            image: pet.imageUrl ? [pet.imageUrl] : undefined,
-            description: story.slice(0, 300),
-            offers: {
-              '@type': 'Offer',
-              priceCurrency: 'USD',
-              price: fr.cashUsd,
-              availability: 'https://schema.org/InStock',
-            },
-          }}
-        />
-      )}
+      {/* Product + AggregateOffer only for our own live stock: the market's cash
+          value is a reference, not an offer anyone can buy here. */}
+      {productLd && <JsonLd data={productLd} />}
 
       {/* Everything the variant selection touches — hero, callout, stats, chart —
           lives inside one provider so picking a form up top reprices it all. */}

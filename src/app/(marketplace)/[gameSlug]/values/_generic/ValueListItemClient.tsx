@@ -16,6 +16,7 @@ import { useItemCta, type ItemBuy } from '@/components/values/how-to-get/HowToGe
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder, confidenceMeta } from '@/components/values/ValueItemHero'
 import { ValueBuyActions } from '@/components/values/ValueBuyActions'
 import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
+import { noPriceFallback } from '@/lib/value-listings/buy-panel'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { VALUE_LABEL, VALUE_SURFACE } from '@/components/values/styles'
 import type { TrendSeries } from '@/components/values/PriceTrendChart'
@@ -113,7 +114,7 @@ export function ValueListItemHero({
           itemName={name}
           marketUsd={marketUsd}
           cheapestUsd={cheapestUsd}
-          fallback={{ label: 'Value', value: 'No price yet' }}
+          fallback={noPriceFallback({ isNew: !!isNew })}
           notes={
             cheapestUsd != null && (
               <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">

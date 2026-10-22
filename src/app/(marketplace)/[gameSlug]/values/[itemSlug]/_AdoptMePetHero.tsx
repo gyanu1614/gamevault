@@ -19,6 +19,7 @@ import { amVariantKey } from '@/lib/value-listings/catalogs'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, ConfidenceBadge } from '@/components/values/ValueItemHero'
 import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
+import { noPriceFallback } from '@/lib/value-listings/buy-panel'
 import { TradeValue } from '@/components/values/TradeValue'
 import { petImageCredit } from '@/lib/adopt-me/image-credit'
 import { formatTradeValue, frostsLabel } from '@/lib/adopt-me/trade-value'
@@ -143,20 +144,18 @@ export default function AdoptMePetHero({
           marketUsd={marketUsd ?? null}
           cheapestUsd={selected.cheapestUsd ?? null}
           marketLabel={hasReputable ? 'Market Price' : 'Cash Value'}
-          // No dollar price at all: the trade-points value, never an invented figure.
-          fallback={
-            pointsValue
-              ? {
-                  label: 'Trade Value',
-                  value: (
-                    <>
-                      <TradeValue>{formatTradeValue(pointsValue)}</TradeValue>
-                      <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts · {frostsLabel(pointsValue)}</span>
-                    </>
-                  ),
-                }
-              : { label: 'Value', value: 'No data yet' }
-          }
+          // No dollar price at all: the trade-points value, never an invented figure;
+          // without one, the one rule ("Value · No Trades Yet", New when new).
+          fallback={noPriceFallback({
+            tradeLabel: 'Trade Value',
+            tradeValue: pointsValue ? (
+              <>
+                <TradeValue>{formatTradeValue(pointsValue)}</TradeValue>
+                <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts · {frostsLabel(pointsValue)}</span>
+              </>
+            ) : null,
+            isNew: !!isNew,
+          })}
           notes={
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
               {hasReputable ? (

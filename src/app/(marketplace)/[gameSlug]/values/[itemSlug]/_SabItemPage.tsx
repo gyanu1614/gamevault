@@ -4,7 +4,7 @@ import { ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareOu
 import { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
 import { TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp'
 import { ValueCrossLinks } from '@/components/values/ValueCrossLinks'
-import { JsonLd, breadcrumbList, productAggregate, faqPage, valuePage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, ownStockProduct, faqPage, valuePage } from '@/lib/seo/jsonld'
 import { withArticle } from '@/lib/text/article'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { buildBrainrotFaq } from '@/lib/sab/faq'
@@ -149,6 +149,15 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
   }), factFaqs({ name: brainrot.name, game, facts, cheapestUsd: reputableCheapest ?? marketPriceUsd }))
   const factList = factRows(facts)
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
+  const productLd = ownStockProduct({
+    name: `${brainrot.name} — Steal a Brainrot`,
+    description: `Buy ${brainrot.name} from verified DropMarket sellers.`,
+    brand: 'Steal a Brainrot',
+    url: canonicalPath,
+    image: brainrot.image_url,
+    stock: buyData?.stock ?? null,
+    offerPrices: (buyData?.offers ?? []).map((o) => o.pricePerUnit),
+  })
 
   // How it compares: the same-rarity brainrot priced closest, and brainrots worth about the same from any rarity.
   const asCompare = (b: Pick<ComparableBrainrot, 'slug' | 'name' | 'rarity' | 'image_url' | 'base_income_per_second' | 'ingame_cost'>, usd: number | null): CompareItem => ({
@@ -201,19 +210,8 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
         })}
       />
 
-      {brainrot.active_listing_count > 0 && brainrot.cheapest_active_price_usd != null && (
-        <JsonLd
-          data={productAggregate({
-            name: `${brainrot.name} — Steal a Brainrot`,
-            description: `Buy ${brainrot.name} from verified DropMarket sellers.`,
-            brand: 'Steal a Brainrot',
-            lowPrice: Number(brainrot.cheapest_active_price_usd),
-            highPrice: Number(brainrot.patient_sale_usd ?? brainrot.cheapest_active_price_usd),
-            offerCount: brainrot.active_listing_count,
-            url: canonicalPath,
-          })}
-        />
-      )}
+      {/* Product + AggregateOffer only for our own live stock: a market price is not an offer. */}
+      {productLd && <JsonLd data={productLd} />}
 
       <HubNav data={hubNav} />
 

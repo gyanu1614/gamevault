@@ -2,21 +2,22 @@ import { readValuePageEvidence } from '@/lib/seo/gate/read'
 import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
-import { JsonLd, breadcrumbList, faqPage, productAggregate, valuePage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, ownStockProduct, valuePage } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { valueItemFaq } from './valueItemFaq'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme, contentThemeVars } from '@/lib/content/theme'
-import { ValuesFreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { ValuesBuyModule } from '@/components/content/ValuesBuyModule'
 import { getValueItems, type ValueItem } from '@/lib/values/data'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
-import { ValueItemHero } from '@/components/values/ValueItemHero'
+import { ValueListItemHero } from './ValueListItemClient'
+import { parseImageAttribution } from '@/lib/values/hub-config'
+import { rarityMeta } from '@/lib/values/rarity'
 import { isNewItem } from '@/lib/values/new-item'
 import { HUB_GROUND, VALUE_BTN_SECONDARY } from '@/components/values/styles'
 
@@ -27,9 +28,6 @@ import { HUB_GROUND, VALUE_BTN_SECONDARY } from '@/components/values/styles'
  * error state: it renders its catalogue facts and points at the priced item it
  * comes from. It never shows a number we cannot back with listings.
  */
-
-const usd = (v: number) =>
-  v < 1 ? `$${v.toFixed(2)}` : v.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
 function formatIncome(perSec: number): string {
   for (const [size, suffix] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']] as const) {
@@ -70,9 +68,6 @@ export default async function ValueItemPage({
 
   const price = item.price
   const hasPrice = price?.cheapestUsd != null
-  // The brief's rule: a value with fewer than 3 live listings behind it is not
-  // strong enough to index.
-  const thin = !hasPrice || (price?.sampleSize ?? 0) < 3
 
   // Catalogue facts → the hero's stat rows.
   const facts: { label: string; value: string }[] = []
@@ -102,6 +97,16 @@ export default async function ValueItemPage({
   facts.unshift({ label: 'Type', value: kindLabel })
 
   // Only what the catalogue and listings say (valueItemFaq.ts); the schema uses the same list.
+  const productLd = ownStockProduct({
+    name: `${item.name} — ${theme.name}`,
+    description: `What ${item.name} sells for in ${theme.name} on DropMarket.`,
+    brand: theme.name,
+    url: `/${gameSlug}/values/${item.slug}`,
+    image: item.imageUrl,
+    stock: buyData?.stock ?? null,
+    offerPrices: (buyData?.offers ?? []).map((o) => o.pricePerUnit),
+  })
+
   const faq = valueItemFaq({ item, gameName: theme.name, items, income: item.incomePerSec != null ? formatIncome(item.incomePerSec) : null })
 
   return (
@@ -140,66 +145,26 @@ export default async function ValueItemPage({
         })}
       />
       {faq.length > 0 && <JsonLd data={faqPage(faq)} />}
-      {/* Product schema only where a real price backs it. */}
-      {hasPrice && !thin && (
-        <JsonLd
-          data={productAggregate({
-            name: `${item.name} — ${theme.name}`,
-            description: `What ${item.name} sells for in ${theme.name}, priced from ${price!.sampleSize} live marketplace listings.`,
-            brand: theme.name,
-            lowPrice: price!.cheapestUsd!,
-            highPrice: price!.highUsd ?? price!.cheapestUsd!,
-            offerCount: price!.sampleSize,
-            url: `/${gameSlug}/values/${item.slug}`,
-          })}
-        />
-      )}
+      {/* Product + AggregateOffer only for our own live stock: a market price is not an offer. */}
+      {productLd && <JsonLd data={productLd} />}
 
       <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-28 sm:px-6 lg:px-8">
-        <ValueItemHero
-          art={item.imageUrl ? { src: item.imageUrl, alt: item.name } : null}
-          title={item.name}
-          isNew={isNewItem({ addedAt: item.addedAt })}
+        {/* The MM2 client hero: On DropMarket first, then the market price, then
+            Value (noPriceFallback); Buy + a quiet Sell line; the New tag. */}
+        <ValueListItemHero
+          name={item.name}
+          accent={item.rarity ? rarityMeta(gameSlug, item.rarity).color : 'var(--color-text-secondary)'}
+          imageUrl={item.imageUrl}
+          imageAlt={`${item.name} — ${theme.name}`}
+          imageCredit={parseImageAttribution(item.imageAttribution)}
           stats={facts}
-          price={
-            hasPrice
-              ? {
-                  value: usd(price!.cheapestUsd!),
-                  children: (
-                    <>
-                      {price!.averageUsd != null && (
-                        <p className="mt-2 text-[14px] tabular-nums text-text-secondary">
-                          typical {usd(price!.averageUsd)}
-                        </p>
-                      )}
-                      {price!.lowUsd != null && price!.highUsd != null && (
-                        <p className="mt-1 text-[12px] tabular-nums text-text-tertiary">
-                          real listings {usd(price!.lowUsd)}–{usd(price!.highUsd)}
-                        </p>
-                      )}
-                    </>
-                  ),
-                }
-              : {
-                  children: (
-                    <p className="text-left text-[15px] leading-relaxed text-text-secondary">
-                      We do not publish a price for {item.name} — it is not sold directly
-                      on the marketplaces we track. Everything below is from the game&apos;s
-                      own data.
-                    </p>
-                  ),
-                }
-          }
-          footer={
-            // The badge renders nothing without a dated, listing-backed price.
-            priceMovedAt && (price?.sampleSize ?? 0) > 0 ? (
-              <ValuesFreshnessBadge
-                lastChangedAt={priceMovedAt}
-                listingCount={price!.sampleSize}
-                sourceCount={price!.sourceCount ?? 0}
-              />
-            ) : null
-          }
+          cheapestUsd={price?.cheapestUsd ?? null}
+          marketUsd={price?.averageUsd ?? null}
+          priceChangedAt={priceMovedAt}
+          buy={{ gameSlug, itemSlug: item.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
+          sell={{ href: hubNav.sellHref ?? `/${gameSlug}/sell`, label: 'Sell Yours For Cash' }}
+          forms={null}
+          isNew={isNewItem({ addedAt: item.addedAt })}
         />
       </section>
 

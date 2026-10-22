@@ -13,10 +13,11 @@ import { priceHistorySummary } from '@/lib/values/history-summary'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { parseImageAttribution, valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
+import { JsonLd, ownStockProduct } from '@/lib/seo/jsonld'
 import { ValueListAboutStats, ValueListItemHero, ValueListPriceTrend, type ItemForm } from './ValueListItemClient'
 import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
 import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
-import { formatUsd, type ItemCopyInput } from './valueListItemCopy'
+import { aboutSentence, formatUsd, priceSentence, type ItemCopyInput } from './valueListItemCopy'
 import { factRows, releasedLabel } from '@/lib/values/item-facts'
 import { ValueListFormTable, type FormRow } from './ValueListFormTable'
 import { pointsOf, tradeCopy } from './valueListTrade'
@@ -157,9 +158,20 @@ export default async function ValueListItemBody({
   )
 
   const imageCredit = parseImageAttribution(item.imageAttribution)
+  // Product + AggregateOffer only for our own live stock: a market price is not an offer.
+  const productLd = ownStockProduct({
+    name: `${item.name} — ${theme.name}`,
+    description: priceSentence(copy) ?? aboutSentence(copy),
+    brand: theme.name,
+    url: `/${gameSlug}/values/${item.slug}`,
+    image: item.imageUrl,
+    stock: buyData?.stock ?? null,
+    offerPrices: (buyData?.offers ?? []).map((o) => o.pricePerUnit),
+  })
 
   return (
     <>
+      {productLd && <JsonLd data={productLd} />}
       <div className="mx-auto w-full max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
         <ValueListItemHero
           name={item.name}
