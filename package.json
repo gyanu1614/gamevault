@@ -58,6 +58,7 @@
     "am:facts:collect": "tsx scripts/collect-adopt-me-wiki-facts.mjs",
     "am:facts:import": "node scripts/import-adopt-me-facts.mjs",
     "values:images": "tsx scripts/copy-values-images.mjs",
+    "catalogue": "tsx scripts/catalogue.mjs",
     "values:dryrun": "tsx scripts/values-dryrun.mjs",
     "value-refs:backfill": "tsx scripts/value-refs-backfill.mjs",
     "funnel:value": "node scripts/funnel-value.mjs",

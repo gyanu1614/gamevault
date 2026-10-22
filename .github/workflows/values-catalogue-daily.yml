@@ -1,0 +1,86 @@
+# Values Catalogue Daily: adds newly released items from each game's Fandom
+# wiki (src/lib/catalogue/; spec docs/superpowers/specs/2026-10-21-values-catalogue-pipeline-design.md).
+#
+# One job per game with fail-fast off, so one wiki or adapter breaking never
+# stops another game. Insert-only. A run over its cap or unable to parse the
+# wiki stops itself and posts to Discord; a crash, error or timeout is posted
+# by the last step below. Light (a few wiki requests, two small reads, writes
+# only for new items), so it is not on the DB-heavy list in
+# src/test/routes/db-heavy-schedule.test.ts. GitHub starts schedules 5–7 h late.
+name: Values Catalogue Daily
+
+on:
+  schedule:
+    - cron: "5 13 * * *"
+  workflow_dispatch:
+    inputs:
+      game:
+        description: "One game key (blank = every game)"
+        required: false
+        default: ""
+
+concurrency:
+  group: values-catalogue
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  catalogue:
+    name: Catalogue (${{ matrix.game }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # The CATALOGUE_GAMES keys (src/lib/catalogue/registry.ts); values-catalogue-workflow.guard.test.ts pins them.
+        game: [sab]
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+      VALUES_REVALIDATE_SECRET: ${{ secrets.VALUES_REVALIDATE_SECRET }}
+      DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The manual input reaches the shell only as a quoted env var, never interpolated.
+      - name: Add new items from the wiki (insert-only)
+        env:
+          ONLY_GAME: ${{ inputs.game }}
+          TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'manual' }}
+        run: pnpm catalogue --game=${{ matrix.game }} --only="$ONLY_GAME" --write --trigger="$TRIGGER"
+
+      # Runs on failure OR cancellation (a timeout kill is a cancellation) and
+      # never fails the job itself, so it cannot hide the original error.
+      - name: Alert on failure
+        if: ${{ failure() || cancelled() }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GAME: ${{ matrix.game }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          set -uo pipefail
+          if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set; the catalogue job failed and nobody was told."
+            exit 0
+          fi
+          payload="$(jq -nc \
+            --arg content "🔴 **Values catalogue (${GAME}) ${OUTCOME}**: no new items were added for this game today. Run: ${RUN_URL}" \
+            '{content: $content, allowed_mentions: {parse: []}}')"
+          code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
+            -X POST -H 'content-type: application/json' \
+            --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || echo 000)"
+          if [ "$code" != "204" ] && [ "$code" != "200" ]; then
+            echo "::warning::Discord alert POST returned HTTP $code"
+          fi
+          exit 0
