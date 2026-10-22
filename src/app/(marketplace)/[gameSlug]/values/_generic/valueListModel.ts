@@ -51,6 +51,17 @@ export function pairForms(rows: readonly ValueListRow[]): Map<string, ValueListF
   return out
 }
 
+/**
+ * One card per item (owner, 2026-10-21): a Chroma whose standard item is in
+ * the same list rides on that card's flip button instead of taking a card of
+ * its own. Shown alone when its base is filtered out (the Chroma tile, a
+ * "chroma" search). Display only: every row keeps its page, rows.json and schema.
+ */
+export function collapseForms(rows: readonly ValueListRow[]): ValueListRow[] {
+  const ids = new Set(rows.map((r) => r.id))
+  return rows.filter((r) => !(r.baseItemId && ids.has(r.baseItemId)))
+}
+
 export type ValueListSort = 'price-desc' | 'price-asc' | 'movers' | 'listed' | 'name'
 
 export const VALUE_LIST_PAGE_SIZE = 25
