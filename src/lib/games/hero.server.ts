@@ -3,7 +3,8 @@ import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { gameHeroTag } from '@/lib/revalidation/tags'
-import { GAME_HERO_COLUMNS, resolveGameHero, type GameHero, type GameHeroRow } from './hero'
+import { mediaUrl } from '@/lib/images/media-url'
+import { GAME_HERO_COLUMNS, heroSrcSetAttr, resolveGameHero, type GameHero, type GameHeroRow } from './hero'
 
 /**
  * The hero background for one game — the read behind GameHeroBackdrop.
@@ -37,5 +38,21 @@ export const getGameHero = cache(async function getGameHero(slug: string): Promi
     tags: [gameHeroTag(slug)],
     revalidate: 86400,
   })()
-  return resolveGameHero(slug, row, process.env.NEXT_PUBLIC_SUPABASE_URL)
+  return heroViaMedia(resolveGameHero(slug, row, process.env.NEXT_PUBLIC_SUPABASE_URL))
 })
+
+/**
+ * The page renders the hero through /media (Vercel CDN), not straight from
+ * Storage (2026-10-20 usage audit). Done here, not in ./hero: that module is
+ * loaded by Node's type-stripper for the import script and stays self-contained.
+ */
+export function heroViaMedia(hero: GameHero): GameHero {
+  if (hero.kind !== 'upload') return hero
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const via = (url: string) => mediaUrl(url, supabaseUrl)
+  return {
+    ...hero,
+    src: via(hero.src),
+    srcSet: heroSrcSetAttr(hero.sources.map((s) => ({ ...s, url: via(s.url) }))),
+  }
+}

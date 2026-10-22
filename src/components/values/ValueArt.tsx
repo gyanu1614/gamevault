@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ImageBrokenIcon } from '@phosphor-icons/react/dist/csr/ImageBroken'
 import { ImageIcon } from '@phosphor-icons/react/dist/csr/Image'
+import { mediaUrl } from '@/lib/images/media-url'
 
 /**
  * Item art for value cards / heroes / rails. Remote catalogue art is
@@ -59,7 +60,7 @@ export function ValueArt({
     // eslint-disable-next-line @next/next/no-img-element -- remote catalogue art
     <img
       ref={imgRef}
-      src={src}
+      src={mediaUrl(src) ?? undefined}
       alt={alt}
       aria-hidden={ariaHidden}
       width={size}

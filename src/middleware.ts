@@ -174,6 +174,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // media/: proxied images (vercel.json rewrite to Storage), never an app route.
+    '/((?!_next/static|_next/image|media/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif)$).*)',
   ],
 }

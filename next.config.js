@@ -111,6 +111,19 @@ const nextConfig = {
       },
     ],
   },
+  // /media/* (src/lib/images/media-url.ts) for `next dev` / `next start`. On
+  // Vercel the same proxy is the vercel.json rewrite, which the CDN caches
+  // (x-vercel-enable-rewrite-caching); this one only serves local runs.
+  async rewrites() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (process.env.VERCEL || !supabaseUrl) return []
+    return [
+      {
+        source: '/media/:path*',
+        destination: `${supabaseUrl.replace(/\/+$/, '')}/storage/v1/object/public/:path*`,
+      },
+    ]
+  },
   // V21/P7.d — Permanent redirect for the legacy `/marketplace/*`
   // URL space. The canonical buyer routes are
   // `/{gameSlug}/{categorySlug}/{listingSlug}` now (handled by the
