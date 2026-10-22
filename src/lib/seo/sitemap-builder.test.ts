@@ -75,7 +75,8 @@ describe('which URLs are listed', () => {
     expect(all).not.toContain(`${BASE}/steal-an-egg/values/thin-egg`)
   })
 
-  it('lists a value-list hub item (MM2) only when it has a page: high tier, priced, enough listings', () => {
+  // 2026-10-21: every MM2 item has a page; the sitemap lists the ones the value gate indexes.
+  it('lists a value-list hub item (MM2) when it is priced with enough listings, any tier', () => {
     const all = urls({
       pipelineItems: [
         { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
@@ -88,7 +89,7 @@ describe('which URLs are listed', () => {
     expect(all).toContain(`${BASE}/murder-mystery-2/values/methodology`)
     expect(all).toContain(`${BASE}/murder-mystery-2/values/harvester`)
     expect(all).toContain(`${BASE}/murder-mystery-2/values/chroma-fang`)
-    expect(all).not.toContain(`${BASE}/murder-mystery-2/values/default-knife`) // commons: list rows, no page
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/default-knife`) // a priced common is a page too
     expect(all).not.toContain(`${BASE}/murder-mystery-2/values/thin-godly`) // < 3 listings: noindex
     expect(all).not.toContain(`${BASE}/murder-mystery-2/calculator`) // Step 3
   })

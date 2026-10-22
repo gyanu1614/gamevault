@@ -21,13 +21,11 @@ describe('value-list hub config', () => {
     ])
   })
 
-  it('gives an MM2 item a page only when it is priced AND high tier', () => {
-    for (const rarity of ['Godly', 'Ancient', 'Vintage', 'Unique', 'Chroma']) {
+  // Owner, 2026-10-21: every item gets a page; Google indexing is the value gate's call.
+  it('gives every MM2 item a page, priced or not, any tier', () => {
+    for (const rarity of ['Godly', 'Ancient', 'Vintage', 'Unique', 'Chroma', 'Common', 'Uncommon', 'Rare', 'Legendary', null]) {
       expect(valueItemHasPage('murder-mystery-2', { rarity, priced: true })).toBe(true)
-      expect(valueItemHasPage('murder-mystery-2', { rarity, priced: false })).toBe(false)
-    }
-    for (const rarity of ['Common', 'Uncommon', 'Rare', 'Legendary', null]) {
-      expect(valueItemHasPage('murder-mystery-2', { rarity, priced: true })).toBe(false)
+      expect(valueItemHasPage('murder-mystery-2', { rarity, priced: false })).toBe(true)
     }
   })
 

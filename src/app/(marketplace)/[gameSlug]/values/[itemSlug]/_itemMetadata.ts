@@ -99,13 +99,13 @@ export async function generateItemMetadata({ params }: ItemPageProps): Promise<M
       return { title: 'Value Not Found' }
     }
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-    const cheapest = price!.cheapestUsd!
+    const cheapest = price?.cheapestUsd ?? null
     // The Adopt Me pattern (8× the clicks of "… — Price in USD" on Bing, 2026-10-19)
     // plus the tier players search by; the snippet says what it is and what the page has.
     const typeLabel = (item.itemType && listHub.itemTypeLabels[item.itemType]) || theme.itemNoun
     const title = valueItemMetaTitle({ name: item.name, shortName: listHub.shortName, rarity: item.rarity, typeLabel }, monthYear)
-    const gate = await getValuePageGate(gameSlug, item.slug, isValueItemIndexable({ priced: true, sampleSize: price!.sampleSize }))
-    const answer = answerSentence({ name: item.name, valueUsd: cheapest, offers: price!.sampleSize, updatedAt: gate.evidence?.priceMovedAt ?? null })
+    const gate = await getValuePageGate(gameSlug, item.slug, isValueItemIndexable({ priced: cheapest != null, sampleSize: price?.sampleSize ?? 0 }))
+    const answer = cheapest != null ? answerSentence({ name: item.name, valueUsd: cheapest, offers: price?.sampleSize ?? 0, updatedAt: gate.evidence?.priceMovedAt ?? null }) : null
     const description = withAnswer(
       answer,
       valueItemMetaTail({ rarity: item.rarity, typeNoun: typeLabel.toLowerCase(), obtain: item.obtain, origin: item.origin }, DESC_MAX - (answer ? answer.length + 1 : 0)),

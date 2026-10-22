@@ -123,8 +123,10 @@ export function ValueListItemHero({
       footer={
         priceChangedAt ? (
           <FreshnessBadge updatedAt={priceChangedAt} />
-        ) : (
+        ) : cheapestUsd != null ? (
           <span className="text-[12px] text-text-tertiary">Priced from reputable sellers only</span>
+        ) : (
+          <span className="text-[12px] text-text-tertiary">Priced once reputable sellers list it</span>
         )
       }
       picker={forms ? <FormSwitch forms={forms} /> : undefined}

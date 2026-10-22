@@ -82,7 +82,7 @@ export default function ValueListClient({
   /** The game's Chroma hub (/[game]/chromas), offered while the Chroma tile is on. */
   chromaHubHref?: string | null
 }) {
-  const { tabs, itemTypeLabels, pageRarities, searchPlaceholder, imageSource } = hub
+  const { tabs, itemTypeLabels, searchPlaceholder, imageSource } = hub
   // First page from the HTML, every row once rows.json lands (a few hundred ms).
   const { rows, ready, failed, retry } = useValueListRows<ValueListRow>(gameSlug, initial)
   // Items in two forms (MM2: standard + Chroma) → the card's flip button. Paired over
@@ -300,7 +300,7 @@ Showing{' '}
         Prices are in US dollars, from active listings by reputable sellers, checked daily. Cheapest is
         the lowest real price on offer; Market is the typical price. &ldquo;Listed now&rdquo; counts
         those listings; the 7-day change appears once we hold a week of history.
-        {pageRarities.length > 0 && <> {listPhrase(pageRarities)} items have their own value page.</>}
+        {' '}Every item has its own value page.
         {imageSource && (
           <>
             {' '}Item images:{' '}
@@ -318,11 +318,6 @@ Showing{' '}
       </p>
     </div>
   )
-}
-
-/** "A, B and C". */
-function listPhrase(words: readonly string[]): string {
-  return words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
 }
 
 /**

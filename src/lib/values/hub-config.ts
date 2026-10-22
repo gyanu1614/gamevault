@@ -85,19 +85,19 @@ export function valueListHub(gameSlug: string): ValueListHubConfig | null {
 export const VALUE_LIST_HUB_GAMES: readonly string[] = Object.keys(VALUE_LIST_HUBS)
 
 /**
- * Does this item have a value page? THE rule for the item route's gate, its
- * prerender set, the sitemap and the list cards' links.
+ * Does this item have a value page? THE rule for the item route's gate, the
+ * sitemap and the list cards' links.
  *
- * List hubs: priced AND in a page rarity. Any other pipeline game (Steal an
- * Egg): every item has a page — its unpriced pets are first-class pages.
+ * Every enabled item, in every game (owner, 2026-10-21: no item hidden;
+ * until then an MM2 item needed a price AND a high tier). Whether Google
+ * indexes the page is the value gate's call (src/lib/games/indexability.ts),
+ * never a 404. Kept as a function so the callers stay one rule.
  */
 export function valueItemHasPage(
-  gameSlug: string,
-  item: { rarity: string | null | undefined; priced: boolean },
+  _gameSlug: string,
+  _item: { rarity: string | null | undefined; priced: boolean },
 ): boolean {
-  const hub = valueListHub(gameSlug)
-  if (!hub) return true
-  return item.priced && item.rarity != null && hub.pageRarities.includes(item.rarity)
+  return true
 }
 
 /** Does an item belong in a list tab? `all` matches everything. */

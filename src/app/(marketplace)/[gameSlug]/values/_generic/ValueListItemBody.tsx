@@ -124,8 +124,9 @@ export default async function ValueListItemBody({
       const ta = a.itemType === item.itemType ? 0 : 1
       const tb = b.itemType === item.itemType ? 0 : 1
       if (ta !== tb) return ta - tb
-      const da = Math.abs(Math.log((a.price!.cheapestUsd ?? ref) / ref))
-      const db = Math.abs(Math.log((b.price!.cheapestUsd ?? ref) / ref))
+      // Unpriced siblings (every item has a page) sort after priced ones of the same type.
+      const da = Math.abs(Math.log((a.price?.cheapestUsd ?? ref * 1e6) / ref))
+      const db = Math.abs(Math.log((b.price?.cheapestUsd ?? ref * 1e6) / ref))
       return da - db
     })
     .slice(0, 14)

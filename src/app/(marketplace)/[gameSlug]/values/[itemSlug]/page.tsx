@@ -60,9 +60,9 @@ export async function generateStaticParams() {
     getPublishablePetSlugs(),
   ])
   // Generic-pipeline games: prerender the PRICED items (the pages that can
-  // rank). Steal an Egg's unpriced catalogue renders on demand into the same
-  // ISR cache; a value-list hub's set is closed — EVERY item with a page
-  // (valueItemHasPage: priced + high-tier) is built, and the body 404s the rest.
+  // rank). Every item has a page (2026-10-21); the unpriced ones render on
+  // their first visit into the same ISR cache — building ~850 unpriced MM2
+  // pages on every release would cost build minutes and production reads.
   const pipelineParams: Array<{ gameSlug: string; itemSlug: string }> = []
   for (const slug of VALUES_PIPELINE_GAMES) {
     if (!hasHubPage(slug, 'values')) continue
@@ -110,8 +110,8 @@ export default async function ValueItemRoute({ params }: ItemPageProps) {
   if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
     if (!hasHubPage(gameSlug, 'values')) notFound()
     if (valueListHub(gameSlug)) {
-      // Gate BEFORE anything streams: only priced high-tier items have a
-      // page, everything else is a real 404 (commons stay list rows).
+      // Gate BEFORE anything streams: an enabled item has a page (every one,
+      // 2026-10-21); a slug the catalogue does not know is a real 404.
       const items = await getValueItems(gameSlug, { itemSlug })
       const item = items.find((i) => i.slug === itemSlug)
       if (!item || !valueItemHasPage(gameSlug, { rarity: item.rarity, priced: item.price?.cheapestUsd != null })) {
