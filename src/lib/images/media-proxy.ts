@@ -91,5 +91,7 @@ export async function proxyMedia(
     const value = upstream.headers.get(name)
     if (value) headers.set(name, value)
   }
+  // fetch decodes a compressed body but keeps the encoded length.
+  if (upstream.headers.has('content-encoding')) headers.delete('content-length')
   return new Response(upstream.body, { status: 200, headers })
 }

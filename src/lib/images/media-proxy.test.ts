@@ -66,6 +66,17 @@ describe('proxyMedia', () => {
     }
   })
 
+  // fetch hands back the decoded body but the encoded length: passing that on
+  // would cut a compressed file (an SVG through Cloudflare) short.
+  it('drops content-length when Storage compressed the body', async () => {
+    const res = await proxyMedia('category-icons', ['g.svg'], {
+      supabaseUrl: SB,
+      fetch: fetchReturning(storageResponse('<svg/>', 200, { 'content-type': 'image/svg+xml', 'content-encoding': 'br' })),
+    })
+    expect(res.headers.has('content-length')).toBe(false)
+    expect(res.headers.has('content-encoding')).toBe(false)
+  })
+
   it('serves the file inert when opened directly (our origin, not supabase.co)', async () => {
     const res = await proxyMedia('category-icons', ['g.svg'], {
       supabaseUrl: SB,
