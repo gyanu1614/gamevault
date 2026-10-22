@@ -396,3 +396,35 @@ jobs:
       # NOT continue-on-error: a failed reprice or publish must fail the job.
       - name: Reprice Murder Mystery 2 (publish once the hub is live)
         run: pnpm reprice --game=murder-mystery-2 ${{ vars.MM2_HUB_LIVE == 'true' && env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}
+
+  # One post when any game's pricing job fails or times out (a timeout kill is
+  # a cancellation). A job skipped on purpose (MM2 behind its repo variable) is
+  # not an alarm. Never fails the run itself.
+  alert:
+    needs: [sab-g2g, sab, adopt-me, steal-an-egg, murder-mystery-2]
+    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Alert on failure
+        env:
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -uo pipefail
+          if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set; pricing failed and nobody was told."
+            exit 0
+          fi
+          failed="$(printf '%s' "$RESULTS" | jq -r 'to_entries | map(select(.value.result == "failure" or .value.result == "cancelled")) | map("\(.key) (\(.value.result))") | join(", ")')"
+          payload="$(jq -nc \
+            --arg content "🔴 **Values pricing failed**: ${failed}. Prices for those games did not update today. Run: ${RUN_URL}" \
+            '{content: $content, allowed_mentions: {parse: []} }')"
+          code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
+            -X POST -H 'content-type: application/json' \
+            --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || echo 000)"
+          if [ "$code" != "204" ] && [ "$code" != "200" ]; then
+            echo "::warning::Discord alert POST returned HTTP $code"
+          fi
+          exit 0
