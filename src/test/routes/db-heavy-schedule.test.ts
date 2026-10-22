@@ -119,8 +119,8 @@ describe('DB-heavy schedules are hours apart', () => {
     { file: 'values-pricing-daily.yml', minutes: 60 + 150 + 90 },
     { file: 'sab-retention-nightly.yml', minutes: 30 },
     { file: 'db-backup.yml', minutes: 60 },
-    // Adopt Me only (MM2 moved to the light daily catalogue job, 2026-10-22).
-    { file: 'adopt-me-weekly-catalog.yml', minutes: 90 },
+    // The weekly Adopt Me picture check (new pets moved to the daily catalogue, 2026-10-22).
+    { file: 'adopt-me-weekly-catalog.yml', minutes: 30 },
     // Trend radar: two schedules in one file (collect+prepare, nightly).
     { file: 'trend-radar.yml', cron: 'collect', minutes: 15 },
     { file: 'trend-radar.yml', cron: 'nightly', minutes: 10 },

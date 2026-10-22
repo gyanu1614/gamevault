@@ -9,6 +9,7 @@
 import { buildSabFacts, parseObtainment, parseUpdateLog, statusOf, type SabHowToGetStatus } from '../../sab/wiki-facts'
 import { plainText, templateBody, templateParams } from '../../wiki/markup'
 import { parseAmount } from '../amounts'
+import { firstImageFile } from '../files'
 import { slugifyTitle } from '../plan'
 import type { CatalogueAdapter, KnownItem, ParsedItem, WikiPage } from '../types'
 
@@ -17,7 +18,7 @@ const BUCKET = 'sab-brainrots'
 const SOURCE_NAME = 'Steal a Brainrot Wiki'
 /** source_payload.imported_by on rows this pipeline added. */
 export const PIPELINE_MARK = 'catalogue-pipeline'
-export { parseAmount }
+export { firstImageFile, parseAmount }
 
 const RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Brainrot God', 'Secret', 'OG'] as const
 
@@ -32,23 +33,6 @@ const OBTAINABILITY: Record<SabHowToGetStatus, 'obtainable' | 'limited' | 'unobt
   seasonal: 'limited',
   unobtainable: 'unobtainable',
   unknown: 'unknown',
-}
-
-/**
- * The infobox picture → one wiki file name. A plain "Slushi Huski.png", or a
- * <gallery> with one "file|caption" per line (normal + egg art): the first file.
- * Also cleans a value stored before this existed ("A.png|Brainrot B.png|Egg").
- */
-export function firstImageFile(raw: string | null | undefined): string | null {
-  const lines = (raw ?? '')
-    .replace(/<\/?gallery[^>]*>/gi, '\n')
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean)
-  const name = plainText(lines[0]?.split('|')[0] ?? '')
-    .replace(/^(?:file|image):/i, '')
-    .trim()
-  return name || null
 }
 
 const pageUrl = (title: string) => `https://${HOST}/wiki/${encodeURI(title.replace(/ /g, '_'))}`
