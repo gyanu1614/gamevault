@@ -7,10 +7,10 @@ import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
  * then its calculator — the WFL calculator, else the inventory worth tool.
  *
  * Why (crawl audit 2026-10-23, docs/handoff/seo-crawl-audit-2026-10-23.md):
- * the footer and the game sub-nav are the only links on the home page and the
- * game landings, and before this they pointed at /steal-a-brainrot/values
+ * the footer and the game sub-nav are how the home page and the game landings
+ * reach the value hubs, and before this they pointed at /steal-a-brainrot/values
  * only. /adopt-me/values — the site's top search landing page — had no link
- * from the home page or from /adopt-me, so Google crawled it twice in 3 months.
+ * from the home page or from /adopt-me, so Google last crawled it on 2026-07-31.
  * Pure: the pages a game publishes come from its theme (HubPageSet).
  */
 export interface HubToolLink {

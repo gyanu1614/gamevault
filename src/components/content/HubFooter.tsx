@@ -130,7 +130,7 @@ export function HubFooter({
             <Link href="/" className="inline-flex items-center gap-2.5">
               <Image
                 src="/brand/logo-mark-white.avif"
-                alt="DropMarket"
+                alt=""
                 width={28}
                 height={28}
                 className="h-7 w-7"

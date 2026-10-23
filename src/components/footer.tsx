@@ -22,19 +22,12 @@ import Link from '@/components/navigation/AppLink'
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { DISCORD_INVITE_URL } from '@/lib/config/social'
+import { COMPANY, COMPANY_REGISTERED_OFFICE } from '@/lib/config/company'
 import { foundingHref } from '@/lib/seo/founding-href'
 
 /* ── Company details (UK e-commerce law + payment-provider requirement) ── */
 
-const COMPANY = {
-  name: 'DropMarket Ltd',
-  number: '17309867',
-  jurisdiction: 'England & Wales',
-  office: '82A James Carter Road, Mildenhall, Suffolk, IP28 7DE, United Kingdom',
-  vat: '287522083',
-  phone: '+44 7476 562276',
-  email: 'support@dropmarket.gg',
-}
+// One source with the legal pages and the Organization JSON-LD (lib/config/company).
 
 
 /* ── Link columns ── */
@@ -156,7 +149,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/brand/logo-mark-lime.avif"
-                alt="DropMarket"
+                alt=""
                 loading="lazy"
                 decoding="async"
                 width={44}
@@ -184,9 +177,9 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
                 value rather than under the label. */}
             <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[12px] leading-relaxed text-text-tertiary">
               <dt>Registered office</dt>
-              <dd>{COMPANY.office}</dd>
+              <dd>{COMPANY_REGISTERED_OFFICE}</dd>
               <dt>Registration No</dt>
-              <dd>{COMPANY.number}</dd>
+              <dd>{COMPANY.companyNumber}</dd>
             </dl>
 
           </motion.div>
@@ -299,7 +292,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
             right. Stacks and centres below sm. */}
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 pb-4 pt-4 text-center sm:flex-row sm:justify-between sm:gap-6 sm:text-left lg:px-8">
           <p className="text-xs leading-relaxed text-text-tertiary">
-            © {new Date().getFullYear()} {COMPANY.name} · Registered in{' '}
+            © {new Date().getFullYear()} {COMPANY.legalName} · Registered in{' '}
             {COMPANY.jurisdiction}
           </p>
           <nav
@@ -321,7 +314,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
         {/* The not-affiliated line every marketplace carries (owner,
             2026-10-06). One line on desktop. */}
         <p className="mx-auto max-w-7xl px-4 pb-8 text-center text-[11.5px] leading-5 text-text-tertiary sm:text-left lg:px-8">
-          All game names, logos and trademarks belong to their owners. {COMPANY.name} is an independent marketplace and isn&apos;t affiliated with, sponsored or endorsed by any game publisher.
+          All game names, logos and trademarks belong to their owners. {COMPANY.legalName} is an independent marketplace and isn&apos;t affiliated with, sponsored or endorsed by any game publisher.
         </p>
       </div>
     </footer>

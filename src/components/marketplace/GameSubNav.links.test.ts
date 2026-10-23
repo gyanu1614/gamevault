@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), prefetch:
 vi.mock('@/hooks/useScrollDirection', () => ({ useScrollDirection: () => ({ hidden: false }) }))
 
 import GameSubNav from '@/components/marketplace/GameSubNav'
-import { hubNavExtras } from '@/app/(marketplace)/[gameSlug]/values/_SabNavExtras'
+import { hubNavExtras } from '@/app/(marketplace)/[gameSlug]/values/_HubNavExtras'
 
 const categories = [
   { id: 'c1', name: 'Accounts', slug: 'buy-accounts' },

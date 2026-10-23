@@ -1057,10 +1057,14 @@ export function Navbar({
                 lg+ the class doesn't apply — desktop layout unchanged.
                 Wordmark now shows at every width (was hidden < sm). */}
             <Link href="/" className="flex shrink-0 items-center gap-2 max-lg:mr-auto">
+              {/* Empty alt: the wordmark beside it names the link. With the brand
+                  in the alt as well, Google read "DropMarket DropMarket" into
+                  result snippets (2026-10-23). Same in both footers and the
+                  /founding navbar. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/brand/logo-mark-white.avif"
-                alt="DropMarket"
+                alt=""
                 width={32}
                 height={32}
                 className="h-8 w-8 shrink-0 max-lg:h-7 max-lg:w-7"

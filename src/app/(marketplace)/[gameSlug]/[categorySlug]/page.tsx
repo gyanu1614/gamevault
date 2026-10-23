@@ -85,7 +85,7 @@ import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
 const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
 import { resolveItemBySlug } from './_itemResolver'
-import { hubNavExtras } from '../values/_SabNavExtras'
+import { hubNavExtras } from '../values/_HubNavExtras'
 import { seoMeta } from '@/lib/seo/fit'
 import { activeDeliveryMethods } from '@/lib/currency/delivery-methods'
 

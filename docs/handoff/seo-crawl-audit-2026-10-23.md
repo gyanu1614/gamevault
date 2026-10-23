@@ -177,6 +177,48 @@ web. When it is "less confident" in the name it falls back to the domain
   profile's display name) count against us. Not checked: Trustpilot blocks
   scripted reads — owner step 9.
 
+### 2.8 Root cause for the brand query: other businesses are called DropMarket
+
+Google for `dropmarket` (US, non-personalised, 2026-10-23) returns **other
+DropMarkets**: a DropMarket Shopify app (apps.shopify.com/dropmarket), DropMarket
+apps on Google Play and the Apple App Store, dropmarket.in, dropmarket.store,
+Dropp Market, a "dropmarket" YouTube channel. `dropmarket gg` returns us at #1,
+because "gg" matches only our domain.
+
+- **Why a new name like "gyanupandey" ranks in a day:** nobody else uses that
+  word, so the only page that matches is yours. "DropMarket" is shared, and the
+  others sit on very strong domains (Shopify, Google Play, Apple). Google has to
+  decide which DropMarket you mean, and it picks the one the web talks about most.
+- **Why the label says "dropmarket.gg":** Google's site-name docs say it
+  "generally won't use the same site name for two different sites that are
+  global in nature", and falls back to the domain when it is less confident.
+  Same cause.
+- **We made it worse ourselves:** our Organization markup listed
+  github.com/dropmarket, which is "Drop-Market.com" — another DropMarket. We were
+  telling Google we are the same entity as a different business. (Fixed in this PR.)
+- **Why Bing differs:** Bing weighs an exact domain-name match heavily and gets
+  every URL from us by IndexNow. Google weighs which entity is best known.
+- **Not the cause:** home page content. The hero says what we sell, and there
+  are real FAQ answers. Content depth decides generic queries, not which of
+  several same-named businesses a name search means.
+- **How the leaders do it:** "Eldorado" is also a shared name. Google still
+  labels eldorado.gg "Eldorado", because the web is full of pages about it
+  (Facebook page, Reddit threads, review sites).
+- **Symptom to watch:** Google rewrites short inner titles (e.g. /fees, /terms)
+  to "… - DropMarket - The Gamer's Marketplace", appending the whole home title.
+  The tagline only exists since 2026-10-07, so this is recent: Google has no
+  confident short name for the site yet.
+
+### 2.9 "DropMarket DropMarket" in result snippets
+
+For the GTA V and R6 sitelinks, Google built the snippet from our footer:
+"100% Refund. DropMarket DropMarket. Every Trade, Protected. Registered …".
+The logo image's alt text ("DropMarket") sat right before the visible
+"DropMarket" wordmark, in the main navbar, both footers and the /founding
+navbar, so every page's text read the brand twice. Fixed: those logos are
+decorative (`alt=""`); the wordmark names the link. Guarded by
+`brand-wordmark-alt.guard.test.ts`.
+
 ## 3. Fix plan (seo-human-first contract)
 
 ### 3.1 Fix — findability (this PR unless marked owner)
@@ -237,6 +279,11 @@ noindex, redirect or rename; the sitemap is unchanged.
    1. Request indexing for `https://dropmarket.gg/` first (step 2) — the site name is read from the home page.
    2. Trustpilot Business → Settings → company/display name: make it `DropMarket` (not `dropmarket.gg`). Do the same anywhere else you control the name: Discord server name, any directory listing.
    3. Wait 2–4 weeks after the recrawl. If it still shows the domain, tell me — Google's next step is a different alternate name, and its last resort is the domain itself, which you don't want, so we'd stop there.
+10. **Win the name "DropMarket" (the real fix, §2.8)**: make the web say which DropMarket we are.
+    1. Create official profiles you will use: X, YouTube, TikTok, Reddit (u/), Instagram. Each named "DropMarket", described as "game items marketplace", linking dropmarket.gg. Send me the URLs for the markup.
+    2. Get listed where gamers look: Trustpilot (name DropMarket), Discord server directories, gaming marketplace comparison/review sites, Crunchbase. Each listing names "DropMarket" next to "dropmarket.gg".
+    3. Ask happy buyers and sellers for Trustpilot reviews (already automated), and answer questions as DropMarket where you genuinely can help — no seeded posts.
+    4. Measure: GSC Performance, query `dropmarket` (impressions and position) monthly. Until then, "dropmarket gg" / "dropmarket.gg" already find us at #1.
 
 ## 5. What to watch (no re-audit needed)
 
