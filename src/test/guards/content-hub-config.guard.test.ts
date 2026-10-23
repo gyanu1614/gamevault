@@ -28,6 +28,7 @@ import { getFreeGuide } from '@/lib/values/free-guide'
 import { sharedWeaponBoxOdds } from '@/lib/values/shop-boxes'
 import { allBoxes } from '@/lib/values/boxes'
 import { valueListHub } from '@/lib/values/hub-config'
+import { hubToolLinks } from '@/lib/content/hub-links'
 
 describe('content hub config', () => {
   it('publishes exactly the games that have a hub today', () => {
@@ -195,13 +196,14 @@ describe('content hub config', () => {
       const theme = getGameContentTheme(slug)
       if (!theme.footerTools) continue
       expect(hasHubPage(slug, 'values')).toBe(true)
-      expect(hasHubPage(slug, 'calculator')).toBe(true)
+      for (const link of hubToolLinks(slug)) expect(hasHubPage(slug, link.tool), link.href).toBe(true)
     }
-    // Flagship-only today — turning this on elsewhere ADDS visible footer
-    // links, so it must be a deliberate, reviewed change.
+    // Every value hub since the 2026-10-23 crawl audit (the footer is the home
+    // page's only link to them). A new game's footer links are still a
+    // deliberate, reviewed change — this list moves with it.
     expect(
       CONTENT_HUB_GAME_SLUGS.filter((s) => getGameContentTheme(s).footerTools),
-    ).toEqual(['steal-a-brainrot'])
+    ).toEqual(['steal-a-brainrot', 'steal-an-egg', 'adopt-me', 'murder-mystery-2'])
   })
 
   it('gives every hub game an item noun, so no shared copy says "Brainrot"', () => {

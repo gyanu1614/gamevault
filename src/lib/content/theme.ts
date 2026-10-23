@@ -79,11 +79,11 @@ export interface GameContentTheme {
   itemNounPlural: string
   variantNoun: string | null
   /**
-   * Surface this game's money tools (Value List / Value Calculator) in the
-   * footer directory alongside its marketplace categories. Flagship-only
-   * today: turning it on for a second game ADDS footer links, which is a
-   * visible change, so it stays opt-in per game rather than implied by
-   * `pages.values`.
+   * Surface this game's money tools (hubToolLinks: Value List, then its
+   * calculator) in the footer directory alongside its marketplace categories.
+   * On for every hub game since the 2026-10-23 crawl audit: the footer is the
+   * home page's only link to the value hubs. Still opt-in per game rather than
+   * implied by `pages.values`, because it ADDS visible footer links.
    */
   footerTools: boolean
   /** Hub tools linked from the footer only (the page exists; its tab was folded out of a crowded nav). */
@@ -344,7 +344,7 @@ const THEMES: Record<string, GameContentTheme> = {
     // The game has no mutation/variant system — verified against the wiki
     // taxonomy, which has no variant field. Variant UI is omitted entirely.
     variantNoun: null,
-    footerTools: false,
+    footerTools: true,
   },
   'adopt-me': {
     name: 'Adopt Me',
@@ -396,7 +396,7 @@ const THEMES: Record<string, GameContentTheme> = {
     itemNoun: 'Pet',
     itemNounPlural: 'Pets',
     variantNoun: 'Variant',
-    footerTools: false,
+    footerTools: true,
   },
   'murder-mystery-2': {
     name: 'Murder Mystery 2',
@@ -462,7 +462,7 @@ const THEMES: Record<string, GameContentTheme> = {
     // Chroma is its own item with its own price (chroma-fang → fang), not a
     // variant axis, so variant UI is omitted.
     variantNoun: null,
-    footerTools: false,
+    footerTools: true,
   },
 }
 

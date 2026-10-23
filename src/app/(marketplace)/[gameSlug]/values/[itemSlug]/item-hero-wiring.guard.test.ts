@@ -13,6 +13,15 @@ describe('value item heroes', () => {
     expect(read('[itemSlug]/_ItemHero.tsx')).toMatch(/titleAs="h2"/)
   })
 
+  // Crawl audit 2026-10-23: the Steal an Egg item pages shipped with no H1.
+  it('every item page has exactly one H1: ItemPageTitle over an h2 hero, or the hero itself', () => {
+    expect(read('_generic/ValueListItemPage.tsx')).toMatch(/<ItemPageTitle /)
+    expect(read('_generic/ValueListItemBody.tsx')).not.toMatch(/titleAs="h1"/)
+    expect(read('_generic/ValueListItemClient.tsx')).toMatch(/titleAs = 'h2'/)
+    expect(read('_generic/ValueItemPage.tsx')).not.toMatch(/ItemPageTitle/)
+    expect(read('_generic/ValueItemPage.tsx')).toMatch(/<ValueListItemHero\s+titleAs="h1"/)
+  })
+
   it('SAB drops Availability (Adopt Me keeps it)', () => {
     expect(read('[itemSlug]/_ItemHero.tsx')).not.toMatch(/label: 'Availability'/)
     expect(read('[itemSlug]/_AdoptMePetHero.tsx')).toMatch(/label: 'Availability'/)

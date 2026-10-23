@@ -16,6 +16,8 @@
 import React from 'react'
 import { SITE_URL } from '@/config/site'
 import { DISCORD_INVITE_URL } from '@/lib/config/social'
+import { COMPANY, COMPANY_REGISTER_URL } from '@/lib/config/company'
+import { TRUSTPILOT_PROFILE_URL } from '@/lib/trustpilot/links'
 
 /** Absolute canonical URL from a site-relative path. */
 function absoluteUrl(path: string): string {
@@ -46,9 +48,23 @@ export function breadcrumbList(items: { name: string; path: string }[]) {
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`
 
 /**
- * The Organization node — emitted ONCE on the homepage. Carries the logo and
- * real social profiles (sameAs) so the publisher entity is verifiable. Keep the
- * sameAs list in step with the site footer's social links.
+ * Profiles that are provably DropMarket's — the Organization's `sameAs`. Only
+ * add one we control: Google joins every sameAs into the brand entity.
+ * (Crawl audit 2026-10-23: github.com/dropmarket is another business,
+ * "Drop-Market.com", created 2024; twitter.com/dropmarket was never confirmed
+ * ours. Both were removed.) The company register entry ties the brand to the
+ * registered company.
+ */
+export const ORGANIZATION_SAME_AS: readonly string[] = [
+  DISCORD_INVITE_URL,
+  TRUSTPILOT_PROFILE_URL,
+  COMPANY_REGISTER_URL,
+]
+
+/**
+ * The Organization node — on the homepage and the /company page (same @id, so
+ * Google merges them). Carries the logo, the registered company behind the
+ * brand and the profiles we own, so the publisher entity is verifiable.
  */
 export function organization() {
   return {
@@ -56,18 +72,34 @@ export function organization() {
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
     name: 'DropMarket',
+    alternateName: ['Drop Market', 'DropMarket.gg'],
+    legalName: COMPANY.legalName,
     url: SITE_URL,
     description:
       'Trusted gaming marketplace with SafeDrop Protection on every order',
     logo: {
       '@type': 'ImageObject',
       url: `${SITE_URL}/brand/logo-mark-lime-256.png`,
+      width: 256,
+      height: 256,
     },
-    sameAs: [
-      'https://twitter.com/dropmarket',
-      DISCORD_INVITE_URL,
-      'https://github.com/dropmarket',
-    ],
+    email: COMPANY.email,
+    telephone: COMPANY.phone,
+    address: { '@type': 'PostalAddress', ...COMPANY.address },
+    vatID: `GB${COMPANY.vatNumber}`,
+    identifier: {
+      '@type': 'PropertyValue',
+      propertyID: 'Companies House company number',
+      value: COMPANY.companyNumber,
+    },
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: COMPANY.email,
+      url: `${SITE_URL}/support`,
+      availableLanguage: 'en',
+    },
+    sameAs: [...ORGANIZATION_SAME_AS],
   }
 }
 

@@ -61,6 +61,7 @@ export function ValueListItemHero({
   sell,
   forms,
   isNew,
+  titleAs = 'h2',
 }: {
   name: string
   /** Rarity colour: price label. */
@@ -77,12 +78,17 @@ export function ValueListItemHero({
   forms: ItemForm[] | null
   /** Added in the last 14 days: the New tag. */
   isNew?: boolean
+  /**
+   * h2 under a page that prints ItemPageTitle (the MM2 list pages); h1 where
+   * the hero is the page's only title (the generic item page — Steal an Egg).
+   */
+  titleAs?: 'h1' | 'h2'
 }) {
   const cta = useItemCta(buy, name)
 
   return (
     <ValueItemHero
-      titleAs="h2"
+      titleAs={titleAs}
       accent={accent}
       art={{
         src: imageUrl,

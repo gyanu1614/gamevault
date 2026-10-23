@@ -201,10 +201,20 @@ export default function GameSubNav({
               const showLoading = isPending && spinnerVisible
 
               return (
-                <button
+                // A real link, not a button (crawl audit 2026-10-23): this strip
+                // is on every game landing, category and listing page, and a
+                // <button> gave crawlers no path to the category pages. A plain
+                // click keeps the transition + delayed spinner below; new-tab
+                // and modifier clicks are left to the browser.
+                <Link
                   key={cat.id}
-                  onClick={() => goToCategory(cat.slug)}
-                  disabled={isPending}
+                  href={`/${gameSlug}/${cat.slug}`}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+                    e.preventDefault()
+                    if (!isPending) goToCategory(cat.slug)
+                  }}
+                  aria-disabled={isPending || undefined}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     // Underline style — no pill. Chunkier on mobile (py-2.5,
@@ -232,7 +242,7 @@ export default function GameSubNav({
                       spinner before the label. */}
                   {showLoading && <Loader2 className="relative z-10 h-3.5 w-3.5 animate-spin text-white/70" />}
                   <span className="relative z-10">{cat.name}</span>
-                </button>
+                </Link>
               )
             })}
             {/* Extra tool tabs (Values / Calculator on the SAB landing),

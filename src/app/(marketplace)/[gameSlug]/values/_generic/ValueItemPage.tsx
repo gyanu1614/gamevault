@@ -151,7 +151,10 @@ export default async function ValueItemPage({
       <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-28 sm:px-6 lg:px-8">
         {/* The MM2 client hero: On DropMarket first, then the market price, then
             Value (noPriceFallback); Buy + a quiet Sell line; the New tag. */}
+        {/* The hero's title is this page's only heading above the fold: the H1
+            (crawl audit 2026-10-23 found these pages with none). */}
         <ValueListItemHero
+          titleAs="h1"
           name={item.name}
           accent={item.rarity ? rarityMeta(gameSlug, item.rarity).color : 'var(--color-text-secondary)'}
           imageUrl={item.imageUrl}
