@@ -92,6 +92,19 @@ describe.skipIf(!hasEnv)('catalogue pipeline: store + SAB adapter (guard)', () =
     expect(known.find((k) => k.slug === slug('a'))).toMatchObject({ pageId: 990_001 })
   })
 
+  it('gives every new brainrot its name + slug aliases, so its Eldorado listings match (20261023031219)', async () => {
+    const { data: row } = await svc.from('sab_brainrots').select('id,name').eq('slug', slug('a')).single()
+    // Aliases cascade-delete with the brainrot (teardown above).
+    const { data: aliases } = await svc.from('sab_brainrot_aliases').select('alias,priority').eq('brainrot_id', row!.id).order('priority', { ascending: false })
+    // Here the name IS the slug, and both normalise to the same text
+    // (sab_normalize_market_text), so the slug alias is skipped as a duplicate.
+    expect(aliases).toEqual([{ alias: row!.name, priority: 100 }])
+    // A brainrot added today stays in the crawl until sellers list it.
+    await svc.rpc('sab_recompute_tradeable')
+    const { data: fresh } = await svc.from('sab_brainrots').select('is_tradeable').eq('id', row!.id).single()
+    expect(fresh!.is_tradeable).toBe(true)
+  })
+
   it('fixes a missing image on a pipeline-added row once the copy works', async () => {
     await svc.from('sab_brainrots').update({ source_payload: { imported_by: PIPELINE_MARK, image_file: 'Y.png' } }).eq('slug', slug('bb'))
     // SAB re-reads the file name it stored, so the wiki is never called.

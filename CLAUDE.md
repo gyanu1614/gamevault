@@ -73,6 +73,7 @@
 - Insert-only: the run never updates or deletes an existing item row (it only fills an image on rows it added). `catalogue_refs` (game, wiki page id) is the dedupe key; `catalogue_runs` is the run log /admin and the health check read.
 - A run over `insertCap` (default 50) or with >20% unparseable pages stops itself and posts to Discord; a big backlog is a manual `--allow-large` run after a dry run.
 - Adding a game: adapter + `games/<game-slug>.test.ts` (saved wiki pages) + registry line + workflow matrix key — the guard test fails until all exist. Never edit another game's adapter for it.
+- A new item must be priceable with no manual step. SAB matches Eldorado titles only through `sab_brainrot_aliases`: the `sab_brainrots_default_aliases` trigger (20261023031219) adds name + slug aliases on every insert, and `sab_recompute_tradeable` keeps brainrots added in the last 14 days in the crawl. Adopt Me and MM2 match by name from the DB; only a spelling that differs on Eldorado needs an alias (`ELDORADO_NAME_ALIASES` / `values_item_aliases`).
 
 ## Public pages are static-first (from Step 7a, 2026-09-19)
 - Every public page is ISR or SSG. `scripts/check-public-route-caching.mjs` runs ahead of `next build` (and as `src/test/guards/public-route-caching.guard.test.ts`) and fails the deploy when a public route breaks a rule below. A new per-request public route needs an entry in its `GRANDFATHERED` list with the reason — the same review a `force-dynamic` would get.
