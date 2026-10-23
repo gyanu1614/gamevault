@@ -3,7 +3,7 @@
 /**
  * Shared content-hub navbar — one row, identical structure for every game.
  *
- *   [game icon + name ▾] [Codes ▾]   [Guides] [Values] [Calculator]   [Shop][Sell]
+ *   [game icon + name ▾] [Codes ▾]   [Guides] [Values] [Calculator]   [Search][Shop][Sell]
  *
  * - The game icon + name link to the game's marketplace hub (/{slug}), like
  *   the marketplace GameSubNav; the caret beside them opens the game
@@ -33,6 +33,8 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/compon
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { GameMark } from './GameMark'
 import { HubCodesMenu } from './HubCodesMenu'
+import { HubSearch } from './HubSearch'
+import { searchIndexGames } from '@/lib/search/game-search'
 import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
 import type { HubNavData } from '@/lib/content/hubNav'
 import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
@@ -323,6 +325,8 @@ export function HubNav({
             pair to the right edge on mobile (where the middle nav is hidden);
             xl:flex-1 takes over the centring role from xl up (below xl a long game name like "Steal a Brainrot" collided with the centred tabs). ── */}
         <div className="ml-auto flex shrink-0 items-center justify-end gap-2.5 xl:ml-0 xl:flex-1">
+          {/* Per-game search (items + guides), where the game has an index. */}
+          {searchIndexGames().includes(current.slug) && <HubSearch game={current} />}
           {(() => {
             // Buy = items board when it exists, else the accounts board.
             const buyHref = itemsHref ?? accountsHref
