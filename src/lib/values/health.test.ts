@@ -44,6 +44,14 @@ describe('evaluateGameHealth', () => {
   it('a read error is a problem, never a pass', () => {
     expect(evaluateGameHealth(sab, healthy({ readError: 'timeout' }), NOW).map((p) => p.kind)).toEqual(['read'])
   })
+
+  it('flags Eldorado names with listings that match no item, naming the busiest', () => {
+    const problems = evaluateGameHealth(am, healthy({ unmatchedNames: [{ marketName: 'Malayan Tapir', offers: 12 }, { marketName: 'Peacok', offers: 4 }] }), NOW)
+    expect(problems).toEqual([
+      expect.objectContaining({ kind: 'names', message: expect.stringContaining('2 Eldorado names with listings match no item yet: "Malayan Tapir" (12), "Peacok" (4)') }),
+    ])
+    expect(evaluateGameHealth(am, healthy({ unmatchedNames: [] }), NOW)).toEqual([])
+  })
 })
 
 describe('healthMessage', () => {

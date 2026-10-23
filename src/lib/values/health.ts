@@ -8,7 +8,11 @@
  *     fail or stop itself (GitHub starts schedules 5–7 h late; one missed day
  *     is tolerated);
  *   - prices:    the game's "pricing ran" timestamp is inside its window;
- *   - list:      the public value list has rows.
+ *   - list:      the public value list has rows;
+ *   - names:     Eldorado names with listings that match no item but look
+ *                like one (market_name_matches 'unmatched' with suggestions),
+ *                so a spelling change is linked within a day (advisory: a
+ *                failed read here never blocks the other signals).
  * Read errors count as problems, never as a pass. The route
  * (api/cron/values-health) posts the message; this module is pure apart from
  * readGameHealth.
@@ -65,13 +69,18 @@ export interface GameHealthInput {
   lastCatalogueRun: { startedAt: string; status: string } | null
   lastPriceAt: string | null
   listCount: number
+  /** Unmatched Eldorado names with suggestions, ≥ NAMES_MIN_OFFERS listings, seen in the last 48 h. */
+  unmatchedNames?: { marketName: string; offers: number }[]
   readError?: string
 }
+
+/** An unmatched name needs this many listings before it is worth an alert. */
+export const NAMES_MIN_OFFERS = 3
 
 export interface HealthProblem {
   gameSlug: string
   name: string
-  kind: 'catalogue' | 'prices' | 'list' | 'read'
+  kind: 'catalogue' | 'prices' | 'list' | 'names' | 'read'
   message: string
 }
 
@@ -94,6 +103,11 @@ export function evaluateGameHealth(game: ValuesHealthGame, input: GameHealthInpu
   else if (ageHours(input.lastPriceAt, now) > game.priceMaxHours) add('prices', `no price moved for ${ageHours(input.lastPriceAt, now)} h (allowed ${game.priceMaxHours} h)`)
 
   if (input.listCount <= 0) add('list', 'the value list is empty')
+  const names = input.unmatchedNames ?? []
+  if (names.length) {
+    const top = names.slice(0, 3).map((n) => `"${n.marketName}" (${n.offers})`).join(', ')
+    add('names', `${names.length} Eldorado ${names.length === 1 ? 'name' : 'names'} with listings ${names.length === 1 ? 'matches' : 'match'} no item yet: ${top}. Link or reject in Admin → Games → Values`)
+  }
   return out
 }
 
@@ -134,8 +148,27 @@ export async function readGameHealth(db: Db, game: ValuesHealthGame): Promise<Ga
       lastCatalogueRun: r ? { startedAt: r.started_at as string, status: r.status as string } : null,
       lastPriceAt: p,
       listCount: list.count ?? 0,
+      unmatchedNames: await readUnmatchedNames(db, game.gameSlug),
     }
   } catch (e) {
     return { lastCatalogueRun: null, lastPriceAt: null, listCount: 0, readError: (e as Error).message }
   }
+}
+
+/** Advisory: an error (e.g. the table not pushed yet) returns [] rather than failing the game's health. */
+async function readUnmatchedNames(db: Db, gameSlug: string): Promise<{ marketName: string; offers: number }[]> {
+  const since = new Date(Date.now() - 48 * 3_600_000).toISOString()
+  const { data, error } = await db
+    .from('market_name_matches')
+    .select('market_name,offers,suggestions')
+    .eq('game_slug', gameSlug)
+    .eq('status', 'unmatched')
+    .gte('offers', NAMES_MIN_OFFERS)
+    .gte('last_seen_at', since)
+    .order('offers', { ascending: false })
+    .limit(50)
+  if (error) return []
+  return ((data ?? []) as { market_name: string; offers: number; suggestions: unknown }[])
+    .filter((r) => Array.isArray(r.suggestions) && r.suggestions.length > 0)
+    .map((r) => ({ marketName: r.market_name, offers: r.offers }))
 }
