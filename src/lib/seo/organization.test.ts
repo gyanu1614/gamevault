@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { ORGANIZATION_ID, ORGANIZATION_SAME_AS, organization } from '@/lib/seo/jsonld'
+import { ORGANIZATION_ID, ORGANIZATION_SAME_AS, SITE_ALTERNATE_NAMES, organization } from '@/lib/seo/jsonld'
 import { LEGAL_ENTITY } from '@/lib/legal/documents'
 import { DISCORD_INVITE_URL } from '@/lib/config/social'
 import { TRUSTPILOT_PROFILE_URL } from '@/lib/trustpilot/links'
@@ -55,5 +55,19 @@ describe('Organization JSON-LD', () => {
     expect(read('src/components/content/HubFooter.tsx')).not.toMatch(/twitter\.com|github\.com/)
     expect(read('src/components/footer.tsx')).not.toMatch(/twitter\.com|github\.com/)
     expect(ORGANIZATION_SAME_AS).toContain(DISCORD_INVITE_URL)
+  })
+
+  // Owner, 2026-10-07 and 2026-10-23: the result should read "DropMarket", not "dropmarket.gg".
+  it('names the site DropMarket everywhere Google looks, with no domain-form alternate', () => {
+    const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8')
+    expect(org.name).toBe('DropMarket')
+    expect(org.alternateName).toEqual([...SITE_ALTERNATE_NAMES])
+    for (const n of SITE_ALTERNATE_NAMES) expect(n).not.toMatch(/\.gg$|\.com$/i)
+    const home = read('src/app/page.tsx')
+    expect(home).toMatch(/'@type': 'WebSite'[\s\S]*name: SITE_NAME,\s*alternateName: \[\.\.\.SITE_ALTERNATE_NAMES\]/)
+    expect(home).toMatch(/title: \{ absolute: "DropMarket - /)
+    const layout = read('src/app/layout.tsx')
+    expect(layout).toMatch(/applicationName: 'DropMarket'/)
+    expect(layout).toMatch(/siteName: 'DropMarket'/)
   })
 })

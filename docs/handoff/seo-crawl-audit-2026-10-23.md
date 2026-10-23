@@ -152,6 +152,31 @@ visitors is noindexed.** Verdict: leave the gate alone. Loosening it would add
   Seznam, Naver. **Google does not use IndexNow**; it relies on links + sitemaps.
 - Bing sync cron (`/api/cron/seo-bing`) is idle: `BING_WEBMASTER_API_KEY` unset.
 
+### 2.7 Site name over the result shows "dropmarket.gg", not "DropMarket"
+
+Owner screenshot (2026-10-23): the brand result reads `dropmarket.gg` /
+`https://dropmarket.gg` above the title "DropMarket - The Gamer's Marketplace".
+The 2026-10-07 change fixed the title but not the site name, because Google
+picks the site name separately: from the home page's WebSite markup, checked
+against the title, headings, `og:site_name` and other text on the site and the
+web. When it is "less confident" in the name it falls back to the domain
+(Google's site-name docs). What we found:
+
+- Home page: consistent. WebSite `name` "DropMarket", title, H1, og:site_name,
+  logo alt and footer all say DropMarket ✅.
+- **Every other page was missing `og:site_name`** (/adopt-me, /adopt-me/values,
+  blog posts, /browse, /safedrop … — 12 of 14 checked). A page's own
+  `openGraph` replaces the layout's in Next, so the siteName was dropped.
+- `alternateName` held `"DropMarket.gg"`: a domain form, mis-cased. Google takes
+  a domain alternate only lowercase and last, as the fallback the owner doesn't
+  want.
+- No other live site claims the name (drop-market.com, dropmarket.com/.io/.net
+  checked), so it is a confidence problem — a new brand with few outside
+  mentions, and an Organization that pointed at another company's GitHub.
+- Outside sources that call the site "dropmarket.gg" (for example the Trustpilot
+  profile's display name) count against us. Not checked: Trustpilot blocks
+  scripted reads — owner step 9.
+
 ## 3. Fix plan (seo-human-first contract)
 
 ### 3.1 Fix — findability (this PR unless marked owner)
@@ -162,6 +187,7 @@ visitors is noindexed.** Verdict: leave the gate alone. Loosening it would add
 | F2 | Critical | **Game sub-nav category tabs are real links** (`<Link href>`; a plain click keeps the transition + delayed spinner; new-tab/modifier clicks work). | Server HTML of any game page has `href="/<game>/<category>"` in the strip. Category pages' GSC "Referring page" lists game landings. |
 | F3 | High | **Hub tool tabs in the game sub-nav for every hub game** ("Values", "Calculator"/"Inventory") on the landing and every category page — the SAB pattern, generalised (`hubNavExtras`). /adopt-me → /adopt-me/values is now one click. | /adopt-me HTML links /adopt-me/values. |
 | F4 | High | **Organization entity corrected**: sameAs = Discord, Trustpilot profile, Companies House record (the GitHub/Twitter claims removed); adds legalName, address, VAT ID, company number, email, phone, contactPoint, logo size. Same node on **/company** plus an AboutPage. Hub footer's unverified Twitter icon removed. Company facts now come from one module (`src/lib/config/company.ts`) shared with the legal pages. | Rich Results Test on / and /company shows one Organization with legalName. Over 1–3 months: "dropmarket" brand query position (GSC) improves from ~63. |
+| F4b | High | **Site name signals**: `og:site_name` "DropMarket" on every page (`seoMeta` default; the seller shop page already set it), `<meta name="application-name" content="DropMarket">` site-wide, `alternateName` = "Drop Market" only (domain form removed) on WebSite and Organization. | Every page's HTML has `og:site_name` DropMarket. After the home page is recrawled (owner step 2), the result's top line reads "DropMarket"; Google says this takes days to weeks and isn't guaranteed for a new brand. |
 | F5 | Medium | **H1 on Steal an Egg item pages** (the hero title is the H1 there; other games keep ItemPageTitle). Guard pins one H1 per item-page type. | Live SAE item HTML has one `<h1>`. |
 | F6 | High (owner) | Resubmit the sitemap and request indexing for the top pages after release — owner steps 1–2. | URL Inspection shows a fresh crawl date. |
 | F7 | High (owner) | Turn on the Bing sync (owner step 6) so /admin/seo shows Bing's view next to Google's and we stop flying blind on the channel that earns traffic. | /admin/seo Bing panel fills the day after. |
@@ -207,10 +233,15 @@ noindex, redirect or rename; the sitemap is unchanged.
    5. Redeploy (or wait for the next RELEASE). The `/api/cron/seo-bing` cron then runs daily at 07:40 UTC and fills the Bing panel on /admin/seo.
 7. **Social profiles**: tell me if you own `x.com/dropmarket`. If yes, I'll add it back to `ORGANIZATION_SAME_AS`. If not, create the official profiles you will actually use (X, YouTube, TikTok — each with dropmarket.gg in the bio) and send me the URLs; only owned profiles go in the markup.
 8. Optional: top up Semrush API units or the Ahrefs plan if you want backlink and SERP data in future audits.
+9. **Site name ("DropMarket" instead of "dropmarket.gg")**:
+   1. Request indexing for `https://dropmarket.gg/` first (step 2) — the site name is read from the home page.
+   2. Trustpilot Business → Settings → company/display name: make it `DropMarket` (not `dropmarket.gg`). Do the same anywhere else you control the name: Discord server name, any directory listing.
+   3. Wait 2–4 weeks after the recrawl. If it still shows the domain, tell me — Google's next step is a different alternate name, and its last resort is the domain itself, which you don't want, so we'd stop there.
 
 ## 5. What to watch (no re-audit needed)
 
 - GSC URL Inspection on /adopt-me/values: "Last crawl" newer than 2026-07-31.
 - GSC Pages report: "Discovered – currently not indexed" count falling, "Indexed" rising, week over week.
 - GSC Performance → query "dropmarket": position below 20 within ~8 weeks.
+- Search "dropmarket" on Google: the line above the title reads "DropMarket", not "dropmarket.gg".
 - Bing (Vercel Web Analytics referrers): unchanged or up. Any drop on the Bing top-10 landing pages after release = look at this PR first.

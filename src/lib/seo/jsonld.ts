@@ -48,6 +48,14 @@ export function breadcrumbList(items: { name: string; path: string }[]) {
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`
 
 /**
+ * Other names Google may show for the site, most preferred first (WebSite and
+ * Organization `alternateName`). No domain form: Google's site-name docs take a
+ * domain only lowercase and last, as a fallback the owner does not want
+ * ("DropMarket", not "dropmarket.gg" — 2026-10-07 and 2026-10-23).
+ */
+export const SITE_ALTERNATE_NAMES: readonly string[] = ['Drop Market']
+
+/**
  * Profiles that are provably DropMarket's — the Organization's `sameAs`. Only
  * add one we control: Google joins every sameAs into the brand entity.
  * (Crawl audit 2026-10-23: github.com/dropmarket is another business,
@@ -72,7 +80,7 @@ export function organization() {
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
     name: 'DropMarket',
-    alternateName: ['Drop Market', 'DropMarket.gg'],
+    alternateName: [...SITE_ALTERNATE_NAMES],
     legalName: COMPANY.legalName,
     url: SITE_URL,
     description:

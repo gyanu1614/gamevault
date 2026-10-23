@@ -1,10 +1,10 @@
-import { SITE_URL } from '@/config/site'
+import { SITE_NAME, SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
 import { PopularGames } from '@/features/home/components/PopularGames'
 import { LatestListings } from '@/features/home/components/LatestListings'
 import { TrustpilotShowcase } from '@/components/trust/TrustpilotShowcase'
-import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
+import { organization, ORGANIZATION_ID, SITE_ALTERNATE_NAMES, serializeJsonLd } from '@/lib/seo/jsonld'
 import { seoMeta } from '@/lib/seo/fit'
 
 export const metadata: Metadata = seoMeta({
@@ -40,14 +40,16 @@ const SCHEMAS = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    // Site name in Google results (owner, 2026-10-07: "DropMarket", not
-    // "dropmarket.gg"). Google reads name + alternateName from this node on the
-    // root home page; the url is the canonical home page with its slash. The
-    // SearchAction is gone: Google retired the sitelinks search box, and its
-    // /?q= target is disallowed in robots.txt.
+    // Site name in Google results (owner, 2026-10-07 and 2026-10-23: "DropMarket",
+    // not "dropmarket.gg"). Google reads name + alternateName from this node on
+    // the root home page, and checks them against the title, H1 and
+    // og:site_name (every page sets siteName: seoMeta). The url is the
+    // canonical home page with its slash. The SearchAction is gone: Google
+    // retired the sitelinks search box, and its /?q= target is disallowed in
+    // robots.txt.
     '@id': `${SITE_URL}/#website`,
-    name: 'DropMarket',
-    alternateName: ['Drop Market', 'DropMarket.gg'],
+    name: SITE_NAME,
+    alternateName: [...SITE_ALTERNATE_NAMES],
     url: `${SITE_URL}/`,
     inLanguage: 'en',
     publisher: { '@id': ORGANIZATION_ID },

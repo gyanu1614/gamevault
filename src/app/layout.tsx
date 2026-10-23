@@ -120,6 +120,9 @@ export const metadata: Metadata = {
   // dropmarket.gg as the real domain even while transition domains
   // serve the same deployment.
   metadataBase: new URL(SITE_URL),
+  // <meta name="application-name">: one more place the site name reads
+  // "DropMarket" (Google picks the result's site name from these signals).
+  applicationName: 'DropMarket',
   alternates: { canonical: './' },
   title: {
     default: 'DropMarket — Buy & Sell Game Items Safely',
