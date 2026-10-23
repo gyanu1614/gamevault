@@ -89,6 +89,7 @@ export function filterSortPets(
   const list = pets.filter((p) => {
     if (q && !p.name.toLowerCase().includes(q)) return false
     if (view === 'popular' || view === 'all') return true
+    if (view === 'new') return p.isNew === true
     return p.rarity === view
   })
   return [...list].sort((a, b) => {

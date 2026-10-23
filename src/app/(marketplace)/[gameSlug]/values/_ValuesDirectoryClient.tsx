@@ -26,7 +26,7 @@ import { NewTag } from '@/components/values/NewTag'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
-import { RarityFilterBar } from '@/components/values/RarityFilterBar'
+import { RarityFilterBar, newFilterOption } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { SAB_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
@@ -240,8 +240,10 @@ function ValuesDirectoryClientInner({ initial }: { initial: InitialValueList }) 
     setSort('value-desc')
   }
 
+  const newCount = ready ? brainrots.filter((b) => b.isNew).length : (initial.facets.new?.new ?? 0)
   const rarityOptions = [
     { key: 'popular', label: 'Popular', color: '#4FB477' },
+    ...(newCount > 0 ? [newFilterOption(newCount)] : []),
     { key: 'all', label: 'All', color: '#9AA6A0', count: ready ? brainrots.length : initial.total },
     ...rarities.map((r) => ({
       key: r,

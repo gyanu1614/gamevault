@@ -431,7 +431,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
               }),
               {
                 pageSize: SAB_PAGE_SIZE,
-                facets: countFacets(brainrots, { rarity: (b) => b.rarity, obtain: (b) => b.obtainability }),
+                facets: countFacets(brainrots, { rarity: (b) => b.rarity, obtain: (b) => b.obtainability, new: (b) => (b.isNew ? 'new' : null) }),
               },
             )}
           />

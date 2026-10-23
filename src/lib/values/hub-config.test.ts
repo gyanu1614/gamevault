@@ -12,6 +12,8 @@ describe('value-list hub config', () => {
     expect(VALUE_LIST_HUB_GAMES).toEqual(['murder-mystery-2'])
     expect(valueListHub('steal-an-egg')).toBeNull()
     expect(valueListHub('murder-mystery-2')?.tabs.map((t) => t.label)).toEqual([
+      // Owner, 2026-10-23: a New tile first (hidden when nothing is new).
+      'New',
       'Godly',
       'Ancient',
       'Vintage',
@@ -54,5 +56,13 @@ describe('value-list hub config', () => {
     })
     expect(parseImageAttribution('Image: Somewhere')).toEqual({ text: 'Somewhere', href: null })
     expect(parseImageAttribution(null)).toBeNull()
+  })
+})
+
+describe('the New tile', () => {
+  it('matches only rows flagged new, whatever their rarity', () => {
+    const tab = valueListHub('murder-mystery-2')!.tabs.find((t) => t.key === 'new')!
+    expect(matchesValueListTab(tab, { rarity: 'Godly', itemType: 'gun', isNew: true })).toBe(true)
+    expect(matchesValueListTab(tab, { rarity: 'Godly', itemType: 'gun' })).toBe(false)
   })
 })

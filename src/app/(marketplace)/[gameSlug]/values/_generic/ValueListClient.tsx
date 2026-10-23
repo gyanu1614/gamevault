@@ -28,7 +28,7 @@ import { ChromaFlipButton, ChromaWord, type CardForm } from '@/components/values
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
-import { RarityFilterBar } from '@/components/values/RarityFilterBar'
+import { RarityFilterBar, newFilterOption } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
@@ -176,7 +176,7 @@ export default function ValueListClient({
 
   const filterOptions = [
     { key: DEFAULT_VIEW, label: 'All', color: '#9AA6A0', count: allCount },
-    ...visibleTabs.map((t) => ({ key: t.key, label: t.label, color: t.color, count: t.count })),
+    ...visibleTabs.map((t) => (t.isNew ? newFilterOption(t.count) : { key: t.key, label: t.label, color: t.color, count: t.count })),
   ]
 
   return (

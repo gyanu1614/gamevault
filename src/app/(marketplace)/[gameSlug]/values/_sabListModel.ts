@@ -121,7 +121,7 @@ export function filterSortBrainrots(
     const matchesRarity =
       effectiveView === 'popular' ||
       effectiveView === 'all' ||
-      brainrot.rarity === effectiveView
+      (effectiveView === 'new' ? brainrot.isNew === true : brainrot.rarity === effectiveView)
 
     const matchesObtainability =
       obtainability === 'all' || brainrot.obtainability === obtainability
