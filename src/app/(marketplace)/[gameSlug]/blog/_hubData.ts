@@ -50,7 +50,7 @@ export async function getHubCalcExample(
     fetchAllRows<any>((from, to) =>
       (supabase as any)
         .from('adopt_me_pets')
-        .select('id,name,image_url,has_page')
+        .select('id,name,image_url,is_active')
         .eq('is_active', true)
         .order('id', { ascending: true })
         .range(from, to),
@@ -66,12 +66,12 @@ export async function getHubCalcExample(
   ])
   if (petsRes.error || valsRes.error) return null
 
-  type Pet = { id: string; name: string; image_url: string | null; has_page: boolean }
+  type Pet = { id: string; name: string; image_url: string | null; is_active: boolean }
   const byId = new Map((petsRes.data as Pet[]).map((p) => [p.id, p]))
   const priced = ((valsRes.data ?? []) as { pet_id: string; cash_value_usd: number | string | null }[])
     .filter((v) => v.cash_value_usd != null && Number.isFinite(Number(v.cash_value_usd)))
     .map((v) => ({ pet: byId.get(v.pet_id), usd: Number(v.cash_value_usd) }))
-    .filter((v): v is { pet: Pet; usd: number } => !!v.pet && v.pet.has_page && v.pet.image_url != null)
+    .filter((v): v is { pet: Pet; usd: number } => !!v.pet && v.pet.is_active && v.pet.image_url != null)
     .sort((a, b) => b.usd - a.usd)
 
   // Need at least two priced pets to form an example.
@@ -152,7 +152,7 @@ export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
     fetchAllRows<any>((from, to) =>
       (supabase as any)
         .from('adopt_me_pets')
-        .select('id,name,slug,image_url,has_page')
+        .select('id,name,slug,image_url,is_active')
         .eq('is_active', true)
         .order('id', { ascending: true })
         .range(from, to),
@@ -182,15 +182,15 @@ export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
 
   if (petsRes.error || valsRes.error) return []
 
-  type Pet = { id: string; name: string; slug: string; image_url: string | null; has_page: boolean }
+  type Pet = { id: string; name: string; slug: string; image_url: string | null; is_active: boolean }
   const pets = (petsRes.data ?? []) as Pet[]
   const byId = new Map(pets.map((p) => [p.id, p]))
-  const published = pets.filter((p) => p.has_page)
+  const published = pets.filter((p) => p.is_active)
 
   const priced = ((valsRes.data ?? []) as { pet_id: string; cash_value_usd: number | string | null }[])
     .filter((v) => v.cash_value_usd != null && Number.isFinite(Number(v.cash_value_usd)))
     .map((v) => ({ pet: byId.get(v.pet_id), usd: Number(v.cash_value_usd) }))
-    .filter((v): v is { pet: Pet; usd: number } => !!v.pet && v.pet.has_page)
+    .filter((v): v is { pet: Pet; usd: number } => !!v.pet && v.pet.is_active)
     .sort((a, b) => b.usd - a.usd)
 
   const usd = new Intl.NumberFormat('en-US', {
@@ -390,7 +390,7 @@ export async function getHubTopValues(
  * Adopt Me top values, ranked by Fly Ride cash price (the variant traders
  * benchmark against — matching the value list's default). Reads the same two
  * catalog tables the /adopt-me/values page reads, so the teaser and the list
- * never disagree. Only published pets (has_page) surface, so every teaser links
+ * never disagree. Only active pets (each has a page) surface, so every teaser links
  * to a real page.
  */
 async function getAdoptMeTopValues(limit: number): Promise<HubTeaserItem[]> {
@@ -400,7 +400,7 @@ async function getAdoptMeTopValues(limit: number): Promise<HubTeaserItem[]> {
     fetchAllRows<any>((from, to) =>
       (supabase as any)
         .from('adopt_me_pets')
-        .select('id,slug,name,image_url,has_page')
+        .select('id,slug,name,image_url,is_active')
         .eq('is_active', true)
         .order('id', { ascending: true })
         .range(from, to),
@@ -427,7 +427,7 @@ async function getAdoptMeTopValues(limit: number): Promise<HubTeaserItem[]> {
     slug: string
     name: string
     image_url: string | null
-    has_page: boolean
+    is_active: boolean
   }
   type ValueRow = {
     pet_id: string
@@ -447,7 +447,7 @@ async function getAdoptMeTopValues(limit: number): Promise<HubTeaserItem[]> {
   )
 
   return ((petsRes.data ?? []) as PetRow[])
-    .filter((pet) => pet.has_page)
+    .filter((pet) => pet.is_active)
     .map((pet) => {
       const price = frByPet.get(pet.id)
       if (!price) return null

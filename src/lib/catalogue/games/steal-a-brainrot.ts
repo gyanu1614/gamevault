@@ -8,6 +8,8 @@
  */
 import { buildSabFacts, parseObtainment, parseUpdateLog, statusOf, type SabHowToGetStatus } from '../../sab/wiki-facts'
 import { plainText, templateBody, templateParams } from '../../wiki/markup'
+import { parseAmount } from '../amounts'
+import { firstImageFile } from '../files'
 import { slugifyTitle } from '../plan'
 import type { CatalogueAdapter, KnownItem, ParsedItem, WikiPage } from '../types'
 
@@ -16,6 +18,8 @@ const BUCKET = 'sab-brainrots'
 const SOURCE_NAME = 'Steal a Brainrot Wiki'
 /** source_payload.imported_by on rows this pipeline added. */
 export const PIPELINE_MARK = 'catalogue-pipeline'
+export { firstImageFile, parseAmount }
+
 const RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Brainrot God', 'Secret', 'OG'] as const
 
 /** Infobox rarity → our label ("Brainrot god" → "Brainrot God"); null when unknown. */
@@ -24,37 +28,11 @@ export function sabRarity(raw: string | undefined): string | null {
   return RARITIES.find((r) => r.toLowerCase() === text) ?? null
 }
 
-const SUFFIX: Record<string, number> = { k: 1e3, m: 1e6, b: 1e9, t: 1e12, q: 1e15, qa: 1e15, qi: 1e18 }
-
-/** "322.5K" → 322500, "$23.5B" → 23500000000; null when it isn't a plain amount. */
-export function parseAmount(raw: string | undefined): number | null {
-  const m = plainText(raw ?? '').replace(/[$,\s]/g, '').match(/^(\d+(?:\.\d+)?)(qa|qi|[kmbtq])?(?:\/s)?$/i)
-  if (!m) return null
-  return Math.round(Number(m[1]) * (m[2] ? SUFFIX[m[2].toLowerCase()] : 1))
-}
-
 const OBTAINABILITY: Record<SabHowToGetStatus, 'obtainable' | 'limited' | 'unobtainable' | 'unknown'> = {
   obtainable: 'obtainable',
   seasonal: 'limited',
   unobtainable: 'unobtainable',
   unknown: 'unknown',
-}
-
-/**
- * The infobox picture → one wiki file name. A plain "Slushi Huski.png", or a
- * <gallery> with one "file|caption" per line (normal + egg art): the first file.
- * Also cleans a value stored before this existed ("A.png|Brainrot B.png|Egg").
- */
-export function firstImageFile(raw: string | null | undefined): string | null {
-  const lines = (raw ?? '')
-    .replace(/<\/?gallery[^>]*>/gi, '\n')
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean)
-  const name = plainText(lines[0]?.split('|')[0] ?? '')
-    .replace(/^(?:file|image):/i, '')
-    .trim()
-  return name || null
 }
 
 const pageUrl = (title: string) => `https://${HOST}/wiki/${encodeURI(title.replace(/ /g, '_'))}`

@@ -13,20 +13,24 @@ const text = (v: unknown): string | null => (typeof v === 'string' && v.trim() ?
 const OWN_TABLES: Record<string, { table: string; columns: string; toFacts: (r: Record<string, unknown>) => ItemFacts }> = {
   'adopt-me': {
     table: 'adopt_me_pets',
-    columns: 'released_at,origin_detail,how_to_get',
+    columns: 'released_at,origin_detail,how_to_get,created_at',
     toFacts: (r) => ({
       released: releasedLabel({ date: text(r.released_at) }),
       origin: text(r.origin_detail),
       howToGet: parseHowToGet(r.how_to_get),
+      releasedAt: text(r.released_at),
+      addedAt: text(r.created_at),
     }),
   },
   'steal-a-brainrot': {
     table: 'sab_brainrots',
-    columns: 'released_at,origin,how_to_get',
+    columns: 'released_at,origin,how_to_get,created_at',
     toFacts: (r) => ({
       released: releasedLabel({ date: text(r.released_at) }),
       origin: text(r.origin),
       howToGet: parseHowToGet(r.how_to_get),
+      releasedAt: text(r.released_at),
+      addedAt: text(r.created_at),
     }),
   },
 }

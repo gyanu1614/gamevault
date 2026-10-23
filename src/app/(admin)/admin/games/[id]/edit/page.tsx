@@ -19,8 +19,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function EditGamePage({
   params,
+  searchParams,
 }: {
   params: { id: string }
+  // Admin page (force-dynamic, never prerendered): reading ?tab= is fine here.
+  searchParams?: { tab?: string }
 }) {
   const id = params.id
   const [game, rows, globalCategories] = await Promise.all([
@@ -36,6 +39,7 @@ export default async function EditGamePage({
       game={game}
       globalCategories={globalCategories}
       initialGameCategories={rows}
+      initialTab={searchParams?.tab}
     />
   )
 }

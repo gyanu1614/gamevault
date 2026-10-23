@@ -1,17 +1,13 @@
 name: Values Weekly Catalog
 
-# Two jobs, one after the other (one DB-heavy run at a time):
-#   1. Adopt Me — below.
-#   2. Murder Mystery 2 — the Fandom wiki catalogue, NEW items only
-#      (--new-only: existing rows are never rewritten), then images for rows
-#      that have none. Before 2026-10-14 it ran only by hand.
+# Adopt Me pictures only (2026-10-22). New pets for every hub game, Adopt Me
+# included, come from the daily catalogue job (values-catalogue-daily.yml,
+# src/lib/catalogue/) reading each game's Fandom wiki. adoptmevalues.app is no
+# longer scraped: its terms forbid it, and its import rewrote existing pets
+# (name, rarity, demand_trend, is_active) every week.
 #
-# Adopt Me re-scrapes the Adopt Me pet catalog (adoptmevalues.app) and upserts it by
-# slug, without duplicating existing pets, and refreshes the community trade
-# values. NEW pets (Friday updates) are added only when the dry run says they
-# qualify — a variant with a real reputable price above $1 (owner rule, T2).
-# Before 2026-10-14 the import held back every new slug (no --qualifying), so
-# no new pet was ever added. Cash prices come from the separate daily workflow.
+# What stays here: the weekly check that copies the Adopt Me Wiki's picture for
+# any pet whose stored image no longer loads (older rows point at the old CDN).
 
 on:
   workflow_dispatch: {}
@@ -29,66 +25,7 @@ concurrency:
 jobs:
   refresh-catalog:
     runs-on: ubuntu-latest
-    # 90: ~25 min reading 795 pet pages (1.5 s apart) + the import; 60 ran out
-    # on 2026-10-17 when a list page hung (now 30 s timeout + one retry).
-    timeout-minutes: 90
-
-    permissions:
-      contents: read
-
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      # The dry run reads the live catalog with the public key (GET only).
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: "22"
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Which new pets qualify (dry run, local files only)
-        run: pnpm adoptme:catalog:dryrun
-
-      - name: Collect + upsert catalog (new pets only when they qualify)
-        run: |
-          REPORT=$(ls -t data/adopt-me-catalog-dryrun/*.json | grep -v eldorado-crawl | head -1)
-          echo "qualifying report: $REPORT"
-          pnpm adoptme:catalog --qualifying "$REPORT"
-
-      # The source CDN has no picture for many new pets (39 on 2026-10-14):
-      # copy the Adopt Me Wiki's into our bucket. Pets whose image loads, and
-      # earlier copies, are never touched.
-      - name: Copy wiki images for pets whose image is broken
-        run: pnpm adoptme:images --write
-
-      - name: Upload catalog feed (debug artifact)
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: adopt-me-catalog-${{ github.run_id }}
-          path: |
-            data/adopt-me-feeds/adoptmevalues-latest.json
-            data/adopt-me-catalog-dryrun/*.csv
-          if-no-files-found: warn
-          retention-days: 14
-
-  mm2-catalog:
-    needs: refresh-catalog
-    # Runs after Adopt Me whether or not that job passed.
-    if: always()
-    runs-on: ubuntu-latest
+    # ~15 min: one image check per active pet, 1 s apart.
     timeout-minutes: 30
 
     permissions:
@@ -114,17 +51,32 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Add new MM2 items from the wiki (never rewrites existing rows)
-        run: pnpm values:mm2:catalogue --write --new-only
+      # Copy the Adopt Me Wiki's picture into our bucket for any pet whose image
+      # does not load. Pets whose image loads, and earlier copies, are never touched.
+      - name: Copy wiki images for pets whose image is broken
+        run: pnpm adoptme:images --write
 
-      - name: Copy images for items that have none
-        run: pnpm values:images --game=murder-mystery-2 --write --only-missing
-
-      - name: Upload catalogue (debug artifact)
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: mm2-catalogue-${{ github.run_id }}
-          path: data/values-catalogue/murder-mystery-2/catalogue.json
-          if-no-files-found: warn
-          retention-days: 14
+      # Runs on failure OR cancellation (a timeout kill is a cancellation) and
+      # never fails the job itself, so it cannot hide the original error.
+      - name: Alert on failure
+        if: ${{ failure() || cancelled() }}
+        env:
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          set -uo pipefail
+          if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set; this job failed and nobody was told."
+            exit 0
+          fi
+          payload="$(jq -nc \
+            --arg content "🔴 **Adopt Me weekly picture check ${OUTCOME}**: broken pet pictures were not repaired this week. Run: ${RUN_URL}" \
+            '{content: $content, allowed_mentions: {parse: []}}')"
+          code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
+            -X POST -H 'content-type: application/json' \
+            --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || echo 000)"
+          if [ "$code" != "204" ] && [ "$code" != "200" ]; then
+            echo "::warning::Discord alert POST returned HTTP $code"
+          fi
+          exit 0

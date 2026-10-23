@@ -60,6 +60,8 @@ export type BrainrotDirectoryItem = {
    * (never seen in the popular feed) sort after all ranked items.
    */
   popularity_rank?: number | null
+  /** Released (else added) in the last 14 days: the New badge (isNewItem). Absent = not new. */
+  isNew?: boolean
 }
 
 export type SabSort = 'value-desc' | 'name' | 'income-desc' | 'income-asc'

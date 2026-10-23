@@ -9,7 +9,7 @@ import { hasEnv, assertGuardTargetAllowed, URL as SUPABASE_URL, SVC } from './th
 import { fixtureNamespace } from './fixture-namespace'
 import { loadRefs, pruneRuns, recordRun, saveRefs } from '@/lib/catalogue/store'
 import { PIPELINE_MARK, stealABrainrot } from '@/lib/catalogue/games/steal-a-brainrot'
-import type { ParsedItem } from '@/lib/catalogue/types'
+import type { ParsedItem, WikiClient } from '@/lib/catalogue/types'
 
 const ns = fixtureNamespace()
 const GAME = `guard-test-${ns.tag}`
@@ -94,7 +94,8 @@ describe.skipIf(!hasEnv)('catalogue pipeline: store + SAB adapter (guard)', () =
 
   it('fixes a missing image on a pipeline-added row once the copy works', async () => {
     await svc.from('sab_brainrots').update({ source_payload: { imported_by: PIPELINE_MARK, image_file: 'Y.png' } }).eq('slug', slug('bb'))
-    const fixed = await stealABrainrot.fixMissingImages!(svc, { copy: async () => true })
+    // SAB re-reads the file name it stored, so the wiki is never called.
+    const fixed = await stealABrainrot.fixMissingImages!(svc, { copy: async () => true }, {} as WikiClient)
     expect(fixed).toContain(slug('bb'))
     const { data } = await svc.from('sab_brainrots').select('image_status,image_path').eq('slug', slug('bb')).single()
     expect(data).toEqual({ image_status: 'approved', image_path: `${slug('bb')}.webp` })

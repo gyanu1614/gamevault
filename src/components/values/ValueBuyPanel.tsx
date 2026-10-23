@@ -6,7 +6,7 @@ import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import { ShieldCheckIcon } from '@phosphor-icons/react/dist/csr/ShieldCheck'
 import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import type { useBuyCta } from '@/components/value-listings/useBuyCta'
-import { buyPanel } from '@/lib/value-listings/buy-panel'
+import { buyPanel, noPriceFallback } from '@/lib/value-listings/buy-panel'
 import { formatUsd } from '@/lib/value-listings/format'
 import { HeroBadge } from './ValueItemHero'
 import { VALUE_LABEL } from './styles'
@@ -36,7 +36,7 @@ export function ValueBuyPanel({
   marketUsd: number | null
   cheapestUsd: number | null
   marketLabel?: string
-  /** Headline when there is no dollar price at all (trade value, "No data yet"). */
+  /** Headline when there is no dollar price at all: noPriceFallback (trade value, else "No Trades Yet"). */
   fallback?: { label: string; value: ReactNode }
   /** Lines under the reference: freshness, estimate and source badges. */
   notes?: ReactNode
@@ -45,7 +45,8 @@ export function ValueBuyPanel({
 }) {
   const panel = buyPanel({ kind: cta.state, ourUsd: cta.priceUsd, count: cta.count, marketUsd, cheapestUsd, marketLabel })
   const priced = panel.usd != null
-  const label = priced ? panel.label : (fallback?.label ?? panel.label)
+  const noPrice = fallback ?? noPriceFallback({ isNew: false })
+  const label = priced ? panel.label : noPrice.label
   const listed = cta.state === 'in_stock'
   // The column is ~260px: "See 4 Other Listings From $289.99" clipped, so
   // the button keeps the action and the price moves to the line under it.
@@ -59,7 +60,7 @@ export function ValueBuyPanel({
       <p className={`${VALUE_LABEL} text-[12px]`}>{label}</p>
       <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-text-primary tabular-nums sm:text-[38px]">
         {panel.from && <span className="mr-0.5 text-[15px] font-semibold tracking-normal text-text-tertiary">From </span>}
-        {priced ? format(panel.usd as number) : (fallback?.value ?? 'No data yet')}
+        {priced ? format(panel.usd as number) : noPrice.value}
       </p>
       {(panel.reference || panel.saveUsd != null) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13px] tabular-nums text-text-tertiary lg:justify-end">

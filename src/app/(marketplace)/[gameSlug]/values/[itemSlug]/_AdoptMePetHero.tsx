@@ -19,6 +19,7 @@ import { amVariantKey } from '@/lib/value-listings/catalogs'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, ConfidenceBadge } from '@/components/values/ValueItemHero'
 import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
+import { noPriceFallback } from '@/lib/value-listings/buy-panel'
 import { TradeValue } from '@/components/values/TradeValue'
 import { petImageCredit } from '@/lib/adopt-me/image-credit'
 import { formatTradeValue, frostsLabel } from '@/lib/adopt-me/trade-value'
@@ -32,6 +33,7 @@ export default function AdoptMePetHero({
   imageUrl,
   buy,
   variants,
+  isNew,
 }: {
   name: string
   rarityLabel: string
@@ -41,6 +43,8 @@ export default function AdoptMePetHero({
   /** DropMarket's own live stock for this pet (drives the buy button). */
   buy: { itemSlug: string; categorySlug: string; stock: ItemStock | null }
   variants: AdoptMePetVariant[]
+  /** Released (else added) in the last 14 days: the New tag. */
+  isNew?: boolean
 }) {
   // Selection is SHARED via context — the callout, stats strip and price chart
   // all read it, so picking a form here reprices the whole page below.
@@ -110,6 +114,7 @@ export default function AdoptMePetHero({
         ) : undefined,
       }}
       title={displayName}
+      isNew={isNew}
       // The pet's facts (owner, 2026-10-12). Listings tracked stays out of the
       // card: the page's structured data (valuePage offers) still carries it.
       stats={[
@@ -139,20 +144,18 @@ export default function AdoptMePetHero({
           marketUsd={marketUsd ?? null}
           cheapestUsd={selected.cheapestUsd ?? null}
           marketLabel={hasReputable ? 'Market Price' : 'Cash Value'}
-          // No dollar price at all: the trade-points value, never an invented figure.
-          fallback={
-            pointsValue
-              ? {
-                  label: 'Trade Value',
-                  value: (
-                    <>
-                      <TradeValue>{formatTradeValue(pointsValue)}</TradeValue>
-                      <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts · {frostsLabel(pointsValue)}</span>
-                    </>
-                  ),
-                }
-              : { label: 'Value', value: 'No data yet' }
-          }
+          // No dollar price at all: the trade-points value, never an invented figure;
+          // without one, the one rule ("Value · No Trades Yet", New when new).
+          fallback={noPriceFallback({
+            tradeLabel: 'Trade Value',
+            tradeValue: pointsValue ? (
+              <>
+                <TradeValue>{formatTradeValue(pointsValue)}</TradeValue>
+                <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts · {frostsLabel(pointsValue)}</span>
+              </>
+            ) : null,
+            isNew: !!isNew,
+          })}
           notes={
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
               {hasReputable ? (

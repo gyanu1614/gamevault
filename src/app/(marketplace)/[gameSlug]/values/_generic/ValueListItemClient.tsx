@@ -16,6 +16,7 @@ import { useItemCta, type ItemBuy } from '@/components/values/how-to-get/HowToGe
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder, confidenceMeta } from '@/components/values/ValueItemHero'
 import { ValueBuyActions } from '@/components/values/ValueBuyActions'
 import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
+import { noPriceFallback } from '@/lib/value-listings/buy-panel'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { VALUE_LABEL, VALUE_SURFACE } from '@/components/values/styles'
 import type { TrendSeries } from '@/components/values/PriceTrendChart'
@@ -59,6 +60,7 @@ export function ValueListItemHero({
   buy,
   sell,
   forms,
+  isNew,
 }: {
   name: string
   /** Rarity colour: price label. */
@@ -73,6 +75,8 @@ export function ValueListItemHero({
   buy: ItemBuy
   sell: { href: string; label: string }
   forms: ItemForm[] | null
+  /** Added in the last 14 days: the New tag. */
+  isNew?: boolean
 }) {
   const cta = useItemCta(buy, name)
 
@@ -99,6 +103,7 @@ export function ValueListItemHero({
         ) : undefined,
       }}
       title={name}
+      isNew={isNew}
       stats={stats.map((s) => ({
         label: s.label,
         value: s.color ? <span style={{ color: s.color }}>{s.value}</span> : s.value,
@@ -109,7 +114,7 @@ export function ValueListItemHero({
           itemName={name}
           marketUsd={marketUsd}
           cheapestUsd={cheapestUsd}
-          fallback={{ label: 'Value', value: 'No price yet' }}
+          fallback={noPriceFallback({ isNew: !!isNew })}
           notes={
             cheapestUsd != null && (
               <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
@@ -123,8 +128,10 @@ export function ValueListItemHero({
       footer={
         priceChangedAt ? (
           <FreshnessBadge updatedAt={priceChangedAt} />
-        ) : (
+        ) : cheapestUsd != null ? (
           <span className="text-[12px] text-text-tertiary">Priced from reputable sellers only</span>
+        ) : (
+          <span className="text-[12px] text-text-tertiary">Priced once reputable sellers list it</span>
         )
       }
       picker={forms ? <FormSwitch forms={forms} /> : undefined}

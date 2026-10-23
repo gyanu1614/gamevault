@@ -75,7 +75,7 @@ export function variantLabel(gameSlug: string, key: string | null, mutations?: R
 
 export interface CatalogItemRow extends SimilarCandidate {
   imageUrl?: string | null
-  /** False when the item has no public value page (Adopt Me `has_page`). */
+  /** False when the item has no public value page (an inactive Adopt Me pet). */
   hasPage?: boolean
 }
 
@@ -151,10 +151,10 @@ export async function loadValueCatalog(client: AnyClient, game: { id: string; sl
     })
   }
   if (game.slug === 'adopt-me') {
-    const { data, error } = await client.from('adopt_me_pets').select('slug, name, rarity, image_url, has_page').limit(5000)
+    const { data, error } = await client.from('adopt_me_pets').select('slug, name, rarity, image_url, is_active').limit(5000)
     if (error) throw error
     return buildValueCatalog(game.slug, {
-      items: (data ?? []).map((r: any) => ({ slug: r.slug, name: r.name, rarity: r.rarity, imageUrl: r.image_url, hasPage: r.has_page === true })),
+      items: (data ?? []).map((r: any) => ({ slug: r.slug, name: r.name, rarity: r.rarity, imageUrl: r.image_url, hasPage: r.is_active === true })),
     })
   }
   if (VALUES_PIPELINE_GAMES.has(game.slug)) {

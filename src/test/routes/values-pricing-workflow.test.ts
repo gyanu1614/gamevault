@@ -54,7 +54,7 @@ describe('values-pricing-daily.yml', () => {
   })
 
   it('has one job per game (SAB split into its two sources)', () => {
-    expect(Object.keys(J).sort()).toEqual(['adopt-me', 'murder-mystery-2', 'sab', 'sab-g2g', 'steal-an-egg'])
+    expect(Object.keys(J).sort()).toEqual(['adopt-me', 'alert', 'murder-mystery-2', 'sab', 'sab-g2g', 'steal-an-egg'])
     for (const [name, text] of Object.entries(J)) {
       expect(text, `${name} needs a timeout`).toMatch(/timeout-minutes: \d+/)
     }

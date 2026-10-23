@@ -7,7 +7,7 @@ import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { CalendarStarIcon } from '@phosphor-icons/react/dist/ssr/CalendarStar'
 import { DiamondIcon } from '@phosphor-icons/react/dist/ssr/Diamond'
 import { CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator'
-import { JsonLd, breadcrumbList, faqPage, productAggregate, valuePage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, valuePage } from '@/lib/seo/jsonld'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
@@ -143,21 +143,7 @@ export default async function ValueListItemPage({
               : undefined,
         })}
       />
-      {/* Product + AggregateOffer: only a real, listing-backed price is an offer. */}
-      {cheapestUsd != null && (price?.sampleSize ?? 0) > 0 && (
-        <JsonLd
-          data={productAggregate({
-            name: `${item.name} — ${theme.name}`,
-            description: priceSentence(copy) ?? aboutSentence(copy),
-            brand: theme.name,
-            image: item.imageUrl,
-            lowPrice: cheapestUsd,
-            highPrice: Math.max(cheapestUsd, price?.highUsd ?? cheapestUsd),
-            offerCount: price!.sampleSize,
-            url: path,
-          })}
-        />
-      )}
+      {/* Product + AggregateOffer: in ValueListItemBody, beside our own stock (the only offer). */}
 
       <GameHeroBackdrop gameSlug={gameSlug} size="tall">
         <HubNav data={hubNav} />

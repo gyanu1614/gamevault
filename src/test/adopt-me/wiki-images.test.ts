@@ -72,11 +72,9 @@ describe('wiki copies are credited and kept up to date', () => {
     expect(hero).toMatch(/caption:/)
   })
 
-  it('the weekly catalog job fixes new pets\' images right after the import', () => {
+  it('the weekly job is the picture check: it copies wiki images for pets whose image is broken', () => {
     const wf = read('.github/workflows/adopt-me-weekly-catalog.yml')
-    const imp = wf.indexOf('pnpm adoptme:catalog --qualifying')
-    const img = wf.indexOf('pnpm adoptme:images --write')
-    expect(img).toBeGreaterThan(imp)
-    expect(img).toBeLessThan(wf.indexOf('  mm2-catalog:'))
+    expect(wf).toMatch(/pnpm adoptme:images --write/)
+    expect(wf).not.toMatch(/adoptme:catalog|adoptmevalues\.app.*scrape|mm2-catalog:/)
   })
 })

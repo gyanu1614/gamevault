@@ -35,7 +35,7 @@ jobs:
       fail-fast: false
       matrix:
         # The CATALOGUE_GAMES keys (src/lib/catalogue/registry.ts); values-catalogue-workflow.guard.test.ts pins them.
-        game: [sab]
+        game: [sab, murder-mystery-2, steal-an-egg, adopt-me]
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

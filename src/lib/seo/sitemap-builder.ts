@@ -60,15 +60,18 @@ export interface SitemapInput {
     price: number | string | null
   }[]
   pausedSellerIds: ReadonlySet<string>
-  sabBrainrots: { slug: string; updated_at: string | null }[]
-  adoptMePets: { slug: string; updated_at: string | null }[]
+  /** newIndexable: a new item with facts (isNewIndexable) ranks before it is priced. */
+  sabBrainrots: { slug: string; updated_at: string | null; newIndexable?: boolean }[]
+  adoptMePets: { slug: string; updated_at: string | null; newIndexable?: boolean }[]
   pipelineItems: {
     gameSlug: string
     slug: string
-    /** values_items.rarity — a value-list hub pages only its high tiers. */
+    /** values_items.rarity. */
     rarity?: string | null
+    /** Null with sampleSize when the item has no price row yet (every item has a page). */
     priceChangedAt: string | null
     sampleSize: number | null
+    newIndexable?: boolean
   }[]
   /** Published events archive rows (values_events), any game. */
   valueEvents: { gameSlug: string; slug: string; status: string; itemCount: number; updatedAt: string | null }[]
@@ -101,13 +104,14 @@ export interface ValueEvidenceRow {
 export type SitemapSection = 'static' | 'blog' | 'buy' | 'sell' | 'hubs' | `values-${string}`
 
 /** The verdict a value item page's robots meta gives, for the sitemap. */
-export function valueItemListed(input: SitemapInput, gameSlug: string, itemSlug: string, legacyIndexable: boolean): boolean {
+export function valueItemListed(input: SitemapInput, gameSlug: string, itemSlug: string, legacyIndexable: boolean, newIndexable = false): boolean {
   const { mode, overrides, evidence } = input.valueGate
   return valuePageVerdict({
     legacyIndexable,
     evidence: evidence.get(`${gameSlug}/${itemSlug}`) ?? null,
     mode,
     override: overrides.get(`/${gameSlug}/values/${itemSlug}`) ?? null,
+    newIndexable,
   }).index
 }
 
@@ -225,16 +229,17 @@ export function buildSitemapSections(input: SitemapInput): Map<SitemapSection, M
   // Steal a Brainrot and Adopt Me pages have no older rule: only the gate.
   for (const [game, rows] of [['steal-a-brainrot', input.sabBrainrots], ['adopt-me', input.adoptMePets]] as const) {
     for (const r of rows) {
-      if (!valueItemListed(input, game, r.slug, true)) continue
+      if (!valueItemListed(input, game, r.slug, true, r.newIndexable)) continue
       ;(itemsByGame[game] ??= []).push({ slug: r.slug, updated_at: movedAt(game, r.slug) })
     }
   }
   for (const i of input.pipelineItems) {
-    // Same rules as the item page: it must exist (valueItemHasPage — a value-list
-    // hub has pages for its high tiers only), then its robots meta: the old
+    // Same rules as the item page: it must exist (valueItemHasPage — every
+    // enabled item), then its robots meta: a new item with facts, else the old
     // thin-content floor (priced, enough live listings) and the data gate.
-    if (!valueItemHasPage(i.gameSlug, { rarity: i.rarity ?? null, priced: true })) continue
-    if (!valueItemListed(input, i.gameSlug, i.slug, isValueItemIndexable({ priced: true, sampleSize: i.sampleSize }))) continue
+    const priced = i.sampleSize != null
+    if (!valueItemHasPage(i.gameSlug, { rarity: i.rarity ?? null, priced })) continue
+    if (!valueItemListed(input, i.gameSlug, i.slug, isValueItemIndexable({ priced, sampleSize: i.sampleSize }), i.newIndexable)) continue
     ;(itemsByGame[i.gameSlug] ??= []).push({ slug: i.slug, updated_at: movedAt(i.gameSlug, i.slug) })
   }
   const valueItemPages = new Map<string, Entry[]>()

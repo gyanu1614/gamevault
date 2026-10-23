@@ -8,6 +8,12 @@ import type { CatalogueRef, KnownItem, ListedPage, ParsedItem, RecentPage } from
 
 /** Recent-changes window: covers two missed daily runs. */
 export const RECENT_WINDOW_DAYS = 3
+/**
+ * A game's FIRST run (no refs yet) looks back this far, so pages created
+ * before the job existed but not yet in a listing (MM2's uncategorised
+ * Halloween 2026 pages) are still read once.
+ */
+export const BOOTSTRAP_WINDOW_DAYS = 30
 /** An ignored page is looked at again after this long even without an edit. */
 export const RECHECK_IGNORED_DAYS = 30
 export const DEFAULT_INSERT_CAP = 50

@@ -14,6 +14,7 @@
     { "path": "/api/cron/seo-evidence", "schedule": "10 5 * * *" },
     { "path": "/api/cron/seo-indexnow", "schedule": "40 5 * * *" },
     { "path": "/api/cron/seo-gsc", "schedule": "20 6 * * *" },
-    { "path": "/api/cron/seo-bing", "schedule": "40 7 * * *" }
+    { "path": "/api/cron/seo-bing", "schedule": "40 7 * * *" },
+    { "path": "/api/cron/values-health", "schedule": "15 9 * * *" }
   ]
 }

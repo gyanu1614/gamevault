@@ -69,3 +69,28 @@ jobs:
           pnpm retention:sab
           --retain-days ${{ inputs.retain_days || '30' }}
           ${{ (inputs.dry_run == 'true') && '--dry-run' || '' }}
+
+      # Runs on failure OR cancellation (a timeout kill is a cancellation) and
+      # never fails the job itself, so it cannot hide the original error.
+      - name: Alert on failure
+        if: ${{ failure() || cancelled() }}
+        env:
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          set -uo pipefail
+          if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set; this job failed and nobody was told."
+            exit 0
+          fi
+          payload="$(jq -nc \
+            --arg content "🔴 **SAB raw-listing retention ${OUTCOME}**: old raw listings were not rolled up or pruned, so the table grows until it runs. Run: ${RUN_URL}" \
+            '{content: $content, allowed_mentions: {parse: []}}')"
+          code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
+            -X POST -H 'content-type: application/json' \
+            --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || echo 000)"
+          if [ "$code" != "204" ] && [ "$code" != "200" ]; then
+            echo "::warning::Discord alert POST returned HTTP $code"
+          fi
+          exit 0

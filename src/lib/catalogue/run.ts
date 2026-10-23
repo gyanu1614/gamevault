@@ -6,7 +6,7 @@
  * the real ones (scripts/catalogue.mjs).
  */
 import { runMessage } from './notify'
-import { candidatePages, DEFAULT_INSERT_CAP, guardRun, planCatalogue, RECENT_WINDOW_DAYS, type ParsedPage } from './plan'
+import { BOOTSTRAP_WINDOW_DAYS, candidatePages, DEFAULT_INSERT_CAP, guardRun, planCatalogue, RECENT_WINDOW_DAYS, type ParsedPage } from './plan'
 import { dbStore, type CatalogueStore, type RefWrite } from './store'
 import type { CatalogueGame, Db, ImageStore, RunReport, WikiClient } from './types'
 
@@ -64,9 +64,9 @@ export async function runCatalogue(game: CatalogueGame, deps: RunDeps, opts: Run
     const listed = new Map<number, { pageId: number; title: string }>()
     for (const q of adapter.listQueries) for (const p of await deps.wiki.listPages(q)) listed.set(p.pageId, p)
     report.listed = listed.size
-    const since = new Date(startedAt.getTime() - RECENT_WINDOW_DAYS * 86_400_000).toISOString()
-    const recent = await deps.wiki.recentChanges(since)
     const refs = await store.loadRefs(deps.db, adapter.gameSlug)
+    const windowDays = refs.size ? RECENT_WINDOW_DAYS : BOOTSTRAP_WINDOW_DAYS
+    const recent = await deps.wiki.recentChanges(new Date(startedAt.getTime() - windowDays * 86_400_000).toISOString())
     const candidates = candidatePages({ listed: [...listed.values()], recent, refs, now: startedAt })
     report.candidates = candidates.length
     log(`${game.name}: ${listed.size} listed, ${recent.length} changed recently, ${refs.size} decided → ${candidates.length} to read`)
@@ -98,22 +98,24 @@ export async function runCatalogue(game: CatalogueGame, deps: RunDeps, opts: Run
         report.message = verdict.reason
         return await finish()
       }
+      const toInsert = plan.insert.length && adapter.enrich ? await adapter.enrich(plan.insert, deps.wiki, ctx) : plan.insert
+      report.added = toInsert.map((i) => ({ slug: i.slug, name: i.name }))
       if (!opts.write) {
-        report.status = plan.insert.length ? 'ok' : 'nothing_new'
+        report.status = toInsert.length ? 'ok' : 'nothing_new'
         return await finish()
       }
-      const inserted = new Set(plan.insert.length ? await adapter.insert(deps.db, plan.insert, deps.images) : [])
+      const inserted = new Set(toInsert.length ? await adapter.insert(deps.db, toInsert, deps.images) : [])
       report.added = report.added.filter((a) => inserted.has(a.slug))
       refWrites.push(
         ...plan.adopt.map((a) => ({ pageId: a.pageId, wikiTitle: a.title, itemSlug: a.slug, status: 'item' as const })),
         // A slug that already existed (insert conflict) is still an item we hold.
-        ...plan.insert.map((i) => ({ pageId: i.pageId, wikiTitle: i.wikiTitle, itemSlug: i.slug, status: 'item' as const })),
+        ...toInsert.map((i) => ({ pageId: i.pageId, wikiTitle: i.wikiTitle, itemSlug: i.slug, status: 'item' as const })),
         ...plan.ignore.map((g) => ({ pageId: g.pageId, wikiTitle: g.title, itemSlug: null, status: 'ignored' as const })),
       )
     }
     if (!opts.write) return await finish()
     if (refWrites.length) await store.saveRefs(deps.db, adapter.gameSlug, refWrites, startedAt)
-    const fixed = adapter.fixMissingImages ? await adapter.fixMissingImages(deps.db, deps.images) : []
+    const fixed = adapter.fixMissingImages ? await adapter.fixMissingImages(deps.db, deps.images, deps.wiki) : []
     report.imagesFixed = fixed.length
     const changed = [...report.added.map((a) => a.slug), ...fixed]
     if (changed.length && deps.revalidate) await deps.revalidate(adapter.gameSlug, changed)

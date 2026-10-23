@@ -21,6 +21,7 @@ import { ValueListSkeleton } from './ValueListSkeleton'
 import { initialValueList } from '@/lib/values/lazy-list'
 import { getValueListRows } from './valueListRows'
 import {
+  collapseForms,
   filterSortValueRows,
   valueListTabCounts,
   VALUE_LIST_DEFAULT_SORT,
@@ -137,8 +138,9 @@ async function ValueListBody({
         gameName={theme.name}
         // The default view's first page only; the client fetches the rest
         // (lib/values/lazy-list.ts — the full list made this page 843 KB).
+        // One card per item: a Chroma rides on its standard item's card (collapseForms).
         initial={initialValueList(
-          filterSortValueRows(rows, { query: '', tab: null, sort: VALUE_LIST_DEFAULT_SORT }),
+          collapseForms(filterSortValueRows(rows, { query: '', tab: null, sort: VALUE_LIST_DEFAULT_SORT })),
           {
             pageSize: VALUE_LIST_PAGE_SIZE,
             facets: { tab: valueListTabCounts(hub.tabs, rows) },

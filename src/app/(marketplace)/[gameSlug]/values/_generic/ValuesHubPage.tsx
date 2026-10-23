@@ -8,6 +8,8 @@ import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { HUB_GROUND } from '@/components/values/styles'
 import { PriceStatPair, RarityLabel, ValueCard } from '@/components/values/ValueCard'
+import { NewTag } from '@/components/values/NewTag'
+import { isNewItem } from '@/lib/values/new-item'
 import { rarityMeta } from '@/lib/values/rarity'
 import { ValuesFreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { getValueItems, getValuesFreshness, type ValueItem } from '@/lib/values/data'
@@ -59,9 +61,10 @@ function ItemCard({ item, gameSlug }: { item: ValueItem; gameSlug: string }) {
       href={`/${gameSlug}/values/${item.slug}`}
       buySlug={item.slug}
       headerLeft={
-        item.area ? (
-          <span className="truncate text-[11px] font-medium text-text-tertiary">{item.area}</span>
-        ) : undefined
+        <>
+          {item.area && <span className="truncate text-[11px] font-medium text-text-tertiary">{item.area}</span>}
+          {isNewItem({ addedAt: item.addedAt }) && <NewTag />}
+        </>
       }
       headerRight={rarity ? <RarityLabel label={rarity.label} color={rarity.color} /> : undefined}
       imageSrc={item.imageUrl}

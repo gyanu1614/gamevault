@@ -11,6 +11,7 @@ import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder } from '@/components/values/ValueItemHero'
 import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
+import { noPriceFallback } from '@/lib/value-listings/buy-panel'
 import { VariantSelector } from '@/components/values/VariantSelector'
 import { mutationGroup } from '@/lib/values/variant-selector'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
@@ -66,6 +67,8 @@ interface ItemHeroProps {
   updatedAt: string | null
   /** Daily price history keyed by mutation slug (may be empty until it accrues). */
   priceHistory: Record<string, PricePoint[]>
+  /** Released (else added) in the last 14 days: the New tag. */
+  isNew?: boolean
 }
 
 const formatTrendCash = (v: number) => formatCash(v) ?? `$${v}`
@@ -82,6 +85,7 @@ export default function ItemHero({
   buy,
   updatedAt,
   priceHistory,
+  isNew,
 }: ItemHeroProps) {
   const ordered = useMemo(
     () => [...mutations].sort((a, b) => mutationOrder(a.slug) - mutationOrder(b.slug)),
@@ -158,6 +162,7 @@ export default function ItemHero({
       accent={visual.color}
       art={{ src: imageUrl, alt: imageAlt || `${displayName} Steal a Brainrot`, pixelated: true }}
       title={displayName}
+      isNew={isNew}
       // Fixed row set so the hero height never shifts between mutations.
       // (Cheapest lives in the price column, so it's not repeated here.)
       stats={[
@@ -173,15 +178,13 @@ export default function ItemHero({
           itemName={displayName}
           marketUsd={marketUsd}
           cheapestUsd={selected.cheapestUsd ?? null}
-          // Only surface a note when the market price is estimated or missing.
+          // No price for this mutation: the one rule ("Value · No Trades Yet", New when new).
+          fallback={noPriceFallback({ isNew: !!isNew })}
+          // Only surface a note when the market price is estimated.
           notes={
-            (selected.isEstimated || marketUsd == null) && (
+            selected.isEstimated && (
               <div className="mt-2 flex min-h-[20px] flex-wrap items-center gap-2 lg:justify-end">
-                {selected.isEstimated ? (
-                  <HeroBadge color="var(--color-warning)">Estimated From Multiplier</HeroBadge>
-                ) : (
-                  <span className="text-[12.5px] text-text-secondary">No priced listings yet</span>
-                )}
+                <HeroBadge color="var(--color-warning)">Estimated From Multiplier</HeroBadge>
               </div>
             )
           }

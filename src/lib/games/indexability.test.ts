@@ -192,6 +192,17 @@ describe('valuePageVerdict', () => {
     expect(v({ legacyIndexable: false })).toEqual({ index: false, reason: 'legacy' })
   })
 
+  // Owner, 2026-10-21: a new item with How To Get + release info ranks before it has prices.
+  it('indexes a NEW item with facts even unpriced: before the legacy floor and before evidence', () => {
+    expect(v({ newIndexable: true, legacyIndexable: false, evidence: null })).toEqual({ index: true, reason: 'new' })
+    expect(v({ newIndexable: true, evidence: thin })).toEqual({ index: true, reason: 'new' })
+    expect(v({ newIndexable: false, legacyIndexable: false })).toEqual({ index: false, reason: 'legacy' })
+  })
+
+  it('the owner can still noindex a new item', () => {
+    expect(v({ newIndexable: true, override: 'noindex' })).toEqual({ index: false, reason: 'override' })
+  })
+
   it("lets the owner's explicit decision win over everything", () => {
     expect(v({ override: 'noindex' })).toEqual({ index: false, reason: 'override' })
     expect(v({ override: 'noindex', mode: 'report', evidence: { ...thin, isProtected: true } })).toEqual({ index: false, reason: 'override' })

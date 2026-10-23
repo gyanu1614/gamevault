@@ -8,7 +8,7 @@ import Link from '@/components/navigation/AppLink'
 import { withArticle } from '@/lib/text/article'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
-import { JsonLd, breadcrumbList, faqPage, valuePage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, ownStockProduct, valuePage } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { AdoptMePriceTrend } from './_AdoptMePriceTrend'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -22,11 +22,12 @@ import {
   type AdoptMePetVariant,
 } from './_adoptMePetData'
 import AdoptMePetHero from './_AdoptMePetHero'
+import { isNewItem } from '@/lib/values/new-item'
 import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
 import { AdoptMeAbout, AdoptMeFormTable } from './_AdoptMeAbout'
-import { livePriceSpread, withoutStalePrices } from './_adoptMeAboutModel'
+import { livePriceSpread, petStory } from './_adoptMeAboutModel'
 import { priceHistorySummary } from '@/lib/values/history-summary'
 import { SelectedVariantProvider } from './_SelectedVariantContext'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -195,10 +196,27 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
     facts: [{ label: 'Rarity', value: meta.label }],
   }
   const faq = mergeFaqs(petFaq(pet), factFaqs({ name: pet.name, game, facts, cheapestUsd: refFrUsd }))
-  // The stored story without its old baked-in prices, plus one live line
-  // from the same numbers as the table (no more "$6.98" next to "$6.28").
-  const story = withoutStalePrices(pet.description)
+  // The stored story without its old baked-in prices (or, with no written
+  // description, the pet's facts), plus one live line from the same numbers as
+  // the table (no more "$6.98" next to "$6.28").
+  const story = petStory({
+    description: pet.description,
+    name: pet.name,
+    rarity: meta.label,
+    released: facts.released,
+    origin: facts.origin ?? pet.originDetail,
+    howToGetMethod: facts.howToGet?.method ?? null,
+  })
   const spread = livePriceSpread(pet.name, pet.variants)
+  const productLd = ownStockProduct({
+    name: `${pet.name} — Adopt Me`,
+    description: story.slice(0, 300),
+    brand: 'Adopt Me',
+    url: `/adopt-me/values/${pet.slug}`,
+    image: pet.imageUrl,
+    stock: buyData?.stock ?? null,
+    offerPrices: (buyData?.offers ?? []).map((o) => o.pricePerUnit),
+  })
   // The chart is browser-only; this line puts its numbers in the HTML.
   const history = headline ? priceHistorySummary(`${headline.label} ${pet.name}`, pet.priceHistory[headline.variant]) : null
 
@@ -230,25 +248,9 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           },
         })}
       />
-      {/* Product + Offer: the cash value is the Offer. Only emitted when we hold
-          a real (non-null) cash number; an estimated/null price is not an offer. */}
-      {fr?.cashUsd != null && (
-        <JsonLd
-          data={{
-            '@context': 'https://schema.org',
-            '@type': 'Product',
-            name: `${pet.name} (Fly Ride) — Adopt Me`,
-            image: pet.imageUrl ? [pet.imageUrl] : undefined,
-            description: story.slice(0, 300),
-            offers: {
-              '@type': 'Offer',
-              priceCurrency: 'USD',
-              price: fr.cashUsd,
-              availability: 'https://schema.org/InStock',
-            },
-          }}
-        />
-      )}
+      {/* Product + AggregateOffer only for our own live stock: the market's cash
+          value is a reference, not an offer anyone can buy here. */}
+      {productLd && <JsonLd data={productLd} />}
 
       {/* Everything the variant selection touches — hero, callout, stats, chart —
           lives inside one provider so picking a form up top reprices it all. */}
@@ -278,6 +280,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
               imageUrl={pet.imageUrl}
               buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
               variants={pet.variants}
+              isNew={isNewItem({ releasedAt: pet.releasedAt, addedAt: pet.addedAt })}
             />
           </div>
         </div>

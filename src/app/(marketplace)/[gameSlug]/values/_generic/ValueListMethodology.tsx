@@ -35,8 +35,6 @@ import { Block } from '../../[categorySlug]/_ItemsSkeleton'
  */
 
 /** "A, B and C". */
-const listPhrase = (words: readonly string[]) =>
-  words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
 
 const pct = Math.round(DEFAULT_PRICE_CHANGE_RULE.minRelative * 100)
 const cents = Math.round(DEFAULT_PRICE_CHANGE_RULE.minAbsoluteUsd * 100)
@@ -194,8 +192,8 @@ export default async function ValueListMethodology({ gameSlug }: { gameSlug: str
             </>
           )}
           Sets are not priced yet. Every item on the list has a price where the
-          evidence allows, but only {listPhrase(hub.pageRarities)} items get their own
-          page: a page for a five-cent common would not help anyone.
+          evidence allows, and every item has its own page with how to get it,
+          its forms and its price once sellers list it.
         </HubSection>
 
         <HubSection title="Limitations You Should Know About">

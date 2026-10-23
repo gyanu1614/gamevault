@@ -7,6 +7,15 @@ import { isLandingPageIndexable } from '@/lib/seo/landingPageInventory'
 import { readGateConfig, REPORT_ONLY } from '@/lib/seo/gate/settings'
 
 import type { SitemapInput, ValueEvidenceRow } from '@/lib/seo/sitemap-builder'
+import { isNewIndexable } from '@/lib/values/new-item'
+
+/** The facts the Google rule needs per item: raw dates + whether a How To Get exists. */
+type FreshRow = { released_at?: string | null; created_at?: string | null; release_year?: number | null; htg?: string | null }
+const fresh = (r: FreshRow, now: number) =>
+  isNewIndexable(
+    { releasedAt: r.released_at ?? null, addedAt: r.created_at ?? null, hasHowToGet: r.htg != null, hasReleaseInfo: r.released_at != null || r.release_year != null },
+    now,
+  )
 
 type Db = any
 
@@ -50,27 +59,39 @@ async function loadValueGate(db: Db): Promise<SitemapInput['valueGate']> {
 
 /** Everything buildSitemap needs, read through `db` (the anon client: the sitemap is static). */
 export async function loadSitemapInput(db: Db, baseUrl: string): Promise<SitemapInput> {
-  const [core, sab, adoptMe, pipeline, events, gamePosts, landingChecks, valueGate] =
+  const now = Date.now()
+  const [core, sabRows, sabFacts, adoptMeRows, pipeline, events, gamePosts, landingChecks, valueGate] =
     await Promise.all([
       loadCoreRows(db),
-      fetchAllRows<SitemapInput['sabBrainrots'][number]>((from, to) =>
+      fetchAllRows<{ slug: string; updated_at: string | null }>((from, to) =>
         db.from('sab_brainrot_catalog').select('slug, updated_at').order('slug').range(from, to),
       ),
-      // Only PUBLISHABLE pets (has_page): a pet without a description 404s.
-      fetchAllRows<SitemapInput['adoptMePets'][number]>((from, to) =>
-        db.from('adopt_me_pets').select('slug, updated_at').eq('has_page', true).order('slug').range(from, to),
+      // The public catalogue view has no dates: read them (and How To Get's presence) from the table.
+      fetchAllRows<FreshRow & { slug: string }>((from, to) =>
+        db.from('sab_brainrots').select('slug, released_at, created_at, htg:how_to_get->>status').order('slug').range(from, to),
       ),
-      fetchAllRows<{
-        slug: string
-        rarity: string | null
-        games: { slug: string } | null
-        values_prices: { price_changed_at: string | null; sample_size: number | null } | null
-      }>((from, to) =>
+      // Every ACTIVE pet has a page (2026-10-21); the value gate decides indexing.
+      fetchAllRows<FreshRow & { slug: string; updated_at: string | null }>((from, to) =>
+        db
+          .from('adopt_me_pets')
+          .select('slug, updated_at, released_at, created_at, htg:how_to_get->>status')
+          .eq('is_active', true)
+          .order('slug')
+          .range(from, to),
+      ),
+      // Every enabled item has a page: the price row is optional (left join).
+      fetchAllRows<
+        FreshRow & {
+          slug: string
+          rarity: string | null
+          games: { slug: string } | null
+          values_prices: { price_changed_at: string | null; sample_size: number | null } | null
+        }
+      >((from, to) =>
         db
           .from('values_items')
-          .select('id, slug, rarity, games!inner(slug), values_prices!inner(price_changed_at, sample_size)')
+          .select('id, slug, rarity, created_at, release_year, htg:how_to_get->>status, games!inner(slug), values_prices(price_changed_at, sample_size)')
           .eq('is_enabled', true)
-          .eq('is_priced', true)
           .order('id')
           .range(from, to),
       ),
@@ -102,11 +123,15 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
       loadValueGate(db),
     ])
 
+  const sabFactsBySlug = new Map(sabFacts.map((f) => [f.slug, f]))
   return {
     baseUrl,
     ...core,
-    sabBrainrots: sab,
-    adoptMePets: adoptMe,
+    sabBrainrots: sabRows.map((r) => {
+      const f = sabFactsBySlug.get(r.slug)
+      return { slug: r.slug, updated_at: r.updated_at, newIndexable: f ? fresh(f, now) : false }
+    }),
+    adoptMePets: adoptMeRows.map((r) => ({ slug: r.slug, updated_at: r.updated_at, newIndexable: fresh(r, now) })),
     pipelineItems: pipeline
       .filter((r) => r.games?.slug)
       .map((r) => ({
@@ -115,6 +140,7 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
         rarity: r.rarity ?? null,
         priceChangedAt: r.values_prices?.price_changed_at ?? null,
         sampleSize: r.values_prices?.sample_size ?? null,
+        newIndexable: fresh(r, now),
       })),
     valueEvents: events
       .filter((r) => r.games?.slug)

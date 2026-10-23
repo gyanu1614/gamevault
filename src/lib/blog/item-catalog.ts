@@ -29,7 +29,7 @@ type Row = { slug: string; name: string; image_url: string | null }
 
 /** Games whose catalogue is its own table (not values_items). */
 const OWN_TABLE: Record<string, { table: string; narrow: (q: any) => any }> = {
-  'adopt-me': { table: 'adopt_me_pets', narrow: (q) => q.eq('is_active', true).eq('has_page', true) },
+  'adopt-me': { table: 'adopt_me_pets', narrow: (q) => q.eq('is_active', true) },
   'steal-a-brainrot': { table: 'sab_brainrot_market_catalog', narrow: (q) => q },
 }
 

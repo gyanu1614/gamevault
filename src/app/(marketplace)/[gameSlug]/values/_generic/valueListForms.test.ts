@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pairForms, type ValueListRow } from './valueListModel'
+import { collapseForms, pairForms, type ValueListRow } from './valueListModel'
 
 const row = (id: string, name: string, rarity: string, baseItemId: string | null = null): ValueListRow => ({
   id,
@@ -34,5 +34,21 @@ describe('pairForms', () => {
     const forms = pairForms([travelers, chroma, lone, orphan])
     expect(forms.has('seer')).toBe(false)
     expect(forms.has('chroma-gone')).toBe(false)
+  })
+})
+
+// Owner, 2026-10-21: one card per item. A Chroma whose standard item is in the
+// same list rides on that card (the flip button); every row keeps its page.
+describe('collapseForms', () => {
+  const emberbow = row('emberbow', 'Emberbow', 'Ancient')
+  const chromaEmberbow = row('chroma-emberbow', 'Chroma Emberbow', 'Chroma', 'emberbow')
+  const seer = row('seer', 'Seer', 'Godly')
+  const orphan = row('chroma-gone', 'Chroma Gone', 'Chroma', 'not-in-list')
+
+  it('drops a Chroma whose base is in the list, keeping order', () => {
+    expect(collapseForms([chromaEmberbow, emberbow, seer]).map((r) => r.id)).toEqual(['emberbow', 'seer'])
+  })
+  it('keeps a Chroma on its own when its base is filtered out (Chroma tab, a "chroma" search)', () => {
+    expect(collapseForms([chromaEmberbow, orphan]).map((r) => r.id)).toEqual(['chroma-emberbow', 'chroma-gone'])
   })
 })

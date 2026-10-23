@@ -110,7 +110,7 @@ export async function getAdoptMeTopValues(limit = 20): Promise<AdoptMeTopValue[]
         .from('adopt_me_pets')
         .select('id,slug,name,rarity')
         .eq('is_active', true)
-        .eq('has_page', true)
+        .eq('is_active', true)
         .order('id', { ascending: true })
         .range(from, to),
     ),

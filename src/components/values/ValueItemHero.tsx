@@ -1,4 +1,5 @@
 import type { ReactNode, Ref } from 'react'
+import { NewTag } from './NewTag'
 import { ValueArt } from './ValueArt'
 import { VALUE_LABEL, VALUE_SURFACE } from './styles'
 import { titleCaseValue } from '@/lib/values/title-case'
@@ -27,6 +28,7 @@ export function ValueItemHero({
   art,
   title,
   titleAs: Title = 'h1',
+  isNew,
   stats,
   price,
   actions,
@@ -43,6 +45,8 @@ export function ValueItemHero({
   art?: { src: string | null; alt: string; pixelated?: boolean; caption?: ReactNode } | null
   title: ReactNode
   titleAs?: 'h1' | 'h2'
+  /** Released (else added) in the last 14 days (isNewItem): a New tag beside the title, outside the h1. */
+  isNew?: boolean
   stats?: ReadonlyArray<{ label: string; value: ReactNode }>
   price?: {
     label?: ReactNode
@@ -81,9 +85,13 @@ export function ValueItemHero({
           )}
 
           <div className="min-w-0">
-            <Title className="text-2xl font-bold leading-[1.1] tracking-[-0.02em] text-text-primary sm:text-[28px]">
-              {title}
-            </Title>
+            {/* The tag sits beside the heading, never inside it: the h1 stays the item's name. */}
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+              <Title className="text-2xl font-bold leading-[1.1] tracking-[-0.02em] text-text-primary sm:text-[28px]">
+                {title}
+              </Title>
+              {isNew && <NewTag size="md" />}
+            </div>
             {/* The item's facts as rows under the name: label left, value
                 right, every other row on a faint band — at every width (owner,
                 2026-10-14: "in rows, alternate block colour, matching the

@@ -1,6 +1,7 @@
 import 'server-only'
 import { getValueItems, getValueTrends } from '@/lib/values/data'
 import { valueItemHasPage } from '@/lib/values/hub-config'
+import { isNewItem } from '@/lib/values/new-item'
 import type { ValueListRow } from './valueListModel'
 
 /**
@@ -12,6 +13,7 @@ import type { ValueListRow } from './valueListModel'
 export async function getValueListRows(gameSlug: string): Promise<{ rows: ValueListRow[]; hasTrends: boolean }> {
   const [items, trends] = await Promise.all([getValueItems(gameSlug, { kinds: ['item'] }), getValueTrends(gameSlug, 7)])
 
+  const now = Date.now()
   const rows: ValueListRow[] = items.map((i) => {
     const priced = i.price?.cheapestUsd != null
     return {
@@ -27,6 +29,8 @@ export async function getValueListRows(gameSlug: string): Promise<{ rows: ValueL
       listedNow: i.price?.sampleSize ?? 0,
       trendPct: trends.pctByItem[i.id] ?? null,
       baseItemId: i.baseItemId ?? null,
+      // Only on new rows: the rest carry no key (rows.json's JSON sends them a null, read as not new).
+      ...(isNewItem({ addedAt: i.addedAt }, now) ? { isNew: true } : null),
     }
   })
   return { rows, hasTrends: Object.keys(trends.pctByItem).length > 0 }

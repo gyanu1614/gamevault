@@ -25,11 +25,11 @@ const pages: WikiPage[] = [
   { pageId: 2, title: 'Slushi Huski', revisionId: 1, content: 'item', categories: [] },
   { pageId: 3, title: 'Slushi Huski/Gallery', revisionId: 1, content: 'gallery', categories: [] },
 ]
-function fakeWiki(list = pages): WikiClient {
+function fakeWiki(list = pages, sinceCalls: string[] = []): WikiClient {
   let n = 0
   return {
     listPages: async () => (n++, list.map((p) => ({ pageId: p.pageId, title: p.title }))),
-    recentChanges: async () => (n++, []),
+    recentChanges: async (since) => (n++, sinceCalls.push(since), []),
     fetchPages: async (ids) => (n++, list.filter((p) => ids.includes(p.pageId))),
     wikitext: async () => '',
     imageUrls: async () => new Map(),
@@ -167,4 +167,46 @@ describe('runCatalogue', () => {
     expect(report.imagesFixed).toBe(1)
     expect(d.revalidate).toHaveBeenCalledWith('steal-a-brainrot', ['slushi-huski', 'old-brainrot'])
   })
+
+  it('looks back 30 days on a game\'s first run (no refs yet), 3 days after that', async () => {
+    const { store } = memStore()
+    const { adapter } = fakeAdapter()
+    const since: string[] = []
+    await runCatalogue(game(adapter), deps(store, { wiki: fakeWiki(pages, since) }), opts)
+    await runCatalogue(game(adapter), deps(store, { wiki: fakeWiki(pages, since) }), opts)
+    const days = since.map((s) => Math.round((NOW.getTime() - Date.parse(s)) / 86_400_000))
+    expect(days).toEqual([30, 3])
+  })
+
+  it('enriches only the items being inserted, after the guards, and inserts the enriched version', async () => {
+    const { store } = memStore()
+    const seen: string[][] = []
+    const { adapter, inserted } = fakeAdapter({
+      enrich: async (items) => {
+        seen.push(items.map((i) => i.slug))
+        return items.map((i) => ({ ...i, origin: 'enriched' }))
+      },
+    })
+    await runCatalogue(game(adapter), deps(store), opts)
+    expect(seen).toEqual([['slushi-huski']])
+    expect(inserted[0][0].origin).toBe('enriched')
+  })
+
+  it('never enriches a blocked run', async () => {
+    const { store } = memStore()
+    const enrich = vi.fn(async (items: ParsedItem[]) => items)
+    const { adapter } = fakeAdapter({ insertCap: 0, enrich })
+    await runCatalogue(game(adapter), deps(store), opts)
+    expect(enrich).not.toHaveBeenCalled()
+  })
+
+  it('hands the wiki to the image retry', async () => {
+    const { store } = memStore()
+    const wiki = fakeWiki()
+    const fix = vi.fn(async () => [] as string[])
+    const { adapter } = fakeAdapter({ fixMissingImages: fix })
+    await runCatalogue(game(adapter), deps(store, { wiki }), opts)
+    expect(fix).toHaveBeenCalledWith(db, expect.anything(), wiki)
+  })
 })
+

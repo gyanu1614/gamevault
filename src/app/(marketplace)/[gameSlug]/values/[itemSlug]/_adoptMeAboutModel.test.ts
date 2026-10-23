@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aboutAnswer, aboutBasis, aboutFacts, formRows, livePriceSpread, withoutStalePrices } from './_adoptMeAboutModel'
+import { aboutAnswer, aboutBasis, aboutFacts, formRows, livePriceSpread, withoutStalePrices, petStory } from './_adoptMeAboutModel'
 
 const v = (variant: string, cheapestUsd: number | null, tradeValue: number | null, listingsTracked = 0) =>
   ({ variant, label: variant, cheapestUsd, cashUsd: cheapestUsd, averageUsd: cheapestUsd, tradeValue, isEstimated: false, confidence: 'high', listingsTracked, lastPricedAt: null }) as any
@@ -79,3 +79,15 @@ describe('livePriceSpread', () => {
   })
 })
 
+
+describe('petStory (2026-10-21: every active pet has a page, written description or not)', () => {
+  it('keeps a written description, without its old baked-in prices', () => {
+    expect(petStory({ description: 'The Owl is a legendary pet. It costs $6.98 on average.', name: 'Owl', rarity: 'Legendary', released: null, origin: null, howToGetMethod: null })).toBe('The Owl is a legendary pet.')
+  })
+  it('without one, writes its facts in plain sentences', () => {
+    expect(
+      petStory({ description: null, name: 'Shoebill', rarity: 'Uncommon', released: '16 October 2026', origin: 'Basic Egg', howToGetMethod: 'Hatched from the Basic Egg in the Nursery.' }),
+    ).toBe('The Shoebill is an uncommon pet in Adopt Me, released 16 October 2026, from the Basic Egg. Hatched from the Basic Egg in the Nursery.')
+    expect(petStory({ description: '  ', name: 'Mystery', rarity: 'Rare', released: null, origin: null, howToGetMethod: null })).toBe('The Mystery is a rare pet in Adopt Me.')
+  })
+})

@@ -13,16 +13,18 @@ import { priceHistorySummary } from '@/lib/values/history-summary'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { parseImageAttribution, valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
+import { JsonLd, ownStockProduct } from '@/lib/seo/jsonld'
 import { ValueListAboutStats, ValueListItemHero, ValueListPriceTrend, type ItemForm } from './ValueListItemClient'
 import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
 import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
-import { formatUsd, type ItemCopyInput } from './valueListItemCopy'
+import { aboutSentence, formatUsd, priceSentence, type ItemCopyInput } from './valueListItemCopy'
 import { factRows, releasedLabel } from '@/lib/values/item-facts'
 import { ValueListFormTable, type FormRow } from './ValueListFormTable'
 import { pointsOf, tradeCopy } from './valueListTrade'
 import { ValueCompare } from '@/components/values/ValueCompare'
 import { nearestByValue, type CompareItem } from '@/lib/values/compare'
 import { formatTradeValue } from '@/lib/values/trade-points'
+import { isNewItem } from '@/lib/values/new-item'
 
 /**
  * The streamed body of a value-list item page (Murder Mystery 2): hero, buy
@@ -124,8 +126,9 @@ export default async function ValueListItemBody({
       const ta = a.itemType === item.itemType ? 0 : 1
       const tb = b.itemType === item.itemType ? 0 : 1
       if (ta !== tb) return ta - tb
-      const da = Math.abs(Math.log((a.price!.cheapestUsd ?? ref) / ref))
-      const db = Math.abs(Math.log((b.price!.cheapestUsd ?? ref) / ref))
+      // Unpriced siblings (every item has a page) sort after priced ones of the same type.
+      const da = Math.abs(Math.log((a.price?.cheapestUsd ?? ref * 1e6) / ref))
+      const db = Math.abs(Math.log((b.price?.cheapestUsd ?? ref * 1e6) / ref))
       return da - db
     })
     .slice(0, 14)
@@ -155,9 +158,20 @@ export default async function ValueListItemBody({
   )
 
   const imageCredit = parseImageAttribution(item.imageAttribution)
+  // Product + AggregateOffer only for our own live stock: a market price is not an offer.
+  const productLd = ownStockProduct({
+    name: `${item.name} — ${theme.name}`,
+    description: priceSentence(copy) ?? aboutSentence(copy),
+    brand: theme.name,
+    url: `/${gameSlug}/values/${item.slug}`,
+    image: item.imageUrl,
+    stock: buyData?.stock ?? null,
+    offerPrices: (buyData?.offers ?? []).map((o) => o.pricePerUnit),
+  })
 
   return (
     <>
+      {productLd && <JsonLd data={productLd} />}
       <div className="mx-auto w-full max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
         <ValueListItemHero
           name={item.name}
@@ -174,6 +188,7 @@ export default async function ValueListItemBody({
           // Gun") overflow the 260px price column.
           sell={{ href: sellHref, label: 'Sell Yours For Cash' }}
           forms={forms}
+          isNew={isNewItem({ addedAt: item.addedAt })}
         />
       </div>
 

@@ -172,12 +172,19 @@ export interface ValuePageIndexInput {
   mode: SeoGateMode
   /** The owner's explicit decision for this URL (seo_index_overrides). */
   override: 'index' | 'noindex' | null
+  /**
+   * A NEW item (released or added in the last 30 days) with a How To Get and
+   * release info (src/lib/values/new-item.ts isNewIndexable): indexable before
+   * it has price data (owner, 2026-10-21).
+   */
+  newIndexable?: boolean
   /** The time to judge a page's age against (defaults to now). */
   now?: string
 }
 
 export type ValuePageVerdictReason =
   | 'override'
+  | 'new'
   | 'legacy'
   | 'report-only'
   | 'passes'
@@ -186,13 +193,15 @@ export type ValuePageVerdictReason =
   | 'no-evidence'
 
 /**
- * Index or not, and why. Order: the owner's decision; the old per-source rule
+ * Index or not, and why. Order: the owner's decision; a new item with facts
+ * (it ranks the week it comes out, before any price); the old per-source rule
  * (a page that was noindex stays so); report mode changes nothing else; then the
  * gate, except that a page Google has indexed or that earned clicks is never
  * hidden automatically (it is flagged on /admin/seo for the owner instead).
  */
 export function valuePageVerdict(input: ValuePageIndexInput): { index: boolean; reason: ValuePageVerdictReason } {
   if (input.override) return { index: input.override === 'index', reason: 'override' }
+  if (input.newIndexable) return { index: true, reason: 'new' }
   if (!input.legacyIndexable) return { index: false, reason: 'legacy' }
   if (input.mode === 'report') return { index: true, reason: 'report-only' }
   if (!input.evidence) return { index: false, reason: 'no-evidence' }

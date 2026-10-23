@@ -75,7 +75,8 @@ describe('which URLs are listed', () => {
     expect(all).not.toContain(`${BASE}/steal-an-egg/values/thin-egg`)
   })
 
-  it('lists a value-list hub item (MM2) only when it has a page: high tier, priced, enough listings', () => {
+  // 2026-10-21: every MM2 item has a page; the sitemap lists the ones the value gate indexes.
+  it('lists a value-list hub item (MM2) when it is priced with enough listings, any tier', () => {
     const all = urls({
       pipelineItems: [
         { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
@@ -88,7 +89,7 @@ describe('which URLs are listed', () => {
     expect(all).toContain(`${BASE}/murder-mystery-2/values/methodology`)
     expect(all).toContain(`${BASE}/murder-mystery-2/values/harvester`)
     expect(all).toContain(`${BASE}/murder-mystery-2/values/chroma-fang`)
-    expect(all).not.toContain(`${BASE}/murder-mystery-2/values/default-knife`) // commons: list rows, no page
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/default-knife`) // a priced common is a page too
     expect(all).not.toContain(`${BASE}/murder-mystery-2/values/thin-godly`) // < 3 listings: noindex
     expect(all).not.toContain(`${BASE}/murder-mystery-2/calculator`) // Step 3
   })
@@ -245,6 +246,25 @@ describe('the value-page data gate (growth point 28)', () => {
     expect(all).not.toContain(`${BASE}/adopt-me/values/shadow-dragon`)
     expect(all).toContain(`${BASE}/steal-a-brainrot/values/cavallo-virtuoso`)
     expect(all).toContain(`${BASE}/adopt-me/values/bat-dragon`)
+  })
+
+  // Owner, 2026-10-21: a new item with How To Get + release info ranks before it has prices.
+  it('lists a NEW item with facts once enforced, even unpriced and without evidence', () => {
+    const base = fixture()
+    const all = urls({
+      ...gate({ mode: 'enforce' }),
+      sabBrainrots: [...base.sabBrainrots, { slug: 'slushi-huski', updated_at: null, newIndexable: true }],
+      adoptMePets: [...base.adoptMePets, { slug: 'shoebill', updated_at: null, newIndexable: true }],
+      pipelineItems: [
+        ...base.pipelineItems,
+        { gameSlug: 'murder-mystery-2', slug: 'emberbow', rarity: 'Ancient', priceChangedAt: null, sampleSize: null, newIndexable: true },
+        { gameSlug: 'murder-mystery-2', slug: 'old-unpriced', rarity: 'Common', priceChangedAt: null, sampleSize: null, newIndexable: false },
+      ],
+    })
+    expect(all).toContain(`${BASE}/steal-a-brainrot/values/slushi-huski`)
+    expect(all).toContain(`${BASE}/adopt-me/values/shoebill`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/emberbow`)
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/values/old-unpriced`)
   })
 
   it('keeps a failing page Google has indexed (protected), and obeys the owner overrides in any mode', () => {

@@ -7,6 +7,7 @@
  * clearly under it. Without our stock the headline is the TYPICAL market price
  * (never the cheapest relabelled as "Market Price"). Pure.
  */
+import type { ReactNode } from 'react'
 import type { BuyState } from './buy-state'
 import { marketSecondaryUsd } from '@/lib/values/pricing'
 
@@ -55,4 +56,23 @@ export function buyPanel(input: {
     reference: lower != null ? { label: 'Cheapest', usd: lower } : null,
     saveUsd: null,
   }
+}
+
+/**
+ * The hero headline when there is no price (owner, 2026-10-21; every hub):
+ * the trade value when there is one, else "No Trades Yet", labelled New for an
+ * item released or added in the last 14 days (isNewItem).
+ */
+export function noPriceFallback({
+  tradeValue,
+  tradeLabel = 'Value',
+  isNew,
+}: {
+  /** A formatted trade value: text, or rendered (Adopt Me's points + frosts). */
+  tradeValue?: ReactNode
+  tradeLabel?: string
+  isNew: boolean
+}): { label: string; value: ReactNode } {
+  if (tradeValue) return { label: tradeLabel, value: tradeValue }
+  return { label: isNew ? 'New' : 'Value', value: 'No Trades Yet' }
 }

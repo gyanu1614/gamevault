@@ -15,6 +15,8 @@ import { getAdoptMePet } from './_adoptMePetData'
 import { petHeadline } from './_petAnswer'
 import { SAB_GAME, getBrainrot } from './_sabItemData'
 import { getItemFacts } from '@/lib/values/item-facts-data'
+import { factsNewIndexable } from '@/lib/values/item-facts'
+import { isNewIndexable } from '@/lib/values/new-item'
 import { sabMetaTail } from '@/lib/sab/about'
 
 export interface ItemPageProps {
@@ -49,7 +51,9 @@ export async function generateItemMetadata({ params }: ItemPageProps): Promise<M
     const tradeLead = fr?.tradeValue != null ? `Trade value ${formatTradeValue(fr.tradeValue)} (${frostsLabel(fr.tradeValue)}). ` : ''
     // ≤155 characters: question, price, then what the page has (seoMeta trims
     // the tail clause on long pet names, never the price).
-    const gate = await getValuePageGate('adopt-me', pet.slug, true)
+    // A new pet with How To Get + a release date ranks before it is priced (owner, 2026-10-21).
+    const fresh = isNewIndexable({ releasedAt: pet.releasedAt, addedAt: pet.addedAt, hasHowToGet: pet.hasHowToGet, hasReleaseInfo: pet.releasedAt != null })
+    const gate = await getValuePageGate('adopt-me', pet.slug, true, fresh)
     const headline = petHeadline(pet)
     // The answer sentence leads the snippet (it is not shown on the page).
     const description = withAnswer(
@@ -99,13 +103,14 @@ export async function generateItemMetadata({ params }: ItemPageProps): Promise<M
       return { title: 'Value Not Found' }
     }
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-    const cheapest = price!.cheapestUsd!
+    const cheapest = price?.cheapestUsd ?? null
     // The Adopt Me pattern (8× the clicks of "… — Price in USD" on Bing, 2026-10-19)
     // plus the tier players search by; the snippet says what it is and what the page has.
     const typeLabel = (item.itemType && listHub.itemTypeLabels[item.itemType]) || theme.itemNoun
     const title = valueItemMetaTitle({ name: item.name, shortName: listHub.shortName, rarity: item.rarity, typeLabel }, monthYear)
-    const gate = await getValuePageGate(gameSlug, item.slug, isValueItemIndexable({ priced: true, sampleSize: price!.sampleSize }))
-    const answer = answerSentence({ name: item.name, valueUsd: cheapest, offers: price!.sampleSize, updatedAt: gate.evidence?.priceMovedAt ?? null })
+    const facts = await getItemFacts(gameSlug, item.slug)
+    const gate = await getValuePageGate(gameSlug, item.slug, isValueItemIndexable({ priced: cheapest != null, sampleSize: price?.sampleSize ?? 0 }), factsNewIndexable(facts))
+    const answer = cheapest != null ? answerSentence({ name: item.name, valueUsd: cheapest, offers: price?.sampleSize ?? 0, updatedAt: gate.evidence?.priceMovedAt ?? null }) : null
     const description = withAnswer(
       answer,
       valueItemMetaTail({ rarity: item.rarity, typeNoun: typeLabel.toLowerCase(), obtain: item.obtain, origin: item.origin }, DESC_MAX - (answer ? answer.length + 1 : 0)),
@@ -145,7 +150,7 @@ export async function generateItemMetadata({ params }: ItemPageProps): Promise<M
     // enough to index. Every unpriced catalogue page (all pets) is noindex too
     // — it is useful to a reader who lands on it, but it is not a ranking page.
     const thin = !priced || (price?.sampleSize ?? 0) < 3
-    const gate = await getValuePageGate(gameSlug, item.slug, !thin)
+    const gate = await getValuePageGate(gameSlug, item.slug, !thin, factsNewIndexable(await getItemFacts(gameSlug, item.slug)))
     const title = priced
       ? `${item.name} Value — ${theme.name}`
       : `${item.name} — ${theme.name} ${item.rarity ? `${item.rarity} ` : ''}Pet`
@@ -170,7 +175,9 @@ export async function generateItemMetadata({ params }: ItemPageProps): Promise<M
   // Same head phrase as Adopt Me / MM2 (owner, 2026-10-14: the game name was missing).
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const title = `${brainrot.name} Value in Steal a Brainrot (${monthYear})`
-  const [gate, facts] = await Promise.all([getValuePageGate(SAB_GAME, brainrot.slug, true), getItemFacts(SAB_GAME, brainrot.slug)])
+  // Facts first: a new brainrot with How To Get + release info ranks before it is priced.
+  const facts = await getItemFacts(SAB_GAME, brainrot.slug)
+  const gate = await getValuePageGate(SAB_GAME, brainrot.slug, true, factsNewIndexable(facts))
   const answer = answerSentence({ name: brainrot.name, valueUsd: gate.evidence?.valueUsd, offers: gate.evidence?.observations ?? 0, updatedAt: gate.evidence?.priceMovedAt ?? null })
   // What it is (and when it came out), then what the page has — sized to the room the answer leaves.
   const description = withAnswer(answer, sabMetaTail({ rarity: brainrot.rarity, released: facts.released }, DESC_MAX - (answer ? answer.length + 1 : 0)))
