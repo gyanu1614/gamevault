@@ -3,8 +3,9 @@
 /**
  * Game detail → Values (hub games only): what the values hub holds and
  * whether its data jobs are healthy. Counts first, then every item with the
- * price the site shows and what it is missing (picture, How To Get), then the
- * new-items catalogue job's recent runs. Read-only (getAdminValues).
+ * price the site shows and what it is missing (picture, How To Get), the
+ * Eldorado names to review (MarketNamesPanel), then the new-items catalogue
+ * job's recent runs.
  */
 import { useDeferredValue, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ import { StatStrip } from '@/components/account/AccountSurface'
 import { getAdminValues } from '@/lib/actions/admin-values'
 import { ADMIN_VALUES_PAGE_SIZE, type AdminValuesView } from '@/lib/values/admin-values'
 import { AdminEmpty, AdminLoadingRows, AdminPagination, FilterChip, PanelHead, StatusBadge, TABLE, adminFieldCls, type ChipTone } from '../../components/kit'
+import { MarketNamesPanel } from './MarketNamesPanel'
 
 const VIEWS: { id: AdminValuesView; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -165,6 +167,8 @@ export function ValuesTab({ gameSlug, gameName }: { gameSlug: string; gameName: 
           </div>
         )}
       </section>
+
+      <MarketNamesPanel gameSlug={gameSlug} />
 
       <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
         <PanelHead title="New-Items Catalogue" subtitle="Runs daily from the game's wiki and only ever adds items." />

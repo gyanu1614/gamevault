@@ -52,6 +52,7 @@ import {
   eldoradoKeyFor,
   normalizeName,
 } from './lib/adoptme-eldorado.mjs'
+import { describeMarketNames, loadMarketNamesSafe, planMarketNames, saveMarketNamesSafe } from './lib/market-names.mjs'
 
 const DEFAULT_OUTPUT = 'data/adopt-me-feeds/eldorado-cash-latest.json'
 const COLLECTOR_VERSION = 3 // 3 = Eldorado trait N is NEON (was Normal); NF/NR/MF/MR combo forms dropped
@@ -108,6 +109,7 @@ function parseArgs(argv) {
     else if (a === '--slugs') o.slugs = argv[++i].split(',').map((s) => s.trim())
     else if (a === '--crawl') o.crawl = true
     else if (a === '--crawl-max-pages') o.crawlMaxPages = Number(argv[++i])
+    else if (a === '--no-match-log') o.noMatchLog = true
   }
   // Politeness floor: never faster than one request a second.
   o.delayMs = Math.max(1000, o.delayMs)
@@ -201,9 +203,11 @@ async function collectByCrawl(targets, opts) {
   })
   const listings = []
   let matched = 0
+  const claimed = new Set()
   for (const pet of targets) {
     const group = crawl.byName.get(eldoradoKeyFor(pet.name))
     if (!group) continue
+    claimed.add(pet.slug)
     for (const l of group.listings) {
       listings.push({ slug: pet.slug, name: pet.name, ...l })
       matched++
@@ -211,8 +215,36 @@ async function collectByCrawl(targets, opts) {
   }
   const rejected = Object.values(crawl.rejected).reduce((a, b) => a + b, 0)
   const petKeys = new Set(targets.map((p) => eldoradoKeyFor(p.name)))
+  const leftover = [...crawl.byName].filter(([key]) => !petKeys.has(key)).map(([, g]) => g)
+
+  // Eldorado names exact matching missed → the match log: saved decisions,
+  // then close matches, then the review list (scripts/lib/market-names.mjs).
+  // Full runs only: with a subset of pets, every other pet's group would look
+  // "unmatched" and the candidates would be incomplete.
+  const useLog = !opts.noMatchLog && !opts.limit && !opts.slugs && !opts.onlyPublished
+  const ledger = useLog && leftover.length ? await loadMarketNamesSafe(sb, 'adopt-me') : null
+  let plan = null
+  if (ledger) {
+    plan = planMarketNames({
+      game: 'adopt-me',
+      names: new Map(leftover.map((g) => [g.itemName, g.listings.length])),
+      items: targets.map((p) => ({ slug: p.slug, names: [p.name] })),
+      claimed,
+      ledger,
+    })
+    const petBySlug = new Map(targets.map((p) => [p.slug, p]))
+    for (const g of leftover) {
+      const slug = plan.mapped.get(g.itemName)
+      if (!slug) continue
+      for (const l of g.listings) {
+        listings.push({ slug, name: petBySlug.get(slug).name, ...l })
+        matched++
+      }
+    }
+    console.log(describeMarketNames('adopt-me', plan))
+  }
   let notInCatalog = 0
-  for (const [key, g] of crawl.byName) if (!petKeys.has(key)) notInCatalog += g.listings.length
+  for (const g of leftover) if (!plan?.mapped.has(g.itemName)) notInCatalog += g.listings.length
   console.log(
     `  crawl: ${crawl.pagesFetched}/${crawl.totalPages} pages, ${crawl.recordCount} offers, ` +
       `${crawl.uniqueOffers} unique, ${crawl.duplicates} duplicates, ${crawl.errors.length} page errors, stopped: ${crawl.stoppedBy}`,
@@ -221,6 +253,8 @@ async function collectByCrawl(targets, opts) {
     // A truncated crawl would make the importer retire listings it never saw.
     throw new Error(`crawl incomplete (${crawl.stoppedBy}) — not writing a partial feed`)
   }
+  // Saved only after a complete crawl: offer counts from a partial one would mislead the review list.
+  if (plan) await saveMarketNamesSafe(sb, 'adopt-me', plan.rows)
   return {
     listings,
     matched,

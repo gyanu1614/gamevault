@@ -18,7 +18,8 @@ import { retireUnseenRawListings } from './values-raw.mjs'
 import fs from 'node:fs'
 
 import { normaliseStructuredListing } from '../../src/lib/values/normalisers/eldorado-structured.ts'
-import { buildMarketIndex, resolveMarketKey } from '../../src/lib/values/catalogue/resolve.ts'
+import { buildMarketIndex, marketNamesFor, resolveMarketKey } from '../../src/lib/values/catalogue/resolve.ts'
+import { describeMarketNames, loadMarketNamesSafe, planMarketNames, saveMarketNamesSafe } from './market-names.mjs'
 import { eldoradoStructuredConfig } from '../../src/lib/values/sources/eldorado-structured-games.ts'
 
 /** values_raw_listings.quantity is an int; Eldorado stock claims run to millions. */
@@ -123,9 +124,63 @@ export function planRawRows({ game, listings, catalogue, observedAt, gameId = nu
       // Report-only fields (stripped before insert).
       matched_slug: slug,
       _raw_price: l.price_usd,
+      _market_key: id.marketKey ?? null,
     })
   }
   return { rows, stats, unmatched: [...unmatchedKeys.values()].sort((a, b) => b.reputableOffers - a.reputableOffers || b.offers - a.offers) }
+}
+
+/** The names a catalogue row can be sold under, for close matching ("Chroma Fang" → "Fang"). */
+function candidateNames(e) {
+  const names = new Set()
+  for (const t of [e.title, e.displayTitle].filter(Boolean)) {
+    const { exact, derived } = marketNamesFor(t, e.itemType)
+    for (const n of [...exact, ...derived]) names.add(e.isChroma ? n.replace(/^chroma\s+/i, '') : n)
+  }
+  return [...names]
+}
+
+/**
+ * Pure: the market keys exact matching missed → the match log
+ * (market-names.mjs). Candidates share the key's type + variant and were not
+ * matched exactly this run. Returns the plan with those listings matched, and
+ * the log rows to save.
+ */
+export function applyMarketNames({ game, plan, catalogue, ledger, now }) {
+  const claimed = new Set(plan.rows.map((r) => r.matched_slug).filter(Boolean))
+  const groups = new Map()
+  for (const u of plan.unmatched) {
+    const tv = u.key.split('|').slice(0, 2).join('|')
+    const g = groups.get(tv) ?? new Map()
+    g.set(u.key, u.offers)
+    groups.set(tv, g)
+  }
+  const mapped = new Map()
+  const log = { mapped, rows: [], autoMatched: [] }
+  for (const [tv, names] of groups) {
+    const [type, variant] = tv.split('|')
+    const items = catalogue.entries
+      .filter((e) => e.itemType === type && (variant === 'chroma') === e.isChroma)
+      .map((e) => ({ slug: e.slug, names: candidateNames(e) }))
+    const p = planMarketNames({ game, names, items, claimed, ledger, now, nameOf: (k) => k.split('|').slice(2).join('|') })
+    for (const [k, slug] of p.mapped) {
+      mapped.set(k, slug)
+      claimed.add(slug)
+    }
+    log.rows.push(...p.rows)
+    log.autoMatched.push(...p.autoMatched)
+  }
+  if (!mapped.size) return { plan, log }
+
+  let moved = 0
+  const rows = plan.rows.map((r) => {
+    const slug = r.parse_status === 'unmatched' && r._market_key ? mapped.get(r._market_key) : null
+    if (!slug) return r
+    moved += 1
+    return { ...r, parse_status: 'matched', matched_slug: slug, matched_item_id: catalogue.idBySlug?.get(slug) ?? null, match_confidence: 0.75 }
+  })
+  const stats = { ...plan.stats, matched: plan.stats.matched + moved, unmatched: plan.stats.unmatched - moved, byVia: { ...plan.stats.byVia, log: moved } }
+  return { plan: { rows, stats, unmatched: plan.unmatched.filter((u) => !mapped.has(u.key)) }, log }
 }
 
 export async function importEldoradoFeed({ game, feed, env, yes = false, write = false, allowPartial = false, cataloguePath }) {
@@ -157,11 +212,15 @@ export async function importEldoradoFeed({ game, feed, env, yes = false, write =
   if (!catalogue.entries.length) throw new Error(`no values_items for '${game}' — run the catalogue import first`)
   const listings = dedupeOffers(feed.listings)
   if (listings.length < feed.listings.length) console.log(`  duplicates: ${feed.listings.length - listings.length} repeated offers dropped`)
-  const plan = planRawRows({ game, listings, catalogue, observedAt, gameId: game_.id })
+  const exact = planRawRows({ game, listings, catalogue, observedAt, gameId: game_.id })
+  // What exact matching missed → saved decisions, close matches, review list.
+  const ledger = await loadMarketNamesSafe(db, game)
+  const { plan, log } = ledger ? applyMarketNames({ game, plan: exact, catalogue, ledger, now: observedAt }) : { plan: exact, log: null }
   report(plan, feed)
+  if (log) console.log(describeMarketNames(game, log))
 
   console.log(`Writing ${plan.rows.length} raw listings to ${url}`)
-  const insertRows = plan.rows.map(({ matched_slug, _raw_price, ...row }) => row)
+  const insertRows = plan.rows.map(({ matched_slug, _raw_price, _market_key, ...row }) => row)
   for (let i = 0; i < insertRows.length; i += 500) {
     const { error } = await db.from('values_raw_listings').insert(insertRows.slice(i, i + 500))
     if (error) throw new Error(`values_raw_listings insert: ${error.message}`)
@@ -171,6 +230,8 @@ export async function importEldoradoFeed({ game, feed, env, yes = false, write =
     // (done first, a failed insert left the game with no active listings).
     // History is untouched.
     await retireUnseenRawListings(db, game_.id, observedAt)
+    // Offer counts are only true for a complete crawl.
+    if (log) await saveMarketNamesSafe(db, game, log.rows)
   }
   return plan
 }
@@ -179,6 +240,6 @@ function report(plan, feed) {
   const s = plan.stats
   const pct = (n) => `${((n / Math.max(s.total, 1)) * 100).toFixed(1)}%`
   console.log(`${feed.gameSlug}: ${s.total} listings (feed complete: ${feed.complete})`)
-  console.log(`  matched   ${s.matched} (${pct(s.matched)})  via title ${s.byVia.title} · derived ${s.byVia.derived} · year ${s.byVia.year} · alias ${s.byVia.alias}`)
+  console.log(`  matched   ${s.matched} (${pct(s.matched)})  via title ${s.byVia.title} · derived ${s.byVia.derived} · year ${s.byVia.year} · alias ${s.byVia.alias} · match log ${s.byVia.log ?? 0}`)
   console.log(`  unmatched ${s.unmatched} (${plan.unmatched.length} names)  rejected ${s.rejected}  ambiguous ${s.ambiguous}`)
 }
