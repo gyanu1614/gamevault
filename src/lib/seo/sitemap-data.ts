@@ -13,7 +13,7 @@ import { isNewIndexable } from '@/lib/values/new-item'
 type FreshRow = { released_at?: string | null; created_at?: string | null; release_year?: number | null; htg?: string | null }
 const fresh = (r: FreshRow, now: number) =>
   isNewIndexable(
-    { releasedAt: r.released_at ?? null, addedAt: r.created_at ?? null, hasHowToGet: r.htg != null, hasReleaseInfo: r.released_at != null || r.release_year != null },
+    { releasedAt: r.released_at ?? null, releaseYear: r.release_year ?? null, addedAt: r.created_at ?? null, hasHowToGet: r.htg != null, hasReleaseInfo: r.released_at != null || r.release_year != null },
     now,
   )
 

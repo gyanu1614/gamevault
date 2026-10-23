@@ -62,6 +62,8 @@ export type BrainrotDirectoryItem = {
   popularity_rank?: number | null
   /** Released (else added) in the last 14 days: the New badge (isNewItem). Absent = not new. */
   isNew?: boolean
+  /** 7-day % change of the plain price (src/lib/values/trends.ts). Absent = no move / no history. */
+  trendPct?: number
 }
 
 export type SabSort = 'value-desc' | 'name' | 'income-desc' | 'income-asc'
@@ -121,7 +123,7 @@ export function filterSortBrainrots(
     const matchesRarity =
       effectiveView === 'popular' ||
       effectiveView === 'all' ||
-      brainrot.rarity === effectiveView
+      (effectiveView === 'new' ? brainrot.isNew === true : brainrot.rarity === effectiveView)
 
     const matchesObtainability =
       obtainability === 'all' || brainrot.obtainability === obtainability

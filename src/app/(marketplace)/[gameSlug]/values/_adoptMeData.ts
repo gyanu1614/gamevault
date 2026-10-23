@@ -2,6 +2,7 @@ import 'server-only'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import { isNewItem } from '@/lib/values/new-item'
+import { getAdoptMeTrends } from './_listTrends'
 import type { AdoptMePetItem, AdoptMeVariantValue } from './_adoptMeListModel'
 
 /**
@@ -48,7 +49,7 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
   // Both reads are PAGED: one PostgREST response stops at max_rows (1000) and
   // the cut is silent — 8 value rows per pet would lose every pet past ~125.
   // Each page orders on a unique key so pages never overlap or skip.
-  const [petsRes, valuesRes] = await Promise.all([
+  const [petsRes, valuesRes, trends] = await Promise.all([
     fetchAllRows<PetRow>((from, to) =>
       (supabase as any)
         .from('adopt_me_pets')
@@ -67,6 +68,8 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
         .order('variant', { ascending: true })
         .range(from, to),
     ),
+    // 7-day change per form, for the card's trend.
+    getAdoptMeTrends(supabase),
   ])
 
   // Read errors throw: [] (or pets with no prices) would be cached by the list
@@ -103,6 +106,7 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
         averageUsd,
         isEstimated: row.is_estimated,
         confidence: row.confidence ?? 'low',
+        ...(trends.has(`${pet.id}|${row.variant}`) ? { trendPct: trends.get(`${pet.id}|${row.variant}`) } : null),
       }
     }
 

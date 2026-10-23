@@ -173,7 +173,7 @@ export default async function AdoptMeValuesPage() {
                 }),
                 {
                   pageSize: ADOPT_ME_PAGE_SIZE,
-                  facets: countFacets(pets, { rarity: (p) => p.rarity }),
+                  facets: countFacets(pets, { rarity: (p) => p.rarity, new: (p) => (p.isNew ? 'new' : null) }),
                   extra: { popular: popularPetSlugs(pets) },
                 },
               )}

@@ -105,6 +105,9 @@ export async function POST(request: Request): Promise<Response> {
       // The full list the page fetches after hydration (lib/values/lazy-list.ts).
       revalidatePath(`/${gameSlug}/values/rows.json`)
       revalidated.push(`/${gameSlug}/values/rows.json`)
+      // The navbar search's index (items + prices), from the same list reads.
+      revalidatePath(`/${gameSlug}/search.json`)
+      revalidated.push(`/${gameSlug}/search.json`)
     }
     if (hasHubPage(gameSlug, 'calculator')) {
       revalidatePath(`/${gameSlug}/calculator`)

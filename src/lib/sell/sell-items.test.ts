@@ -69,7 +69,7 @@ describe('sell rows: the one price rule (our listing, else the market)', () => {
 
   it('Steal an Egg (ValueItems): New from the date the row was added', () => {
     const item = (slug: string, addedAt: string): ValueItem =>
-      ({ id: slug, slug, name: slug, imageUrl: null, itemType: null, rarity: null, baseItemId: null, addedAt, price: null }) as unknown as ValueItem
+      ({ id: slug, slug, name: slug, imageUrl: null, itemType: null, rarity: null, baseItemId: null, addedAt, releaseYear: 2026, price: null }) as unknown as ValueItem
     const now = Date.parse('2026-10-22T00:00:00Z')
     const rows = sellItemsFromValueItems('steal-an-egg', [item('new-pet', new Date(now - DAY).toISOString()), item('old-pet', '2026-01-01T00:00:00Z')], {}, now)
     expect(rows.map((r) => [r.slug, r.isNew, r.priceUsd])).toEqual([

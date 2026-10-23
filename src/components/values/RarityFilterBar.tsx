@@ -1,12 +1,26 @@
 'use client'
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { SparkleIcon } from '@phosphor-icons/react/dist/csr/Sparkle'
 
 export interface RarityFilterOption {
   key: string
   label: string
   color: string
   count?: number
+  icon?: ReactNode
+}
+
+/** The view key every value list uses for "items new in the game" (isNewItem). */
+export const NEW_VIEW = 'new'
+
+/**
+ * The New tile, the same on every values hub (owner, 2026-10-23: "New in
+ * green with an icon"). The lime accent, like the New tag. Callers drop it
+ * when the count is 0.
+ */
+export function newFilterOption(count: number): RarityFilterOption {
+  return { key: NEW_VIEW, label: 'New', color: 'var(--color-accent-default)', count, icon: <SparkleIcon aria-hidden size={15} weight="fill" /> }
 }
 
 /**
@@ -50,6 +64,7 @@ export function RarityFilterBar({
               active ? '' : 'hover:brightness-125'
             }`}
           >
+            {o.icon}
             {o.label}
             {o.count != null && (
               <span className={active ? 'text-[#0C0F0E]/55' : 'opacity-60'}>{o.count.toLocaleString('en-US')}</span>

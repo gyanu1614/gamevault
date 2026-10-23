@@ -19,6 +19,8 @@ export interface AdoptMeVariantValue {
   averageUsd: number | null
   isEstimated: boolean
   confidence: string
+  /** 7-day % change of this form's cash value (src/lib/values/trends.ts). Absent = no move / no history. */
+  trendPct?: number
 }
 export interface AdoptMePetItem {
   slug: string
@@ -89,6 +91,7 @@ export function filterSortPets(
   const list = pets.filter((p) => {
     if (q && !p.name.toLowerCase().includes(q)) return false
     if (view === 'popular' || view === 'all') return true
+    if (view === 'new') return p.isNew === true
     return p.rarity === view
   })
   return [...list].sort((a, b) => {

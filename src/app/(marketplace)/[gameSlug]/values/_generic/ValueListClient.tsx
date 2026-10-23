@@ -16,19 +16,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/csr/SortAscending'
-import { CaretUpIcon } from '@phosphor-icons/react/dist/csr/CaretUp'
-import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
 import { DiamondIcon } from '@phosphor-icons/react/dist/csr/Diamond'
 import Link from '@/components/navigation/AppLink'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { CardRank, PriceStatPair, RarityLabel, ValueCard } from '@/components/values/ValueCard'
 import { NewTag } from '@/components/values/NewTag'
-import { ChromaFlipButton, ChromaWord, type CardForm } from '@/components/values/ChromaFlipButton'
+import { ChromaWord, type CardForm } from '@/components/values/ChromaWord'
+import { FormSwitch } from '@/components/values/FormSwitch'
+import { TrendChip } from '@/components/values/TrendChip'
+import { TREND_MIN_PCT } from '@/lib/values/trends'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
-import { RarityFilterBar } from '@/components/values/RarityFilterBar'
+import { RarityFilterBar, newFilterOption } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
@@ -55,7 +56,6 @@ export type { ValueListRow } from './valueListModel'
 /** Adopt Me's cash teal — "Cheapest" reads the same on every hub. */
 const CHEAPEST_TEAL = '#54DDBE'
 /** Moves smaller than this are noise, not a trend. */
-const TREND_MIN_PCT = 0.05
 
 /** Cents under $1,000; whole dollars above, so a two-column phone card never clips "$4,049.98". */
 const usd = (v: number) =>
@@ -176,7 +176,7 @@ export default function ValueListClient({
 
   const filterOptions = [
     { key: DEFAULT_VIEW, label: 'All', color: '#9AA6A0', count: allCount },
-    ...visibleTabs.map((t) => ({ key: t.key, label: t.label, color: t.color, count: t.count })),
+    ...visibleTabs.map((t) => (t.isNew ? newFilterOption(t.count) : { key: t.key, label: t.label, color: t.color, count: t.count })),
   ]
 
   return (
@@ -322,9 +322,10 @@ Showing{' '}
 }
 
 /**
- * One item on the shared ValueCard: rank + type · rarity → art + name → listed
- * now + trend → (Standard | Chroma switch) → Cheapest / Market. An item in two
- * forms switches the whole card to the other form's art, prices and page.
+ * One item on the shared ValueCard: rank + type · rarity → art + name → 7-day
+ * trend → (Standard | Chroma switch) → Cheapest / Market, each labelled with
+ * the form it is for. An item in two forms switches the whole card to the
+ * other form's art, prices and page. No "N listed now" (owner, 2026-10-23).
  */
 function ItemCard({
   gameSlug,
@@ -348,8 +349,10 @@ function ItemCard({
   const rarity = row.rarity ? rarityMeta(gameSlug, row.rarity) : null
   const priced = row.cheapestUsd != null
   const trend = row.trendPct != null && Math.abs(row.trendPct) >= TREND_MIN_PCT ? row.trendPct : null
-  const up = (trend ?? 0) >= 0
-  const Caret = up ? CaretUpIcon : CaretDownIcon
+  // Which form the prices are for, named over each price when the item has two.
+  const chromaLabel = rarityMeta(gameSlug, 'Chroma').label
+  const formLabel = form === 'chroma' ? chromaLabel : 'Standard'
+  const formEyebrow = forms ? (form === 'chroma' ? <ChromaWord>{chromaLabel}</ChromaWord> : 'Standard') : undefined
 
   return (
     <ValueCard
@@ -376,38 +379,20 @@ function ItemCard({
       imageAlt={`${row.name}${typeLabel ? ` ${typeLabel.toLowerCase()}` : ''} in ${gameName}`}
       name={row.name}
       sub={
-        priced ? (
-          <span className="flex items-center justify-center gap-1.5 tabular-nums">
-            <span className="text-text-tertiary">{row.listedNow.toLocaleString('en-US')} listed now</span>
-            {trend != null && (
-              <span
-                className="inline-flex items-center gap-0.5 font-semibold"
-                style={{ color: up ? 'var(--color-success)' : 'var(--color-error)' }}
-                title="7-day change"
-              >
-                <Caret aria-hidden size={10} weight="fill" />
-                <span className="sr-only">{up ? 'Up' : 'Down'} over 7 days</span>
-                {Math.abs(trend).toFixed(1)}%
-              </span>
-            )}
-          </span>
-        ) : undefined
+        trend != null ? (
+          <TrendChip pct={trend} />
+        ) : (
+          // Same line height on every card, so switches and prices line up across a row.
+          <span aria-hidden className="invisible">–</span>
+        )
       }
-      control={
-        forms ? (
-          <ChromaFlipButton
-            form={form}
-            onToggle={() => setForm((f) => (f === 'chroma' ? 'standard' : 'chroma'))}
-            chromaLabel={rarityMeta(gameSlug, 'Chroma').label}
-          />
-        ) : undefined
-      }
+      control={forms ? <FormSwitch form={form} onChange={setForm} itemName={listed.name} chromaLabel={chromaLabel} /> : undefined}
       footer={
         <PriceStatPair
-          empty={priced ? null : 'No Price Yet'}
+          empty={priced ? null : forms ? `No ${formLabel} Price Yet` : 'No Price Yet'}
           stats={[
-            { label: 'Cheapest', value: priced ? usd(row.cheapestUsd!) : null, color: CHEAPEST_TEAL },
-            { label: 'Market', value: row.marketUsd != null ? usd(row.marketUsd) : null },
+            { label: 'Cheapest', eyebrow: formEyebrow, value: priced ? usd(row.cheapestUsd!) : null, color: CHEAPEST_TEAL },
+            { label: 'Market', eyebrow: formEyebrow, value: row.marketUsd != null ? usd(row.marketUsd) : null },
           ]}
         />
       }

@@ -26,11 +26,12 @@ import {
   VariantPill,
 } from '@/components/values/ValueCard'
 import { NewTag } from '@/components/values/NewTag'
+import { TrendChip } from '@/components/values/TrendChip'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePopoverField } from '@/components/values/ValuePopoverField'
 import { ValuePagination } from '@/components/values/ValuePagination'
-import { RarityFilterBar } from '@/components/values/RarityFilterBar'
+import { RarityFilterBar, newFilterOption } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { MARKET_SECONDARY_GAP } from '@/lib/values/pricing'
 import { ADOPT_ME_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
@@ -181,8 +182,10 @@ function AdoptMeValuesClientInner({ initial }: { initial: InitialValueList }) {
     }
   }, [variant, query, view, sort, page, pathname, router, searchParams])
 
+  const newCount = ready ? pets.filter((p) => p.isNew).length : (initial.facets.new?.new ?? 0)
   const rarityOptions = [
     { key: 'popular', label: 'Popular', color: '#4FB477' },
+    ...(newCount > 0 ? [newFilterOption(newCount)] : []),
     { key: 'all', label: 'All', color: '#9AA6A0', count: ready ? pets.length : initial.total },
     ...raritiesPresent.map((r) => ({
       key: r,
@@ -358,6 +361,14 @@ function PetCard({
       imageSrc={pet.imageUrl}
       imageAlt={`${pet.name} in Adopt Me`}
       name={pet.name}
+      sub={
+        v?.trendPct != null ? (
+          <TrendChip pct={v.trendPct} />
+        ) : (
+          // Same line height on every card, so the variant pills and prices line up across a row.
+          <span aria-hidden className="invisible">–</span>
+        )
+      }
       control={
         <VariantPill
           label={VARIANT_DISPLAY[code]}

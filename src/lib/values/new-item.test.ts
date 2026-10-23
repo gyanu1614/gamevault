@@ -10,9 +10,15 @@ describe('isNewItem (owner, 2026-10-21: a New badge for items from the wiki)', (
     expect(isNewItem({ releasedAt: '2026-10-07', addedAt: '2026-10-22T09:00:00Z' }, NOW)).toBe(false)
   })
 
-  it('without a release date, the day we added it decides (a backlog import never looks new by date alone)', () => {
-    expect(isNewItem({ releasedAt: null, addedAt: '2026-10-20T09:00:00Z' }, NOW)).toBe(true)
-    expect(isNewItem({ releasedAt: null, addedAt: '2026-07-23T22:29:28Z' }, NOW)).toBe(false)
+  it('with only a release YEAR: this year AND added in the last 14 days (MM2 Halloween 2026 items)', () => {
+    expect(isNewItem({ releaseYear: 2026, addedAt: '2026-10-20T09:00:00Z' }, NOW)).toBe(true)
+    expect(isNewItem({ releaseYear: 2026, addedAt: '2026-07-23T22:29:28Z' }, NOW)).toBe(false)
+    // An old item the catalogue only just added ("Laser (Knife)", 2018) is not new.
+    expect(isNewItem({ releaseYear: 2018, addedAt: '2026-10-22T09:00:00Z' }, NOW)).toBe(false)
+  })
+
+  it('with no release info at all, never new: "we just added it" is not "new in the game" (2026-10-23: Dolphin, Camel)', () => {
+    expect(isNewItem({ releasedAt: null, addedAt: '2026-10-20T09:00:00Z' }, NOW)).toBe(false)
   })
 
   it('no dates, a bad date, or a date far in the future is not new', () => {
@@ -26,7 +32,8 @@ describe('isNewIndexable (owner, 2026-10-21: new items with facts may rank befor
   const facts = { hasHowToGet: true, hasReleaseInfo: true }
   it('new within 30 days AND How To Get AND release info', () => {
     expect(isNewIndexable({ ...facts, releasedAt: '2026-10-01' }, NOW)).toBe(true)
-    expect(isNewIndexable({ ...facts, releasedAt: null, addedAt: '2026-09-25T00:00:00Z' }, NOW)).toBe(true)
+    expect(isNewIndexable({ ...facts, releasedAt: null, releaseYear: 2026, addedAt: '2026-09-25T00:00:00Z' }, NOW)).toBe(true)
+    expect(isNewIndexable({ ...facts, releasedAt: null, releaseYear: 2019, addedAt: '2026-10-20T00:00:00Z' }, NOW)).toBe(false)
     expect(isNewIndexable({ ...facts, releasedAt: '2026-09-10' }, NOW)).toBe(false)
   })
   it('never without the facts that make the page worth reading', () => {

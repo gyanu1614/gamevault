@@ -19,6 +19,8 @@ export interface ValueListTab {
   rarity?: string
   /** … or on values_items.item_type. */
   itemType?: string
+  /** … or on the row's New flag (isNewItem). */
+  isNew?: boolean
 }
 
 export interface ValueListHubConfig {
@@ -51,6 +53,8 @@ const MM2: ValueListHubConfig = {
   shortName: 'MM2',
   pageRarities: ['Godly', 'Ancient', 'Vintage', 'Unique', 'Chroma'],
   tabs: [
+    // Items new in the game first (hidden when there are none).
+    { key: 'new', label: 'New', color: 'var(--color-accent-default)', isNew: true },
     ...MM2_TAB_RARITIES.map((r) => ({
       key: r.toLowerCase(),
       label: r,
@@ -102,10 +106,11 @@ export function valueItemHasPage(
 
 /** Does an item belong in a list tab? `all` matches everything. */
 export function matchesValueListTab(
-  tab: Pick<ValueListTab, 'rarity' | 'itemType'> | null,
-  item: { rarity: string | null; itemType: string | null },
+  tab: Pick<ValueListTab, 'rarity' | 'itemType' | 'isNew'> | null,
+  item: { rarity: string | null; itemType: string | null; isNew?: boolean },
 ): boolean {
   if (!tab) return true
+  if (tab.isNew && !item.isNew) return false
   if (tab.rarity && item.rarity !== tab.rarity) return false
   if (tab.itemType && item.itemType !== tab.itemType) return false
   return true

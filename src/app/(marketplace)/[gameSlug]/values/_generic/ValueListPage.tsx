@@ -309,8 +309,8 @@ function valueListFaq(gameName: string, shortName: string, top: ValueListRow | u
       a: `Every day. A value only changes on the page when the market moves by more than 3% (or 5 cents on cheap items), so the list follows real moves instead of daily noise. Each item page shows a price chart built from those daily snapshots.`,
     },
     {
-      q: `What does "listed now" mean?`,
-      a: `It is how many live listings from reputable sellers back the item's price at the last daily check. More listings mean a more reliable price; an item with only a handful can move quickly.`,
+      q: `What do the green and red percentages mean?`,
+      a: `They are the 7-day change in an item's market price: green is up, red is down. No percentage means the price held steady, or there is not a week of prices yet.`,
     },
     {
       q: `How do I sell my ${shortName} items for money?`,

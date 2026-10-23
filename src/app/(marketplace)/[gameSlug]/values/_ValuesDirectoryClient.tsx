@@ -23,10 +23,11 @@ import {
   VariantPill,
 } from '@/components/values/ValueCard'
 import { NewTag } from '@/components/values/NewTag'
+import { TrendChip } from '@/components/values/TrendChip'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
-import { RarityFilterBar } from '@/components/values/RarityFilterBar'
+import { RarityFilterBar, newFilterOption } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { SAB_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
@@ -240,8 +241,10 @@ function ValuesDirectoryClientInner({ initial }: { initial: InitialValueList }) 
     setSort('value-desc')
   }
 
+  const newCount = ready ? brainrots.filter((b) => b.isNew).length : (initial.facets.new?.new ?? 0)
   const rarityOptions = [
     { key: 'popular', label: 'Popular', color: '#4FB477' },
+    ...(newCount > 0 ? [newFilterOption(newCount)] : []),
     { key: 'all', label: 'All', color: '#9AA6A0', count: ready ? brainrots.length : initial.total },
     ...rarities.map((r) => ({
       key: r,
@@ -448,7 +451,16 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
       imageAlt={`${brainrot.name} Steal a Brainrot`}
       pixelated
       name={brainrot.name}
-      sub={income ? <span className="tabular-nums text-[#7EE0A6]">{income}</span> : undefined}
+      sub={
+        // Income, then the 7-day trend of the plain price (history is kept for the plain one only).
+        income || (isDefault && brainrot.trendPct != null) ? (
+          <span className="flex items-center justify-center gap-1.5 tabular-nums">
+            {income && <span className="text-[#7EE0A6]">{income}</span>}
+            {income && isDefault && brainrot.trendPct != null && <span aria-hidden className="text-text-disabled">·</span>}
+            {isDefault && <TrendChip pct={brainrot.trendPct} />}
+          </span>
+        ) : undefined
+      }
       control={
         hasMutations ? (
           <VariantPill

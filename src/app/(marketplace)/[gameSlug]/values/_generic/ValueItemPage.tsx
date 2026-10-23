@@ -164,7 +164,7 @@ export default async function ValueItemPage({
           buy={{ gameSlug, itemSlug: item.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
           sell={{ href: hubNav.sellHref ?? `/${gameSlug}/sell`, label: 'Sell Yours For Cash' }}
           forms={null}
-          isNew={isNewItem({ addedAt: item.addedAt })}
+          isNew={isNewItem({ addedAt: item.addedAt, releaseYear: item.releaseYear })}
         />
       </section>
 

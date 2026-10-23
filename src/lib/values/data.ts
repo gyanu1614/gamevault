@@ -312,8 +312,9 @@ export async function getValueItemFacts(gameSlug: string, itemSlug: string): Pro
     released: releasedLabel({ year: data.release_year }),
     origin: typeof data.origin === 'string' && data.origin.trim() ? data.origin.trim() : null,
     howToGet: parseHowToGet(data.how_to_get),
-    // A year is not a date: the New rules fall back to when we added the item.
+    // A year is not a date: the New rules use the year plus when we added it.
     releasedAt: null,
+    releaseYear: typeof data.release_year === 'number' ? data.release_year : null,
     addedAt: typeof data.created_at === 'string' ? data.created_at : null,
   }
 }

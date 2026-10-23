@@ -70,16 +70,16 @@ export const VALUE_LIST_PAGE_SIZE = 25
 export const VALUE_LIST_DEFAULT_VIEW = 'all'
 export const VALUE_LIST_DEFAULT_SORT: ValueListSort = 'price-desc'
 
-/** Rows per tab, for the filter tiles. */
+/** Cards per tab, for the filter tiles: a Chroma riding on its standard's card counts once, as the grid shows it. */
 export function valueListTabCounts(tabs: readonly ValueListTab[], rows: ValueListRow[]): Record<string, number> {
   const out: Record<string, number> = {}
-  for (const t of tabs) out[t.key] = rows.filter((r) => matchesValueListTab(t, r)).length
+  for (const t of tabs) out[t.key] = collapseForms(rows.filter((r) => matchesValueListTab(t, r))).length
   return out
 }
 
 export function filterSortValueRows(
   rows: ValueListRow[],
-  { query, tab, sort }: { query: string; tab: Pick<ValueListTab, 'rarity' | 'itemType'> | null; sort: ValueListSort },
+  { query, tab, sort }: { query: string; tab: Pick<ValueListTab, 'rarity' | 'itemType' | 'isNew'> | null; sort: ValueListSort },
 ): ValueListRow[] {
   const q = query.trim().toLowerCase()
   const list = rows.filter((r) => (!q || r.name.toLowerCase().includes(q)) && matchesValueListTab(tab, r))

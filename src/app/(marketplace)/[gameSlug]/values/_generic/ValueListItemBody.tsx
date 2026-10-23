@@ -188,7 +188,7 @@ export default async function ValueListItemBody({
           // Gun") overflow the 260px price column.
           sell={{ href: sellHref, label: 'Sell Yours For Cash' }}
           forms={forms}
-          isNew={isNewItem({ addedAt: item.addedAt })}
+          isNew={isNewItem({ addedAt: item.addedAt, releaseYear: item.releaseYear })}
         />
       </div>
 

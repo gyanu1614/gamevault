@@ -12,6 +12,7 @@ import { pack, unpack } from '@/lib/serialize/columnar'
 
 const DAY = 86_400_000
 const item = (slug: string, addedAt: string | null) => ({
+  releaseYear: new Date().getUTCFullYear(),
   id: slug,
   slug,
   name: slug,

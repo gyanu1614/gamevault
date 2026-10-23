@@ -3,6 +3,7 @@ import { createValueListReadClient } from '@/lib/values/read-client'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
 import type { BrainrotDirectoryItem, CardMutation } from './_sabListModel'
 import { isNewItem } from '@/lib/values/new-item'
+import { getSabTrends } from './_listTrends'
 
 /**
  * Every Steal a Brainrot row for the value list. ONE loader for the page
@@ -66,6 +67,7 @@ export async function getSabBrainrots(): Promise<BrainrotDirectoryItem[]> {
     brainrotResult,
     calculatorResult,
     popularityResult,
+    trends,
   ] = await Promise.all([
     (supabase as any)
       .from('sab_brainrot_market_catalog')
@@ -101,6 +103,9 @@ export async function getSabBrainrots(): Promise<BrainrotDirectoryItem[]> {
     selectAllRows<{ id: string; popularity_rank: number | null; released_at: string | null; created_at: string | null }>((from, to) =>
       (supabase as any).from('sab_brainrots').select('id,popularity_rank,released_at,created_at').order('id', { ascending: true }).range(from, to),
     ).then((data: unknown[]) => ({ data, error: null })),
+
+    // 7-day change of the plain price, for the card's trend.
+    getSabTrends(supabase),
   ])
 
   const { defaults: defaultPriceRows, mutations: mutationPriceRows } =
@@ -203,14 +208,16 @@ export async function getSabBrainrots(): Promise<BrainrotDirectoryItem[]> {
     const mutations = buildMutations(brainrot.id)
     // Only on new rows: the rest carry no key (rows.json's JSON sends them a null, read as not new).
     const isNew = newBrainrots.has(brainrot.id) ? { isNew: true } : null
+    const trend = trends.has(brainrot.id) ? { trendPct: trends.get(brainrot.id) } : null
 
-    if (!price) return { ...brainrot, popularity_rank: popularityRank, mutations, ...isNew }
+    if (!price) return { ...brainrot, popularity_rank: popularityRank, mutations, ...isNew, ...trend }
 
     return {
       ...brainrot,
       popularity_rank: popularityRank,
       mutations,
       ...isNew,
+      ...trend,
       display_price_usd: Number(price.market_value_usd),
       display_price_label: 'Average Current Market Price',
       display_price_source: 'public_market_estimate',

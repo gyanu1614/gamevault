@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { ValueListBuy } from '@/components/buy-rails/ValueListBuy'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
-import { createValueListReadClient } from '@/lib/values/read-client'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
 import { JsonLd, breadcrumbList, itemList, faqPage } from '@/lib/seo/jsonld'
 import { ValuesSeo, valuesFaq } from './_ValuesSeo'
@@ -34,6 +33,7 @@ import { socialTitle, stripBrand, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { seoMeta } from '@/lib/seo/fit'
 import { getSabBrainrots } from './_sabBrainrots'
 import {
+  asNumber,
   filterSortBrainrots,
   SAB_DEFAULT_OBTAIN,
   SAB_DEFAULT_SORT,
@@ -195,74 +195,24 @@ export interface MoverItem {
 }
 
 /**
- * "Biggest movers" — 7-day percentage change per item, computed from real
- * daily snapshots in sab_price_history (default mutation only).
- *
- * Deliberately gated: returns [] unless we hold at least two distinct
- * snapshot days, because a "change" needs two points to be true. History
- * cannot be backfilled, so this stays empty until enough days accumulate and
- * the section self-hides rather than inventing movement.
+ * "Biggest movers": the cards' own 7-day trends (getSabBrainrots →
+ * _listTrends, the plain price), largest move first, so the box and the cards
+ * show the same numbers. Empty — and the box hidden — until two snapshot days
+ * exist: a change needs two points to be true. (It used to read the history
+ * in one unpaged request, which stopped at 1,000 of ~4,600 rows.)
  */
-async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
-  const supabase = createValueListReadClient('steal-a-brainrot')
-
-  const since = new Date()
-  since.setUTCDate(since.getUTCDate() - 8)
-  const sinceStr = since.toISOString().slice(0, 10)
-
-  const { data, error } = await (supabase as any)
-    .from('sab_price_history')
-    .select(
-      'brainrot_id,history_date,median_usd,sab_mutations!inner(slug),sab_brainrots!inner(slug,name,rarity,image_url)',
-    )
-    .eq('sab_mutations.slug', 'default')
-    .gte('history_date', sinceStr)
-    .order('history_date', { ascending: true })
-
-  if (error || !data) return []
-
-  type Row = {
-    brainrot_id: string
-    history_date: string
-    median_usd: number | string | null
-    sab_brainrots?: {
-      slug: string
-      name: string
-      rarity: string | null
-      image_url: string | null
-    } | null
-  }
-
-  const days = new Set<string>()
-  const byItem = new Map<
-    string,
-    { first: number; last: number; meta: NonNullable<Row['sab_brainrots']> }
-  >()
-
-  for (const row of data as Row[]) {
-    const value = Number(row.median_usd)
-    const meta = row.sab_brainrots
-    if (!Number.isFinite(value) || value <= 0 || !meta) continue
-    days.add(row.history_date)
-    const existing = byItem.get(row.brainrot_id)
-    // Rows arrive oldest-first, so `first` sticks and `last` keeps updating.
-    if (existing) existing.last = value
-    else byItem.set(row.brainrot_id, { first: value, last: value, meta })
-  }
-
-  // A change needs two distinct days of evidence.
-  if (days.size < 2) return []
-
-  return [...byItem.values()]
-    .filter((x) => x.first > 0 && x.last !== x.first)
-    .map((x) => ({
-      slug: x.meta.slug,
-      name: x.meta.name,
-      rarity: x.meta.rarity ?? '',
-      imageUrl: x.meta.image_url,
-      price: x.last,
-      changePct: ((x.last - x.first) / x.first) * 100,
+function biggestMovers(brainrots: BrainrotDirectoryItem[], limit = 3): MoverItem[] {
+  return brainrots
+    .filter((b) => b.trendPct != null)
+    .map((b) => ({
+      slug: b.slug,
+      name: b.name,
+      rarity: b.rarity ?? '',
+      imageUrl: b.image_url,
+      price: asNumber(b.average_usd) ?? asNumber(b.display_price_usd) ?? 0,
+      changePct: b.trendPct as number,
     }))
+    .filter((m) => m.price > 0)
     .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
     .slice(0, limit)
 }
@@ -292,11 +242,8 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
     notFound()
   }
 
-  const [brainrots, hubNav, movers] = await Promise.all([
-    getSabBrainrots(),
-    getHubNavData(gameSlug),
-    getBiggestMovers(3),
-  ])
+  const [brainrots, hubNav] = await Promise.all([getSabBrainrots(), getHubNavData(gameSlug)])
+  const movers = biggestMovers(brainrots)
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
@@ -431,7 +378,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
               }),
               {
                 pageSize: SAB_PAGE_SIZE,
-                facets: countFacets(brainrots, { rarity: (b) => b.rarity, obtain: (b) => b.obtainability }),
+                facets: countFacets(brainrots, { rarity: (b) => b.rarity, obtain: (b) => b.obtainability, new: (b) => (b.isNew ? 'new' : null) }),
               },
             )}
           />
