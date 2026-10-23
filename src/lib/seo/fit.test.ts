@@ -67,3 +67,19 @@ describe('seoMeta', () => {
     expect(m.alternates).toEqual({ canonical: '/x' })
   })
 })
+
+// Owner, 2026-10-23: Google shows "dropmarket.gg" over the result, not "DropMarket".
+// A page's openGraph replaces the layout's, so og:site_name was missing almost everywhere.
+describe('seoMeta keeps the site name on every page', () => {
+  it('adds og:site_name when a page sets its own openGraph', () => {
+    const m = seoMeta({ title: 'Adopt Me Values', openGraph: { title: 'Adopt Me Values', type: 'website' } })
+    expect((m.openGraph as { siteName?: string }).siteName).toBe('DropMarket')
+  })
+  it("never overrides a page's own siteName", () => {
+    const m = seoMeta({ openGraph: { siteName: 'Other' } })
+    expect((m.openGraph as { siteName?: string }).siteName).toBe('Other')
+  })
+  it('leaves openGraph out when the page sets none (the layout supplies it)', () => {
+    expect(seoMeta({ title: 'x' }).openGraph).toBeUndefined()
+  })
+})

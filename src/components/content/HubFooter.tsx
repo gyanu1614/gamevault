@@ -20,7 +20,6 @@ import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
 import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import Image from 'next/image'
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo'
-import { TwitterLogoIcon } from '@phosphor-icons/react/dist/ssr/TwitterLogo'
 import { EnvelopeSimpleIcon } from '@phosphor-icons/react/dist/ssr/EnvelopeSimple'
 
 const LEGAL = [
@@ -36,10 +35,12 @@ const LEGAL = [
 
 const SUPPORT_EMAIL = 'support@dropmarket.gg'
 
-/* Brand socials — Phosphor logo glyphs (no hand-drawn SVG paths). */
+/* Brand socials — Phosphor logo glyphs (no hand-drawn SVG paths). Only
+   profiles we own (the Organization sameAs list in lib/seo/jsonld.ts):
+   the old Twitter link went to a handle that is not ours (owner,
+   2026-10-23). */
 const SOCIALS: Array<{ name: string; href: string; Icon: typeof DiscordLogoIcon }> = [
   { name: 'Discord', href: DISCORD_INVITE_URL, Icon: DiscordLogoIcon },
-  { name: 'Twitter', href: 'https://twitter.com/dropmarket', Icon: TwitterLogoIcon },
 ]
 
 /* Fill-only icon chip (VALUE_BTN_SECONDARY's fill, no outline). */
@@ -129,7 +130,7 @@ export function HubFooter({
             <Link href="/" className="inline-flex items-center gap-2.5">
               <Image
                 src="/brand/logo-mark-white.avif"
-                alt="DropMarket"
+                alt=""
                 width={28}
                 height={28}
                 className="h-7 w-7"

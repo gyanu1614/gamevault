@@ -41,17 +41,18 @@ import {
   PAYMENT_PROCESSORS_PHRASE,
   PAYOUT_PROVIDERS,
 } from './payment-processors'
+import { COMPANY, COMPANY_REGISTERED_OFFICE } from '../config/company'
 
 export const LEGAL_ENTITY = {
-  name: 'DropMarket Ltd',
-  companyNumber: '17309867',
+  name: COMPANY.legalName,
+  companyNumber: COMPANY.companyNumber,
   /** Identical to the site footer (src/components/footer.tsx). */
-  registeredOffice: '82A James Carter Road, Mildenhall, Suffolk, IP28 7DE, United Kingdom',
-  vatNumber: '287522083',
-  phone: '+44 7476 562276',
-  jurisdiction: 'England & Wales',
+  registeredOffice: COMPANY_REGISTERED_OFFICE,
+  vatNumber: COMPANY.vatNumber,
+  phone: COMPANY.phone,
+  jurisdiction: COMPANY.jurisdiction,
   website: 'dropmarket.gg',
-  email: 'support@dropmarket.gg',
+  email: COMPANY.email,
   effectiveDate: '1 July 2026',
   /** Default for documents that carry no `lastUpdated` of their own. */
   lastUpdated: '12 July 2026',

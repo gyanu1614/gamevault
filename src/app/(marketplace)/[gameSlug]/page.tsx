@@ -25,7 +25,7 @@ import GameSubNav from '@/components/marketplace/GameSubNav'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { SabLanding } from './values/_SabLanding'
 import { getGameIcon } from '@/features/home/lib/game-icons'
-import { SabNavExtras } from './values/_SabNavExtras'
+import { SabNavExtras, hubNavExtras } from './values/_HubNavExtras'
 import { loadItemsTaxonomy, listingToOffer } from './[categorySlug]/_itemsData'
 import type { ItemOffer } from './[categorySlug]/_itemsTypes'
 import { cache } from 'react'
@@ -423,6 +423,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
         gameImageUrl={game.image_url}
         currentCategorySlug=""
         categories={categories as any}
+        extraTabs={hubNavExtras(gameSlug, game.name)}
       />
 
       <GameHub

@@ -110,7 +110,10 @@ export function seoMeta(meta: Metadata): Metadata {
   if (meta.title !== undefined) out.title = fitTitle(meta.title)
   if (typeof meta.description === 'string') out.description = fitDescription(meta.description)
   if (meta.openGraph) {
-    const og = { ...meta.openGraph }
+    // A page's openGraph REPLACES the layout's (Next does not merge it), so
+    // og:site_name vanished from every page that set one (crawl audit
+    // 2026-10-23). Google checks it when choosing the site name in results.
+    const og = { siteName: BRAND, ...meta.openGraph }
     if (typeof og.title === 'string') og.title = fitTitleText(og.title, 70)
     if (typeof og.description === 'string') og.description = fitDescription(og.description, 200)
     out.openGraph = og

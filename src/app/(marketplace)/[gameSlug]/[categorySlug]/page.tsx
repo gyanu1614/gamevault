@@ -85,7 +85,7 @@ import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
 const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
 import { resolveItemBySlug } from './_itemResolver'
-import { SabNavExtras } from '../values/_SabNavExtras'
+import { hubNavExtras } from '../values/_HubNavExtras'
 import { seoMeta } from '@/lib/seo/fit'
 import { activeDeliveryMethods } from '@/lib/currency/delivery-methods'
 
@@ -607,7 +607,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           gameImageUrl={game?.image_url}
           currentCategorySlug={realCategorySlug ?? 'currency'}
           categories={categories}
-          extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
+          extraTabs={hubNavExtras(gameSlug, gameName)}
         />
         <BundleCurrencyPageClient
           data={data}
@@ -780,7 +780,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           // Falls back to 'currency' if no per-game row was found.
           currentCategorySlug={realCategorySlug ?? 'currency'}
           categories={categories}
-          extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
+          extraTabs={hubNavExtras(gameSlug, gameName)}
         />
         <CurrencyPageClient
           data={mergedData}
@@ -906,7 +906,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           gameImageUrl={(game as any).image_url}
           currentCategorySlug={category.slug}
           categories={allCategories}
-          extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
+          extraTabs={hubNavExtras(gameSlug, game.name)}
         />
         {/* The client reads ?attr_<slug>= / ?search= deep links through
             SearchParamsBridge, so it stays in the static HTML. */}
@@ -979,7 +979,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         gameImageUrl={(game as any).image_url}
         currentCategorySlug={categorySlug}
         categories={allCategories}
-        extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
+        extraTabs={hubNavExtras(gameSlug, game.name)}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

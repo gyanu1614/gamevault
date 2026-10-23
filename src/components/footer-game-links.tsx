@@ -23,6 +23,7 @@ import { FOOTER_VISIBLE_GAMES, rankFooterGames } from '@/lib/marketplace/footerG
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { GamesDirectoryCollapse } from '@/components/games-directory-collapse'
 import { getGameContentTheme } from '@/lib/content/theme'
+import { hubToolLinks } from '@/lib/content/hub-links'
 
 type CategoryLink = { label: string; href: string }
 type GameGroup = {
@@ -72,16 +73,15 @@ async function getDirectory(): Promise<GameGroup[]> {
     let gameCats: CategoryLink[] = raw
       .slice(0, MAX_CATS)
       .map((c) => ({ label: c.label, href: `/${g.slug}/${c.slug}` }))
-    // Flagship: surface the game's money tools alongside its marketplace
-    // categories (high-intent, keyword-rich anchors). Config-driven via
-    // `footerTools`, which is on for Steal a Brainrot only — so the rendered
-    // footer is unchanged.
-    const theme = getGameContentTheme(g.slug)
-    if (theme.footerTools) {
+    // Hub games: surface the game's money tools (value list + calculator)
+    // alongside its marketplace categories — high-intent, keyword-rich
+    // anchors, and the only links the home page has to the value hubs
+    // (crawl audit 2026-10-23). Config-driven via `footerTools`.
+    const tools = getGameContentTheme(g.slug).footerTools ? hubToolLinks(g.slug) : []
+    if (tools.length > 0) {
       gameCats = [
-        ...gameCats.slice(0, MAX_CATS - 2),
-        { label: 'Value List', href: `/${g.slug}/values` },
-        { label: 'Value Calculator', href: `/${g.slug}/calculator` },
+        ...gameCats.slice(0, MAX_CATS - tools.length),
+        ...tools.map((t) => ({ label: t.footerLabel, href: t.href })),
       ]
     }
     return {

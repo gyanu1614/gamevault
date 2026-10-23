@@ -20,6 +20,7 @@ import {
 } from './protection-windows'
 import { PAYMENT_PROCESSORS, PUBLIC_PAYMENT_PROVIDER_KEYS } from './payment-processors'
 import { LEGAL_DOCS, LEGAL_ENTITY, getLegalDoc } from './documents'
+import { COMPANY, COMPANY_REGISTERED_OFFICE } from '../config/company'
 
 const ROOT = join(__dirname, '../../..')
 const MIGRATION = readFileSync(join(ROOT, 'supabase/migrations/20260923025457_order_completion_release.sql'), 'utf8')
@@ -118,11 +119,17 @@ describe('payment processors', () => {
 })
 
 describe('company details match the footer', () => {
+  // Since 2026-10-23 the footer, the legal pages and the Organization JSON-LD
+  // all read src/lib/config/company.ts, so they cannot drift: pin that.
   it('registered office, VAT number and phone are the footer values', () => {
     const footer = readFileSync(join(ROOT, 'src/components/footer.tsx'), 'utf8')
-    expect(footer).toContain(`office: '${LEGAL_ENTITY.registeredOffice}'`)
-    expect(footer).toContain(`vat: '${LEGAL_ENTITY.vatNumber}'`)
-    expect(footer).toContain(`phone: '${LEGAL_ENTITY.phone}'`)
+    expect(footer).toMatch(/import \{ COMPANY, COMPANY_REGISTERED_OFFICE \} from '@\/lib\/config\/company'/)
+    expect(footer).toContain('{COMPANY_REGISTERED_OFFICE}')
+    expect(footer).not.toContain(LEGAL_ENTITY.registeredOffice)
+    expect(footer).not.toContain(`'${LEGAL_ENTITY.phone}'`)
+    expect(LEGAL_ENTITY.registeredOffice).toBe(COMPANY_REGISTERED_OFFICE)
+    expect(LEGAL_ENTITY.vatNumber).toBe(COMPANY.vatNumber)
+    expect(LEGAL_ENTITY.phone).toBe(COMPANY.phone)
     expect(docText('company')).toContain(LEGAL_ENTITY.vatNumber)
   })
 })

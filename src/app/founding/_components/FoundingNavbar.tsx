@@ -53,7 +53,7 @@ export default function FoundingNavbar({
         <Link href="/" aria-label="DropMarket home" className="flex items-center gap-2.5">
           <Image
             src="/brand/logo-mark-white.avif"
-            alt="DropMarket"
+            alt=""
             width={30}
             height={30}
             className="h-[28px] w-[28px] object-contain"
