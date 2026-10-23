@@ -33,7 +33,7 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/compon
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { GameMark } from './GameMark'
 import { HubCodesMenu } from './HubCodesMenu'
-import { HubSearch } from './HubSearch'
+import { HubSearchButton, HubSearchDialog } from './HubSearch'
 import { searchIndexGames } from '@/lib/search/game-search'
 import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
 import type { HubNavData } from '@/lib/content/hubNav'
@@ -90,6 +90,8 @@ export function HubNav({
   )
   const calcMode = calcModeOverride ?? urlCalcMode
   const [open, setOpen] = useState(false)
+  // One search dialog for the bar; a button in the top row (sm+) or the sub-row (phones) opens it.
+  const [searchOpen, setSearchOpen] = useState(false)
   const router = useRouter()
   // Phones open on the list, not the keyboard (see useCoarsePointer).
   const coarse = useCoarsePointer()
@@ -99,6 +101,7 @@ export function HubNav({
   const pointerPick = useRef(false)
 
   const { current, games, tools, itemsHref, accountsHref, sellHref, codes } = data
+  const searchable = searchIndexGames().includes(current.slug)
 
   // The page tabs, built once and rendered in two places: the inline desktop
   // nav (md+) and the mobile sub-row (below md). One source avoids drift.
@@ -325,8 +328,8 @@ export function HubNav({
             pair to the right edge on mobile (where the middle nav is hidden);
             xl:flex-1 takes over the centring role from xl up (below xl a long game name like "Steal a Brainrot" collided with the centred tabs). ── */}
         <div className="ml-auto flex shrink-0 items-center justify-end gap-2.5 xl:ml-0 xl:flex-1">
-          {/* Per-game search (items + guides), where the game has an index. */}
-          {searchIndexGames().includes(current.slug) && <HubSearch game={current} />}
+          {/* Per-game search (items + guides), where the game has an index. Phones: in the sub-row (no room up here). */}
+          {searchable && <HubSearchButton gameName={current.name} onOpen={() => setSearchOpen(true)} className="hidden sm:inline-flex" />}
           {(() => {
             // Buy = items board when it exists, else the accounts board.
             const buyHref = itemsHref ?? accountsHref
@@ -374,8 +377,9 @@ export function HubNav({
           set (Guides · Values · WFL Calculator · Cash Price) never clips the way
           the old single-row bar did. */}
       <nav className="flex items-center gap-6 overflow-x-auto border-t border-white/[0.07] px-4 [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
-        {/* Phones: the Codes button leads the row, under the switcher (no room up top). */}
+        {/* Phones: the Codes button leads the row, under the switcher (no room up top), then search. */}
         <HubCodesMenu games={codes} variant="row" />
+        {searchable && <HubSearchButton gameName={current.name} onOpen={() => setSearchOpen(true)} className="my-1.5 inline-flex h-9 sm:hidden" />}
         {tabs.map((tab) => {
           const active = isTabActive(tab)
           return (
@@ -395,6 +399,7 @@ export function HubNav({
           )
         })}
       </nav>
+      {searchable && <HubSearchDialog game={current} open={searchOpen} setOpen={setSearchOpen} />}
     </header>
   )
 }

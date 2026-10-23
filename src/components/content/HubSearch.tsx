@@ -44,9 +44,24 @@ const ROW =
   'flex cursor-pointer select-none items-center gap-3 rounded-md px-2.5 py-2 outline-none transition-colors data-[selected=true]:bg-white/[0.06]'
 const HEADING = '[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-text-tertiary'
 
-export function HubSearch({ game }: { game: { slug: string; name: string } }) {
+/** The bar's search button: icon-only, "Search" spelled out on wide screens. Several may open one dialog. */
+export function HubSearchButton({ gameName, onOpen, className = '' }: { gameName: string; onOpen: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Search ${gameName}`}
+      className={`h-10 shrink-0 items-center gap-2 rounded-md bg-white/[0.05] px-3 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.09] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-11 ${className}`}
+    >
+      <MagnifyingGlassIcon size={16} weight="bold" aria-hidden />
+      <span className="hidden 2xl:inline">Search</span>
+    </button>
+  )
+}
+
+/** The search dialog (one per bar; Ctrl/⌘ K toggles it). The bar owns `open` so a button in either row opens it. */
+export function HubSearchDialog({ game, open, setOpen }: { game: { slug: string; name: string }; open: boolean; setOpen: (open: boolean | ((o: boolean) => boolean)) => void }) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState<GameSearchIndex | null>(null)
   const [elsewhere, setElsewhere] = useState<{ name: string; items: SearchItem[] }[]>([])
@@ -60,7 +75,7 @@ export function HubSearch({ game }: { game: { slug: string; name: string } }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [setOpen])
 
   useEffect(() => {
     if (open && !index) loadIndex(game.slug).then(setIndex)
@@ -103,16 +118,6 @@ export function HubSearch({ game }: { game: { slug: string; name: string } }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={`Search ${game.name}`}
-        className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md bg-white/[0.05] px-3 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.09] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-11"
-      >
-        <MagnifyingGlassIcon size={16} weight="bold" aria-hidden />
-        <span className="hidden 2xl:inline">Search</span>
-      </button>
-
       <Command.Dialog
         open={open}
         onOpenChange={(o) => {
