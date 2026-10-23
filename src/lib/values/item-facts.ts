@@ -17,8 +17,10 @@ export interface ItemFacts {
   howToGet: ValueHowToGet | null
   /** The raw release date (YYYY-MM-DD) when the table has one; for the New rules. */
   releasedAt?: string | null
-  /** When the row was created; the New rules' fallback date. */
+  /** When the row was created; with releaseYear, the New rules' date for MM2. */
   addedAt?: string | null
+  /** The release year when only a year is known (values_items). */
+  releaseYear?: number | null
 }
 
 export const NO_FACTS: ItemFacts = { released: null, origin: null, howToGet: null }
@@ -26,7 +28,7 @@ export const NO_FACTS: ItemFacts = { released: null, origin: null, howToGet: nul
 /** The Google rule from an item's facts: new (30 days) with a How To Get and release info. */
 export function factsNewIndexable(facts: ItemFacts, now: number = Date.now()): boolean {
   return isNewIndexable(
-    { releasedAt: facts.releasedAt ?? null, addedAt: facts.addedAt ?? null, hasHowToGet: facts.howToGet != null, hasReleaseInfo: facts.released != null },
+    { releasedAt: facts.releasedAt ?? null, releaseYear: facts.releaseYear ?? null, addedAt: facts.addedAt ?? null, hasHowToGet: facts.howToGet != null, hasReleaseInfo: facts.released != null },
     now,
   )
 }

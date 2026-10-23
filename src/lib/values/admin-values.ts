@@ -194,7 +194,7 @@ async function adoptMeRows(db: Db, now: number): Promise<AdminValueRow[]> {
 async function valuesItemsRows(db: Db, gameSlug: string, now: number): Promise<AdminValueRow[]> {
   const id = await gameId(db, gameSlug)
   const [items, prices, ours] = await Promise.all([
-    all<any>((f, t) => db.from('values_items').select('id,slug,name,rarity,image_url,how_to_get,created_at,is_enabled').eq('game_id', id).order('slug').range(f, t), 'values_items'),
+    all<any>((f, t) => db.from('values_items').select('id,slug,name,rarity,image_url,how_to_get,created_at,release_year,is_enabled').eq('game_id', id).order('slug').range(f, t), 'values_items'),
     all<any>((f, t) => db.from('values_prices').select('item_id,average_usd,cheapest_usd').eq('game_id', id).range(f, t), 'values_prices'),
     ourPrices(db, id),
   ])
@@ -210,7 +210,7 @@ async function valuesItemsRows(db: Db, gameSlug: string, now: number): Promise<A
     hasHowToGet: r.how_to_get != null,
     addedAt: r.created_at,
     releasedAt: null,
-    isNew: isNewItem({ addedAt: r.created_at }, now),
+    isNew: isNewItem({ addedAt: r.created_at, releaseYear: r.release_year }, now),
     isVisible: r.is_enabled,
     href: `/${gameSlug}/values/${r.slug}`,
   }))

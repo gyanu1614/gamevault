@@ -116,7 +116,7 @@ export function sellItemsFromValueItems(gameSlug: string, items: readonly ValueI
       listedNow: i.price?.sampleSize ?? 0,
       trendPct: null,
       baseItemId: i.baseItemId,
-      isNew: isNewItem({ addedAt: i.addedAt }, now),
+      isNew: isNewItem({ addedAt: i.addedAt, releaseYear: i.releaseYear }, now),
     })),
     stock,
   )

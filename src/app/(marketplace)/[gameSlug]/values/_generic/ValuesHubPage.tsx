@@ -63,7 +63,7 @@ function ItemCard({ item, gameSlug }: { item: ValueItem; gameSlug: string }) {
       headerLeft={
         <>
           {item.area && <span className="truncate text-[11px] font-medium text-text-tertiary">{item.area}</span>}
-          {isNewItem({ addedAt: item.addedAt }) && <NewTag />}
+          {isNewItem({ addedAt: item.addedAt, releaseYear: item.releaseYear }) && <NewTag />}
         </>
       }
       headerRight={rarity ? <RarityLabel label={rarity.label} color={rarity.color} /> : undefined}

@@ -30,7 +30,7 @@ export async function getValueListRows(gameSlug: string): Promise<{ rows: ValueL
       trendPct: trends.pctByItem[i.id] ?? null,
       baseItemId: i.baseItemId ?? null,
       // Only on new rows: the rest carry no key (rows.json's JSON sends them a null, read as not new).
-      ...(isNewItem({ addedAt: i.addedAt }, now) ? { isNew: true } : null),
+      ...(isNewItem({ addedAt: i.addedAt, releaseYear: i.releaseYear }, now) ? { isNew: true } : null),
     }
   })
   return { rows, hasTrends: Object.keys(trends.pctByItem).length > 0 }
