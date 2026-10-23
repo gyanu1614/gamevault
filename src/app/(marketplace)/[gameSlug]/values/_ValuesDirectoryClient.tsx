@@ -23,6 +23,7 @@ import {
   VariantPill,
 } from '@/components/values/ValueCard'
 import { NewTag } from '@/components/values/NewTag'
+import { TrendChip } from '@/components/values/TrendChip'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
@@ -450,7 +451,16 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
       imageAlt={`${brainrot.name} Steal a Brainrot`}
       pixelated
       name={brainrot.name}
-      sub={income ? <span className="tabular-nums text-[#7EE0A6]">{income}</span> : undefined}
+      sub={
+        // Income, then the 7-day trend of the plain price (history is kept for the plain one only).
+        income || (isDefault && brainrot.trendPct != null) ? (
+          <span className="flex items-center justify-center gap-1.5 tabular-nums">
+            {income && <span className="text-[#7EE0A6]">{income}</span>}
+            {income && isDefault && brainrot.trendPct != null && <span aria-hidden className="text-text-disabled">·</span>}
+            {isDefault && <TrendChip pct={brainrot.trendPct} />}
+          </span>
+        ) : undefined
+      }
       control={
         hasMutations ? (
           <VariantPill

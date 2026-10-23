@@ -16,8 +16,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/csr/SortAscending'
-import { CaretUpIcon } from '@phosphor-icons/react/dist/csr/CaretUp'
-import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
 import { DiamondIcon } from '@phosphor-icons/react/dist/csr/Diamond'
 import Link from '@/components/navigation/AppLink'
@@ -26,6 +24,8 @@ import { CardRank, PriceStatPair, RarityLabel, ValueCard } from '@/components/va
 import { NewTag } from '@/components/values/NewTag'
 import { ChromaWord, type CardForm } from '@/components/values/ChromaWord'
 import { FormSwitch } from '@/components/values/FormSwitch'
+import { TrendChip } from '@/components/values/TrendChip'
+import { TREND_MIN_PCT } from '@/lib/values/trends'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
@@ -56,7 +56,6 @@ export type { ValueListRow } from './valueListModel'
 /** Adopt Me's cash teal — "Cheapest" reads the same on every hub. */
 const CHEAPEST_TEAL = '#54DDBE'
 /** Moves smaller than this are noise, not a trend. */
-const TREND_MIN_PCT = 0.05
 
 /** Cents under $1,000; whole dollars above, so a two-column phone card never clips "$4,049.98". */
 const usd = (v: number) =>
@@ -350,8 +349,6 @@ function ItemCard({
   const rarity = row.rarity ? rarityMeta(gameSlug, row.rarity) : null
   const priced = row.cheapestUsd != null
   const trend = row.trendPct != null && Math.abs(row.trendPct) >= TREND_MIN_PCT ? row.trendPct : null
-  const up = (trend ?? 0) >= 0
-  const Caret = up ? CaretUpIcon : CaretDownIcon
   // Which form the prices are for, named over each price when the item has two.
   const chromaLabel = rarityMeta(gameSlug, 'Chroma').label
   const formLabel = form === 'chroma' ? chromaLabel : 'Standard'
@@ -383,15 +380,7 @@ function ItemCard({
       name={row.name}
       sub={
         trend != null ? (
-          <span
-            className="inline-flex items-center justify-center gap-0.5 font-semibold tabular-nums"
-            style={{ color: up ? 'var(--color-success)' : 'var(--color-error)' }}
-            title="7-day change"
-          >
-            <Caret aria-hidden size={10} weight="fill" />
-            <span className="sr-only">{up ? 'Up' : 'Down'} over 7 days</span>
-            {Math.abs(trend).toFixed(1)}%
-          </span>
+          <TrendChip pct={trend} />
         ) : (
           // Same line height on every card, so switches and prices line up across a row.
           <span aria-hidden className="invisible">–</span>

@@ -19,6 +19,8 @@ export interface AdoptMeVariantValue {
   averageUsd: number | null
   isEstimated: boolean
   confidence: string
+  /** 7-day % change of this form's cash value (src/lib/values/trends.ts). Absent = no move / no history. */
+  trendPct?: number
 }
 export interface AdoptMePetItem {
   slug: string

@@ -26,6 +26,7 @@ import {
   VariantPill,
 } from '@/components/values/ValueCard'
 import { NewTag } from '@/components/values/NewTag'
+import { TrendChip } from '@/components/values/TrendChip'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePopoverField } from '@/components/values/ValuePopoverField'
@@ -360,6 +361,14 @@ function PetCard({
       imageSrc={pet.imageUrl}
       imageAlt={`${pet.name} in Adopt Me`}
       name={pet.name}
+      sub={
+        v?.trendPct != null ? (
+          <TrendChip pct={v.trendPct} />
+        ) : (
+          // Same line height on every card, so the variant pills and prices line up across a row.
+          <span aria-hidden className="invisible">–</span>
+        )
+      }
       control={
         <VariantPill
           label={VARIANT_DISPLAY[code]}

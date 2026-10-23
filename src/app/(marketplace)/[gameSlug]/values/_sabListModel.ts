@@ -62,6 +62,8 @@ export type BrainrotDirectoryItem = {
   popularity_rank?: number | null
   /** Released (else added) in the last 14 days: the New badge (isNewItem). Absent = not new. */
   isNew?: boolean
+  /** 7-day % change of the plain price (src/lib/values/trends.ts). Absent = no move / no history. */
+  trendPct?: number
 }
 
 export type SabSort = 'value-desc' | 'name' | 'income-desc' | 'income-asc'
