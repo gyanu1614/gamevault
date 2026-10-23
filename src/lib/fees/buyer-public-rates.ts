@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache'
 
 import { createAnonClient } from '@/lib/supabase/anon'
 import type { LegalBlock } from '@/lib/legal/documents'
+import { PAYSSION_METHODS } from '@/lib/payments/providers/payssion/methods'
 import { BUYER_FEES_TAG } from '@/lib/revalidation/tags'
 
 /**
@@ -61,11 +62,19 @@ export function buyerFeeTableBlock(rows: PublicMethodFee[]): Extract<LegalBlock,
   const head = ['Payment method', 'Processing fee', 'Refunds', 'Clears']
   const visible = rows.filter((r) => r.selectable)
   if (visible.length === 0) return { t: 'table', head, rows: [['No payment methods are currently enabled.', '', '', '']] }
+  // Checkout shows each buyer only their own country's rails, so several
+  // share a label there ("Credit / Debit Card"); this table lists them all,
+  // so a shared label carries the rail's country.
+  const shared = new Set(visible.map((r) => r.label).filter((l, i, all) => all.indexOf(l) !== i))
+  const name = (r: PublicMethodFee) => {
+    const coverage = shared.has(r.label) ? PAYSSION_METHODS[r.method]?.coverage : undefined
+    return coverage ? `${r.label} (${coverage})` : r.label
+  }
   return {
     t: 'table',
     head,
     rows: visible.map((r) => [
-      r.label,
+      name(r),
       describeMethodFee(r),
       r.refundable ? 'Yes' : 'Store credit only',
       r.instantClearing ? 'Instantly' : 'After the provider settles',
@@ -100,7 +109,7 @@ async function readBuyerFees(): Promise<PublicMethodFee[]> {
       instantClearing: !!r.instant_clearing,
       selectable: !!r.selectable,
     }))
-    .sort((a, b) => (PROVIDER_ORDER[a.provider] ?? 5) - (PROVIDER_ORDER[b.provider] ?? 5) || a.label.localeCompare(b.label))
+    .sort((a, b) => (PROVIDER_ORDER[a.provider] ?? 5) - (PROVIDER_ORDER[b.provider] ?? 5) || a.label.localeCompare(b.label) || a.method.localeCompare(b.method))
 }
 
 export const getPublicBuyerFees = unstable_cache(readBuyerFees, ['public-buyer-fees'], {
