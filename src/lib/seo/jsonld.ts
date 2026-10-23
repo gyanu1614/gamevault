@@ -59,9 +59,9 @@ export const SITE_ALTERNATE_NAMES: readonly string[] = ['Drop Market']
  * Profiles that are provably DropMarket's — the Organization's `sameAs`. Only
  * add one we control: Google joins every sameAs into the brand entity.
  * (Crawl audit 2026-10-23: github.com/dropmarket is another business,
- * "Drop-Market.com", created 2024; twitter.com/dropmarket was never confirmed
- * ours. Both were removed.) The company register entry ties the brand to the
- * registered company.
+ * "Drop-Market.com", created 2024; x.com/dropmarket is not ours either —
+ * owner, 2026-10-23. Both were removed.) The company register entry ties the
+ * brand to the registered company.
  */
 export const ORGANIZATION_SAME_AS: readonly string[] = [
   DISCORD_INVITE_URL,

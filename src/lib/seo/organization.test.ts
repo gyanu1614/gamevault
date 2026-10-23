@@ -19,7 +19,7 @@ describe('Organization JSON-LD', () => {
     ])
     for (const url of org.sameAs) {
       // github.com/dropmarket is "Drop-Market.com" (another business, 2024);
-      // twitter.com/dropmarket was never confirmed ours.
+      // the X/Twitter "dropmarket" handle is not ours (owner, 2026-10-23).
       expect(url).not.toMatch(/github\.com|twitter\.com|x\.com/)
     }
   })

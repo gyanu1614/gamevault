@@ -231,7 +231,7 @@ noindex, redirect or rename; the sitemap is unchanged.
    3. Settings (gear) → API access → API Key → Generate; copy the key.
    4. Vercel → Project gamevault → Settings → Environment Variables → add `BING_WEBMASTER_API_KEY` = the key, Environment = Production. (Optional `BING_SITE_URL` only if the Bing site is not exactly `https://dropmarket.gg/`.)
    5. Redeploy (or wait for the next RELEASE). The `/api/cron/seo-bing` cron then runs daily at 07:40 UTC and fills the Bing panel on /admin/seo.
-7. **Social profiles**: tell me if you own `x.com/dropmarket`. If yes, I'll add it back to `ORGANIZATION_SAME_AS`. If not, create the official profiles you will actually use (X, YouTube, TikTok — each with dropmarket.gg in the bio) and send me the URLs; only owned profiles go in the markup.
+7. **Social profiles**: `x.com/dropmarket` is not ours (owner, 2026-10-23) — it stays out of the markup and footer. When you create official profiles you will actually use (X, YouTube, TikTok — each with dropmarket.gg in the bio), send me the URLs and I'll add them to `ORGANIZATION_SAME_AS`; only owned profiles go in the markup.
 8. Optional: top up Semrush API units or the Ahrefs plan if you want backlink and SERP data in future audits.
 9. **Site name ("DropMarket" instead of "dropmarket.gg")**:
    1. Request indexing for `https://dropmarket.gg/` first (step 2) — the site name is read from the home page.

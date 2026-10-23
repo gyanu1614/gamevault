@@ -37,7 +37,7 @@ const SUPPORT_EMAIL = 'support@dropmarket.gg'
 
 /* Brand socials — Phosphor logo glyphs (no hand-drawn SVG paths). Only
    profiles we own (the Organization sameAs list in lib/seo/jsonld.ts):
-   the old Twitter link went to a handle never confirmed ours (crawl audit
+   the old Twitter link went to a handle that is not ours (owner,
    2026-10-23). */
 const SOCIALS: Array<{ name: string; href: string; Icon: typeof DiscordLogoIcon }> = [
   { name: 'Discord', href: DISCORD_INVITE_URL, Icon: DiscordLogoIcon },
