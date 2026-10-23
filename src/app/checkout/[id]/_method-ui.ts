@@ -12,7 +12,7 @@
 import { Barcode, CreditCard, Landmark, QrCode, Smartphone, Store, Wallet, Zap, type LucideIcon } from 'lucide-react'
 
 import type { ClientMethod } from '@/lib/payments/eligibility'
-import { PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
+import { PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK, type MethodMark } from '@/lib/payments/method-marks'
 import { flagEmoji } from '@/lib/geo/countries'
 
 export type MethodIcon = LucideIcon
@@ -71,8 +71,11 @@ export interface LocalMethodRow {
   region: string
   /** The database's buyer-fee quote for this order (checkout B3). */
   quote: ClientMethod['quote']
-  /** Real brand mark, drawn for a dark row (public/payments/ondark); Icon is the fallback. */
-  mark?: { logo: string; aspect: number }
+  /** Brand marks for the row's logo tiles, drawn for a dark row (public/payments/ondark):
+   *  card rails show Visa + Mastercard, others their one mark; empty = the Icon. */
+  marks: MethodMark[]
+  /** The provider page shows a QR to scan (phones get a "screenshot it" tip). */
+  qrPay: boolean
   /** Emoji flag for the region chip: country flag, or 🌍 for multi-country. */
   flag: string
   countries: string[]
@@ -87,7 +90,8 @@ export function toRow(m: ClientMethod): LocalMethodRow {
     label: m.label,
     region: m.coverage,
     quote: m.quote,
-    mark: PAYMENT_METHOD_ONDARK[m.method],
+    marks: PAYMENT_METHOD_MULTI_MARKS[m.method] ?? (PAYMENT_METHOD_ONDARK[m.method] ? [PAYMENT_METHOD_ONDARK[m.method]] : []),
+    qrPay: QR_PAY_METHODS.has(m.method),
     flag: m.countries.length === 1 ? flagEmoji(m.countries[0]) : '🌍',
     countries: m.countries,
     Icon: ui.Icon,
@@ -116,6 +120,9 @@ export function markSize(aspect: number, slot: { width: number; height: number }
   }
   return { width: Math.round(width), height: Math.round(height) }
 }
+
+/** Methods whose provider page is a QR to scan from a banking app. */
+const QR_PAY_METHODS: ReadonlySet<string> = new Set(['paynow_sg', 'qr_ph', 'qris_id', 'vietqr_vn', 'pix_br'])
 
 /** pm_ids with a METHOD_UI line (tests pin every registry method to one). */
 export const METHOD_UI_IDS: readonly string[] = Object.keys(METHOD_UI)

@@ -77,6 +77,26 @@ export const PAYMENT_METHOD_ONDARK: Record<string, { logo: string; aspect: numbe
   mybank: { logo: '/payments/ondark/mybank.svg', aspect: 1.75 },
 }
 
+export type MethodMark = { logo: string; aspect: number }
+
+/**
+ * Card-scheme marks, on-dark (Shopify payment_icons, MIT; card background
+ * removed, trimmed). Owner 2026-10-22: card rails read "Credit / Debit Card"
+ * and show the schemes Payssion takes on them, not a country name.
+ */
+export const CARD_SCHEME_MARKS = {
+  visa: { logo: '/payments/ondark/visa.svg', aspect: 3.01 },
+  mastercard: { logo: '/payments/ondark/mastercard.svg', aspect: 1.54 },
+} as const satisfies Record<string, MethodMark>
+
+/** Methods that show more than one mark (in this order); the rest show their one on-dark mark. */
+export const PAYMENT_METHOD_MULTI_MARKS: Record<string, MethodMark[]> = {
+  creditcard_br: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],
+  creditcard_mx: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],
+  creditcard_za: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],
+  mada_sa: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard, PAYMENT_METHOD_ONDARK.mada_sa],
+}
+
 /** The crypto card's coins, as the checkout lists them. */
 export const CHECKOUT_COINS = [
   { key: 'usdt', label: 'USDT', icon: '/crypto/usdt.svg' },

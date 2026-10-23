@@ -78,7 +78,7 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
   // refused on Payssion's page, so "Cards" alone would mislead a US buyer.
   creditcard_br: {
     pmId: 'creditcard_br',
-    label: 'Brazilian Cards',
+    label: 'Credit / Debit Card',
     kind: 'instant', // card issued in Brazil
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Brazil',
@@ -174,7 +174,7 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
   },
   creditcard_mx: {
     pmId: 'creditcard_mx',
-    label: 'Mexican Cards',
+    label: 'Credit / Debit Card',
     kind: 'instant', // card issued in Mexico
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Mexico',
@@ -310,7 +310,7 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
   //    spill: only buyers in the listed country see these. ─────────────────
   mada_sa: {
     pmId: 'mada_sa',
-    label: 'Saudi Cards (mada)',
+    label: 'Credit / Debit Card',
     kind: 'instant', // mada debit + cards issued in Saudi Arabia
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Saudi Arabia',
@@ -318,7 +318,7 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
   },
   applepay_sa: {
     pmId: 'applepay_sa',
-    label: 'Apple Pay (Saudi Arabia)',
+    label: 'Apple Pay',
     kind: 'instant', // Apple Pay with a Saudi-issued card
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Saudi Arabia',
@@ -326,7 +326,7 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
   },
   creditcard_za: {
     pmId: 'creditcard_za',
-    label: 'South African Cards',
+    label: 'Credit / Debit Card',
     kind: 'instant', // card issued in South Africa
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'South Africa',

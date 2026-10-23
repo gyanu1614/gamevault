@@ -99,12 +99,11 @@ describe('2026-10-15 methods: registry ⇒ recorded probe 200', () => {
 })
 
 describe('2026-10-15 methods: labels, kind, countries', () => {
-  it('local card rails are named by country', () => {
-    expect(PAYSSION_METHODS.creditcard_br.label).toBe('Brazilian Cards')
-    expect(PAYSSION_METHODS.creditcard_mx.label).toBe('Mexican Cards')
-    expect(PAYSSION_METHODS.creditcard_za.label).toBe('South African Cards')
-    expect(PAYSSION_METHODS.mada_sa.label).toBe('Saudi Cards (mada)')
-    expect(PAYSSION_METHODS.applepay_sa.label).toBe('Apple Pay (Saudi Arabia)')
+  it('card rails are plain "Credit / Debit Card"; Apple Pay is plain (owner 2026-10-22: the "Paying from" country says where)', () => {
+    for (const pm of ['creditcard_br', 'creditcard_mx', 'creditcard_za', 'mada_sa']) {
+      expect(PAYSSION_METHODS[pm].label, pm).toBe('Credit / Debit Card')
+    }
+    expect(PAYSSION_METHODS.applepay_sa.label).toBe('Apple Pay')
   })
 
   it('every one is an instant rail with the 60-minute window, except BCP (reference code, 48 hours)', () => {

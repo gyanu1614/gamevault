@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, toRow } from './_method-ui'
 import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
-import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
+import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
 
 describe('checkout method rows', () => {
   it('every selectable registry method has its own icon + notes line (none falls back)', () => {
@@ -13,13 +13,20 @@ describe('checkout method rows', () => {
 
   it('a row carries the label, logo and flag; multi-country methods get the globe', () => {
     const quote = { serviceFeeMinor: 100 } as any
-    const br = toRow({ method: 'creditcard_br', label: 'Brazilian Cards', countries: ['BR'], coverage: 'Brazil', quote } as any)
-    expect(br).toMatchObject({ id: 'creditcard_br', label: 'Brazilian Cards', flag: '🇧🇷' })
+    const br = toRow({ method: 'creditcard_br', label: 'Credit / Debit Card', countries: ['BR'], coverage: 'Brazil', quote } as any)
+    expect(br).toMatchObject({ id: 'creditcard_br', label: 'Credit / Debit Card', flag: '🇧🇷' })
     expect(br.points[0]).toBe('Pay with a card issued in Brazil')
     const sk = toRow({ method: 'skrill', label: 'Skrill', countries: ['GB', 'DE'], coverage: 'Worldwide', quote } as any)
     expect(sk.flag).toBe('🌍')
-    expect(sk.mark).toEqual({ logo: '/payments/ondark/skrill.svg', aspect: 2.85 })
-    expect(br.mark).toBeUndefined() // no brand mark → the row's icon
+    expect(sk.marks).toEqual([{ logo: '/payments/ondark/skrill.svg', aspect: 2.85 }])
+    // Card rails show the schemes they take (owner 2026-10-22).
+    expect(br.marks.map((m) => m.logo)).toEqual(['/payments/ondark/visa.svg', '/payments/ondark/mastercard.svg'])
+    const sa = toRow({ method: 'mada_sa', label: 'Credit / Debit Card', countries: ['SA'], coverage: 'Saudi Arabia', quote } as any)
+    expect(sa.marks.map((m) => m.logo)).toEqual(['/payments/ondark/visa.svg', '/payments/ondark/mastercard.svg', '/payments/ondark/mada_sa.svg'])
+    const pn = toRow({ method: 'paynow_sg', label: 'PayNow', countries: ['SG'], coverage: 'Singapore', quote } as any)
+    expect(pn.marks).toEqual([]) // no clean PayNow vector → the row's icon
+    expect(pn.qrPay).toBe(true)
+    expect(sk.qrPay).toBe(false)
   })
 
   it('every method with a brand mark has its on-dark version, and the file exists', () => {
@@ -28,6 +35,12 @@ describe('checkout method rows', () => {
       expect(mark, pm).toBeDefined()
       expect(existsSync(join(process.cwd(), 'public', mark.logo)), mark.logo).toBe(true)
       expect(mark.aspect, pm).toBeGreaterThan(0)
+    }
+    for (const [pm, marks] of Object.entries(PAYMENT_METHOD_MULTI_MARKS)) {
+      for (const mark of marks) {
+        expect(existsSync(join(process.cwd(), 'public', mark.logo)), `${pm} ${mark.logo}`).toBe(true)
+        expect(mark.aspect, pm).toBeGreaterThan(0)
+      }
     }
   })
 
