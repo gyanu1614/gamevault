@@ -111,7 +111,7 @@ export function emailShell({ preview, icon, heading, body }: EmailShellOptions):
   <!-- Logo OUTSIDE the card -->
   <div style="max-width:560px;margin:0 auto 20px;text-align:center;">
     <img src="${ASSET_URL}/brand/logo-mark-ink.png" width="30" height="30" alt="" class="dm-logo-dark" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;">
-    <img src="${ASSET_URL}/brand/logo-mark-lime.png" width="30" height="30" alt="" class="dm-logo-light" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;display:none;">
+    <img src="${ASSET_URL}/brand/logo-mark-green.png" width="30" height="30" alt="" class="dm-logo-light" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;display:none;">
     <span class="dm-brand" style="font-size:21px;font-weight:800;letter-spacing:-0.02em;color:${FOREST};vertical-align:middle;">Drop<span class="dm-brand-2" style="color:${FOREST_2};">Market</span></span>
   </div>
 

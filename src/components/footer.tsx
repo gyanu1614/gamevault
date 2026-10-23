@@ -148,7 +148,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
             <Link href="/" className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/logo-mark-lime.avif"
+                src="/brand/logo-mark-green.avif"
                 alt=""
                 loading="lazy"
                 decoding="async"
