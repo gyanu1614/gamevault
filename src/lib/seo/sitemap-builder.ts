@@ -157,6 +157,9 @@ export function buildSitemapSections(input: SitemapInput): Map<SitemapSection, M
     { url: at('/browse'), ...dated(marketLastmod), changeFrequency: 'daily', priority: 0.9 },
     { url: at('/safedrop'), ...dated(SITE_PAGES_UPDATED.safedrop), changeFrequency: 'weekly', priority: 0.8 },
     { url: at('/sell/fees'), ...dated(SITE_PAGES_UPDATED.sellFees), changeFrequency: 'weekly', priority: 0.7 },
+    { url: at('/delivery'), ...dated(SITE_PAGES_UPDATED.delivery), changeFrequency: 'monthly', priority: 0.6 },
+    { url: at('/about'), ...dated(SITE_PAGES_UPDATED.about), changeFrequency: 'monthly', priority: 0.5 },
+    { url: at('/contact'), ...dated(SITE_PAGES_UPDATED.contact), changeFrequency: 'monthly', priority: 0.5 },
     // The public seller page (open signup, 4 steps). /early-seller and
     // /signup-become-seller redirect here; /account/become-seller stays noindex.
     { url: at('/founding'), ...dated(SITE_PAGES_UPDATED.founding), changeFrequency: 'monthly', priority: 0.7 },

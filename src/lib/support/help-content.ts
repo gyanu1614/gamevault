@@ -193,7 +193,7 @@ export const HELP_FAQ: HelpFaq[] = [
     topic: 'selling',
     q: 'Who am I buying from?',
     // Homepage FAQ copy (HomeFaq).
-    a: 'Real players and verified sellers. Every seller completes identity verification before they can list anything, and their rating and sales history sit on each listing so you can see who you are dealing with.',
+    a: 'Independent sellers, from players to dedicated stores. Their rating and sales history sit on each listing, so you can see who you are dealing with.',
     keywords: ['seller', 'verified', 'rating', 'reviews', 'identity'],
   },
   {

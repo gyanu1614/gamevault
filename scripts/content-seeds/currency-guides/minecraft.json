@@ -53,14 +53,14 @@
     }
   ],
   "page": {
-    "subtitle": "What Minecoins are, how much you can save, how they reach your account and how to buy them safely.",
+    "subtitle": "What Minecoins are, what they cost, how they reach your account and how to buy them safely.",
     "what_is": {
       "heading": "What Are Minecoins?",
       "text": "Minecoins are the money for the Minecraft Marketplace in Bedrock Edition. You spend them on skins, texture packs, worlds and add-ons."
     },
     "savings": {
-      "heading": "How Much Do You Save on Minecoins?",
-      "text": "The official store sells Minecoins at fixed prices. Sellers here set their own, and many charge less for the same coins.",
+      "heading": "Minecoins Prices",
+      "text": "Official pack prices next to the lowest price from sellers here.",
       "amounts": [
         320,
         1020,

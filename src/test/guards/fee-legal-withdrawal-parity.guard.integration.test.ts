@@ -1,16 +1,19 @@
 /**
- * Fee engine PR 7 — the numbers the legal document quotes for withdrawals must
- * equal the data the RPCs charge from. /fees is static copy (documents.ts);
- * withdrawal_methods / platform_fee_settings / order_completion_windows are
- * the truth. If an admin changes a number, this test fails until the legal
- * text is updated — the legal document may not silently drift from the code.
+ * Fee engine PR 7 — the numbers the legal documents quote must equal the
+ * data the RPCs charge from (withdrawal_methods / platform_fee_settings /
+ * order_completion_windows). /fees Withdrawals renders its numbers live from
+ * those tables (lib/fees/withdrawal-legal); the protection-window tables are
+ * still copy, so an admin change fails this test until the text follows.
  * Also: no "escrow" / "holding funds" wording in the PR 7 copy.
  */
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { hasEnv, URL, SVC } from './throwaway'
+
+vi.mock('server-only', () => ({}))
+vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined, unstable_cache: (fn: any) => fn }))
 
 let svc: SupabaseClient
 const fmt = (n: number) => Number(n).toFixed(2).replace(/\.?0+$/, '')
@@ -44,26 +47,22 @@ describe.skipIf(!hasEnv)('PR 7 — legal withdrawal copy == fee data (integratio
     windows = w.data ?? []
   })
 
-  it('/fees Withdrawals quotes every active method with its exact fee and minimum', () => {
+  it('/fees Withdrawals types in no payout number; the live block quotes every active method', async () => {
+    // 2026-10-23: the typed-in copy said a $100 Payoneer minimum while the
+    // live table said $50. The numbers now render from the table itself.
     const text = sectionText('fees', 'Withdrawals')
-    const crypto = methods.find((x) => x.method_name === 'usdt_trc20')
-    const payoneer = methods.find((x) => x.method_name === 'payoneer')
-    expect(crypto, 'usdt_trc20 must exist and be active').toBeTruthy()
-    expect(payoneer, 'payoneer must exist and be active').toBeTruthy()
-    // Crypto: "3% + $5 per payout; minimum withdrawal $50."
-    expect(text).toContain(`${fmt(crypto.fee_percentage)}% + $${fmt(crypto.fee_fixed)} per payout; minimum withdrawal $${fmt(crypto.min_withdrawal)}`)
-    // Payoneer: "3% per payout with a $5 minimum fee; minimum withdrawal $100."
-    expect(text).toContain(`${fmt(payoneer.fee_percentage)}% per payout with a $${fmt(payoneer.fee_min)} minimum fee; minimum withdrawal $${fmt(payoneer.min_withdrawal)}`)
-    // Hold, gate, freeze.
-    expect(text).toContain(`${settings.completion_hold_hours} hours after the Buyer confirms receipt`)
-    expect(text).toContain(`withdrawals open ${settings.withdrawal_min_account_age_days} days after`)
-    expect(text).toContain(`pauses withdrawals for ${settings.payout_details_freeze_hours} hours`)
-    // Every crypto method shares one term (the copy says "USDT" once).
-    for (const m of methods.filter((x) => x.method_type === 'crypto')) {
-      expect(Number(m.fee_percentage)).toBe(Number(crypto.fee_percentage))
-      expect(Number(m.fee_fixed)).toBe(Number(crypto.fee_fixed))
-      expect(Number(m.min_withdrawal)).toBe(Number(crypto.min_withdrawal))
+    expect(text).not.toMatch(/\$\d|\d+%|\d+ hours|\d+ days/)
+    const { getPublicWithdrawalTerms } = await import('@/lib/fees/public-rates')
+    const { withdrawalTermsBlocks } = await import('@/lib/fees/withdrawal-legal')
+    const live = JSON.stringify(withdrawalTermsBlocks(await getPublicWithdrawalTerms()))
+    expect(methods.length, 'at least one active payout method').toBeGreaterThan(0)
+    for (const m of methods) {
+      expect(live, m.method_name).toContain(m.display_name)
+      expect(live, m.method_name).toContain(`$${fmt(m.min_withdrawal)}`)
     }
+    expect(live).toContain(`${settings.completion_hold_hours} hours after the Buyer confirms receipt`)
+    expect(live).toContain(`withdrawals open ${settings.withdrawal_min_account_age_days} days after`)
+    expect(live).toContain(`pauses withdrawals for ${hoursWord(settings.payout_details_freeze_hours)}`)
   })
 
   it('SafeDrop / refunds protection-window tables match order_completion_windows', () => {

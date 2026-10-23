@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from 'vitest'
 
-import { buyerFeeTableBlock, describeMethodFee, type PublicMethodFee } from './buyer-public-rates'
+import { buyerFeeTableBlock, describeMethodFee, isPublicFeeRow, type PublicMethodFee } from './buyer-public-rates'
 
 const row = (over: Partial<PublicMethodFee>): PublicMethodFee => ({
   method: 'pix_br', label: 'Pix', provider: 'payssion', feeCurrency: 'USD', providerPct: 3.75, providerFixedMinor: 0,
@@ -24,6 +24,10 @@ describe('describeMethodFee — one honest line per method', () => {
       .toBe('5% + PHP 10.00 + 3.4% currency conversion + 1% buffer, at least 5% of the amount charged')
     expect(describeMethodFee(row({ method: 'paysafecard', label: 'paysafecard', feeCurrency: 'EUR', providerPct: 12.5, fxMarkupPct: 0, minFeeMinor: 0, maxTotalMinor: 25000 })))
       .toBe('12.5% + 1% buffer, at least 5% of the amount charged, orders up to EUR 250.00')
+  })
+  it('a method with no charge at all reads "No fee" (store credit), never "at least 0%"', () => {
+    expect(describeMethodFee(row({ method: 'wallet', label: 'Store credit', providerPct: 0, fxMarkupPct: 0, bufferPct: 0, floorPct: 0, minFeeMinor: 0 })))
+      .toBe('No fee')
   })
   it('crypto / wallet read as the floor only', () => {
     expect(describeMethodFee(row({ method: 'btcpay', label: 'Crypto', providerPct: 0, fxMarkupPct: 0, minFeeMinor: 0 })))
@@ -64,5 +68,14 @@ describe('buyerFeeTableBlock — the legal table block', () => {
   it('an empty table still renders a row that says so (never a blank section)', () => {
     const block = buyerFeeTableBlock([])
     expect(block.rows).toEqual([['No payment methods are currently enabled.', '', '', '']])
+  })
+})
+
+describe('isPublicFeeRow — what /fees and the payments strip may show', () => {
+  it('hides the test provider and the Payssion sandbox method', () => {
+    expect(isPublicFeeRow({ provider: 'fake', method: 'fake' })).toBe(false)
+    expect(isPublicFeeRow({ provider: 'payssion', method: 'payssion_test' })).toBe(false)
+    expect(isPublicFeeRow({ provider: 'payssion', method: 'pix_br' })).toBe(true)
+    expect(isPublicFeeRow({ provider: 'btcpay', method: 'btcpay' })).toBe(true)
   })
 })

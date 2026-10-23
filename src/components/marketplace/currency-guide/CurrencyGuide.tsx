@@ -2,14 +2,13 @@ import type { ComponentType, ReactNode } from 'react'
 import type { IconProps } from '@phosphor-icons/react'
 import { CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins'
 import { GiftIcon } from '@phosphor-icons/react/dist/ssr/Gift'
-import { IdentificationCardIcon } from '@phosphor-icons/react/dist/ssr/IdentificationCard'
 import { KeyIcon } from '@phosphor-icons/react/dist/ssr/Key'
 import { LightbulbIcon } from '@phosphor-icons/react/dist/ssr/Lightbulb'
 import { LockKeyIcon } from '@phosphor-icons/react/dist/ssr/LockKey'
 import { PackageIcon } from '@phosphor-icons/react/dist/ssr/Package'
-import { PiggyBankIcon } from '@phosphor-icons/react/dist/ssr/PiggyBank'
 import { RocketLaunchIcon } from '@phosphor-icons/react/dist/ssr/RocketLaunch'
 import { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
+import { StarIcon } from '@phosphor-icons/react/dist/ssr/Star'
 import { StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront'
 import { UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle'
 import { WarningIcon } from '@phosphor-icons/react/dist/ssr/Warning'
@@ -77,12 +76,12 @@ export function pageCopy(guide: Guide) {
   if (guide.page) return guide.page
   const packs = guide.official_prices?.packages ?? []
   return {
-    subtitle: `What ${c} ${/s$/i.test(c) ? 'are' : 'is'}, how much you can save, how delivery works and how to buy safely.`,
+    subtitle: `What ${c} ${/s$/i.test(c) ? 'are' : 'is'}, what ${/s$/i.test(c) ? 'they cost' : 'it costs'}, how delivery works and how to buy safely.`,
     what_is: { heading: `What ${/s$/i.test(c) ? 'Are' : 'Is'} ${c}?`, text: splitLead(guide.what_is.paragraphs[0])[0] },
     savings: packs.length >= 2
       ? {
-          heading: `How Much Do You Save on ${c}?`,
-          text: `Sellers here set their own prices, so the same ${c} often costs less than the official store.`,
+          heading: `${c} Prices`,
+          text: 'Official pack prices next to the lowest price from sellers here.',
           amounts: packs.slice(0, 5).map((p) => p.amount),
         }
       : undefined,
@@ -90,7 +89,7 @@ export function pageCopy(guide: Guide) {
       text: guide.delivery.typical_time ? splitLead(guide.delivery.typical_time)[0] : `Here is how ${c} reaches your account.`,
       steps: guide.delivery.steps.slice(0, 4).map((s, i) => ({ title: `Step ${i + 1}`, body: splitLead(s)[0] })),
     },
-    safety_text: 'Every order is covered, and every seller is ID-checked before they can list.',
+    safety_text: 'Every order is covered by SafeDrop Protection, and every seller shows their rating and sales.',
     support: guide.support_topic ? { heading: guide.support_topic.heading, text: splitLead(guide.support_topic.paragraphs[0])[0] } : undefined,
   }
 }
@@ -169,9 +168,15 @@ function Tip({ label, children, tone = 'blue', icon }: { label: string; children
   )
 }
 
-/* ── Savings table ───────────────────────────────────────────────── */
+/* ── Price table ─────────────────────────────────────────────────── */
 
-function SavingsTable({ rows, currency, officialLabel }: { rows: PriceRow[]; currency: string; officialLabel: string }) {
+/**
+ * Owner, 2026-10-23: the official price struck through, then ours and the
+ * "% Off", like a shop's sale price. No "you save" / "cheaper than the
+ * store" lines. A pack with no live offer, or none under the official
+ * price, shows the official price alone, unstruck.
+ */
+function PriceTable({ rows, currency, officialLabel }: { rows: PriceRow[]; currency: string; officialLabel: string }) {
   // A real table (owner, 2026-10-06: "a nice full table, not just lines"):
   // one rounded box, a filled header row, each row a full-width cell band.
   const th = 'px-4 py-3.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-text-tertiary sm:px-6'
@@ -180,22 +185,29 @@ function SavingsTable({ rows, currency, officialLabel }: { rows: PriceRow[]; cur
     <div className="mx-auto mt-8 max-w-4xl overflow-hidden rounded-xl bg-[#1D1E23] text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.8)]">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[15px] tabular-nums">
-          <caption className="sr-only">{`${currency} prices: ${officialLabel} compared with sellers here`}</caption>
+          <caption className="sr-only">{`${currency} prices, with the ${officialLabel.toLowerCase()} price where ours is lower`}</caption>
           <thead className="bg-[#24252B]">
             <tr>
               <th scope="col" className={th}>Amount</th>
-              <th scope="col" className={`${th} text-right`}>{officialLabel}</th>
-              <th scope="col" className={`${th} text-right`}>Sellers Here</th>
-              <th scope="col" className={`${th} text-right`}>You Save</th>
+              <th scope="col" className={`${th} text-right`}>Price</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.amount} className={i % 2 === 1 ? 'bg-white/[0.015]' : undefined}>
                 <th scope="row" className={`${td} whitespace-nowrap font-semibold text-text-primary`}>{formatAmount(currency, r.amount)}</th>
-                <td className={`${td} text-right text-text-tertiary`}>{r.officialUsd != null ? usd.format(r.officialUsd) : '—'}</td>
-                <td className={`${td} text-right text-[16px] font-bold text-text-primary`}>{r.oursUsd != null ? usd.format(r.oursUsd) : '—'}</td>
-                <td className={`${td} text-right font-semibold text-[#3FD986]`}>{r.savePct != null ? `${r.savePct}%` : '—'}</td>
+                <td className={`${td} text-right`}>
+                  {r.savePct != null && r.officialUsd != null && r.oursUsd != null ? (
+                    <span className="inline-flex flex-wrap items-baseline justify-end gap-x-3 gap-y-1">
+                      <span className="sr-only">{officialLabel}:</span>
+                      <s className="text-[14px] text-text-tertiary decoration-white/40">{usd.format(r.officialUsd)}</s>
+                      <span className="text-[16px] font-bold text-text-primary">{usd.format(r.oursUsd)}</span>
+                      <span className="rounded-md bg-[#3FD986]/[0.12] px-2 py-0.5 text-[12.5px] font-semibold text-[#3FD986]">{`${r.savePct}% Off`}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[16px] font-bold text-text-primary">{r.oursUsd ?? r.officialUsd ? usd.format((r.oursUsd ?? r.officialUsd)!) : '—'}</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -257,17 +269,12 @@ export function CurrencyGuide({ guide, gameName, ours, related, rmtPublisher, ic
   const allRows = buildPriceRows(guide, ours)
   const rows = page.savings ? page.savings.amounts.map((a) => allRows.find((r) => r.amount === a)).filter((r): r is PriceRow => !!r) : []
   const showTable = rows.some((r) => r.officialUsd != null)
-  const tipAmount = page.savings && 'tip_amount' in page.savings ? page.savings.tip_amount : undefined
-  const tipRow = tipAmount
-    ? rows.find((r) => r.amount === tipAmount)
-    : rows.filter((r) => r.officialUsd != null && r.oursUsd != null).at(-1)
-  const tipSave = tipRow?.officialUsd != null && tipRow.oursUsd != null ? Math.round(tipRow.officialUsd - tipRow.oursUsd) : 0
   const officialLabel = guide.game === 'roblox' ? 'On Roblox' : 'Official Store'
 
   const steps: DeliveryStep[] = page.delivery.steps
   const safety: { icon: ComponentType<IconProps>; tint: string; title: string; body: string }[] = [
     { icon: ShieldCheckIcon, tint: '63,217,134', title: 'Every Order Covered', body: "Not delivered or not as described? You get a full refund." },
-    { icon: IdentificationCardIcon, tint: '94,234,212', title: 'ID-Checked Sellers', body: 'Every seller passes an ID check before they can sell.' },
+    { icon: StarIcon, tint: '94,234,212', title: 'Rated Sellers', body: 'Every seller shows their rating and sales history.' },
     noPassword
       ? { icon: LockKeyIcon, tint: '245,196,81', title: 'Keep Your Password', body: 'Delivery never needs your login.' }
       : { icon: KeyIcon, tint: '245,196,81', title: 'Access Explained First', body: "Your seller says what's needed before you pay." },
@@ -300,19 +307,14 @@ export function CurrencyGuide({ guide, gameName, ours, related, rmtPublisher, ic
         </p>
       </header>
 
-      {/* 2 — Savings: five packs, official price against the cheapest seller here. */}
+      {/* 2 — Prices: five packs, the official price struck through beside the cheapest seller here. */}
       {page.savings && showTable && (
-        <Block id="guide-prices" title={page.savings.heading}>
-          <SavingsTable rows={rows} currency={c} officialLabel={officialLabel} />
+        <Block id="guide-prices" title={`${c} Prices`}>
+          <PriceTable rows={rows} currency={c} officialLabel={officialLabel} />
           {/* Where the official numbers come from, and how fresh they are. */}
           <p className="mx-auto mt-3 max-w-4xl text-left text-[12.5px] leading-5 text-text-tertiary">
-            Official prices from {guide.official_prices?.packages[0]?.where ?? 'the official store'}, checked {formatCheckedAt(guide.checked_at)}. Sellers Here is the cheapest live offer for that exact amount, before the service fee.
+            Official prices from {guide.official_prices?.packages[0]?.where ?? 'the official store'}, checked {formatCheckedAt(guide.checked_at)}. Our price is the cheapest live offer for that exact amount, before the service fee.
           </p>
-          {tipRow && tipSave >= 2 && (
-            <Tip label="Tip" icon={PiggyBankIcon}>
-              You save about {usd.format(tipSave).replace(/\.00$/, '')} on {formatAmount(c, tipRow.amount)} when you buy here.
-            </Tip>
-          )}
         </Block>
       )}
 

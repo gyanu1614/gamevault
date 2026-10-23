@@ -59,6 +59,7 @@ import { applyGuideToFaq, getCurrencyGuide } from '@/lib/currency-guides'
 import { CurrencyGuideSection } from '@/components/marketplace/currency-guide/CurrencyGuideSection'
 import { pageTitle } from '@/lib/seo/title'
 import { gameTrademarkLine } from '@/lib/seo/trademark'
+import { PaymentsStrip } from '@/components/marketplace/PaymentsStrip'
 import { getCategoryStats, formatStatPrice, type CategoryStats } from '@/lib/seo/page-stats'
 
 // V19/P24/P4 — Inline delivery formatter for bundle offers. The
@@ -785,6 +786,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         <CurrencyPageClient
           data={mergedData}
           trademark={gameTrademarkLine(gameName, { currency: mergedData.currency.name, owner: guide?.trademark_owner })}
+          paymentsStrip={<PaymentsStrip disclaimer={gameTrademarkLine(gameName, { currency: mergedData.currency.name, owner: guide?.trademark_owner })} />}
           gameImageUrl={game?.image_url ?? `/games/${gameSlug}.png`}
           gameSlug={gameSlug}
           introLine={introLine}

@@ -55,14 +55,14 @@
     }
   ],
   "page": {
-    "subtitle": "What GTA$ is, how much you can save on GTA Online money, how it reaches you and how to buy it safely.",
+    "subtitle": "What GTA$ is, what GTA Online money costs, how it reaches you and how to buy it safely.",
     "what_is": {
       "heading": "What Is GTA$?",
       "text": "GTA$ is the money in GTA Online. You spend it on cars, properties, businesses, weapons and clothes, and the big buys cost millions."
     },
     "savings": {
-      "heading": "How Much Do You Save on GTA$?",
-      "text": "Shark Cards sell GTA$ at fixed prices. Sellers here set their own, and many charge less for the same amount.",
+      "heading": "GTA$ Prices",
+      "text": "Official pack prices next to the lowest price from sellers here.",
       "amounts": [
         250000,
         600000,

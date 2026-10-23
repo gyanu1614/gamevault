@@ -9,6 +9,8 @@ export const COMPANY = {
   companyNumber: '17309867',
   jurisdiction: 'England & Wales',
   vatNumber: '287522083',
+  /** Companies House incorporation date. */
+  incorporatedOn: '30 June 2026',
   phone: '+44 7476 562276',
   email: 'support@dropmarket.gg',
   address: {
@@ -31,3 +33,6 @@ export const COMPANY_REGISTERED_OFFICE = [
 
 /** The company's public record on the UK register (Companies House). */
 export const COMPANY_REGISTER_URL = `https://find-and-update.company-information.service.gov.uk/company/${COMPANY.companyNumber}`
+
+/** The VAT number as UK invoices and disclosures print it. */
+export const COMPANY_VAT_DISPLAY = `GB${COMPANY.vatNumber}`

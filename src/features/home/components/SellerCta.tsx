@@ -41,15 +41,8 @@ const CARDS: SellerCtaType[] = [
   },
   {
     step: '02',
-    // ⚠️ UNSUPPORTED CLAIM. No `game_fee_overrides` row at 0% exists — the
-    // only seeded overrides are three GTA `accounts` entries at 20%. The
-    // schema permits it (`CHECK (pct >= 0 AND pct <= 50)`), so 0% needs a
-    // row insert rather than a migration, but until those rows are live
-    // this headline promises a rate no seller can obtain. Either insert the
-    // rows before launch or revert to "Fees From 0% on Select Games",
-    // which qualifies the claim.
-    title: 'Fees as Low as 0%',
-    titleBreak: ['FEES AS LOW', 'AS 0%'],
+    title: 'Fair Fees by Category',
+    titleBreak: ['FAIR FEES', 'BY CATEGORY'],
     // "select games free" dropped: the 0% row in the list below already
     // makes that claim, and the longer string wrapped to a one-word orphan.
     // Number-free, per the fee-engine rule (no seller-fee figure in

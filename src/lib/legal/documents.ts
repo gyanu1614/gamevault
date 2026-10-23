@@ -30,10 +30,8 @@ import {
   DISPUTE_DECISION_DAYS,
   DISPUTE_EVIDENCE_HOURS,
   DISPUTE_WINDOW_DAYS,
-  PAYOUT_DETAILS_FREEZE_HOURS,
   PROTECTION_WINDOW_HOURS as WIN,
   SELLER_RESPONSE_HOURS,
-  WITHDRAWAL_MIN_ACCOUNT_AGE_DAYS,
   hoursAsDays,
 } from './protection-windows'
 import {
@@ -71,6 +69,13 @@ const UPDATED_2026_10_10 = { lastUpdated: '10 October 2026', version: 'v1.3' } a
  *  Seller Agreement, SafeDrop, Refund & Dispute Policy); 20 Oct adds Cancel –
  *  Not Delivered (SafeDrop 2.1, Refund Policy 12.2). */
 const UPDATED_2026_10_20 = { lastUpdated: '20 October 2026', version: 'v1.2' } as const
+
+/** Payment-provider site review: sellers list before KYC and verify before
+ *  their first withdrawal (Terms 6.1, Seller Agreement 5.1); chargeback
+ *  wording keeps every bank / card-issuer right (Buyer Terms 7.1, Refunds
+ *  10.2); crypto refunds spelled out (Refunds 9.1); /fees withdrawal numbers
+ *  read live, plus a payment-security section. */
+const updated20261023 = (version: string) => ({ lastUpdated: '23 October 2026', version }) as const
 
 export type LegalBlock =
   | { t: 'p'; md: string }
@@ -204,7 +209,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Terms of Use',
     description:
       'The master terms governing use of the DropMarket platform: our venue role, SafeDrop Protection and payments, eligibility, accounts, consumer rights, liability, and governing law.',
-    ...UPDATED_2026_10_20,
+    ...updated20261023('v1.3'),
     sections: [
       {
         h: '1. Introduction',
@@ -310,7 +315,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '6. Verification, AML and sanctions',
         blocks: [
           p(
-            '6.1. Sellers must complete identity verification (KYC) **before listing or receiving payouts**, and Buyers may be required to verify identity for higher-value Orders or where risk indicators arise, per the AML/KYC Policy.',
+            '6.1. Sellers may list before completing identity verification (KYC) but **must complete it before their first withdrawal**. Listings from a Seller who has not yet verified may be reviewed before they go live, and we may ask for verification earlier where risk indicators arise. Buyers may be required to verify identity for higher-value Orders or where risk indicators arise, per the AML/KYC Policy.',
           ),
           p(
             '6.2. We (and our payment processors) may require additional documentation at any time — including government ID, proof of address, source of funds, and proof of ownership of the payout account — and may delay Listings, releases, or payout instructions pending verification.',
@@ -565,7 +570,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Buyer Terms',
     description:
       'How SafeDrop protects buyers: what is covered, what is not, protection and dispute windows, refunds, and how your statutory rights sit alongside the platform protection.',
-    ...UPDATED_2026_10_20,
+    ...updated20261023('v1.3'),
     sections: [
       {
         h: '1. About these Buyer Terms',
@@ -629,7 +634,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '7. Chargebacks and friendly fraud',
         blocks: [
           p(
-            '7.1. **Friendly-fraud:** initiating a chargeback while a SafeDrop dispute could resolve the matter, or after receiving the item, is a breach of these Terms and may lead to account termination and recovery of resulting losses. This does not affect your right to dispute a genuinely unauthorised payment with your bank or payment provider.',
+            '7.1. **Chargebacks:** please use the SafeDrop dispute process before contacting your bank. Filing a chargeback while a SafeDrop dispute could still resolve the matter, or on an item you received, may lead to your Account being restricted and to recovery of resulting losses. This does not affect your rights with your bank or payment provider, including disputing an unauthorised payment.',
           ),
         ],
       },
@@ -649,7 +654,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
   {
     slug: 'seller-agreement',
     title: 'Seller Agency Agreement',
-    ...UPDATED_2026_10_20,
+    ...updated20261023('v1.3'),
     description:
       'The commercial agency agreement between DropMarket Ltd and the Seller: the disclosed commercial-agent appointment, authority to conclude sales and collect payment, fees, payouts, reserves and clawbacks, delivery, KYC/AML and sanctions, tax and platform reporting, confidentiality, anti-circumvention, and termination — under the PSRs 2017 commercial-agent exclusion.',
     sections: [
@@ -729,7 +734,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '5. KYC, AML and sanctions',
         blocks: [
           p(
-            '5.1. Before listing or receiving any payout, the Seller must complete identity verification (KYC, and business verification where applicable) via DropMarket’s provider, and pass sanctions, PEP and adverse-media screening. DropMarket may re-verify at any time and may suspend Listings or withhold payout pending verification.',
+            '5.1. Before receiving any payout, the Seller must complete identity verification (KYC, and business verification where applicable) via DropMarket’s provider, and pass sanctions, PEP and adverse-media screening. The Seller may list before verifying; Listings from a Seller who has not yet verified may be reviewed before they go live. DropMarket may re-verify at any time and may suspend Listings or withhold payout pending verification.',
           ),
           p(
             '5.2. The Seller warrants it is not subject to, nor owned or controlled by any person subject to, applicable sanctions (including UK, EU, UN and OFAC), and is not located in a sanctioned territory. DropMarket may freeze, suspend or terminate on a sanctions or AML concern.',
@@ -935,7 +940,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Refund & Dispute Policy',
     description:
       'When refunds apply, category protection windows, the five-stage dispute process, store-credit and cash refund mechanics, and how chargebacks are handled.',
-    ...UPDATED_2026_10_20,
+    ...updated20261023('v1.3'),
     sections: [
       {
         blocks: [
@@ -957,7 +962,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             `1.3. **The default rule:** all sales are final once delivery is confirmed by the Buyer, **except** where the item is not delivered, is materially not as described (raised within the Dispute Window of ${DISPUTE_WINDOW}), or where the Buyer has non-excludable statutory rights (Consumer Rights Act 2015). This policy explains exactly when a refund applies, how to claim one, and how disputes are decided.`,
           ),
           p(
-            `1.4. **For Sellers: when sale proceeds become available.** The Buyer’s payment discharges the Buyer’s debt to the Seller when DropMarket receives it (Terms of Use, Section 1.4). The net proceeds become available in the Seller Balance when the Order completes: **${HOLD} after the Buyer confirms delivery**, or **at once** when the Order completes automatically at the end of its Protection Window or a dispute is decided in the Seller’s favour. A dispute opened within the Dispute Window sets that Order’s amount aside until it is decided. Withdrawals then follow the Fees & Charges page: new sellers can withdraw ${WITHDRAWAL_MIN_ACCOUNT_AGE_DAYS} days after approval, and changing payout details pauses withdrawals for ${PAYOUT_DETAILS_FREEZE_HOURS} hours.`,
+            `1.4. **For Sellers: when sale proceeds become available.** The Buyer’s payment discharges the Buyer’s debt to the Seller when DropMarket receives it (Terms of Use, Section 1.4). The net proceeds become available in the Seller Balance when the Order completes: **${HOLD} after the Buyer confirms delivery**, or **at once** when the Order completes automatically at the end of its Protection Window or a dispute is decided in the Seller’s favour. A dispute opened within the Dispute Window sets that Order’s amount aside until it is decided. Withdrawals then follow the Fees & Charges page, which lists when new sellers can first withdraw and how long a change of payout details pauses withdrawals.`,
           ),
         ],
       },
@@ -1100,7 +1105,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '9. Crypto refund mechanics',
         blocks: [
           p(
-            '9.1. **Crypto payments are irreversible once broadcast.** Where an Order was paid in crypto/stablecoin (received through BTCPay Server, the payment software DropMarket hosts), approved cash refunds are made in crypto/stablecoin to an address you provide (or as store credit) at the US-dollar value received, and the crypto amount may differ from what you sent because of exchange-rate movement between purchase and refund.',
+            '9.1. **Crypto payments are irreversible once broadcast.** Orders paid in crypto/stablecoin (received through BTCPay Server, the payment software DropMarket hosts) are refunded as store credit; they are marked “Store credit only” on the Fees & Charges page. Where the law requires a cash refund, we send it in crypto/stablecoin to an address you provide, at the US-dollar value received; the crypto amount may differ from what you sent because of exchange-rate movement between purchase and refund.',
           ),
           p(
             '9.2. Underpayments, overpayments, wrong-network transfers, and late payments are handled per the instructions on the payment page; recovery may be impossible, and reasonable recovery costs may be deducted where recovery is attempted.',
@@ -1114,7 +1119,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '10.1. **Contact us first.** If you have an issue with an Order, use the Dispute process above rather than filing a chargeback with your bank or card issuer. The Dispute process is faster, and SafeDrop already protects your purchase.',
           ),
           p(
-            '10.2. **Chargebacks on completed Orders.** Filing a chargeback on an Order that was delivered and confirmed (Completed), instead of using the Dispute process, is treated as a breach of the Terms and may lead to suspension and recovery of amounts owed. This does **not** limit your right to dispute a genuinely **unauthorised** transaction (e.g. card used without your permission) with your bank — that right exists independently.',
+            '10.2. **Chargebacks on completed Orders.** If you file a chargeback on an Order that was delivered and confirmed (Completed) instead of using the Dispute process, we may restrict your Account and recover amounts owed. This does **not** limit your rights with your bank or card issuer, including disputing an **unauthorised** transaction (e.g. a card used without your permission).',
           ),
           p(
             '10.3. **Friendly fraud.** False “item not received” claims, false “not as described” claims, and chargeback abuse are investigated and may lead to account termination and loss recovery.',
@@ -1536,7 +1541,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Fees & Charges',
     description:
       'DropMarket’s commission and service fees, all-inclusive buyer pricing, the payment processors we use, and payout timing.',
-    ...UPDATED_2026_10_04,
+    ...updated20261023('v1.2'),
     sections: [
       {
         blocks: [
@@ -1584,17 +1589,22 @@ export const LEGAL_DOCS: LegalDoc[] = [
         ],
       },
       {
+        h: 'Payment security',
+        blocks: [
+          p(
+            'You pay on the payment provider’s own secure page. DropMarket and the Seller never see or store your card or bank details. Crypto payments go to the payment address shown on the payment page.',
+          ),
+        ],
+      },
+      {
         h: 'Withdrawals',
         blocks: [
+          p(
+            'The fee and minimum for each payout method, and when a sale can be withdrawn, are listed below, read live from the same table the withdrawal page uses. The full seller schedule is on the [Seller Fees page](/sell/fees).',
+          ),
           ul([
-            '**Crypto payouts (USDT, USDC, BTC, ETH):** 3% + $5 per payout; minimum withdrawal $50.',
-            '**Payoneer payouts:** 3% per payout with a $5 minimum fee; minimum withdrawal $100.',
-            `**When a sale becomes withdrawable:** ${HOLD} after the Buyer confirms receipt, or immediately when the Order completes automatically at the end of its SafeDrop Protection window.`,
-            `**New sellers:** withdrawals open ${WITHDRAWAL_MIN_ACCOUNT_AGE_DAYS} days after your seller account is approved.`,
-            `**Payout details:** changing your payout address or Payoneer email pauses withdrawals for ${PAYOUT_DETAILS_FREEZE_HOURS} hours. One withdrawal may be in progress at a time.`,
             '**Disputes:** while a dispute is open on an Order, that Order’s amount is set aside from your balance; a refund decided against you is deducted, and your balance may go below zero until later sales cover it.',
           ]),
-          p('The live schedule, read from the same table the withdrawal page quotes from, is on the [Seller Fees page](/sell/fees).'),
         ],
       },
       {
@@ -1777,7 +1787,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
           ul([
             `**Company number:** ${E.companyNumber}`,
             `**Registered office:** ${E.registeredOffice}`,
-            `**VAT number:** ${E.vatNumber}`,
+            `**VAT number:** GB${E.vatNumber}`,
             `**Phone:** ${E.phone}`,
             `**Website:** ${E.website}`,
             `**Contact:** ${E.email}`,

@@ -129,7 +129,7 @@ function fastWay(name: string, gameName: string, shortName: string, price: strin
     total: {
       label: 'Total Cost',
       value: price ? `Around ${price}` : null,
-      detail: 'Sold by ID-verified sellers · Safe and quick service.',
+      detail: 'Sold by rated sellers · Safe and quick service.',
     },
     steps: [
       { icon: 'store' as const, title: 'Open DropMarket', value: `${shortName} listings for ${name}` },

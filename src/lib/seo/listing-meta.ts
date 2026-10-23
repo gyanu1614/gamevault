@@ -63,7 +63,7 @@ export function listingMeta(input: {
   const lead = `Buy ${bare}${forGame}${Number.isFinite(price) && price > 0 ? ` for ${usd(price)}` : ''}.`
   const own = cleanSellerText(input.description)
   const tail = 'Covered by SafeDrop Protection.'
-  const body = own.length >= 40 ? `${lead} ${own}` : `${lead} ${input.categoryName.trim()} from an ID-verified seller. ${tail}`
+  const body = own.length >= 40 ? `${lead} ${own}` : `${lead} ${input.categoryName.trim()} from an independent seller. ${tail}`
 
   return { title, description: clip(body, DESC_MAX) }
 }

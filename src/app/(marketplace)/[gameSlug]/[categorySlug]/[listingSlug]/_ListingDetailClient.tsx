@@ -54,6 +54,7 @@ import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import type { TemplateField } from '@/lib/templates/types'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { SellerStats } from '@/components/seller/SellerStats'
+import { acceptedMethodsPhrase } from '@/lib/payments/accepted-methods'
 
 const fmtPrice = (n: number) => {
   if (n === 0) return '$0.00'
@@ -148,6 +149,8 @@ interface Props {
   blogRail?: React.ReactNode
   /** Server-rendered Trustpilot proof (TrustpilotShowcase); renders nothing below 10 reviews. */
   trustpilot?: React.ReactNode
+  /** Server-rendered PaymentsStrip (only the methods checkout has on), passed as a slot. */
+  paymentsStrip?: React.ReactNode
 }
 
 const PREVIEW_STATUS_LABELS: Record<string, string> = {
@@ -162,7 +165,7 @@ const PREVIEW_STATUS_LABELS: Record<string, string> = {
 }
 
 export default function ListingDetailClient({
-  listing, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers, blogRail, trustpilot,
+  listing, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers, blogRail, trustpilot, paymentsStrip,
 }: Props) {
   const router = useRouter()
   const { open: openAuth } = useAuthDialog()
@@ -789,7 +792,7 @@ verified={listing.seller.verified}
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee, outside
           the max-w-7xl wrapper so it spans the whole viewport. */}
-      <PaymentsMarquee disclaimer={gameTrademarkLine(listing.gameName)} />
+      {paymentsStrip ?? <PaymentsMarquee disclaimer={gameTrademarkLine(listing.gameName)} />}
 
       {/* Mobile-audit — page-end sentinel for the Buy-bar footer guard */}
       <div ref={pageEndRef} aria-hidden className="h-px" />
@@ -1326,7 +1329,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
     () => [
       {
         q: `Is it safe to buy ${gameName} ${cat} on DropMarket?`,
-        a: `Yes. Every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Protection. You're paying for an outcome: get the ${gameName} ${cat} you ordered, or your money back. Confirm and the order is complete. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund, no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
+        a: `Yes. Every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Protection. You're paying for an outcome: get the ${gameName} ${cat} you ordered, or your money back. Confirm and the order is complete. If a ${gameName} seller doesn't deliver, or the ${cat} aren't as described, open a dispute from your order page and you get your money back.`,
       },
       {
         q: `How fast is ${gameName} ${cat} delivery?`,
@@ -1334,7 +1337,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `What if I don't receive my ${gameName} ${cat}?`,
-        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Every order is covered by SafeDrop Protection, so an undelivered ${gameName} ${cat} order means a full refund for you. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
+        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Every order is covered by SafeDrop Protection, so an undelivered ${gameName} ${cat} order is refunded. Our support team reviews every ${gameName} ${cat} dispute.`,
       },
       {
         q: `Do I need to share my password to buy ${gameName} ${cat}?`,
@@ -1342,15 +1345,15 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `Why buy ${gameName} ${cat} from DropMarket instead of in-game?`,
-        a: `${gameName} ${cat} on the DropMarket marketplace are usually significantly cheaper than the in-game store. Independent sellers compete on price, speed, and reputation, which keeps ${gameName} ${cat} prices buyer-friendly. Plus every ${gameName} ${cat} order is covered by SafeDrop Protection (get what you ordered, or your money back), so you get the cheap price AND the safety net.`,
+        a: `${gameName} ${cat} on DropMarket come from independent sellers who compete on price, speed and reputation, so you can compare offers in one place. Every ${gameName} ${cat} order is covered by SafeDrop Protection: get what you ordered, or your money back.`,
       },
       {
         q: `What payment methods are accepted for ${gameName} ${cat}?`,
-        a: `DropMarket accepts all major credit and debit cards, PayPal, Apple Pay, Google Pay, and a range of cryptocurrencies (USDT, USDC, BTC, ETH) for ${gameName} ${cat} purchases. Every payment method is processed through encrypted, PCI-compliant providers; your card details are never seen by the seller. You can complete a ${gameName} ${cat} order in under 60 seconds from any supported payment method.`,
+        a: `You can pay for ${gameName} ${cat} with ${acceptedMethodsPhrase()} Checkout shows the options available in your country. Payments are processed by our payment providers, so neither DropMarket nor the seller sees your card or bank details.`,
       },
       {
         q: `Can I get cashback on ${gameName} ${cat} orders?`,
-        a: `Yes — buyers earn loyalty rewards on every ${gameName} ${cat} order. Rewards accumulate automatically in your DropMarket wallet and can be redeemed against future ${gameName} ${cat} purchases or any other listing on the platform. The longer you've been buying ${gameName} ${cat}, the higher your tier and the bigger the cashback rate.`,
+        a: `Yes. Completed ${gameName} ${cat} orders earn cashback as store credit in your DropMarket wallet, which you can spend on future ${gameName} ${cat} orders or any other listing.`,
       },
     ],
     [gameName, cat],

@@ -15,7 +15,7 @@ export const metadata: Metadata = seoMeta({
   title: { absolute: "DropMarket - The Gamer's Marketplace" },
   // ≤155 characters so the snippet isn't cut (2026-10-06 crawl: was 193).
   description:
-    'Buy and sell game items, accounts, currency, top ups and boosting safely. ID-verified sellers, fast delivery and a full refund if it never arrives.',
+    'Buy and sell game items, accounts, currency, top ups and boosting safely. Rated sellers, fast delivery and a full refund if it never arrives.',
   keywords: [
     'buy game accounts', 'sell game items', 'gaming marketplace',
     'roblox accounts', 'fortnite accounts', 'valorant accounts',
@@ -23,14 +23,14 @@ export const metadata: Metadata = seoMeta({
   ],
   openGraph: {
     title: "DropMarket - The Gamer's Marketplace",
-    description: 'Buy and sell game items, accounts, currency, top ups and boosting safely. ID-verified sellers, fast delivery and a full refund if it never arrives.',
+    description: 'Buy and sell game items, accounts, currency, top ups and boosting safely. Rated sellers, fast delivery and a full refund if it never arrives.',
     type: 'website',
     siteName: 'DropMarket',
   },
   twitter: {
     card: 'summary_large_image',
     title: "DropMarket - The Gamer's Marketplace",
-    description: 'Buy and sell game items, accounts, currency, top ups and boosting safely. ID-verified sellers, fast delivery and a full refund if it never arrives.',
+    description: 'Buy and sell game items, accounts, currency, top ups and boosting safely. Rated sellers, fast delivery and a full refund if it never arrives.',
   },
 })
 

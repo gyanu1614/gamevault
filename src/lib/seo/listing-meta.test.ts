@@ -27,7 +27,7 @@ describe('listingMeta', () => {
 
   it('replaces a throwaway seller description with a full sentence', () => {
     const { description } = listingMeta({ ...base, title: 'Sheeeeep FR', gameName: 'Adopt Me', description: 'Check out my other offers :)' })
-    expect(description).toBe('Buy Sheeeeep FR for Adopt Me for $4.50. Items from an ID-verified seller. Covered by SafeDrop Protection.')
+    expect(description).toBe('Buy Sheeeeep FR for Adopt Me for $4.50. Items from an independent seller. Covered by SafeDrop Protection.')
   })
 
   it("keeps the seller's own words when they say something, within 155 characters", () => {
