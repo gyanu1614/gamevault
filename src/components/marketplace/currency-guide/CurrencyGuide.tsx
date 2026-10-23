@@ -173,8 +173,8 @@ function Tip({ label, children, tone = 'blue', icon }: { label: string; children
 /**
  * Owner, 2026-10-23: the official price struck through, then ours and the
  * "% Off", like a shop's sale price. No "you save" / "cheaper than the
- * store" lines. A pack with no live offer, or none under the official
- * price, shows the official price alone, unstruck.
+ * store" lines. A pack whose cheapest offer isn't under the official price
+ * shows our price alone; a pack with no live offer says so.
  */
 function PriceTable({ rows, currency, officialLabel }: { rows: PriceRow[]; currency: string; officialLabel: string }) {
   // A real table (owner, 2026-10-06: "a nice full table, not just lines"):
@@ -204,8 +204,10 @@ function PriceTable({ rows, currency, officialLabel }: { rows: PriceRow[]; curre
                       <span className="text-[16px] font-bold text-text-primary">{usd.format(r.oursUsd)}</span>
                       <span className="rounded-md bg-[#3FD986]/[0.12] px-2 py-0.5 text-[12.5px] font-semibold text-[#3FD986]">{`${r.savePct}% Off`}</span>
                     </span>
+                  ) : r.oursUsd != null ? (
+                    <span className="text-[16px] font-bold text-text-primary">{usd.format(r.oursUsd)}</span>
                   ) : (
-                    <span className="text-[16px] font-bold text-text-primary">{r.oursUsd ?? r.officialUsd ? usd.format((r.oursUsd ?? r.officialUsd)!) : '—'}</span>
+                    <span className="text-body-sm text-text-tertiary">No offers yet</span>
                   )}
                 </td>
               </tr>

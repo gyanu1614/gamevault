@@ -236,7 +236,7 @@ export function buyRow(
     callout: cheapest.box
       ? {
           title: `~${fmtCount(n.godlyRounds)} Rounds or ${usd(cheapest.box.usd)}`,
-          body: 'a box Godly on average, or bought from ID-verified sellers and delivered in minutes',
+          body: 'a box Godly on average, or bought from rated sellers and delivered in minutes',
         }
       : null,
   }

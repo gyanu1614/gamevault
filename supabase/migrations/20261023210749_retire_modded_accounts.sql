@@ -39,3 +39,20 @@ UPDATE public.global_categories
    SET is_active = false
  WHERE slug = 'modded-accounts'
    AND is_active;
+
+-- Fail closed: an active listing left on a switched-off modded pair (its
+-- game has no enabled accounts pair) would bounce between the listing page's
+-- canonical redirect and the buy-modded-accounts → buy-accounts redirect.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+      FROM public.listings l
+      JOIN public.game_categories gc ON gc.id = l.game_category_id
+      JOIN public.global_categories g ON g.id = gc.global_category_id
+     WHERE g.slug = 'modded-accounts'
+       AND l.status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'retire_modded_accounts: active listings remain on a modded-accounts pair whose game has no enabled accounts pair; move them first';
+  END IF;
+END $$;

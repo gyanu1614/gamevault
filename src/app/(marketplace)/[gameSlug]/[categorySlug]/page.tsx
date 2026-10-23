@@ -614,6 +614,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           data={data}
           gameImageUrl={game?.image_url ?? null}
           trademark={gameTrademarkLine(gameName, { currency: data.unitLabel, owner: guide?.trademark_owner })}
+          paymentsStrip={<PaymentsStrip disclaimer={gameTrademarkLine(gameName, { currency: data.unitLabel, owner: guide?.trademark_owner })} />}
           introLine={introLine}
           blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
           guide={

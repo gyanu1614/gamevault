@@ -133,8 +133,8 @@ export default async function DeliveryPage() {
               of {CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or more, you can also ask us to cancel before the order is marked delivered.
             </p>
             <p>
-              An order that isn’t delivered is refunded: as store credit straight away, or the full amount back to your payment method if you
-              ask. The details are in the{' '}
+              An order that isn’t delivered is refunded as store credit straight away. If your payment method supports refunds, you can ask for
+              the full amount back to it instead. The details are in the{' '}
               <Link href="/refunds" className={link}>
                 Refund &amp; Dispute Policy
               </Link>

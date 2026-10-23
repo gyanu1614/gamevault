@@ -168,7 +168,7 @@ const onlineSafetySection = (h: string): LegalSection => ({
   h,
   blocks: [
     p(
-      'Users can post listings, reviews and messages that other users see, so DropMarket is a user-to-user service under the **Online Safety Act 2023**. The Platform is for adults: you must be 18 or over to use it (Terms of Use, Section 3). We take proportionate steps against illegal content: identity verification before anyone can sell, review of new sellers’ listings, the reporting route in this document, and prompt removal of illegal content once we know about it. Content harmful to children is prohibited.',
+      'Users can post listings, reviews and messages that other users see, so DropMarket is a user-to-user service under the **Online Safety Act 2023**. The Platform is for adults: you must be 18 or over to use it (Terms of Use, Section 3). We take proportionate steps against illegal content: identity verification before a seller’s first withdrawal, review of listings from sellers who have not yet verified, the reporting route in this document, and prompt removal of illegal content once we know about it. Content harmful to children is prohibited.',
     ),
   ],
 })
@@ -1178,7 +1178,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Prohibited Items & Conduct Policy',
     description:
       'What may be traded on DropMarket, what is banned outright, the publisher-EULA and account-security acknowledgements every user accepts, and how to report a breach or appeal a decision.',
-    ...UPDATED_2026_10_04,
+    ...updated20261023('v1.2'),
     sections: [
       {
         h: 'Permitted (subject to publisher terms and law)',
@@ -1623,14 +1623,14 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Chargeback & Payment Policy',
     description:
       'How crypto and local-method payments behave: irreversibility, chargeback and reversal rules, seller liability, and friendly-fraud.',
-    ...UPDATED_2026_10_04,
+    ...updated20261023('v1.2'),
     sections: [
       {
         blocks: [
           ul([
             '**Crypto (received through BTCPay Server):** payments are **irreversible; no chargebacks**. Refunds, if approved, are made under the Refund & Dispute Policy.',
             '**Local payment methods (processed by Payssion):** some methods let the payer dispute or reverse a payment through their bank or payment provider, under that method’s own rules. Where a reversal results from a Seller’s failure to deliver, misdescription, breach or fraud, the Seller bears it through reserves and clawbacks under the Seller Agency Agreement.',
-            'Initiating a chargeback instead of using the SafeDrop dispute process (“friendly fraud”) breaches the Terms.',
+            'Please use the SafeDrop dispute process before contacting your bank. A chargeback filed instead of a dispute on an Order that was delivered (“friendly fraud”) may lead to Account restrictions and recovery of amounts owed. This does not affect your rights with your bank or card issuer.',
           ]),
           p(`The current list of payment processors is on the Fees & Charges page.`),
         ],
@@ -1752,7 +1752,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Community Guidelines / Trust & Safety',
     description:
       'The behaviour we expect from every user, how to report a problem, how DropMarket moderates content and enforces the rules, and how to appeal.',
-    ...UPDATED_2026_10_04,
+    ...updated20261023('v1.2'),
     sections: [
       {
         blocks: [
