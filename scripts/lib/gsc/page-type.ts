@@ -47,6 +47,7 @@ export const GAME_HUB_SEGMENTS = [
   'inventory',
   'neon-calculator',
   'price-index',
+  'search.json',
   'sell',
   'values',
 ] as const
