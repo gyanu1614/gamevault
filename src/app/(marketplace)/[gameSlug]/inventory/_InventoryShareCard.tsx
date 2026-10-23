@@ -83,7 +83,7 @@ function Brand({ size }: { size: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- captured to PNG */}
-      <img src="/brand/logo-mark-lime.png" alt="DropMarket logo" aria-hidden width={size} height={size} style={{ width: size, height: size }} />
+      <img src="/brand/logo-mark-green.png" alt="DropMarket logo" aria-hidden width={size} height={size} style={{ width: size, height: size }} />
       <span style={{ fontSize: size * 0.62, fontWeight: 800, letterSpacing: '-0.02em', color: INK }}>DropMarket</span>
     </div>
   )

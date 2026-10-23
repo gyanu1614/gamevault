@@ -87,7 +87,7 @@ export function organization() {
       'Trusted gaming marketplace with SafeDrop Protection on every order',
     logo: {
       '@type': 'ImageObject',
-      url: `${SITE_URL}/brand/logo-mark-lime-256.png`,
+      url: `${SITE_URL}/brand/logo-mark-green-256.png`,
       width: 256,
       height: 256,
     },
