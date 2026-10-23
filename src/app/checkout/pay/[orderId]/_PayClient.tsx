@@ -4,7 +4,8 @@
  * PayClient: the native BTCPay payment page.
  *
  * White hosted-invoice layout (owner 2026-10-21, the CoinGate / Cryptomus
- * look, our own build): one centred card. The order total heads it with an
+ * look, our own build): one centred card, 480px on phones and 880px on
+ * desktop with the QR on the left (owner 2026-10-22: shorter, wider). The order total heads it with an
  * Order Info toggle; then the coin + network, the countdown, the exact amount
  * to send, the QR, the address and Open In Wallet; a progress bar; "safe to
  * close" + Cancel Order. Help, terms and SafeDrop sit under the card.
@@ -350,7 +351,10 @@ export default function PayClient({
 
   // ── Card bodies ───────────────────────────────────────────────────
   const payBody = selected ? (
-    <div className="space-y-5 px-5 pb-6 pt-5 sm:px-6">
+    // Phones: one column (coin, amount, QR, address). Desktop (owner
+    // 2026-10-22: "too long and narrow"): QR on the left, the rest beside it.
+    <div className="grid grid-cols-1 gap-5 px-5 pb-6 pt-5 sm:px-6 lg:grid-cols-[minmax(0,296px)_minmax(0,1fr)] lg:gap-x-8 lg:px-8 lg:py-7">
+      <div className="space-y-5 lg:col-start-2">
       {/* Coin + network, and the clock */}
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2">
@@ -390,9 +394,10 @@ export default function PayClient({
           to the same address. Exchange fees often cause this, nothing is lost.
         </Note>
       )}
+      </div>
 
       {/* QR */}
-      <div className="flex justify-center">
+      <div className="flex justify-center lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:items-start">
         <div className="rounded-xl border border-[#E6E8EC] p-3">
           <PaymentQr
             payload={qrPayload(selected)}
@@ -402,6 +407,7 @@ export default function PayClient({
         </div>
       </div>
 
+      <div className="space-y-5 lg:col-start-2">
       {/* Address */}
       <div>
         <p className="text-[12.5px] font-medium text-[#8A94A3]">
@@ -423,6 +429,7 @@ export default function PayClient({
           {selected.networkWarning}
         </Note>
       )}
+      </div>
     </div>
   ) : (
     <StatePanel
@@ -526,7 +533,7 @@ export default function PayClient({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[480px] px-4 pb-16 pt-6 sm:pt-10">
+      <main className="mx-auto w-full max-w-[480px] px-4 pb-16 pt-6 sm:pt-10 lg:max-w-[880px]">
         <p className="sr-only" aria-live="polite">
           {announce}
         </p>
@@ -536,7 +543,9 @@ export default function PayClient({
           className="overflow-hidden rounded-2xl border border-[#E6E8EC] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_rgba(16,24,40,0.06)]"
         >
           {/* Order total heads the card */}
-          <div className="border-b border-[#E6E8EC] px-5 pb-4 pt-6 text-center sm:px-6">
+          <div className="border-b border-[#E6E8EC] px-5 pb-4 pt-6 text-center sm:px-6 lg:px-8 lg:pb-5 lg:text-left">
+            <div className="lg:flex lg:items-end lg:justify-between lg:gap-6">
+            <div>
             <p className="text-[12.5px] text-[#8A94A3]">
               DropMarket{orderNumber ? ` · Order ${orderNumber}` : ''}
             </p>
@@ -548,16 +557,18 @@ export default function PayClient({
                 ≈ {dueDisplay} {selected.short}
               </p>
             )}
+            </div>
             <button
               type="button"
               onClick={() => setOrderOpen((v) => !v)}
               aria-expanded={orderOpen}
-              className={cn(btn.secondary, 'mt-3 h-8 px-3 text-[12.5px]')}
+              className={cn(btn.secondary, 'mt-3 h-8 shrink-0 px-3 text-[12.5px] lg:mt-0')}
             >
               <InfoIcon className="h-3.5 w-3.5" aria-hidden />
               Order Info
               <CaretDownIcon className={cn('h-3.5 w-3.5 transition-transform', orderOpen && 'rotate-180')} aria-hidden />
             </button>
+            </div>
             <AnimatePresence initial={false}>
               {orderOpen && (
                 <motion.div

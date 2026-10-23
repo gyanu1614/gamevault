@@ -332,9 +332,18 @@ Maya / OXXO / Boleto are wired but hidden by their fee row (`selectable=false`).
 **Regions** (`lib/payments/regions.ts`): Europe, Latin America and Southeast
 Asia spill (a buyer also sees the rest of the region's rails); Middle East &
 Africa, East Asia and Rest of World do not (exact country only, and their
-chip shows only to their own buyers). Local card rails are named by country
-("Brazilian Cards", "Saudi Cards (mada)", "Apple Pay (Saudi Arabia)") because
-a card from elsewhere is refused on Payssion's page. The cheapest of the
+chip shows only to their own buyers). Card rails read "Credit / Debit Card"
+with Visa + Mastercard tiles (mada too in Saudi Arabia) and Apple Pay is plain
+"Apple Pay" (owner 2026-10-22): each buyer only sees their own country's list,
+under "Paying from <country>", which is what tells them a card must be local.
+QR rails (PayNow, QR Ph, QRIS, VietQR, Pix) show phone buyers a one-line tip:
+screenshot the QR on the next page and scan it from the banking app's photos.
+
+**Charge failures** (`lib/actions/checkout-errors.ts`): Payssion 417 → under
+the method minimum; any other 4xx (491 not enabled, the undocumented 492) →
+"This payment method isn't working right now … pick another"; network/5xx →
+"temporarily unavailable, try again shortly". One message, next to Pay (above
+the sticky bar on phones), no toast. The cheapest of the
 buyer's own-country methods (by this order's quoted service fee) carries a
 small "Lowest Fee" tag (`lib/payments/lowest-fee.ts`); crypto and other
 countries' regional rails never count.

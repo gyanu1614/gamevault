@@ -49,6 +49,7 @@ import { checkRateLimit } from '@/lib/security/rate-limit'
 import { validatePromoCode } from '@/lib/actions/promo'
 import { promoRefusalMessage, resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
+import { PROVIDER_UNAVAILABLE_MESSAGE, chargeFailureMessage } from '@/lib/actions/checkout-errors'
 
 // Order currency is the ledger base. USD end-to-end (decided 2026-09-04):
 // listings, checkout totals, orders, wallet ledger and provider invoices all
@@ -77,24 +78,17 @@ const CHARGE_IN_FLIGHT_WINDOW_MS = 90 * 1000
 const REUSE_VALIDITY_BUFFER_MS = 5 * 60 * 1000
 const PAYMENT_BEING_PREPARED_MESSAGE =
   'Your payment is still being prepared — please try again in a moment.'
-const PROVIDER_UNAVAILABLE_MESSAGE =
-  'The payment service is temporarily unavailable. Nothing was charged, and any wallet credit you applied is back in your wallet. Please try again shortly.'
 /** PAY-003: the stock ran out between checkout and payment; the order was
  *  refunded to the wallet inside the confirm transaction. */
 const SOLD_OUT_REFUNDED_MESSAGE =
   'This item sold out just before your payment went through — the full amount is back in your DropMarket wallet.'
 const WALLET_CHANGED_MESSAGE =
   'Your wallet balance changed while the order was being created — nothing was charged. Please try again.'
-/** B4: the provider refused the charge as below its minimum (Payssion 417 —
- *  its own FX rate moved past our headroom). The order was cancelled and any
- *  wallet credit returned by the PAY-006 path before this is shown. */
 /** Same-tab pay (2026-10-16): the buyer paid on Payssion, pressed Back and
  *  pressed Pay again before the webhook landed. The open order is NOT
  *  cancelled; the buyer is sent to it. */
 const ALREADY_PAID_MESSAGE =
   'You have already paid for this order — taking you to it now.'
-const BELOW_PROVIDER_MINIMUM_MESSAGE =
-  'This order is under the minimum amount for that payment method — nothing was charged, and any wallet credit you applied is back in your wallet. Please pick another payment method.'
 
 export interface CreateCheckoutInput {
   listingId: string
@@ -458,10 +452,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         // sweepable; the sweep drives the same cancel + return path.
         console.error(`[createCheckout] cancel after charge failure ALSO failed (order ${orderId} left for the sweep):`, cancelError)
       }
-      if (/result_code 417/.test(String(chargeError?.message ?? ''))) {
-        return { success: false, error: BELOW_PROVIDER_MINIMUM_MESSAGE }
-      }
-      return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
+      return { success: false, error: chargeFailureMessage(chargeError) }
     }
     // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
     // provider's hosted checkout — the invoice id on the attempt is what the

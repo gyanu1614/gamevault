@@ -37,6 +37,7 @@ import {
   Info,
   Loader2,
   Lock,
+  Smartphone,
   Tag,
   TriangleAlert,
   X,
@@ -57,6 +58,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { cn } from '@/lib/utils'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { SERVICE_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { SilverIcon } from '@/components/ui/silver-icon'
@@ -384,6 +386,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // not pointed at Indonesia's QRIS) and never crypto. Re-derived from the
   // live quotes on every render.
   const lowestFeeId = lowestFeeMethodId(localRows)
+  const coarse = useCoarsePointer()
   // The countries worth picking: every country one of this order's local
   // rails lists (sorted by name), plus the buyer's own, then Other Country.
   const countryOptions = useMemo<ComboboxOption[]>(() => {
@@ -404,6 +407,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // Payment method: NOTHING is picked until the buyer taps a row (owner
   // call 2026-09-28) — Pay Now stays disabled until then.
   const [payMethod, setPayMethod] = useState<PayMethodId | null>(null)
+  const selectedRow = orderedRows.find((r) => r.id === payMethod) ?? null
   // Switching country re-orders the list; a pick that is no longer listed
   // is cleared (crypto is always listed, so it survives).
   const selectCountry = (v: string) => {
@@ -574,8 +578,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           leaveFor(result.orderId, `/checkout/paid/${result.orderId}`)
           return
         }
+        // One message, by the Pay button (owner 2026-10-22: not a toast too).
         setPayError(result.error || 'Checkout failed')
-        toast.error(result.error || 'Checkout failed')
         setPaying(false)
         return
       }
@@ -609,7 +613,6 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       setPaying(false)
     } catch (err: any) {
       setPayError(err?.message || 'An unexpected error occurred')
-      toast.error(err?.message || 'An unexpected error occurred')
       setPaying(false)
     }
   }
@@ -630,6 +633,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const selectedNet = NETWORKS.find((n) => n.value === network)!
 
   // ── Shared blocks (desktop + mobile) ──────────────────────────────
+
+  const payErrorNote = payError && (
+    <p role="alert" className="flex items-start gap-1.5 text-[13px] font-medium leading-snug text-[#F87171]">
+      <TriangleAlert className="mt-[1px] h-4 w-4 shrink-0" aria-hidden />
+      <span>{payError}</span>
+    </p>
+  )
 
   const payButton = (extraClass = '') => (
     <button
@@ -766,15 +776,24 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       {children}
     </span>
   )
-  const markTile = (mark: LocalMethodRow['mark'], Icon: MethodIcon) => {
-    const size = mark && markSize(mark.aspect, TILE_SLOT)
-    return logoTile(
-      mark && size ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={mark.logo} alt="" width={size.width} height={size.height} style={size} />
-      ) : (
-        <Icon className="h-5 w-5" strokeWidth={1.75} style={{ color: '#C9D1DA' }} />
-      )
+  /** The row's logo tiles: one per mark (card rails show Visa + Mastercard;
+   *  phones keep the first two), or the row's icon when it has no mark. */
+  const markTiles = (marks: LocalMethodRow['marks'], Icon: MethodIcon) => {
+    if (marks.length === 0) return logoTile(<Icon className="h-5 w-5" strokeWidth={1.75} style={{ color: '#C9D1DA' }} />)
+    return (
+      <span className="flex shrink-0 gap-1.5">
+        {marks.map((mark, i) => {
+          const size = markSize(mark.aspect, TILE_SLOT)
+          return (
+            <span key={mark.logo} className={i >= 2 ? 'hidden sm:block' : undefined}>
+              {logoTile(
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mark.logo} alt="" width={size.width} height={size.height} style={size} />
+              )}
+            </span>
+          )
+        })}
+      </span>
     )
   }
 
@@ -799,7 +818,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               Lowest Fee
             </span>
           )}
-          {markTile(m.mark, m.Icon)}
+          {markTiles(m.marks, m.Icon)}
         </button>
       </div>
     )
@@ -900,6 +919,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             )}
           </AnimatePresence>
         </div>
+      )}
+      {/* QR rails on a phone: the code is on this screen, so the camera can't
+          scan it. Every SG/PH/ID/VN bank app scans from the photo gallery. */}
+      {coarse && selectedRow?.qrPay && (
+        <p className="flex items-start gap-2 rounded-md bg-[rgba(106,168,255,0.10)] px-3 py-2.5 text-[13px] leading-snug" style={{ color: '#C9DCFF' }}>
+          <Smartphone className="mt-[1px] h-4 w-4 shrink-0" style={{ color: TRUST_BLUE }} aria-hidden />
+          <span>On this phone? Screenshot the QR code on the next page, then scan it from your photos in your banking app.</span>
+        </p>
       )}
     </div>
   )
@@ -1143,9 +1170,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           sticky pay bar at the bottom of the screen. */}
       <div className="mt-4 hidden lg:block">
         {payButton()}
-        {payError && (
-          <p className="mt-2.5 text-[12.5px] font-medium text-red-600">{payError}</p>
-        )}
+        {payErrorNote && <div className="mt-2.5">{payErrorNote}</div>}
         <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: T.dis }}>
           By paying you agree to our{' '}
           <Link
@@ -1205,9 +1230,6 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               {countryLine}
             </div>
             {paymentList}
-            {payError && (
-              <p className="mt-3 text-[12.5px] font-medium text-red-600 lg:hidden">{payError}</p>
-            )}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
             <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.035] px-4 pb-4 pt-1 lg:hidden">
@@ -1281,6 +1303,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         className="fixed inset-x-0 bottom-0 z-40 border-t bg-[#1D1E23]/95 px-4 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
         style={{ borderColor: T.line }}
       >
+        {/* Phones: the error sits right above the button the buyer just pressed. */}
+        {payErrorNote && <div className="mb-2.5">{payErrorNote}</div>}
         {payButton()}
       </div>
     </div>

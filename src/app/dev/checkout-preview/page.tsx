@@ -15,6 +15,7 @@ import { notFound } from 'next/navigation'
 import { CheckoutForm } from '../../checkout/[id]/CheckoutForm'
 import { eligibleMethods, toClientMethods, type ClientMethod } from '@/lib/payments/eligibility'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { PAYSSION_METHODS } from '@/lib/payments/providers/payssion/methods'
 
 const MOCK_LISTING = {
   id: '00000000-0000-0000-0000-000000000000',
@@ -65,6 +66,13 @@ const MOCK_METHODS: ClientMethod[] = [
   { method: 'pix_br', pmId: 'pix_br', kind: 'local', label: 'Pix', countries: ['BR'], coverage: 'Brazil', countryMatch: false, refundable: true, instantClearing: true, quote: q(67, 14.02) },
   { method: 'gcash_ph', pmId: 'gcash_ph', kind: 'local', label: 'GCash', countries: ['PH'], coverage: 'Philippines', countryMatch: false, refundable: true, instantClearing: true, quote: q(69, 14.44) },
   { method: 'qr_ph', pmId: 'qr_ph', kind: 'local', label: 'QR Ph', countries: ['PH'], coverage: 'Philippines', countryMatch: false, refundable: false, instantClearing: true, quote: q(62, 12.97) },
+  // Card rails, PayNow and Saudi rails (owner 2026-10-22 check): names come from the registry.
+  ...(['creditcard_br', 'paynow_sg', 'grabpay_sg', 'mada_sa', 'applepay_sa', 'skrill', 'trustly'] as const).map(
+    (pm): ClientMethod => ({
+      method: pm, pmId: pm, kind: 'local', label: PAYSSION_METHODS[pm].label, countries: [...PAYSSION_METHODS[pm].countries],
+      coverage: PAYSSION_METHODS[pm].coverage, countryMatch: false, refundable: true, instantClearing: true, quote: q(55, 11.5),
+    }),
+  ),
   { method: 'wallet', pmId: null, kind: 'wallet', label: 'Store credit', countries: [], coverage: '', countryMatch: true, refundable: true, instantClearing: true, quote: q(0, 0, 0) },
 ]
 
