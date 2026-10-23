@@ -1,0 +1,29 @@
+/*
+ * MM2's chroma finish: an iridescent sweep (pink → violet → blue → cyan →
+ * lime → gold → pink) on the lettering, looping seamlessly because the tile
+ * starts and ends on one colour. Native CSS: the "holographic foil" technique
+ * (a repeating gradient moved by background-position). Static under reduced
+ * motion.
+ */
+.word {
+  --chroma-gradient: linear-gradient(90deg, #ff6ec7, #a77bff, #5ab0ff, #4ef0e0, #9dff6a, #ffd966, #ff6ec7);
+  --chroma-tile: 9rem;
+  background: var(--chroma-gradient);
+  background-size: var(--chroma-tile) 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: chroma-word 5s linear infinite;
+}
+
+@keyframes chroma-word {
+  to {
+    background-position: var(--chroma-tile) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word {
+    animation: none;
+  }
+}

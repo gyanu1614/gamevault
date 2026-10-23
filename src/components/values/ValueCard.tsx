@@ -123,7 +123,8 @@ export function PriceStatPair({
   stats,
   empty,
 }: {
-  stats: Array<{ label: string; value: string | null; color?: string; shine?: boolean; sub?: ReactNode }>
+  /** `eyebrow`: a line above the label naming what the price is for ("Standard", "Chroma"). */
+  stats: Array<{ label: string; value: string | null; color?: string; shine?: boolean; sub?: ReactNode; eyebrow?: ReactNode }>
   empty?: string | null
 }) {
   if (empty) {
@@ -139,6 +140,7 @@ export function PriceStatPair({
         <div key={s.label} className="flex flex-1">
           {i > 0 && <div aria-hidden className="my-2 w-px bg-white/[0.07]" />}
           <div className="min-w-0 flex-1 px-1.5 py-2 text-center">
+            {s.eyebrow && <div className={`${VALUE_LABEL} truncate font-semibold`}>{s.eyebrow}</div>}
             <div className={VALUE_LABEL}>{s.label}</div>
             <div
               className="truncate text-[16px] font-semibold leading-6 tabular-nums tracking-[-0.01em]"
