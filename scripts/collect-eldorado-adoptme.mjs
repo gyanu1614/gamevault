@@ -52,7 +52,7 @@ import {
   eldoradoKeyFor,
   normalizeName,
 } from './lib/adoptme-eldorado.mjs'
-import { describeMarketNames, loadMarketNames, planMarketNames, saveMarketNames } from './lib/market-names.mjs'
+import { describeMarketNames, loadMarketNamesSafe, planMarketNames, saveMarketNamesSafe } from './lib/market-names.mjs'
 
 const DEFAULT_OUTPUT = 'data/adopt-me-feeds/eldorado-cash-latest.json'
 const COLLECTOR_VERSION = 3 // 3 = Eldorado trait N is NEON (was Normal); NF/NR/MF/MR combo forms dropped
@@ -222,14 +222,15 @@ async function collectByCrawl(targets, opts) {
   // Full runs only: with a subset of pets, every other pet's group would look
   // "unmatched" and the candidates would be incomplete.
   const useLog = !opts.noMatchLog && !opts.limit && !opts.slugs && !opts.onlyPublished
+  const ledger = useLog && leftover.length ? await loadMarketNamesSafe(sb, 'adopt-me') : null
   let plan = null
-  if (useLog && leftover.length) {
+  if (ledger) {
     plan = planMarketNames({
       game: 'adopt-me',
       names: new Map(leftover.map((g) => [g.itemName, g.listings.length])),
       items: targets.map((p) => ({ slug: p.slug, names: [p.name] })),
       claimed,
-      ledger: await loadMarketNames(sb, 'adopt-me'),
+      ledger,
     })
     const petBySlug = new Map(targets.map((p) => [p.slug, p]))
     for (const g of leftover) {
@@ -253,7 +254,7 @@ async function collectByCrawl(targets, opts) {
     throw new Error(`crawl incomplete (${crawl.stoppedBy}) — not writing a partial feed`)
   }
   // Saved only after a complete crawl: offer counts from a partial one would mislead the review list.
-  if (plan) await saveMarketNames(sb, 'adopt-me', plan.rows)
+  if (plan) await saveMarketNamesSafe(sb, 'adopt-me', plan.rows)
   return {
     listings,
     matched,

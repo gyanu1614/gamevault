@@ -157,3 +157,20 @@ describe('applyMarketNames (MM2): close matches stay inside the same type and fo
     expect(log.rows.find((r: { market_name: string }) => r.market_name === 'gun|default|emberscythe')).toMatchObject({ status: 'unmatched' })
   })
 })
+
+import { loadMarketNamesSafe } from '../../../scripts/lib/market-names.mjs'
+
+describe('the match log never fails a price run', () => {
+  it('a failed read (table not pushed yet) means exact matching only, with a warning', async () => {
+    const failing = { from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ range: async () => ({ data: null, error: { message: 'relation does not exist' } }) }) }) }) }) }) }
+    const warn = console.warn
+    const seen: string[] = []
+    console.warn = (m: string) => seen.push(m)
+    try {
+      expect(await loadMarketNamesSafe(failing, 'adopt-me')).toBeNull()
+    } finally {
+      console.warn = warn
+    }
+    expect(seen[0]).toMatch(/::warning::match log unavailable for adopt-me/)
+  })
+})

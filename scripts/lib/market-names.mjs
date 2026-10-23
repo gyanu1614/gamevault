@@ -98,6 +98,28 @@ export async function saveMarketNames(db, game, rows, source = 'eldorado') {
   if (error) throw new Error(`market_name_matches prune: ${error.message}`)
 }
 
+/**
+ * The price run must never fail because of the match log: a failed read
+ * (e.g. the table not pushed yet) means exact matching only this run, and a
+ * failed save is a warning. Both show as GitHub Actions warnings.
+ */
+export async function loadMarketNamesSafe(db, game, source = 'eldorado') {
+  try {
+    return await loadMarketNames(db, game, source)
+  } catch (e) {
+    console.warn(`::warning::match log unavailable for ${game} (${e.message}); exact matching only this run`)
+    return null
+  }
+}
+
+export async function saveMarketNamesSafe(db, game, rows, source = 'eldorado') {
+  try {
+    await saveMarketNames(db, game, rows, source)
+  } catch (e) {
+    console.warn(`::warning::match log not saved for ${game} (${e.message})`)
+  }
+}
+
 /** One log line per run. */
 export function describeMarketNames(game, plan) {
   const unmatched = plan.rows.filter((r) => r.status === 'unmatched')

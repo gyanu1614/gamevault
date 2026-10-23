@@ -19,7 +19,7 @@ import fs from 'node:fs'
 
 import { normaliseStructuredListing } from '../../src/lib/values/normalisers/eldorado-structured.ts'
 import { buildMarketIndex, marketNamesFor, resolveMarketKey } from '../../src/lib/values/catalogue/resolve.ts'
-import { describeMarketNames, loadMarketNames, planMarketNames, saveMarketNames } from './market-names.mjs'
+import { describeMarketNames, loadMarketNamesSafe, planMarketNames, saveMarketNamesSafe } from './market-names.mjs'
 import { eldoradoStructuredConfig } from '../../src/lib/values/sources/eldorado-structured-games.ts'
 
 /** values_raw_listings.quantity is an int; Eldorado stock claims run to millions. */
@@ -214,9 +214,10 @@ export async function importEldoradoFeed({ game, feed, env, yes = false, write =
   if (listings.length < feed.listings.length) console.log(`  duplicates: ${feed.listings.length - listings.length} repeated offers dropped`)
   const exact = planRawRows({ game, listings, catalogue, observedAt, gameId: game_.id })
   // What exact matching missed → saved decisions, close matches, review list.
-  const { plan, log } = applyMarketNames({ game, plan: exact, catalogue, ledger: await loadMarketNames(db, game), now: observedAt })
+  const ledger = await loadMarketNamesSafe(db, game)
+  const { plan, log } = ledger ? applyMarketNames({ game, plan: exact, catalogue, ledger, now: observedAt }) : { plan: exact, log: null }
   report(plan, feed)
-  console.log(describeMarketNames(game, log))
+  if (log) console.log(describeMarketNames(game, log))
 
   console.log(`Writing ${plan.rows.length} raw listings to ${url}`)
   const insertRows = plan.rows.map(({ matched_slug, _raw_price, _market_key, ...row }) => row)
@@ -230,7 +231,7 @@ export async function importEldoradoFeed({ game, feed, env, yes = false, write =
     // History is untouched.
     await retireUnseenRawListings(db, game_.id, observedAt)
     // Offer counts are only true for a complete crawl.
-    await saveMarketNames(db, game, log.rows)
+    if (log) await saveMarketNamesSafe(db, game, log.rows)
   }
   return plan
 }
