@@ -30,7 +30,7 @@ describe('CurrencyGuide (on-page layout)', () => {
   })
 
   it('every section is in the HTML, without "DropMarket" in the headings', () => {
-    for (const t of ['How Much Do You Save on Robux?', 'How Robux Delivery Works', 'Is It Safe to Buy Robux?', 'More Roblox Games']) {
+    for (const t of ['Robux Prices', 'How Robux Delivery Works', 'Is It Safe to Buy Robux?', 'More Roblox Games']) {
       expect(html).toContain(t)
     }
     expect(html.match(/<h3[^>]*>[^<]*DropMarket/g)).toBeNull()
@@ -45,11 +45,20 @@ describe('CurrencyGuide (on-page layout)', () => {
     expect(html).toContain('Tokens in Blade Ball')
   })
 
-  it('compares exactly the five chosen packs and quotes the 11,000 saving', () => {
+  it('prices the five chosen packs: official price struck through, ours, and the % off', () => {
     const rows = html.match(/<th scope="row"[^>]*>([^<]+)<\/th>/g)!.map((r) => r.replace(/<[^>]+>/g, ''))
     expect(rows).toEqual(['500 Robux', '1,000 Robux', '5,250 Robux', '11,000 Robux', '24,000 Robux'])
-    // 11,000 × $0.0052 = $57.20 against $99.99 → about $43.
-    expect(html).toContain('You save about $43 on 11,000 Robux')
+    // 11,000 × $0.0052 = $57.20 against $99.99 → 42% off (whole percent, rounded down).
+    expect(html).toMatch(/<s[^>]*>\$99\.99<\/s>/)
+    expect(html).toContain('$57.20')
+    expect(html).toContain('42% Off')
+    // Owner 2026-10-23: no "you save" / "cheaper than the store" claims.
+    expect(html).not.toMatch(/you save|save about|costs? less than/i)
+  })
+
+  it('never says every seller is ID-checked (sellers verify before their first payout)', () => {
+    expect(html).not.toMatch(/ID-Checked|ID check before/)
+    expect(html).toContain('Rated Sellers')
   })
 
   it('More Roblox Games: one links section, this game first, then other games', () => {

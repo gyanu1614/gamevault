@@ -34,7 +34,7 @@ import HowItWorksBand, { type HowItWorksHighlight } from '@/components/marketpla
 import { FaqSection } from '@/components/marketplace/FaqCards'
 import { CurrencyBuyCard } from '@/components/marketplace/CurrencyBuyCard'
 import { WhyBuyCard } from '@/components/marketplace/WhyBuyCard'
-import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { PaymentsStrip } from '@/components/marketplace/PaymentsStrip'
 import { OfferRail } from '@/components/marketplace/OfferRail'
 import { cn } from '@/lib/utils'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
@@ -173,7 +173,7 @@ function hubHighlight({
   return {
     label: `Live Now`,
     value: `${totalOffers.toLocaleString('en-US')} ${totalOffers === 1 ? 'Offer' : 'Offers'} Live`,
-    note: 'From ID-verified sellers',
+    note: 'From rated sellers',
     backdropUrl: gameImageUrl,
   }
 }
@@ -382,7 +382,7 @@ export function GameHub({
         {blogRail}
       </div>
 
-      <PaymentsMarquee disclaimer={trademark} />
+      <PaymentsStrip disclaimer={trademark} />
     </main>
   )
 }

@@ -39,7 +39,7 @@ export function PreFooterCtaBand({
   artWidth = 1920,
   artHeight = 1080,
   headline = 'Start Your Collection',
-  support = 'Verified Sellers, Ready to Deliver.',
+  support = 'Rated Sellers, Ready to Deliver.',
   buttonLabel = 'Browse Marketplace',
   buttonHref = '/browse',
 }: PreFooterCtaBandProps) {

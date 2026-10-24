@@ -61,7 +61,8 @@ const LINK_GROUPS: Array<{
       { name: 'Become a Founding Seller', href: foundingHref('footer') },
       { name: 'Seller Fees', href: '/sell/fees' },
       { name: 'Blog', href: '/blog' },
-      { name: 'Company', href: '/company' },
+      { name: 'About Us', href: '/about' },
+      { name: 'Contact', href: '/contact' },
     ],
   },
   {
@@ -71,6 +72,7 @@ const LINK_GROUPS: Array<{
       // document and the one PSP review looks for. The marketing page is
       // reachable from it and from the buyer-steps section.
       { name: 'SafeDrop Protection', href: '/safedrop-policy' },
+      { name: 'Delivery', href: '/delivery' },
       { name: 'Refunds & Disputes', href: '/refunds' },
       { name: 'Prohibited Items', href: '/prohibited' },
       { name: 'Trust & Safety', href: '/trust-safety' },

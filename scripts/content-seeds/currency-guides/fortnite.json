@@ -60,14 +60,14 @@
     }
   ],
   "page": {
-    "subtitle": "What V-Bucks are, how much you can save, how they reach your account and how to buy them safely.",
+    "subtitle": "What V-Bucks are, what they cost, how they reach your account and how to buy them safely.",
     "what_is": {
       "heading": "What Are V-Bucks?",
       "text": "V-Bucks are Fortnite's in-game money. You spend them in the Item Shop on skins, emotes and pickaxes, and on the Battle Pass for 800 V-Bucks."
     },
     "savings": {
-      "heading": "How Much Do You Save on V-Bucks?",
-      "text": "The official store sells V-Bucks at fixed prices. Sellers here set their own, and many charge less for the same V-Bucks.",
+      "heading": "V-Bucks Prices",
+      "text": "Official pack prices next to the lowest price from sellers here.",
       "amounts": [
         800,
         2400,

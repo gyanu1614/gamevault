@@ -125,6 +125,19 @@ const nextConfig = {
       // sitemap and in inboxes, so they 308 rather than 404.
       { source: '/early-seller', destination: '/founding', permanent: true },
       { source: '/signup-become-seller', destination: '/founding', permanent: true },
+      // Payment-provider reviewers type these (2026-10-23 site review): the
+      // common names for our policy and help pages land on the real page.
+      { source: '/terms-of-service', destination: '/terms', permanent: true },
+      { source: '/privacy-policy', destination: '/privacy', permanent: true },
+      { source: '/cookie-policy', destination: '/cookies', permanent: true },
+      { source: '/refund-policy', destination: '/refunds', permanent: true },
+      { source: '/about-us', destination: '/about', permanent: true },
+      { source: '/contact-us', destination: '/contact', permanent: true },
+      { source: '/help', destination: '/support', permanent: true },
+      // A game keeps one accounts page (owner 2026-10-23): the retired
+      // modded-accounts pages and their listings live under buy-accounts.
+      { source: '/:game/buy-modded-accounts', destination: '/:game/buy-accounts', permanent: true },
+      { source: '/:game/buy-modded-accounts/:path*', destination: '/:game/buy-accounts/:path*', permanent: true },
       // The per-game content hub moved from /[game]/blogs to /[game]/blog, so
       // the whole site uses the singular form (the site-wide index was already
       // /blog). These URLs are in the sitemap and may be indexed, so both the

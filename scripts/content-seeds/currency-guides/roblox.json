@@ -144,7 +144,7 @@
   "confidence": "high",
   "notes": "Package prices and app amounts read from the JSON embedded in roblox.com/upgrades/robux (USD, fetched from a US IP on 2026-10-05; field nonPromotionalPlatformRobuxAmount = app/console amount). Plus prices from the same page; a third-party source said Plus 1000 = $13.49 but the Roblox page says $12.99. The 30% pass fee is widely documented (creator docs) but I did not fetch a Roblox page stating it; medium confidence on the wording only. Pass pending length: Roblox publishes no number for passes; '5 to 7 days' comes from our own live Roblox seller listing and community reports, '30 days' from Roblox's Limited-resale article and devforum staff replies. Direct Robux transfers: the Sending/Receiving article says 16+ age check (under-16 needs parent approval) while the Roblox Plus article says 18+ (under-18 needs parent approval); I wrote 'both sides need an age check' to stay true to both. One live seller also asks buyers to be age-verified (16+) and to restore/make the experience public; that's a seller rule, not a Roblox rule, so it's left out of the generic steps.",
   "page": {
-    "subtitle": "What Robux is, how much you can save, how it gets to your account and how to buy it safely.",
+    "subtitle": "What Robux is, what it costs, how it gets to your account and how to buy it safely.",
     "what_is": {
       "heading": "What Is Robux?",
       "text": "Robux is the money of Roblox. You spend it on avatar items, game passes and boosts in any Roblox game.",
@@ -169,8 +169,8 @@
       ]
     },
     "savings": {
-      "heading": "How Much Do You Save on Robux?",
-      "text": "Roblox sells Robux at fixed prices. Sellers here set their own, and most charge a lot less for the same Robux.",
+      "heading": "Robux Prices",
+      "text": "Official pack prices next to the lowest price from sellers here.",
       "amounts": [
         500,
         1000,

@@ -28,24 +28,35 @@ type Mark =
  * first, then the coins. Every method is still in the screen-reader list.
  */
 const LEAD = ['trustly', 'pix_br', 'paysafecard', 'blik_pl', 'p24_pl']
-const LOGO_METHODS = payssionSelectorMethods()
-  .filter((m) => {
-    const mono = PAYMENT_METHOD_MONO[m.pmId]
-    return !!mono && 'logo' in mono
-  })
-  .sort((a, b) => {
-    const ai = LEAD.indexOf(a.pmId)
-    const bi = LEAD.indexOf(b.pmId)
-    return (ai < 0 ? LEAD.length : ai) - (bi < 0 ? LEAD.length : bi)
-  })
 
-const MARKS: Mark[] = [
-  ...LOGO_METHODS.map((m): Mark => ({ key: m.pmId, label: m.label, kind: 'logo', src: (PAYMENT_METHOD_MONO[m.pmId] as { logo: string }).logo })),
-  ...CHECKOUT_COINS.map((c): Mark => ({ key: c.key, label: c.label, kind: 'coin', src: CHECKOUT_COINS_MONO[c.key] })),
-]
-
-/** Every way to pay, for screen readers (the strip shows the logo ones). */
-const ALL_LABELS = [...payssionSelectorMethods().map((m) => m.label), ...CHECKOUT_COINS.map((c) => c.label)]
+/**
+ * The strip's marks and its screen-reader list. `live` is the set of
+ * payment_method_fees rows switched on (selectable); a registry method whose
+ * row is off is not offered at checkout, so it isn't shown here either.
+ * Without `live` (dev preview) every registry method shows.
+ */
+export function marqueeContent(live?: readonly string[]): { marks: Mark[]; labels: string[] } {
+  const on = live ? new Set(live) : null
+  const methods = payssionSelectorMethods().filter((m) => !on || on.has(m.pmId))
+  const logoMethods = methods
+    .filter((m) => {
+      const mono = PAYMENT_METHOD_MONO[m.pmId]
+      return !!mono && 'logo' in mono
+    })
+    .sort((a, b) => {
+      const ai = LEAD.indexOf(a.pmId)
+      const bi = LEAD.indexOf(b.pmId)
+      return (ai < 0 ? LEAD.length : ai) - (bi < 0 ? LEAD.length : bi)
+    })
+  return {
+    marks: [
+      ...logoMethods.map((m): Mark => ({ key: m.pmId, label: m.label, kind: 'logo', src: (PAYMENT_METHOD_MONO[m.pmId] as { logo: string }).logo })),
+      ...CHECKOUT_COINS.map((c): Mark => ({ key: c.key, label: c.label, kind: 'coin', src: CHECKOUT_COINS_MONO[c.key] })),
+    ],
+    // Every way to pay, for screen readers (the strip shows the logo ones).
+    labels: [...methods.map((m) => m.label), ...CHECKOUT_COINS.map((c) => c.label)],
+  }
+}
 
 function MarkView({ mark }: { mark: Mark }) {
   const base =
@@ -70,7 +81,8 @@ function MarkView({ mark }: { mark: Mark }) {
   )
 }
 
-export function PaymentsMarquee({ disclaimer }: { disclaimer?: string | null } = {}) {
+export function PaymentsMarquee({ disclaimer, live }: { disclaimer?: string | null; live?: readonly string[] } = {}) {
+  const { marks, labels } = marqueeContent(live)
   return (
     <section aria-labelledby="payments-strip-title" className="group relative mt-12 w-full overflow-hidden pb-4 sm:mt-16">
       {/* The strip speaks for itself; the heading stays for screen readers. */}
@@ -78,7 +90,7 @@ export function PaymentsMarquee({ disclaimer }: { disclaimer?: string | null } =
         Accepted at Checkout
       </h2>
       {/* Screen readers get the list once, in plain words. */}
-      <p className="sr-only">{ALL_LABELS.join(', ')}</p>
+      <p className="sr-only">{labels.join(', ')}</p>
 
       <div className="relative">
         <div
@@ -95,7 +107,7 @@ export function PaymentsMarquee({ disclaimer }: { disclaimer?: string | null } =
         >
           {[0, 1].map((t) => (
             <div key={t} className="pm-track flex shrink-0 items-center gap-16 pr-16 sm:gap-20 sm:pr-20">
-              {MARKS.map((m) => (
+              {marks.map((m) => (
                 <MarkView key={`${t}-${m.key}`} mark={m} />
               ))}
             </div>

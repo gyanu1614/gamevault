@@ -35,7 +35,7 @@ export const HERO_EYEBROW = {
     accent: 'Start Earning Today.',
     lead: 'Sell Items, Currency and Accounts',
     /** Shimmered. */
-    tail: '50% Off Fees for a Limited Time',
+    tail: '50% Off Fees for Your First 12 Months',
     cta: 'Start Selling',
     /** Phones: one full-width line, accent + button (owner, 2026-10-09). */
     phoneCta: 'Apply',
@@ -54,7 +54,7 @@ export function listingsCardCopy(variant: SellerPromptVariant, gameName: string,
   const what = `${gameName} ${categoryLabel}`
   return variant === 'seller'
     ? { lead: 'Your store is open', tail: `List your ${what} and buyers here see them first.`, cta: 'Create a listing' }
-    : { lead: `Got ${what} to sell?`, tail: '50% Off Fees for a Limited Time.', cta: 'Start Selling' }
+    : { lead: `Got ${what} to sell?`, tail: '50% Off Fees for Your First 12 Months.', cta: 'Start Selling' }
 }
 
 /** Listings empty state: the category has no listings at all. */
@@ -65,7 +65,7 @@ export function listingsEmptyCopy(variant: SellerPromptVariant, gameName: string
     body:
       variant === 'seller'
         ? 'Buyers searching this page will see your listing first.'
-        : '50% Off Fees for a Limited Time. Buyers searching this page see your listing first.',
+        : '50% Off Fees for Your First 12 Months. Buyers searching this page see your listing first.',
     cta: variant === 'seller' ? 'Create a listing' : 'Start Selling',
   }
 }

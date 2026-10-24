@@ -181,6 +181,7 @@ export default function CurrencyPageClient({
   blogRail,
   guide,
   trademark,
+  paymentsStrip,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
@@ -195,6 +196,8 @@ export default function CurrencyPageClient({
   guide?: React.ReactNode
   /** Per-game trademark line under the payments strip (lib/seo/trademark). */
   trademark?: string | null
+  /** Server-rendered PaymentsStrip (only the methods checkout has on), passed as a slot. */
+  paymentsStrip?: React.ReactNode
 }) {
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
@@ -480,7 +483,7 @@ export default function CurrencyPageClient({
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}
-      <PaymentsMarquee disclaimer={trademark} />
+      {paymentsStrip ?? <PaymentsMarquee disclaimer={trademark} />}
 
       {/* V14j — Fullscreen route-transition loader. Renders while the
           checkout route is resolving (useTransition pending). Animation

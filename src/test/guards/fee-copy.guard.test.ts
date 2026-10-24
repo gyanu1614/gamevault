@@ -176,9 +176,10 @@ describe('fee engine — marketing copy carries no seller-fee number', () => {
         expect(line, `${file}: the buyer line must stay number-free`).not.toMatch(/\d\s*%|\$\s*\d/)
       }
     }
-    // /fees lists every crypto payout currency offered, not just USDT.
+    // /fees lists every payout method live from withdrawal_methods (lib/fees/withdrawal-legal),
+    // so the document itself points at that table instead of naming coins and numbers.
     const withdrawals = LEGAL_DOCS.find((d) => d.slug === 'fees')!.sections.find((s) => s.h === 'Withdrawals')!
-    expect(JSON.stringify(withdrawals.blocks)).toMatch(/Crypto payouts \(USDT, USDC, BTC, ETH\)/)
+    expect(JSON.stringify(withdrawals.blocks)).toMatch(/read live from the same table the withdrawal page uses/)
   })
 
   it('no source file outside lib/fees re-declares the retired TS commission constants', () => {

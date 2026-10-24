@@ -2,7 +2,7 @@ import { unstable_cache } from 'next/cache'
 
 import { createAnonClient } from '@/lib/supabase/anon'
 import type { LegalBlock } from '@/lib/legal/documents'
-import { PAYSSION_METHODS } from '@/lib/payments/providers/payssion/methods'
+import { PAYSSION_METHODS, PAYSSION_SANDBOX_METHOD } from '@/lib/payments/providers/payssion/methods'
 import { BUYER_FEES_TAG } from '@/lib/revalidation/tags'
 
 /**
@@ -44,13 +44,15 @@ const money = (minor: number, currency: string) =>
 
 /** One line of TERMS for a method: "3.75% + 7.5% currency conversion + 1% buffer, at least 5% of the amount charged, minimum $0.35". */
 export function describeMethodFee(r: PublicMethodFee): string {
+  const free = r.providerPct + r.providerFixedMinor + r.fxMarkupPct + r.bufferPct + r.floorPct + r.minFeeMinor === 0
+  if (free) return 'No fee'
   const parts: string[] = []
   if (r.providerPct > 0) parts.push(pct(r.providerPct))
   if (r.providerFixedMinor > 0) parts.push(money(r.providerFixedMinor, r.feeCurrency))
   if (r.fxMarkupPct > 0) parts.push(`${pct(r.fxMarkupPct)} currency conversion`)
   if (r.bufferPct > 0) parts.push(`${pct(r.bufferPct)} buffer`)
   const clauses: string[] = [parts.length ? parts.join(' + ') : 'no provider charge']
-  clauses.push(`at least ${pct(r.floorPct)} of the amount charged`)
+  if (r.floorPct > 0) clauses.push(`at least ${pct(r.floorPct)} of the amount charged`)
   if (r.minFeeMinor > 0) clauses.push(`minimum ${money(r.minFeeMinor, r.feeCurrency)}`)
   if (r.minTotalMinor != null) clauses.push(`orders from ${money(r.minTotalMinor, r.feeCurrency)}`)
   if (r.maxTotalMinor != null) clauses.push(`orders up to ${money(r.maxTotalMinor, r.feeCurrency)}`)
@@ -82,6 +84,11 @@ export function buyerFeeTableBlock(rows: PublicMethodFee[]): Extract<LegalBlock,
   }
 }
 
+/** Test rows never reach a public page: the fake provider and the Payssion sandbox method. */
+export function isPublicFeeRow(r: { provider: string; method: string }): boolean {
+  return r.provider !== 'fake' && r.method !== PAYSSION_SANDBOX_METHOD
+}
+
 /** Provider display order: crypto/wallet first, then local rails by label. */
 const PROVIDER_ORDER: Record<string, number> = { btcpay: 0, coingate: 0, wallet: 1, payssion: 2, fake: 9 }
 
@@ -91,7 +98,7 @@ async function readBuyerFees(): Promise<PublicMethodFee[]> {
     .select('method, label, provider, fee_currency, provider_pct, provider_fixed_minor, fx_markup_pct, buffer_pct, floor_pct, min_fee_minor, min_total_minor, max_total_minor, refundable, instant_clearing, selectable')
   if (error) throw new Error(`payment_method_fees: ${error.message}`)
   return ((data ?? []) as any[])
-    .filter((r) => r.provider !== 'fake')
+    .filter(isPublicFeeRow)
     .map((r) => ({
       method: r.method,
       label: r.label,

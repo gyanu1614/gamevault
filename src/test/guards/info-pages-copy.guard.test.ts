@@ -1,6 +1,6 @@
 /**
  * The redesigned info pages (2026-10-15: /safedrop, /sell/fees, /blog,
- * /browse) and their shared kit carry no em or en dash in anything a visitor
+ * /browse; 2026-10-23: /about, /contact, /delivery) and their shared kit carry no em or en dash in anything a visitor
  * reads (owner: human-written copy; the dash is the commonest AI tell).
  * Comments are free. No DB.
  */
@@ -12,6 +12,9 @@ const ROOTS = [
   'src/components/info',
   'src/app/(marketing)/safedrop',
   'src/app/(marketing)/sell/fees',
+  'src/app/(marketing)/about',
+  'src/app/(marketing)/contact',
+  'src/app/(marketing)/delivery',
   'src/app/blog',
   'src/app/browse',
 ]

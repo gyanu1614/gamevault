@@ -56,14 +56,14 @@
     }
   ],
   "page": {
-    "subtitle": "What Valorant Points are, how much you can save, how they reach your account and how to buy them safely.",
+    "subtitle": "What Valorant Points are, what they cost, how they reach your account and how to buy them safely.",
     "what_is": {
       "heading": "What Are Valorant Points?",
       "text": "Valorant Points (VP) are Riot's money for Valorant. You spend them in the Store on weapon skin bundles, Night Market deals, the Premium Battle Pass and agents."
     },
     "savings": {
-      "heading": "How Much Do You Save on Valorant Points?",
-      "text": "The official store sells VP at fixed prices. Sellers here set their own, and many charge less for the same VP.",
+      "heading": "Valorant Points Prices",
+      "text": "Official pack prices next to the lowest price from sellers here.",
       "amounts": [
         475,
         1000,

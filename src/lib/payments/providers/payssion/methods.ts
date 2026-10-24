@@ -377,8 +377,11 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
 
 /** Selector-facing methods in display order (the sandbox simulator never
  *  renders as a checkout row). */
+/** The sandbox-only simulator: never offered to buyers, never on a public page. */
+export const PAYSSION_SANDBOX_METHOD = 'payssion_test'
+
 export function payssionSelectorMethods(): PayssionMethodMeta[] {
-  return Object.values(PAYSSION_METHODS).filter((m) => m.pmId !== 'payssion_test')
+  return Object.values(PAYSSION_METHODS).filter((m) => m.pmId !== PAYSSION_SANDBOX_METHOD)
 }
 
 /**

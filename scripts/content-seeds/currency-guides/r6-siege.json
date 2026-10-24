@@ -53,14 +53,14 @@
     }
   ],
   "page": {
-    "subtitle": "What R6 Credits are, how much you can save, how they reach your account and how to buy them safely.",
+    "subtitle": "What R6 Credits are, what they cost, how they reach your account and how to buy them safely.",
     "what_is": {
       "heading": "What Are R6 Credits?",
       "text": "R6 Credits are the money you buy for Rainbow Six Siege X. You spend them on the Battle Pass, new operators and skins, and some shop items are Credit-only."
     },
     "savings": {
-      "heading": "How Much Do You Save on R6 Credits?",
-      "text": "The official store sells R6 Credits at fixed prices. Sellers here set their own, and many charge less for the same Credits.",
+      "heading": "R6 Credits Prices",
+      "text": "Official pack prices next to the lowest price from sellers here.",
       "amounts": [
         600,
         1200,
