@@ -1,0 +1,81 @@
+import { describe, it, expect } from 'vitest'
+import { buildGameHome } from './build'
+import type { GameHomeData } from '../types'
+
+const card = (over: Partial<GameHomeData['cards'][number]>) => ({
+  id: 'c1',
+  name: 'Pets',
+  slug: 'buy-pets',
+  type: 'items',
+  href: '/adopt-me/buy-pets',
+  icon: '/icons/categories/items.svg',
+  count: 0,
+  fromLabel: null,
+  avgDelivery: null,
+  isCurrency: false,
+  ...over,
+})
+
+const offer = (id: string, price: number) =>
+  ({
+    id,
+    pricePerUnit: price,
+    recommended: 0,
+    listingSales: 0,
+    stock: 1,
+    seller: { sales: 0, ratingPercent: null },
+  }) as unknown as GameHomeData['offers']['items'][number]
+
+function data(over: Partial<GameHomeData> = {}): GameHomeData {
+  return {
+    game: { id: 'g', name: 'Adopt Me', slug: 'adopt-me', description: null, image_url: null },
+    categories: [],
+    cards: [],
+    spotlight: null,
+    currency: { iconUrl: null, accent: null },
+    stats: {},
+    offers: { items: [], accounts: [] },
+    faq: [],
+    trademark: 'tm',
+    ...over,
+  }
+}
+
+describe('buildGameHome', () => {
+  it('names rows with the game and its item word', () => {
+    const items = card({ id: 'i', count: 2 })
+    const accounts = card({ id: 'a', name: 'Accounts', type: 'account', href: '/adopt-me/buy-accounts', count: 1 })
+    const m = buildGameHome(
+      data({ cards: [items, accounts], offers: { items: [offer('o1', 5)], accounts: [offer('o2', 9)] } }),
+    )
+    expect(m.topSelling.map((r) => r.title)).toEqual(['Top Selling Adopt Me Pets', 'Top Selling Adopt Me Accounts'])
+    expect(m.topSelling[0].seeAllHref).toBe('/adopt-me/buy-pets')
+  })
+
+  it('leaves out a row with no offers', () => {
+    const m = buildGameHome(data({ cards: [card({ id: 'i', count: 0 })] }))
+    expect(m.topSelling).toEqual([])
+  })
+
+  it('builds the hero facts from the cheapest non-currency price and the items delivery', () => {
+    const items = card({ id: 'i', count: 83 })
+    const robux = card({ id: 'r', type: 'currency', isCurrency: true, count: 10, name: 'Robux' })
+    const m = buildGameHome(
+      data({
+        cards: [robux, items],
+        spotlight: robux,
+        stats: {
+          i: { count: 83, lowPrice: 4.99, avgDeliveryLabel: '1 hour' },
+          r: { count: 10, lowPrice: 0.0052, avgDeliveryLabel: '15 minutes' },
+        },
+      }),
+    )
+    expect(m.hero.facts).toBe('93 Adopt Me offers from $4.99, delivered in about 1 hour.')
+    expect(m.currency?.name).toBe('Robux')
+  })
+
+  it('flags Opening Soon when the game has no categories', () => {
+    expect(buildGameHome(data()).openingSoon).toBe(true)
+    expect(buildGameHome(data({ cards: [card({})] })).openingSoon).toBe(false)
+  })
+})

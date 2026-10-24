@@ -40,6 +40,7 @@ const SCOPE_DIRS = [
   `${HUB}/chromas`, // Chroma hub (live Chroma + normal prices, events)
   `${HUB}/inventory`, // Inventory Worth (every priced item's live price)
   `${HUB}/boxes`, // Box Odds (live prices of every box item, events)
+  'src/features/game-home', // game home: Hot New + Price Moves read the value lists
 ]
 
 /** Single files outside those directories that read values data. */
@@ -48,7 +49,7 @@ const SCOPE_FILES = [
   'src/lib/values/data.ts',
   'src/lib/values/events.ts',
   'src/lib/blog/item-catalog.ts', // blog table pictures (value items named in a post's tables)
-  `${HUB}/page.tsx`, // the SAB landing's top-values carousel
+  `${HUB}/page.tsx`, // the game home route (its values sections load through features/game-home)
 ]
 
 /**
@@ -69,10 +70,14 @@ const ANON_ALLOWED: Record<string, { count: number; reason: string }> = {
     reason: "searchCatalog: the admin editor's item search (one query per keystroke, never cached); the article's read is tagged",
   },
   [`${HUB}/page.tsx`]: {
-    count: 3,
+    count: 2,
     reason:
-      'games / game_categories / category_configs rows — its marketplace listing reads use the ' +
-      'listing read clients (listings-data-tags.guard); its one price read (getSabTopValues) is tagged',
+      'generateStaticParams (games slugs) + the metadata curated-currency check (category_configs); ' +
+      'its listing reads use the listing read clients (listings-data-tags.guard)',
+  },
+  'src/features/game-home/load/game.ts': {
+    count: 1,
+    reason: 'getGameData: the games row + game_categories + category_configs — not values data',
   },
 }
 
