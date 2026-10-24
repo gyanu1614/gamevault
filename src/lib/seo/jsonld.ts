@@ -15,7 +15,7 @@
 
 import React from 'react'
 import { SITE_URL } from '@/config/site'
-import { DISCORD_INVITE_URL } from '@/lib/config/social'
+import { BRAND_PROFILES, DISCORD_INVITE_URL } from '@/lib/config/social'
 import { COMPANY, COMPANY_REGISTER_URL } from '@/lib/config/company'
 import { TRUSTPILOT_PROFILE_URL } from '@/lib/trustpilot/links'
 
@@ -56,14 +56,17 @@ export const ORGANIZATION_ID = `${SITE_URL}/#organization`
 export const SITE_ALTERNATE_NAMES: readonly string[] = ['Drop Market']
 
 /**
- * Profiles that are provably DropMarket's — the Organization's `sameAs`. Only
- * add one we control: Google joins every sameAs into the brand entity.
+ * Profiles that are provably DropMarket's — the Organization's `sameAs`: our
+ * social profiles (BRAND_PROFILES, the same list the footers show), Discord,
+ * Trustpilot. Only add one we control: Google joins every sameAs into the
+ * brand entity.
  * (Crawl audit 2026-10-23: github.com/dropmarket is another business,
  * "Drop-Market.com", created 2024; x.com/dropmarket is not ours either —
  * owner, 2026-10-23. Both were removed.) The company register entry ties the
  * brand to the registered company.
  */
 export const ORGANIZATION_SAME_AS: readonly string[] = [
+  ...BRAND_PROFILES.map((p) => p.url),
   DISCORD_INVITE_URL,
   TRUSTPILOT_PROFILE_URL,
   COMPANY_REGISTER_URL,

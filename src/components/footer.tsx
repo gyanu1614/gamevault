@@ -21,7 +21,12 @@ import { CookieSettingsButton } from '@/components/analytics/ConsentBanner'
 import Link from '@/components/navigation/AppLink'
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { DISCORD_INVITE_URL } from '@/lib/config/social'
+import { BRAND_PROFILES, DISCORD_INVITE_URL, type BrandProfileKey } from '@/lib/config/social'
+import { XLogoIcon } from '@phosphor-icons/react/dist/csr/XLogo'
+import { YoutubeLogoIcon } from '@phosphor-icons/react/dist/csr/YoutubeLogo'
+import { TiktokLogoIcon } from '@phosphor-icons/react/dist/csr/TiktokLogo'
+import { RedditLogoIcon } from '@phosphor-icons/react/dist/csr/RedditLogo'
+import { LinkedinLogoIcon } from '@phosphor-icons/react/dist/csr/LinkedinLogo'
 import { COMPANY, COMPANY_REGISTERED_OFFICE } from '@/lib/config/company'
 import { foundingHref } from '@/lib/seo/founding-href'
 
@@ -29,6 +34,17 @@ import { foundingHref } from '@/lib/seo/founding-href'
 
 // One source with the legal pages and the Organization JSON-LD (lib/config/company).
 
+
+/* Our social profiles (lib/config/social BRAND_PROFILES — the same list the
+   Organization JSON-LD sameAs carries). Discord has its own button in the
+   support row. */
+const PROFILE_ICON: Record<BrandProfileKey, typeof XLogoIcon> = {
+  x: XLogoIcon,
+  youtube: YoutubeLogoIcon,
+  tiktok: TiktokLogoIcon,
+  reddit: RedditLogoIcon,
+  linkedin: LinkedinLogoIcon,
+}
 
 /* ── Link columns ── */
 
@@ -181,6 +197,25 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
               <dt>Registration No</dt>
               <dd>{COMPANY.companyNumber}</dd>
             </dl>
+
+            <ul aria-label="DropMarket on social media" className="mt-5 flex flex-wrap gap-2">
+              {BRAND_PROFILES.map((p) => {
+                const Icon = PROFILE_ICON[p.key]
+                return (
+                  <li key={p.key}>
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`DropMarket on ${p.name}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-[rgba(233,237,242,0.06)] text-text-secondary transition-colors hover:bg-[rgba(233,237,242,0.09)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                    >
+                      <Icon size={17} weight="fill" aria-hidden />
+                    </a>
+                  </li>
+                )
+              })}
+            </ul>
 
           </motion.div>
 

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { ORGANIZATION_ID, ORGANIZATION_SAME_AS, SITE_ALTERNATE_NAMES, organization } from '@/lib/seo/jsonld'
 import { LEGAL_ENTITY } from '@/lib/legal/documents'
-import { DISCORD_INVITE_URL } from '@/lib/config/social'
+import { BRAND_PROFILES, DISCORD_INVITE_URL } from '@/lib/config/social'
 import { TRUSTPILOT_PROFILE_URL } from '@/lib/trustpilot/links'
 
 // Crawl audit 2026-10-23 (docs/handoff/seo-crawl-audit-2026-10-23.md): the
@@ -13,14 +13,30 @@ describe('Organization JSON-LD', () => {
 
   it('claims only profiles DropMarket controls', () => {
     expect(org.sameAs).toEqual([
+      ...BRAND_PROFILES.map((p) => p.url),
       DISCORD_INVITE_URL,
       TRUSTPILOT_PROFILE_URL,
       'https://find-and-update.company-information.service.gov.uk/company/17309867',
     ])
     for (const url of org.sameAs) {
       // github.com/dropmarket is "Drop-Market.com" (another business, 2024);
-      // the X/Twitter "dropmarket" handle is not ours (owner, 2026-10-23).
-      expect(url).not.toMatch(/github\.com|twitter\.com|x\.com/)
+      // the X/Twitter "dropmarket" handle is not ours — ours is DropMarketGG.
+      expect(url).not.toMatch(/github\.com|twitter\.com|x\.com\/dropmarket$/i)
+    }
+  })
+
+  // Owner, 2026-10-23: X, YouTube, TikTok, Reddit, LinkedIn — one list for the markup and the footers.
+  it('lists our own social profiles, and both footers show the same list', () => {
+    expect(BRAND_PROFILES.map((p) => p.url)).toEqual([
+      'https://x.com/DropMarketGG',
+      'https://www.youtube.com/channel/UC6LfJK7uWhLosH61K14KdVw',
+      'https://www.tiktok.com/@dropmarket.gg',
+      'https://www.reddit.com/user/dropmarketgg',
+      'https://www.linkedin.com/company/dropmarketgg',
+    ])
+    const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8')
+    for (const f of ['src/components/footer.tsx', 'src/components/content/HubFooter.tsx']) {
+      expect(read(f), f).toMatch(/BRAND_PROFILES\.map\(/)
     }
   })
 
