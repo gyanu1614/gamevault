@@ -21,6 +21,12 @@ import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import Image from 'next/image'
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo'
 import { EnvelopeSimpleIcon } from '@phosphor-icons/react/dist/ssr/EnvelopeSimple'
+import { XLogoIcon } from '@phosphor-icons/react/dist/ssr/XLogo'
+import { YoutubeLogoIcon } from '@phosphor-icons/react/dist/ssr/YoutubeLogo'
+import { TiktokLogoIcon } from '@phosphor-icons/react/dist/ssr/TiktokLogo'
+import { RedditLogoIcon } from '@phosphor-icons/react/dist/ssr/RedditLogo'
+import { LinkedinLogoIcon } from '@phosphor-icons/react/dist/ssr/LinkedinLogo'
+import { BRAND_PROFILES, type BrandProfileKey } from '@/lib/config/social'
 
 const LEGAL = [
   { name: 'Terms', href: '/terms' },
@@ -36,11 +42,18 @@ const LEGAL = [
 const SUPPORT_EMAIL = 'support@dropmarket.gg'
 
 /* Brand socials — Phosphor logo glyphs (no hand-drawn SVG paths). Only
-   profiles we own (the Organization sameAs list in lib/seo/jsonld.ts):
-   the old Twitter link went to a handle that is not ours (owner,
-   2026-10-23). */
+   profiles we own: Discord + BRAND_PROFILES, the list the Organization sameAs
+   reads too (lib/config/social). */
+const PROFILE_ICON: Record<BrandProfileKey, typeof DiscordLogoIcon> = {
+  x: XLogoIcon,
+  youtube: YoutubeLogoIcon,
+  tiktok: TiktokLogoIcon,
+  reddit: RedditLogoIcon,
+  linkedin: LinkedinLogoIcon,
+}
 const SOCIALS: Array<{ name: string; href: string; Icon: typeof DiscordLogoIcon }> = [
   { name: 'Discord', href: DISCORD_INVITE_URL, Icon: DiscordLogoIcon },
+  ...BRAND_PROFILES.map((p) => ({ name: p.name, href: p.url, Icon: PROFILE_ICON[p.key] })),
 ]
 
 /* Fill-only icon chip (VALUE_BTN_SECONDARY's fill, no outline). */
@@ -147,14 +160,14 @@ export function HubFooter({
             </p>
 
             {/* Socials + direct support — the professional bit. */}
-            <div className="mt-5 flex items-center gap-2.5">
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
               {SOCIALS.map(({ name, href, Icon }) => (
                 <a
                   key={name}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={name}
+                  aria-label={`DropMarket on ${name}`}
                   className={`${CHIP} w-9`}
                 >
                   <Icon size={18} weight="fill" aria-hidden />
