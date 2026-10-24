@@ -130,7 +130,7 @@ export default async function GameHomePage({ params }: PageProps) {
   const game = await getGameData(gameSlug)
   if (!game) notFound()
 
-  const model = buildGameHome(await loadGameHome(game))
+  const model = buildGameHome(await loadGameHome(game), Date.now())
 
   return (
     <GameHeroBackdrop gameSlug={gameSlug} size="market">

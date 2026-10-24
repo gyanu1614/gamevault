@@ -16,6 +16,8 @@ const card = (over: Partial<GameHomeData['cards'][number]>) => ({
   ...over,
 })
 
+const NOW = Date.UTC(2026, 9, 23, 12)
+
 const offer = (id: string, price: number) =>
   ({
     id,
@@ -37,6 +39,7 @@ function data(over: Partial<GameHomeData> = {}): GameHomeData {
     offers: { items: [], accounts: [] },
     faq: [],
     trademark: 'tm',
+    values: null,
     ...over,
   }
 }
@@ -47,13 +50,14 @@ describe('buildGameHome', () => {
     const accounts = card({ id: 'a', name: 'Accounts', type: 'account', href: '/adopt-me/buy-accounts', count: 1 })
     const m = buildGameHome(
       data({ cards: [items, accounts], offers: { items: [offer('o1', 5)], accounts: [offer('o2', 9)] } }),
+      NOW,
     )
     expect(m.topSelling.map((r) => r.title)).toEqual(['Top Selling Adopt Me Pets', 'Top Selling Adopt Me Accounts'])
     expect(m.topSelling[0].seeAllHref).toBe('/adopt-me/buy-pets')
   })
 
   it('leaves out a row with no offers', () => {
-    const m = buildGameHome(data({ cards: [card({ id: 'i', count: 0 })] }))
+    const m = buildGameHome(data({ cards: [card({ id: 'i', count: 0 })] }), NOW)
     expect(m.topSelling).toEqual([])
   })
 
@@ -69,13 +73,29 @@ describe('buildGameHome', () => {
           r: { count: 10, lowPrice: 0.0052, avgDeliveryLabel: '15 minutes' },
         },
       }),
+      NOW,
     )
     expect(m.hero.facts).toBe('93 Adopt Me offers from $4.99, delivered in about 1 hour.')
     expect(m.currency?.name).toBe('Robux')
   })
 
   it('flags Opening Soon when the game has no categories', () => {
-    expect(buildGameHome(data()).openingSoon).toBe(true)
-    expect(buildGameHome(data({ cards: [card({})] })).openingSoon).toBe(false)
+    expect(buildGameHome(data(), NOW).openingSoon).toBe(true)
+    expect(buildGameHome(data({ cards: [card({})] }), NOW).openingSoon).toBe(false)
+  })
+
+  it('shows Hot New only for a values game with new items, linking the value list and the sell page', () => {
+    expect(buildGameHome(data(), NOW).hotNew).toBeNull()
+    const values = {
+      items: [{ slug: 'boohoo', name: 'Boohoo', imageUrl: null, href: '/adopt-me/values/boohoo', isNew: true, trendPct: null, trendLabel: null, valueUsd: null }],
+      stock: {},
+      buyHref: {},
+      minPrice: {},
+      updatedAt: null,
+    }
+    const m = buildGameHome(data({ values }), NOW)
+    expect(m.hotNew).toMatchObject({ title: 'Hot New Adopt Me Pets', allHref: '/adopt-me/values?view=new', sellHref: '/adopt-me/sell' })
+    expect(m.hotNew?.cards.map((c) => c.slug)).toEqual(['boohoo'])
+    expect(buildGameHome(data({ values: { ...values, items: [{ ...values.items[0], isNew: false }] } }), NOW).hotNew).toBeNull()
   })
 })

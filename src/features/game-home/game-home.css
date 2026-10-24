@@ -42,6 +42,16 @@
       animation-timeline: --gh-steps;
       animation-range: entry 10% cover 60%;
     }
+
+    /* Card rows (Hot New, …): the row is the timeline, cards rise in turn. */
+    .gh-reveal-group {
+      view-timeline: --gh-row block;
+    }
+    .gh-reveal {
+      animation: gh-rise linear both;
+      animation-timeline: --gh-row;
+      animation-range: entry calc(5% + var(--gh-i, 0) * 4%) cover calc(22% + var(--gh-i, 0) * 4%);
+    }
   }
 }
 

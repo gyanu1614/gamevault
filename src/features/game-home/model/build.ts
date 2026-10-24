@@ -5,14 +5,32 @@
  * and GameHome leaves it out.
  */
 import { hubPitch, pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
-import type { GameHomeData, GameHomeModel, OfferRowModel } from '../types'
+import type { GameHomeData, GameHomeModel, HotNewModel, OfferRowModel } from '../types'
 import { heroFacts } from './hero'
+import { pickHotNew } from './hot-new'
 import { itemNoun, itemNounSingular } from './item-noun'
 
 /** Offers per Top Selling row (the rail scrolls; See All goes to the category). */
 const ROW_LIMIT = 12
 
-export function buildGameHome(data: GameHomeData): GameHomeModel {
+function buildHotNew({ game, values }: GameHomeData, noun: string, now: number): HotNewModel | null {
+  if (!values) return null
+  const cards = pickHotNew(values, now)
+  if (cards.length === 0) return null
+  return {
+    title: `Hot New ${game.name} ${noun}`,
+    // The value lists open on their New view from ?view=new (read client-side).
+    allHref: `/${game.slug}/values?view=new`,
+    sellHref: `/${game.slug}/sell`,
+    cards,
+  }
+}
+
+/**
+ * `now` seeds the daily orders (Hot New): the page re-renders on every listing
+ * change and at least every 24 h (its ISR window), so the order moves daily.
+ */
+export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
   const { game, cards, spotlight, stats, offers } = data
   const noun = itemNoun(game.slug)
   const itemsCard = cards.find((c) => c.type === 'items') ?? null
@@ -63,6 +81,7 @@ export function buildGameHome(data: GameHomeData): GameHomeModel {
       : null,
     topSelling,
     openingSoon: cards.length === 0,
+    hotNew: buildHotNew(data, noun, now),
     faq: data.faq,
     trademark: data.trademark,
   }

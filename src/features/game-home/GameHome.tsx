@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import type { GameHomeModel } from './types'
 import { Hero } from './sections/Hero'
 import { HowBuying } from './sections/HowBuying'
+import { HotNew } from './sections/HotNew'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
 
@@ -65,6 +66,8 @@ export function GameHome({ model }: { model: GameHomeModel }) {
         ))}
 
         <HowBuying gameName={gameName} itemNoun={model.itemNoun} itemNounSingular={model.itemNounSingular} />
+
+        {model.hotNew && <HotNew model={model.hotNew} gameName={gameName} />}
 
         <FaqSection title={`${gameName} Marketplace FAQ`} items={model.faq} />
       </div>

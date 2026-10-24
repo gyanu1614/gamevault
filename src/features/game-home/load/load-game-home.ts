@@ -10,6 +10,7 @@ import { getHubCategoryStats, getHubCurrency, getHubOffers } from '@/app/(market
 import { buildHubCards, splitCards, type HubCategory } from '@/app/(marketplace)/[gameSlug]/_hubModel'
 import type { GameHomeData } from '../types'
 import type { GameData } from './game'
+import { getValuesFeed } from './values-feed'
 
 const NO_CURRENCY = { iconUrl: null, unitSuffix: null, unitsPerPrice: null }
 
@@ -23,10 +24,11 @@ export async function loadGameHome(game: GameData): Promise<GameHomeData> {
   const categories = (game.categories ?? []) as HubCategory[]
   const hasCurrency = categories.some((c) => c.type === 'currency')
 
-  const [stats, currency, offers] = await Promise.all([
+  const [stats, currency, offers, values] = await Promise.all([
     getHubCategoryStats(game.id, categories),
     hasCurrency ? getHubCurrency(game.slug) : Promise.resolve(NO_CURRENCY),
     getHubOffers(game.id, categories),
+    getValuesFeed(game.slug),
     // Anchor this render to every category's listings tag (no-op reads), so
     // revalidateListingSurfaces refreshes the page with its category pages.
     Promise.all(categories.map((c) => bindCategoryListingsTag(c.id))),
@@ -72,5 +74,6 @@ export async function loadGameHome(game: GameData): Promise<GameHomeData> {
     offers,
     faq,
     trademark: gameTrademarkLine(game.name, { currency: spotlight?.name, owner: guide?.trademark_owner }),
+    values,
   }
 }
