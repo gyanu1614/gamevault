@@ -37,7 +37,7 @@ export function Hero({ hero }: { hero: HeroModel }) {
       <p className="mt-3 max-w-2xl text-balance text-[15px] leading-relaxed text-[#C9CDC6] sm:text-[17px]">{hero.pitch}</p>
 
       {hero.facts && (
-        <p className="mt-2 text-[13.5px] font-medium tabular-nums text-text-secondary sm:text-[14.5px]">{hero.facts}</p>
+        <p className="mt-2 max-w-2xl text-balance text-[13.5px] font-medium tabular-nums text-text-secondary sm:text-[14.5px]">{hero.facts}</p>
       )}
     </header>
   )

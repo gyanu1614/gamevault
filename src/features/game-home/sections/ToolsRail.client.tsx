@@ -43,7 +43,7 @@ function Tile({ tile, art }: { tile: ToolTile; art: string[] }) {
       <span className="relative mt-auto flex items-end justify-between gap-3 pt-5">
         <span
           className={cn(
-            'inline-flex items-center gap-1.5 text-[13.5px] font-semibold',
+            'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[13.5px] font-semibold',
             tile.featured ? 'h-10 rounded-md bg-[#ECEEEA] px-4 font-extrabold text-[#0F1012]' : 'text-text-secondary group-hover:text-text-primary',
           )}
         >
@@ -54,7 +54,7 @@ function Tile({ tile, art }: { tile: ToolTile; art: string[] }) {
           <span aria-hidden className="flex">
             {art.map((src, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={src} src={src} alt="" width={72} height={72} loading="lazy" decoding="async" className={cn('h-[72px] w-[72px] object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)]', i > 0 && '-ml-4')} />
+              <img key={src} src={src} alt="" width={72} height={72} loading="lazy" decoding="async" className={cn('h-14 w-14 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)] sm:h-[72px] sm:w-[72px]', i > 0 && '-ml-4')} />
             ))}
           </span>
         )}

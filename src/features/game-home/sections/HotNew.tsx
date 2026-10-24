@@ -73,7 +73,7 @@ function Card({ card, sellHref, index }: { card: HotNewCard; sellHref: string; i
               href={card.valueHref}
               className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
             >
-              Value And How To Get
+              How To Get
               <ArrowRightIcon size={12} weight="bold" aria-hidden />
             </Link>
           )}

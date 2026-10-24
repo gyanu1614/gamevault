@@ -40,7 +40,8 @@ export function SectionHeading({
         <h2 id={id} className="text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]">
           {title}
         </h2>
-        {sub && <p className="mt-1 truncate text-[13.5px] text-text-secondary sm:text-[14.5px]">{sub}</p>}
+        {/* One line or nothing: phones drop the sub rather than wrap or cut it (ui-section rules). */}
+        {sub && <p className="mt-1 hidden truncate text-[14.5px] text-text-secondary sm:block">{sub}</p>}
       </div>
       {action && (
         <Link
