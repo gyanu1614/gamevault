@@ -17,6 +17,7 @@ import { MARKET_CARD } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import type { GameHomeModel } from './types'
 import { Hero } from './sections/Hero'
+import { HowBuying } from './sections/HowBuying'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
 
@@ -62,6 +63,8 @@ export function GameHome({ model }: { model: GameHomeModel }) {
         {model.topSelling.map((row) => (
           <OfferRail key={row.title} title={row.title} seeAllHref={row.seeAllHref} offers={row.offers} gameSlug={gameSlug} gameName={gameName} />
         ))}
+
+        <HowBuying gameName={gameName} itemNoun={model.itemNoun} itemNounSingular={model.itemNounSingular} />
 
         <FaqSection title={`${gameName} Marketplace FAQ`} items={model.faq} />
       </div>
