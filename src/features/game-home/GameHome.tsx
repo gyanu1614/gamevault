@@ -17,6 +17,7 @@ import { Hero } from './sections/Hero'
 import { HowBuying } from './sections/HowBuying'
 import { HotNew } from './sections/HotNew'
 import { StartSelling } from './sections/StartSelling'
+import { PriceMoves } from './sections/PriceMoves'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
 
@@ -49,6 +50,8 @@ export function GameHome({ model }: { model: GameHomeModel }) {
         {model.hotNew && <HotNew model={model.hotNew} gameName={gameName} />}
 
         <StartSelling model={model.startSelling} />
+
+        {model.priceMoves && <PriceMoves model={model.priceMoves} />}
 
         <FaqSection title={`${gameName} Marketplace FAQ`} items={model.faq} />
       </div>

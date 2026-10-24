@@ -5,13 +5,30 @@
  * and GameHome leaves it out.
  */
 import { hubPitch, pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
-import type { GameHomeData, GameHomeModel, HotNewModel, OfferRowModel } from '../types'
+import type { GameHomeData, GameHomeModel, HotNewModel, OfferRowModel, PriceMovesModel } from '../types'
 import { heroFacts } from './hero'
 import { pickHotNew } from './hot-new'
+import { pickMovers } from './movers'
 import { itemNoun, itemNounSingular } from './item-noun'
 
 /** Offers per Top Selling row (the rail scrolls; See All goes to the category). */
 const ROW_LIMIT = 12
+
+function buildPriceMoves({ game, values }: GameHomeData): PriceMovesModel | null {
+  if (!values) return null
+  const moves = pickMovers(values.items)
+  if (!moves) return null
+  const updated = values.updatedAt ? new Date(values.updatedAt) : null
+  return {
+    title: `Biggest ${game.name} Price Moves This Week`,
+    listHref: `/${game.slug}/values`,
+    updatedLabel:
+      updated && !Number.isNaN(updated.getTime())
+        ? `Prices updated ${updated.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`
+        : 'Updated daily',
+    ...moves,
+  }
+}
 
 function buildHotNew({ game, values }: GameHomeData, noun: string, now: number): HotNewModel | null {
   if (!values) return null
@@ -81,6 +98,7 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
       : null,
     topSelling,
     hotNew: buildHotNew(data, noun, now),
+    priceMoves: buildPriceMoves(data),
     startSelling: {
       gameSlug: game.slug,
       gameName: game.name,

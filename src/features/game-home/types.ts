@@ -6,6 +6,9 @@
  */
 import type { HubCard, HubCategory, HubCategoryStat } from '@/app/(marketplace)/[gameSlug]/_hubModel'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
+import type { MoverRow } from './model/movers'
+
+export type { MoverRow }
 
 export interface GameRow {
   id: string
@@ -109,6 +112,15 @@ export interface OfferRowModel {
   offers: ItemOffer[]
 }
 
+export interface PriceMovesModel {
+  title: string
+  listHref: string
+  /** "Prices updated Oct 23" from real data, else "Updated daily". */
+  updatedLabel: string
+  rising: MoverRow[]
+  falling: MoverRow[]
+}
+
 export interface StartSellingModel {
   gameSlug: string
   gameName: string
@@ -131,6 +143,8 @@ export interface GameHomeModel {
   /** Hot New {Game} {Items}, or null without new items. */
   hotNew: HotNewModel | null
   startSelling: StartSellingModel
+  /** Biggest Price Moves, or null for a game without trends. */
+  priceMoves: PriceMovesModel | null
   faq: { q: string; a: string }[]
   trademark: string
 }
