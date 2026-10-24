@@ -153,9 +153,11 @@ describe('fee engine — marketing copy carries no seller-fee number', () => {
     const numbers = text.match(PCT_RE) ?? []
     expect(numbers, 'only the marketplace fee is a literal').toEqual(['2%'])
     expect(text).not.toMatch(/5%|processing fee of the greater/i)
-    const page = read('src/app/(legal)/fees/page.tsx')
-    expect(page).toMatch(/getPublicBuyerFees\(/)
-    expect(page).toMatch(/buyerFeeTableBlock\(/)
+    // The redesigned page (2026-10-23) shows every method's fee from THE quote
+    // and its terms from the fee rows, both through one cached read.
+    const page = read('src/app/(marketing)/fees/page.tsx')
+    expect(page).toMatch(/getBuyerFeeOverview\(/)
+    expect(read('src/lib/fees/buyer-fee-overview.ts')).toMatch(/buyer_fee_quote_many/)
   })
 
   // Checkout B4: the buyer-side line lives on the SAME surfaces as the seller

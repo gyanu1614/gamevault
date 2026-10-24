@@ -1,6 +1,7 @@
 /**
- * The ONE layout every legal document renders through (all 17 routes under
- * src/app/(legal) call it with a LegalDoc from src/lib/legal/documents.ts).
+ * The ONE layout every legal document renders through (the routes under
+ * src/app/(legal) call it with a LegalDoc from src/lib/legal/documents.ts;
+ * /fees renders from (marketing) with its document's fee terms at the bottom).
  *
  * Structure follows how mature marketplaces and GOV.UK present legal text:
  *   - Document header: title, summary, effective date / last updated +
