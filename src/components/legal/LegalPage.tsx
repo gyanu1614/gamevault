@@ -36,7 +36,9 @@ import { LegalBlockView } from './LegalBlocks'
 import { LegalToc } from './LegalToc'
 import { CopySectionLink, PrintButton } from './LegalActions'
 import { buildLegalToc, type LegalTocEntry } from './toc'
-import { groupedLegalDocs, legalDocHref, relatedLegalDocs } from './legal-nav'
+import { groupedLegalDocs, legalDocHref, legalPageParts, partAnchor, relatedLegalDocs } from './legal-nav'
+import { KEY_POINTS } from '@/lib/legal/key-points'
+import type { LegalSection } from '@/lib/legal/documents'
 
 /** Under the navbar (its height + any announcement banner) with a little air. */
 const STICKY_TOP = 'top-[calc(var(--navbar-bottom)+24px)]'
@@ -122,12 +124,14 @@ function DocIndex({ currentSlug, compact = false }: { currentSlug: string; compa
   )
 }
 
-function SectionHeading({ entry }: { entry: LegalTocEntry }) {
+function SectionHeading({ entry, level = 2 }: { entry: LegalTocEntry; level?: 2 | 3 }) {
+  const H = level === 2 ? 'h2' : 'h3'
   return (
-    <h2
+    <H
       id={entry.id}
       className={cn(
-        'group/heading flex items-start text-[19px] font-semibold leading-snug tracking-[-0.01em] text-text-primary sm:text-[21px]',
+        'group/heading flex items-start font-semibold leading-snug tracking-[-0.01em] text-text-primary',
+        level === 2 ? 'text-[19px] sm:text-[21px]' : 'text-[17px] sm:text-[18px]',
         ANCHOR_OFFSET,
       )}
     >
@@ -136,14 +140,76 @@ function SectionHeading({ entry }: { entry: LegalTocEntry }) {
         {entry.label}
       </span>
       <CopySectionLink id={entry.id} label={entry.label} />
-    </h2>
+    </H>
+  )
+}
+
+/** Words a reader works through, for the "min read" line (BIT 2019: showing reading time raised opens). */
+function wordCount(sections: readonly LegalSection[]): number {
+  return JSON.stringify(sections.map((sec) => [sec.h, sec.blocks])).replace(/[^A-Za-z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean).length
+}
+
+/** The sections of one document, numbered headings as anchors (a part's ids carry its slug). */
+function DocSections({ sections, idPrefix = '', level = 2 }: { sections: readonly LegalSection[]; idPrefix?: string; level?: 2 | 3 }) {
+  const toc = buildLegalToc(sections).map((e) => ({ ...e, id: idPrefix + e.id }))
+  const bySection = new Map(toc.map((e) => [e.sectionIndex, e]))
+  return (
+    <>
+      {sections.map((section, i) => {
+        const entry = bySection.get(i)
+        return (
+          <section
+            key={i}
+            aria-labelledby={entry?.id}
+            className={cn('space-y-4', i > 0 && entry && 'border-t border-white/[0.07] pt-10 print:border-black/20')}
+          >
+            {entry && <SectionHeading entry={entry} level={level} />}
+            {section.blocks.map((block, j) => (
+              <LegalBlockView key={j} block={block} />
+            ))}
+          </section>
+        )
+      })}
+    </>
+  )
+}
+
+/**
+ * Key Points: questions and answers above the document, marked as a summary
+ * (lib/legal/key-points). Always open: collapsed summaries lowered
+ * understanding in the UK government's tests.
+ */
+function KeyPoints({ points }: { points: readonly { q: string; a: string }[] }) {
+  return (
+    <section aria-labelledby="key-points" className="mt-8 rounded-lg bg-bg-raised p-5 sm:p-6 print:bg-transparent print:p-0">
+      <h2 id="key-points" className="text-[17px] font-semibold text-text-primary">
+        Key Points
+      </h2>
+      <p className="mt-1 text-[13px] leading-relaxed text-text-tertiary">
+        A plain summary to help you read this page. It is not part of the terms; the full text below is what applies.
+      </p>
+      <dl className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+        {points.map((p) => (
+          <div key={p.q}>
+            <dt className="text-[14.5px] font-semibold text-text-primary">{p.q}</dt>
+            <dd className="mt-1 text-[14px] leading-relaxed text-text-secondary">{p.a}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   )
 }
 
 export function LegalPage({ doc }: { doc: LegalDoc }) {
-  const toc = buildLegalToc(doc.sections)
-  const tocBySection = new Map(toc.map((e) => [e.sectionIndex, e]))
+  const parts = legalPageParts(doc.slug)
+  // The page contents: the document's own headings, then one entry per part.
+  const toc: LegalTocEntry[] = [
+    ...buildLegalToc(doc.sections),
+    ...parts.map((part, i) => ({ id: partAnchor(part.slug), number: null, label: part.title, sectionIndex: -1 - i })),
+  ]
   const hasToc = toc.length >= 2
+  const keyPoints = KEY_POINTS[doc.slug]
+  const minutes = Math.max(1, Math.round((wordCount(doc.sections) + parts.reduce((n, part) => n + wordCount(part.sections), 0)) / 230))
   const related = relatedLegalDocs(doc.slug)
   const href = legalDocHref(doc.slug)
 
@@ -185,6 +251,10 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
                 {href}
               </p>
               <p className="mt-4 text-[15px] leading-relaxed text-text-secondary print:hidden">{doc.description}</p>
+              <p className="mt-2 text-[13px] text-text-tertiary print:hidden">
+                {minutes} min read
+                {parts.length > 0 && <> · Includes {parts.map((part) => part.title).join(', ')}</>}
+              </p>
 
               <dl className="mt-6 grid divide-y divide-white/[0.07] rounded-lg bg-bg-raised sm:grid-cols-3 sm:divide-x sm:divide-y-0 print:grid-cols-3 print:divide-none print:bg-transparent">
                 <MetaItem
@@ -214,6 +284,8 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
               </p>
             </header>
 
+            {keyPoints && <KeyPoints points={keyPoints} />}
+
             {hasToc && (
               <div className="mt-6 lg:hidden">
                 <LegalToc entries={toc} variant="disclosure" />
@@ -222,22 +294,31 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
 
             {/* ── Body ────────────────────────────────────────────────── */}
             <div className="mt-10 space-y-10">
-              {doc.sections.map((section, i) => {
-                const entry = tocBySection.get(i)
-                return (
-                  <section
-                    key={i}
-                    aria-labelledby={entry?.id}
-                    className={cn('space-y-4', i > 0 && entry && 'border-t border-white/[0.07] pt-10 print:border-black/20')}
-                  >
-                    {entry && <SectionHeading entry={entry} />}
-                    {section.blocks.map((block, j) => (
-                      <LegalBlockView key={j} block={block} />
-                    ))}
-                  </section>
-                )
-              })}
+              <DocSections sections={doc.sections} />
             </div>
+
+            {/* ── Parts: documents read on this page, wording and numbering unchanged ── */}
+            {parts.map((part) => (
+              <section
+                key={part.slug}
+                aria-labelledby={partAnchor(part.slug)}
+                className="mt-16 border-t-2 border-white/[0.12] pt-12 print:border-black/30"
+              >
+                <h2
+                  id={partAnchor(part.slug)}
+                  className={cn('text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary sm:text-[28px]', ANCHOR_OFFSET)}
+                >
+                  {part.title}
+                </h2>
+                <p className="mt-3 text-[14.5px] leading-relaxed text-text-secondary">{part.description}</p>
+                <p className="mt-2 text-[13px] text-text-tertiary">
+                  Last updated {part.lastUpdated ?? LEGAL_ENTITY.lastUpdated} · {part.version ?? LEGAL_ENTITY.version}
+                </p>
+                <div className="mt-8 space-y-10">
+                  <DocSections sections={part.sections} idPrefix={`${part.slug}-`} level={3} />
+                </div>
+              </section>
+            ))}
 
             {/* ── Contact for legal queries ───────────────────────────── */}
             <aside

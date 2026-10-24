@@ -72,7 +72,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     links: [
       { label: 'How Refunds Are Paid', href: REFUNDS_ANCHORS.paid },
       { label: 'Fees & Charges', href: '/fees' },
-      { label: 'Chargebacks', href: '/chargebacks' },
+      { label: 'Chargebacks', href: '/refunds#part-chargebacks' },
     ],
     keywords: ['refund', 'money back', 'payment', 'pay', 'fee', 'charge', 'card', 'crypto', 'store credit', 'balance'],
   },
@@ -82,8 +82,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     summary: 'Item Guaranteed or Full Refund — what every order is covered for, and what is not.',
     links: [
       { label: 'How SafeDrop Works', href: '/safedrop' },
-      { label: 'SafeDrop Protection Terms', href: '/safedrop-policy' },
-      { label: 'Buyer Terms', href: '/buyer-terms' },
+      { label: 'SafeDrop Protection Terms', href: '/refunds#part-safedrop' },
+      { label: 'Buyer Terms', href: '/terms#part-buyer-terms' },
     ],
     keywords: ['safe', 'protection', 'guarantee', 'covered', 'scam', 'trust'],
   },

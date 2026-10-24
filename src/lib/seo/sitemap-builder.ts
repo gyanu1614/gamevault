@@ -10,6 +10,7 @@ import {
   type SeoGateMode,
 } from '@/lib/games/indexability'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
+import { legalPageSlug } from '@/components/legal/legal-nav'
 import { valueItemHasPage } from '@/lib/values/hub-config'
 import { isEventIndexable } from '@/lib/values/events-model'
 import { freeGuideLastmod } from '@/lib/values/free-guide'
@@ -165,14 +166,19 @@ export function buildSitemapSections(input: SitemapInput): Map<SitemapSection, M
     { url: at('/founding'), ...dated(SITE_PAGES_UPDATED.founding), changeFrequency: 'monthly', priority: 0.7 },
   ]
 
-  // ── legal: one route per doc under src/app/(legal). `safedrop` is /safedrop-policy.
+  // ── legal: the /legal hub and one URL per page. A document shown as a part
+  // of another page (lib/legal-nav LEGAL_PARTS) has no URL of its own: its old
+  // one redirects to the host page's anchor.
   const legalUpdated = legalLastUpdatedIso()
-  const legalPages: Entry[] = LEGAL_DOCS.map((doc) => ({
-    url: at(doc.slug === 'safedrop' ? '/safedrop-policy' : `/${doc.slug}`),
-    ...dated(legalUpdated),
-    changeFrequency: 'monthly' as const,
-    priority: 0.3,
-  }))
+  const legalPages: Entry[] = [
+    { url: at('/legal'), ...dated(legalUpdated), changeFrequency: 'monthly' as const, priority: 0.4 },
+    ...LEGAL_DOCS.filter((doc) => legalPageSlug(doc.slug) === doc.slug).map((doc) => ({
+      url: at(`/${doc.slug}`),
+      ...dated(legalUpdated),
+      changeFrequency: 'monthly' as const,
+      priority: 0.3,
+    })),
+  ]
 
   // ── blog ──────────────────────────────────────────────────────────────────
   const newestPost = newest(...input.posts.map((p) => p.publishedAt))

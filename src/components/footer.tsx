@@ -52,27 +52,23 @@ const LINK_GROUPS: Array<{
   {
     title: 'Buying & Selling',
     links: [
-      // One SafeDrop entry, pointing at the POLICY: it is the binding
-      // document and the one PSP review looks for. The marketing page is
-      // reachable from it and from the buyer-steps section.
-      { name: 'SafeDrop Protection', href: '/safedrop-policy' },
+      // The refund policy, with the SafeDrop Protection Terms and the
+      // chargeback rules as parts of the same page (2026-10-23): the
+      // document a payment provider's review looks for first.
+      { name: 'Refunds & SafeDrop', href: '/refunds' },
       { name: 'Delivery', href: '/delivery' },
-      { name: 'Refunds & Disputes', href: '/refunds' },
       { name: 'Prohibited Items', href: '/prohibited' },
       { name: 'Trust & Safety', href: '/trust-safety' },
-      { name: 'Chargebacks', href: '/chargebacks' },
     ],
   },
   {
     title: 'Policies',
     links: [
-      { name: 'Buyer Terms', href: '/buyer-terms' },
+      { name: 'All Policies', href: '/legal' },
       { name: 'Seller Agreement', href: '/seller-agreement' },
       // Fee disclosure — kept reachable from every page (main's Legal column
       // carried it; this footer has no Legal column).
       { name: 'Fees & Charges', href: '/fees' },
-      { name: 'Acceptable Use', href: '/acceptable-use' },
-      { name: 'Risk Disclosure', href: '/risk' },
       { name: 'AML Policy', href: '/aml' },
     ],
   },

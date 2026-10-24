@@ -15,10 +15,12 @@ const ROOTS = [
   'src/app/(marketing)/about',
   'src/app/(marketing)/contact',
   'src/app/(marketing)/delivery',
+  'src/app/(marketing)/legal',
+  'src/app/(marketing)/fees',
   'src/app/blog',
   'src/app/browse',
 ]
-const FILES = ['src/components/blog/GuideCard.tsx', 'src/components/blog/FeaturedGuide.tsx']
+const FILES = ['src/components/blog/GuideCard.tsx', 'src/components/blog/FeaturedGuide.tsx', 'src/lib/legal/key-points.ts']
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {

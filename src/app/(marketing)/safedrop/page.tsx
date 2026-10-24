@@ -49,7 +49,7 @@ export default function SafeDropPage() {
       <JsonLd data={breadcrumbList([{ name: 'Home', path: '/' }, { name: 'SafeDrop Protection', path: '/safedrop' }])} />
 
       <InfoHero icon={ShieldCheckIcon} tone="blue" title="SafeDrop Protection" lead={SAFEDROP_LEAD}>
-        <Link href="/safedrop-policy" className={cn(VALUE_BTN_SECONDARY, 'group h-11 px-5 text-body-sm')}>
+        <Link href="/refunds#part-safedrop" className={cn(VALUE_BTN_SECONDARY, 'group h-11 px-5 text-body-sm')}>
           <FileTextIcon size={16} weight="duotone" aria-hidden />
           Read the SafeDrop Terms
         </Link>
