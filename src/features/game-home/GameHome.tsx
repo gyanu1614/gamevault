@@ -20,6 +20,7 @@ import { StartSelling } from './sections/StartSelling'
 import { PriceMoves } from './sections/PriceMoves'
 import { Tools } from './sections/Tools'
 import { Guides } from './sections/Guides'
+import { Trust } from './sections/Trust'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
 
@@ -58,6 +59,8 @@ export function GameHome({ model }: { model: GameHomeModel }) {
         {model.tools && <Tools model={model.tools} />}
 
         {model.guides && <Guides model={model.guides} />}
+
+        <Trust gameName={gameName} itemNoun={model.itemNoun} />
 
         <FaqSection title={`${gameName} Marketplace FAQ`} items={model.faq} />
       </div>
