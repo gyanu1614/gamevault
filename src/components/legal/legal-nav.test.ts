@@ -4,14 +4,16 @@ import { describe, expect, it } from 'vitest'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { LEGAL_GROUPS, groupedLegalDocs, legalDocHref, relatedLegalDocs } from './legal-nav'
 
-const ROUTES = join(process.cwd(), 'src/app/(legal)')
+// Legal documents render under (legal); /fees renders from (marketing), with the
+// document's fee terms at the bottom of the page (2026-10-23 redesign).
+const ROUTE_DIRS = ['(legal)', '(marketing)'].map((g) => join(process.cwd(), 'src/app', g))
 
 describe('legal navigation', () => {
   it('maps every document to an existing route (safedrop -> /safedrop-policy)', () => {
     expect(legalDocHref('safedrop')).toBe('/safedrop-policy')
     for (const doc of LEGAL_DOCS) {
       const href = legalDocHref(doc.slug)
-      expect(existsSync(join(ROUTES, href.slice(1), 'page.tsx')), href).toBe(true)
+      expect(ROUTE_DIRS.some((dir) => existsSync(join(dir, href.slice(1), 'page.tsx'))), href).toBe(true)
     }
   })
 

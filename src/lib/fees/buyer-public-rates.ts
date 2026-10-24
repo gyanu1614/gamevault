@@ -1,8 +1,7 @@
 import { unstable_cache } from 'next/cache'
 
 import { createAnonClient } from '@/lib/supabase/anon'
-import type { LegalBlock } from '@/lib/legal/documents'
-import { PAYSSION_METHODS, PAYSSION_SANDBOX_METHOD } from '@/lib/payments/providers/payssion/methods'
+import { PAYSSION_SANDBOX_METHOD } from '@/lib/payments/providers/payssion/methods'
 import { BUYER_FEES_TAG } from '@/lib/revalidation/tags'
 
 /**
@@ -57,31 +56,6 @@ export function describeMethodFee(r: PublicMethodFee): string {
   if (r.minTotalMinor != null) clauses.push(`orders from ${money(r.minTotalMinor, r.feeCurrency)}`)
   if (r.maxTotalMinor != null) clauses.push(`orders up to ${money(r.maxTotalMinor, r.feeCurrency)}`)
   return clauses.join(', ')
-}
-
-/** The legal-page table block: selectable rows only, in the order given. */
-export function buyerFeeTableBlock(rows: PublicMethodFee[]): Extract<LegalBlock, { t: 'table' }> {
-  const head = ['Payment method', 'Processing fee', 'Refunds', 'Clears']
-  const visible = rows.filter((r) => r.selectable)
-  if (visible.length === 0) return { t: 'table', head, rows: [['No payment methods are currently enabled.', '', '', '']] }
-  // Checkout shows each buyer only their own country's rails, so several
-  // share a label there ("Credit / Debit Card"); this table lists them all,
-  // so a shared label carries the rail's country.
-  const shared = new Set(visible.map((r) => r.label).filter((l, i, all) => all.indexOf(l) !== i))
-  const name = (r: PublicMethodFee) => {
-    const coverage = shared.has(r.label) ? PAYSSION_METHODS[r.method]?.coverage : undefined
-    return coverage ? `${r.label} (${coverage})` : r.label
-  }
-  return {
-    t: 'table',
-    head,
-    rows: visible.map((r) => [
-      name(r),
-      describeMethodFee(r),
-      r.refundable ? 'Yes' : 'Store credit only',
-      r.instantClearing ? 'Instantly' : 'After the provider settles',
-    ]),
-  }
 }
 
 /** Test rows never reach a public page: the fake provider and the Payssion sandbox method. */

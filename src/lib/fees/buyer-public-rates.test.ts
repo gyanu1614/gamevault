@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from 'vitest'
 
-import { buyerFeeTableBlock, describeMethodFee, isPublicFeeRow, type PublicMethodFee } from './buyer-public-rates'
+import { describeMethodFee, isPublicFeeRow, type PublicMethodFee } from './buyer-public-rates'
 
 const row = (over: Partial<PublicMethodFee>): PublicMethodFee => ({
   method: 'pix_br', label: 'Pix', provider: 'payssion', feeCurrency: 'USD', providerPct: 3.75, providerFixedMinor: 0,
@@ -32,42 +32,6 @@ describe('describeMethodFee — one honest line per method', () => {
   it('crypto / wallet read as the floor only', () => {
     expect(describeMethodFee(row({ method: 'btcpay', label: 'Crypto', providerPct: 0, fxMarkupPct: 0, minFeeMinor: 0 })))
       .toBe('1% buffer, at least 5% of the amount charged')
-  })
-})
-
-describe('buyerFeeTableBlock — the legal table block', () => {
-  it('lists only selectable rows, in the given order, with refund / clearing flags', () => {
-    const block = buyerFeeTableBlock([
-      row({}),
-      row({ method: 'maya_ph', label: 'Maya', selectable: false }),
-      row({ method: 'qr_ph', label: 'QR Ph', feeCurrency: 'PHP', providerPct: 2.5, providerFixedMinor: 1500, fxMarkupPct: 3.4, minFeeMinor: 0, refundable: false }),
-    ])
-    expect(block.t).toBe('table')
-    expect(block.head).toEqual(['Payment method', 'Processing fee', 'Refunds', 'Clears'])
-    expect(block.rows.map((r) => r[0])).toEqual(['Pix', 'QR Ph'])
-    expect(block.rows[1][2]).toBe('Store credit only')
-    expect(block.rows[0][2]).toBe('Yes')
-    expect(block.rows[0][3]).toBe('Instantly')
-  })
-  it('rails sharing a checkout label ("Credit / Debit Card") are told apart by their country', () => {
-    const card = (method: string) => row({ method, label: 'Credit / Debit Card' })
-    const block = buyerFeeTableBlock([
-      card('creditcard_br'),
-      card('creditcard_mx'),
-      row({ method: 'applepay_sa', label: 'Apple Pay' }),
-      card('creditcard_za'),
-      row({ method: 'mada_sa', label: 'Credit / Debit Card', selectable: false }),
-    ])
-    expect(block.rows.map((r) => r[0])).toEqual([
-      'Credit / Debit Card (Brazil)',
-      'Credit / Debit Card (Mexico)',
-      'Apple Pay',
-      'Credit / Debit Card (South Africa)',
-    ])
-  })
-  it('an empty table still renders a row that says so (never a blank section)', () => {
-    const block = buyerFeeTableBlock([])
-    expect(block.rows).toEqual([['No payment methods are currently enabled.', '', '', '']])
   })
 })
 

@@ -1575,7 +1575,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             'Buyers pay one **service fee** at checkout, shown as a single line and always included in the displayed total, so the price you see at checkout is the price you pay. It has two parts. The **marketplace part** is **2%** of the item price with a $0.30 minimum; it keeps every order covered by SafeDrop Protection. The **processing part** depends on the payment method you choose: it covers the payment provider’s charge on the amount actually charged, currency conversion where the provider applies it, and a small buffer for rate movement, and every method has a minimum share of that amount. Orders whose total would fall under $1.00 are raised to $1.00. **Orders paid entirely with store credit carry no service fee.** The exact fee for your order is quoted before you pay.',
           ),
           p(
-            'The current terms per payment method are listed below, read live from the same table checkout quotes from. A method that is hidden or over its provider’s limit for your order is not offered.',
+            'The current terms for each payment method are listed on this page, read live from the same table checkout quotes from. A method that is hidden or over its provider’s limit for your order is not offered.',
           ),
         ],
       },
@@ -1600,7 +1600,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Withdrawals',
         blocks: [
           p(
-            'The fee and minimum for each payout method, and when a sale can be withdrawn, are listed below, read live from the same table the withdrawal page uses. The full seller schedule is on the [Seller Fees page](/sell/fees).',
+            'The fee and minimum for each payout method, and when a sale can be withdrawn, are listed on this page, read live from the same table the withdrawal page uses. The full seller schedule is on the [Seller Fees page](/sell/fees).',
           ),
           ul([
             '**Disputes:** while a dispute is open on an Order, that Order’s amount is set aside from your balance; a refund decided against you is deducted, and your balance may go below zero until later sales cover it.',

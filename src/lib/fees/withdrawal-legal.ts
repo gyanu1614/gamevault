@@ -10,10 +10,11 @@ import type { PublicWithdrawalTerms } from './public-rates'
  * quoting an old number.
  */
 
-const usd = (n: number) => `$${Number(n.toFixed(2))}`
+export const usd = (n: number) => `$${Number(n.toFixed(2))}`
 const pct = (n: number) => `${Number(n.toFixed(3))}%`
 
-function feeText(m: PublicWithdrawalTerms['methods'][number]): string {
+/** "3% + $5" / "3%, at least $5": one payout method's fee in words. */
+export function payoutFeeText(m: PublicWithdrawalTerms['methods'][number]): string {
   let s = pct(m.feePct)
   if (m.feeFixed > 0) s += ` + ${usd(m.feeFixed)}`
   if (m.feeMin > 0) s += `, at least ${usd(m.feeMin)}`
@@ -23,7 +24,7 @@ function feeText(m: PublicWithdrawalTerms['methods'][number]): string {
 export function withdrawalTermsBlocks(t: PublicWithdrawalTerms): LegalBlock[] {
   const head = ['Payout method', 'Fee', 'Minimum withdrawal']
   const rows = t.methods.length
-    ? t.methods.map((m) => [m.displayName, feeText(m), usd(m.minWithdrawal)])
+    ? t.methods.map((m) => [m.displayName, payoutFeeText(m), usd(m.minWithdrawal)])
     : [['No payout methods are currently enabled.', '', '']]
   return [
     { t: 'table', head, rows },
