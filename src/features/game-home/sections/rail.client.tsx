@@ -1,13 +1,12 @@
 'use client'
 
 /**
- * Shared Embla controls for the game-home rails (tools, guides): prev/next
- * buttons in the OfferRail style and a hook that tracks whether each side
- * can scroll. Event-driven (Embla's select/scroll), never a scroll listener.
+ * Shared Embla state for the game-home carousel: whether each side can
+ * scroll and the selected slide. Event-driven (Embla's select/scroll), never
+ * a scroll listener.
  */
 import { useCallback, useEffect, useState } from 'react'
 import type { UseEmblaCarouselType } from 'embla-carousel-react'
-import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 
 /** The Embla API as the React hook returns it (embla-carousel itself is not a direct dependency). */
 type EmblaCarouselType = NonNullable<UseEmblaCarouselType[1]>
@@ -34,39 +33,4 @@ export function useRailNav(api: EmblaCarouselType | undefined) {
   }, [api, sync])
 
   return { canPrev, canNext, selected }
-}
-
-export function RailArrows({
-  api,
-  canPrev,
-  canNext,
-  label,
-}: {
-  api: EmblaCarouselType | undefined
-  canPrev: boolean
-  canNext: boolean
-  /** What the buttons move through ("tools", "guides"), for their labels. */
-  label: string
-}) {
-  if (!canPrev && !canNext) return null
-  return (
-    <div className="hidden items-center gap-1.5 sm:flex">
-      {(['prev', 'next'] as const).map((dir) => {
-        const Icon = dir === 'prev' ? CaretLeftIcon : CaretRightIcon
-        const disabled = dir === 'prev' ? !canPrev : !canNext
-        return (
-          <button
-            key={dir}
-            type="button"
-            aria-label={dir === 'prev' ? `Previous ${label}` : `Next ${label}`}
-            onClick={() => (dir === 'prev' ? api?.scrollPrev() : api?.scrollNext())}
-            disabled={disabled}
-            className="grid h-9 w-9 place-items-center rounded-md bg-white/[0.06] text-text-secondary transition-[background-color,color,transform] hover:bg-white/[0.1] hover:text-text-primary active:scale-95 disabled:pointer-events-none disabled:opacity-35"
-          >
-            <Icon size={15} weight="bold" aria-hidden />
-          </button>
-        )
-      })}
-    </div>
-  )
 }

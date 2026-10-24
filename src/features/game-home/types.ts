@@ -7,6 +7,7 @@
 import type { HubCard, HubCategory, HubCategoryStat } from '@/app/(marketplace)/[gameSlug]/_hubModel'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import type { BlogRailPost } from '@/components/blog/BlogSection'
+import type { HowItWorksHighlight } from '@/components/marketplace/HowItWorksBand'
 import type { MoverRow } from './model/movers'
 import type { ToolTile } from './model/tools'
 import type { AboutRow } from './model/about'
@@ -92,11 +93,11 @@ export interface GameHomeData {
   guides: (BlogRailPost & { postType?: string })[]
 }
 
-export interface HeroModel {
+export interface HeaderModel {
   gameName: string
   gameImageUrl: string | null
-  /** "Buy and sell Adopt Me pets, accounts and more from verified sellers." */
-  pitch: string
+  /** The item word for the seller prompt ("Got Adopt Me Pets to sell?"). */
+  itemNoun: string
   /** "83 Adopt Me offers from $4.99, delivered in about 1 hour.", or null with no offers. */
   facts: string | null
 }
@@ -160,28 +161,21 @@ export interface AboutModel {
   categories: { name: string; href: string; count: number }[]
 }
 
-export interface StartSellingModel {
-  gameSlug: string
-  gameName: string
-  itemNoun: string
-  /** Our highest-priced live item offers with a picture (own data only), up to 3. */
-  examples: { name: string; imageUrl: string; priceUsd: number }[]
-  /** No live offers in the game yet: the "be the first" variant. */
-  firstSeller: boolean
-}
-
 export interface GameHomeModel {
   gameSlug: string
   gameName: string
   itemNoun: string
   itemNounSingular: string
-  hero: HeroModel
+  header: HeaderModel
   currency: CurrencyModel | null
   /** Top Selling rows: items, then accounts. Empty when the game has neither. */
   topSelling: OfferRowModel[]
   /** Hot New {Game} {Items}, or null without new items. */
   hotNew: HotNewModel | null
-  startSelling: StartSellingModel
+  /** The house How It Works bento: its H2 and the live figure on the first tile. */
+  howItWorks: { title: string; highlight: HowItWorksHighlight | null }
+  /** The house Why Buy card: live offers and the cheapest goods price ("$4.99"). */
+  whyBuy: { count: number; fromPrice: string | null }
   /** Biggest Price Moves, or null for a game without trends. */
   priceMoves: PriceMovesModel | null
   /** Free {Game} Trading Tools, or null for a game without tool pages. */

@@ -1,80 +1,66 @@
 import Link from '@/components/navigation/AppLink'
-import { ArrowRightIcon, SparkleIcon } from '@phosphor-icons/react/dist/ssr'
+import { IconSparkles } from '@tabler/icons-react'
+import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
-import { MARKET_CARD } from '@/lib/ui/surfaces'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import type { HotNewCard, HotNewModel } from '../types'
 import { SectionHeading } from './SectionHeading'
 
 /**
- * Hot New {Game} {Items} (owner, 2026-10-23): the game's newest items, ranked
- * by our own offers (model/hot-new.ts). An item we stock sells straight from
- * the card ("Buy From $X"); one nobody lists yet asks sellers to be first.
- * One surface per card (no nested boxes); the art sits on a soft lime glow,
- * the New colour of the value lists. Cards rise in turn as the row enters.
+ * Hot New {Game} {Items}: the game's newest items ranked by our own offers
+ * (model/hot-new.ts). Built on the listing card's system (ItemCard): the
+ * marketplace fill, 10px corners, a footer band one step lighter, hover
+ * lightens in place and nothing moves, fill only. An item we stock sells from
+ * the card with the house buy button; one nobody lists asks sellers first.
  */
-function Card({ card, sellHref, index }: { card: HotNewCard; sellHref: string; index: number }) {
+function Card({ card, sellHref }: { card: HotNewCard; sellHref: string }) {
   const inStock = card.buyHref != null
   return (
-    <li className="gh-reveal" style={{ ['--gh-i' as string]: index }}>
-      <article
-        className={cn(
-          'group relative flex h-full flex-col items-center rounded-xl px-4 pb-4 pt-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-300 hover:-translate-y-1',
-          MARKET_CARD,
-        )}
-      >
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-[5px] bg-[#B6E36A]/[0.14] px-2 py-[3px] text-[11px] font-bold text-[#B6E36A]">
-          <SparkleIcon size={11} weight="fill" aria-hidden />
-          New
-        </span>
+    <li>
+      <article className={cn('group relative flex h-full flex-col overflow-hidden rounded-lg', MARKET_CARD, MARKET_CARD_HOVER)}>
+        <div className="flex flex-1 flex-col items-center text-center" style={{ padding: 'var(--gap-card)' }}>
+          <span className="inline-flex h-6 items-center gap-1 self-start rounded bg-lime-tint-bg px-2 text-[11.5px] font-semibold text-lime-text">
+            <IconSparkles aria-hidden size={13} stroke={2} />
+            New
+          </span>
+          <span className="mt-2 grid h-[104px] w-full place-items-center sm:h-[120px]">
+            {card.imageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={card.imageUrl} alt={card.name} width={112} height={112} loading="lazy" decoding="async" className="h-[96px] w-[96px] object-contain sm:h-[112px] sm:w-[112px]" />
+            ) : (
+              <span className="font-medium uppercase tracking-wider text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
+                No image
+              </span>
+            )}
+          </span>
+          <h3 className="mt-3 line-clamp-1 text-text-primary" style={{ fontSize: 'var(--fs-card-title)', fontWeight: 500, letterSpacing: '-0.01em', lineHeight: 'var(--lh-card-title)' }}>
+            {card.name}
+          </h3>
+          <p className="mt-1 tabular-nums text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+            {inStock ? `${card.offers} ${card.offers === 1 ? 'Offer' : 'Offers'} on DropMarket` : 'No Offers Yet'}
+          </p>
+        </div>
 
-        <span className="relative grid h-[118px] w-full place-items-center">
-          <span aria-hidden className="absolute inset-x-[12%] inset-y-0 rounded-full bg-[radial-gradient(circle,rgba(182,227,106,0.16),transparent_64%)]" />
-          <span aria-hidden className="absolute bottom-1 h-3 w-20 rounded-full bg-black/55 blur-md" />
-          {card.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={card.imageUrl}
-              alt={card.name}
-              width={108}
-              height={108}
-              loading="lazy"
-              decoding="async"
-              className="relative h-[96px] w-[96px] object-contain transition-transform duration-300 group-hover:scale-[1.05] sm:h-[108px] sm:w-[108px]"
-            />
-          ) : (
-            <SparkleIcon size={44} weight="duotone" className="relative text-[#B6E36A]/70" aria-hidden />
-          )}
-        </span>
-
-        <h3 className="mt-2 line-clamp-1 text-[16px] font-semibold tracking-[-0.01em] text-text-primary sm:text-[17px]">{card.name}</h3>
-        <p className="mt-0.5 text-[12.5px] tabular-nums text-text-secondary sm:text-[13px]">
-          {inStock ? `${card.offers} ${card.offers === 1 ? 'offer' : 'offers'} on DropMarket` : 'No offers yet'}
-        </p>
-
-        <div className="mt-auto w-full pt-4">
+        {/* Footer band, as on the listing card: one step lighter, lightens again on hover. */}
+        <div className="flex flex-col gap-2 bg-[#24252B] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors group-hover:bg-[#2A2B31]" style={{ padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
           {inStock ? (
-            <Link
-              href={card.buyHref!}
-              className="flex h-10 w-full items-center justify-center rounded-md bg-[#2F7A4B] text-[13.5px] font-bold text-white transition-[background-color,transform] hover:bg-[#358A55] active:scale-[0.98]"
-            >
-              {card.fromPrice != null ? `Buy From $${formatStatPrice(card.fromPrice)}` : 'Buy Now'}
+            <Link href={card.buyHref!} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+              <BuyButtonFace size="sm" className="w-full">
+                {card.fromPrice != null ? `Buy From $${formatStatPrice(card.fromPrice)}` : 'Buy Now'}
+              </BuyButtonFace>
             </Link>
           ) : (
             <Link
               href={sellHref}
-              className="flex h-10 w-full items-center justify-center rounded-md bg-[#F5C451]/[0.14] text-[13.5px] font-bold text-[#F5C451] transition-[background-color,transform] hover:bg-[#F5C451]/[0.22] active:scale-[0.98]"
+              className="inline-flex h-9 w-full items-center justify-center rounded-md bg-amber-400/10 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-400/[0.16]"
             >
               Sell Yours First
             </Link>
           )}
           {card.valueHref && (
-            <Link
-              href={card.valueHref}
-              className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
-            >
+            <Link href={card.valueHref} className="text-center font-semibold text-text-secondary transition-colors hover:text-text-primary" style={{ fontSize: 'var(--fs-meta)' }}>
               How To Get
-              <ArrowRightIcon size={12} weight="bold" aria-hidden />
             </Link>
           )}
         </div>
@@ -85,16 +71,11 @@ function Card({ card, sellHref, index }: { card: HotNewCard; sellHref: string; i
 
 export function HotNew({ model, gameName }: { model: HotNewModel; gameName: string }) {
   return (
-    <section aria-labelledby="hot-new" className="mt-16 sm:mt-20">
-      <SectionHeading
-        id="hot-new"
-        title={model.title}
-        sub={`Just added to ${gameName}. Updated daily.`}
-        action={{ href: model.allHref, label: 'All New' }}
-      />
-      <ul className="gh-reveal-group grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {model.cards.map((card, i) => (
-          <Card key={card.slug} card={card} sellHref={model.sellHref} index={i} />
+    <section aria-labelledby="hot-new">
+      <SectionHeading id="hot-new" title={model.title} sub={`Just added to ${gameName}. Updated daily.`} action={{ href: model.allHref, label: 'All New' }} />
+      <ul className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {model.cards.map((card) => (
+          <Card key={card.slug} card={card} sellHref={model.sellHref} />
         ))}
       </ul>
     </section>

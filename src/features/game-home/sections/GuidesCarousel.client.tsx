@@ -15,14 +15,14 @@ import { ArrowRightIcon } from '@phosphor-icons/react'
 import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import type { GuideCard } from '../types'
-import { RailArrows, useRailNav } from './rail.client'
+import { useRailNav } from './rail.client'
 
 const OPACITY_FLOOR = 0.45
 const PARALLAX = 0.18
 
 export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
   const [ref, api] = useEmblaCarousel({ align: 'center', loop: posts.length > 2, skipSnaps: false })
-  const { canPrev, canNext, selected } = useRailNav(api)
+  const { selected } = useRailNav(api)
   const slides = useRef<HTMLElement[]>([])
   const covers = useRef<HTMLElement[]>([])
 
@@ -56,7 +56,7 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
   }, [api, tween])
 
   return (
-    <div className="relative">
+    <div className="relative mt-8">
       <div className="-mx-4 overflow-hidden sm:-mx-6 lg:mx-0" ref={ref}>
         <div className="flex touch-pan-y">
           {posts.map((post, i) => (
@@ -66,7 +66,7 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
                 ref={(el) => {
                   if (el) slides.current[i] = el
                 }}
-                className="group relative block aspect-[4/3] overflow-hidden rounded-2xl bg-[#1D1E23] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.9),inset_0_0_0_1px_rgba(255,255,255,0.06)] sm:aspect-[16/9]"
+                className="group relative block aspect-[4/3] overflow-hidden rounded-lg bg-[#1D1E23] sm:aspect-[16/9]"
               >
                 {post.cover ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -78,7 +78,7 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
                     alt=""
                     loading="lazy"
                     decoding="async"
-                    className="absolute inset-0 h-full w-full scale-[1.12] object-cover transition-[filter] duration-300 group-hover:brightness-110"
+                    className="absolute inset-0 h-full w-full scale-[1.12] object-cover"
                   />
                 ) : (
                   <span aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(125,180,255,0.25),transparent_60%),#1D1E23]" />
@@ -107,7 +107,7 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
       </div>
 
       {posts.length > 1 && (
-        <div className="mt-5 flex items-center justify-center gap-4">
+        <div className="mt-5 flex items-center justify-center">
           <div className="flex justify-center gap-2" role="group" aria-label="Choose a guide">
             {posts.map((post, i) => (
               <button
@@ -123,7 +123,6 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
               />
             ))}
           </div>
-          <RailArrows api={api} canPrev={canPrev} canNext={canNext} label="guides" />
         </div>
       )}
     </div>

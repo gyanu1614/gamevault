@@ -4,10 +4,12 @@
  * unit test. A section that has nothing to show is null (or an empty list)
  * and GameHome leaves it out.
  */
-import { hubPitch, pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
+import { pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
+import { formatStatPrice } from '@/lib/seo/page-stats-format'
 import type { GameHomeData, GameHomeModel, GuidesModel, HotNewModel, OfferRowModel, PriceMovesModel, ToolsModel } from '../types'
 import { gameTools } from './tools'
 import { aboutRows } from './about'
+import { howItWorksHighlight } from './how-it-works'
 import { heroFacts } from './hero'
 import { pickHotNew } from './hot-new'
 import { pickMovers } from './movers'
@@ -116,10 +118,10 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
     gameName: game.name,
     itemNoun: noun,
     itemNounSingular: itemNounSingular(game.slug),
-    hero: {
+    header: {
       gameName: game.name,
       gameImageUrl: game.image_url,
-      pitch: hubPitch(game.name, cards),
+      itemNoun: noun,
       facts: heroFacts({ gameName: game.name, offerCount, lowPrice, avgDelivery: delivery }),
     },
     currency: spotlight
@@ -138,19 +140,11 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
     priceMoves: buildPriceMoves(data),
     tools: buildTools(data, noun),
     guides: buildGuides(data),
-    startSelling: {
-      gameSlug: game.slug,
-      gameName: game.name,
-      itemNoun: noun,
-      examples: [...offers.items]
-        .filter((o): o is typeof o & { imageUrl: string } => typeof o.imageUrl === 'string' && o.imageUrl.length > 0)
-        .sort((a, b) => b.pricePerUnit - a.pricePerUnit)
-        // One card per picture: "NFR Bat Dragon" and "FR Bat Dragon" would show the same art twice.
-        .filter((o, i, all) => all.findIndex((x) => x.imageUrl === o.imageUrl) === i)
-        .slice(0, 3)
-        .map((o) => ({ name: o.name, imageUrl: o.imageUrl, priceUsd: o.pricePerUnit })),
-      firstSeller: cards.every((c) => c.count === 0),
+    howItWorks: {
+      title: `How to Buy ${game.name} ${noun} Safely`,
+      highlight: howItWorksHighlight({ spotlight, currencyIconUrl: data.currency.iconUrl, gameImageUrl: game.image_url, totalOffers: offerCount }),
     },
+    whyBuy: { count: offerCount, fromPrice: lowPrice != null ? `$${formatStatPrice(lowPrice)}` : null },
     about: {
       gameName: game.name,
       gameImageUrl: game.image_url,

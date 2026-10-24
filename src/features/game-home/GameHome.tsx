@@ -1,26 +1,33 @@
 /**
- * GameHome — /[gameSlug] for every game, from one GameHomeModel. Sections
- * render in a fixed order and each one is left out when its model is empty,
- * so a game without values data, tools or guides simply gets a shorter page.
+ * GameHome — /[gameSlug] for every game, from one GameHomeModel, built on the
+ * house sections and rules (house design checklist, 2026-10-24):
  *
- * Server component: every link and every slide is in the HTML. Motion is CSS
- * (game-home.css), off under reduced motion; the rails are the only client
- * islands (OfferRail, and the Embla rails added per section).
+ *   header        the category pages' header (logo, game, title, seller prompt) + live facts
+ *   offers        currency card, Top Selling rows (OfferRail)
+ *   How It Works  the house bento (HowItWorksBand)
+ *   Hot New       values games with new items
+ *   Sell          the homepage's seller banners (SellerCta)
+ *   Price Moves / Tools / Guides   when the game has the data
+ *   Why Buy       the house card (WhyBuyCard)
+ *   FAQ, About, payments strip
+ *
+ * `.page-rhythm` owns the space between sections (no ad-hoc margins); each
+ * section opts into the standard page width. A section whose model is empty
+ * is left out. Server component; the rails are the only client islands.
  */
-import './game-home.css'
 import { CurrencyBuyCard } from '@/components/marketplace/CurrencyBuyCard'
 import { OfferRail } from '@/components/marketplace/OfferRail'
+import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
+import { WhyBuyCard } from '@/components/marketplace/WhyBuyCard'
 import { FaqSection } from '@/components/marketplace/FaqCards'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { SellerCta } from '@/features/home/components/SellerCta'
 import type { GameHomeModel } from './types'
-import { Hero } from './sections/Hero'
-import { HowBuying } from './sections/HowBuying'
+import { Header } from './sections/Header'
 import { HotNew } from './sections/HotNew'
-import { StartSelling } from './sections/StartSelling'
 import { PriceMoves } from './sections/PriceMoves'
 import { Tools } from './sections/Tools'
 import { Guides } from './sections/Guides'
-import { Trust } from './sections/Trust'
 import { About } from './sections/About'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
@@ -28,44 +35,69 @@ const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
 export function GameHome({ model }: { model: GameHomeModel }) {
   const { gameSlug, gameName } = model
   return (
-    <main className="min-h-screen pb-12">
-      <div className={PAGE}>
-        <Hero hero={model.hero} />
+    <main className="min-h-screen">
+      <div className="page-rhythm pb-20">
+        <div className={PAGE}>
+          <Header header={model.header} />
 
-        {model.currency && (
-          <CurrencyBuyCard
-            className="mt-8"
-            gameName={gameName}
-            name={model.currency.name}
-            href={model.currency.href}
-            iconUrl={model.currency.iconUrl}
-            accent={model.currency.accent}
-            fromLabel={model.currency.fromLabel}
-            avgDelivery={model.currency.avgDelivery}
-          />
+          {model.currency && (
+            <CurrencyBuyCard
+              className="mt-8"
+              gameName={gameName}
+              name={model.currency.name}
+              href={model.currency.href}
+              iconUrl={model.currency.iconUrl}
+              accent={model.currency.accent}
+              fromLabel={model.currency.fromLabel}
+              avgDelivery={model.currency.avgDelivery}
+            />
+          )}
+
+          {model.topSelling.map((row) => (
+            <OfferRail key={row.title} title={row.title} seeAllHref={row.seeAllHref} offers={row.offers} gameSlug={gameSlug} gameName={gameName} />
+          ))}
+        </div>
+
+        <HowItWorksBand title={model.howItWorks.title} highlight={model.howItWorks.highlight} className="py-0 sm:py-0" />
+
+        {model.hotNew && (
+          <div className={PAGE}>
+            <HotNew model={model.hotNew} gameName={gameName} />
+          </div>
         )}
 
-        {model.topSelling.map((row) => (
-          <OfferRail key={row.title} title={row.title} seeAllHref={row.seeAllHref} offers={row.offers} gameSlug={gameSlug} gameName={gameName} />
-        ))}
+        {/* The homepage's seller section; the fee line is the site's standard (fee-copy rule). */}
+        <SellerCta feeLine="Lowest fees for buyers and sellers" />
 
-        <HowBuying gameName={gameName} itemNoun={model.itemNoun} itemNounSingular={model.itemNounSingular} />
+        {model.priceMoves && (
+          <div className={PAGE}>
+            <PriceMoves model={model.priceMoves} />
+          </div>
+        )}
 
-        {model.hotNew && <HotNew model={model.hotNew} gameName={gameName} />}
+        {model.tools && (
+          <div className={PAGE}>
+            <Tools model={model.tools} />
+          </div>
+        )}
 
-        <StartSelling model={model.startSelling} />
+        {model.guides && (
+          <div className={PAGE}>
+            <Guides model={model.guides} />
+          </div>
+        )}
 
-        {model.priceMoves && <PriceMoves model={model.priceMoves} />}
+        <div className={PAGE}>
+          <WhyBuyCard gameSlug={gameSlug} subject={gameName} count={model.whyBuy.count} fromPrice={model.whyBuy.fromPrice} />
+        </div>
 
-        {model.tools && <Tools model={model.tools} />}
+        <div className={PAGE}>
+          <FaqSection className="mt-0 sm:mt-0" title={`${gameName} Marketplace FAQ`} sub="Quick answers before you buy or sell." items={model.faq} />
+        </div>
 
-        {model.guides && <Guides model={model.guides} />}
-
-        <Trust gameName={gameName} itemNoun={model.itemNoun} />
-
-        <FaqSection className="mt-20 sm:mt-28" title={`${gameName} Marketplace FAQ`} sub="Quick answers before you buy or sell." items={model.faq} />
-
-        <About model={model.about} />
+        <div className={PAGE}>
+          <About model={model.about} />
+        </div>
       </div>
 
       <PaymentsMarquee disclaimer={model.trademark} />

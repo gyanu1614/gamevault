@@ -76,30 +76,16 @@ describe('buildGameHome', () => {
       }),
       NOW,
     )
-    expect(m.hero.facts).toBe('93 Adopt Me offers from $4.99, delivered in about 1 hour.')
+    expect(m.header.facts).toBe('93 Adopt Me offers from $4.99, delivered in about 1 hour.')
     expect(m.currency?.name).toBe('Robux')
   })
 
-  it('Start Selling shows our three highest-priced item offers that have a picture', () => {
-    const withImg = (id: string, price: number, imageUrl: string | null, name = id) => ({ ...offer(id, price), imageUrl, name })
-    const m = buildGameHome(
-      data({
-        cards: [card({ id: 'i', count: 4 })],
-        offers: {
-          items: [withImg('a', 10, '/a.png'), withImg('b', 300, '/b.png'), withImg('c', 500, null), withImg('d', 120, '/d.png'), withImg('e', 90, '/e.png')],
-          accounts: [],
-        },
-      }),
-      NOW,
-    )
-    expect(m.startSelling.examples.map((e) => e.name)).toEqual(['b', 'd', 'e'])
-    expect(m.startSelling.examples[0]).toEqual({ name: 'b', imageUrl: '/b.png', priceUsd: 300 })
-    expect(m.startSelling.firstSeller).toBe(false)
-  })
-
-  it('Start Selling asks for the first seller when the game has no offers', () => {
-    const m = buildGameHome(data({ cards: [card({ id: 'i', count: 0 })] }), NOW)
-    expect(m.startSelling).toMatchObject({ firstSeller: true, examples: [], itemNoun: 'Pets' })
+  it('feeds the house How It Works bento and Why Buy card with the live numbers', () => {
+    const items = card({ id: 'i', count: 13 })
+    const m = buildGameHome(data({ cards: [items], stats: { i: { count: 13, lowPrice: 14.99, avgDeliveryLabel: '1 hour' } } }), NOW)
+    expect(m.howItWorks.title).toBe('How to Buy Adopt Me Pets Safely')
+    expect(m.howItWorks.highlight).toMatchObject({ value: '13 Offers Live' })
+    expect(m.whyBuy).toEqual({ count: 13, fromPrice: '$14.99' })
   })
 
   it('Price Moves: hidden without trends; a real update date, else "Updated daily"', () => {
