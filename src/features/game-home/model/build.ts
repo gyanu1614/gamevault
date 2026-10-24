@@ -168,7 +168,23 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
       art: collage,
       categories: cards.map((c) => ({ name: c.name, href: c.href, count: c.count })),
     },
+    productSchema: productSchema(data, noun, itemsCard?.count ?? 0),
     faq: data.faq,
     trademark: data.trademark,
+  }
+}
+
+/** The item offers this page shows, as one Product with an AggregateOffer (prices on the page, never a guess). */
+function productSchema({ game, offers }: GameHomeData, noun: string, liveCount: number): GameHomeModel['productSchema'] {
+  const prices = offers.items.map((o) => o.pricePerUnit).filter((p) => Number.isFinite(p) && p > 0)
+  if (prices.length === 0) return null
+  return {
+    name: `${game.name} ${noun}`,
+    description: `Buy ${game.name} ${noun.toLowerCase()} from verified sellers on DropMarket, with SafeDrop Protection on every order.`,
+    brand: game.name,
+    lowPrice: Math.min(...prices),
+    highPrice: Math.max(...prices),
+    offerCount: Math.max(liveCount, prices.length),
+    image: offers.items.find((o) => o.imageUrl)?.imageUrl ?? game.image_url,
   }
 }

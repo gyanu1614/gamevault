@@ -16,7 +16,7 @@ import { notFound } from 'next/navigation'
 import { isGameHubIndexable } from '@/lib/games/indexability'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
-import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, productAggregate } from '@/lib/seo/jsonld'
 import { resolveGameSeo } from '@/lib/seo/templates'
 import { stripBrand } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
@@ -142,6 +142,16 @@ export default async function GameHomePage({ params }: PageProps) {
           ])}
         />
         {model.faq.length > 0 && <JsonLd data={faqPage(model.faq)} />}
+        {model.productSchema && (
+          <JsonLd
+            data={productAggregate({
+              ...model.productSchema,
+              // productAggregate takes an absolute image URL; a /public path gets the site origin.
+              image: model.productSchema.image?.startsWith('/') ? `${SITE_URL}${model.productSchema.image}` : model.productSchema.image,
+              url: `/${gameSlug}`,
+            })}
+          />
+        )}
 
         <GameSubNav
           gameSlug={gameSlug}

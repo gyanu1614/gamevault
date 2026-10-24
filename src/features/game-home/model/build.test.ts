@@ -126,6 +126,12 @@ describe('buildGameHome', () => {
     expect(m.guides?.posts[0]).toMatchObject({ href: '/adopt-me/blog/how-to-sell', title: 'How to Sell', cover: '/c.png', readMinutes: 7, typeLabel: 'Selling Guide' })
   })
 
+  it('describes the item offers on the page as one product, with no schema when there are none', () => {
+    expect(buildGameHome(data(), NOW).productSchema).toBeNull()
+    const m = buildGameHome(data({ cards: [card({ id: 'i', count: 13 })], offers: { items: [offer('a', 4.99), offer('b', 649.99)], accounts: [] } }), NOW)
+    expect(m.productSchema).toMatchObject({ name: 'Adopt Me Pets', brand: 'Adopt Me', lowPrice: 4.99, highPrice: 649.99, offerCount: 13 })
+  })
+
   it('shows Hot New only for a values game with new items, linking the value list and the sell page', () => {
     expect(buildGameHome(data(), NOW).hotNew).toBeNull()
     const values = {

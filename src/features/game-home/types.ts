@@ -189,6 +189,8 @@ export interface GameHomeModel {
   /** {Game} Guides carousel, or null without published posts. */
   guides: GuidesModel | null
   about: AboutModel
+  /** Product + AggregateOffer JSON-LD inputs for the item offers on the page, or null with none. */
+  productSchema: { name: string; description: string; brand: string; lowPrice: number; highPrice: number; offerCount: number; image: string | null } | null
   faq: { q: string; a: string }[]
   trademark: string
 }

@@ -75,8 +75,16 @@ const BELOW_THE_FOLD: { file: string; eagerOk?: string[] }[] = [
   { file: 'src/components/ui/silver-icon.tsx' },
   // The values/calculator hubs' closing CTA band.
   { file: 'src/components/content/HubCtaBand.tsx' },
-  // The hub header logo (src={gameImageUrl}) is the first thing on the page.
-  { file: 'src/app/(marketplace)/[gameSlug]/_GameHub.tsx', eagerOk: ['src={gameImageUrl}'] },
+  // Game home (/[gameSlug]): the hero logo is the first thing on the page;
+  // every other picture sits below the fold.
+  { file: 'src/features/game-home/sections/Hero.tsx', eagerOk: ['src={hero.gameImageUrl}'] },
+  { file: 'src/features/game-home/sections/HotNew.tsx' },
+  { file: 'src/features/game-home/sections/StartSelling.tsx' },
+  { file: 'src/features/game-home/sections/PriceMoves.tsx' },
+  { file: 'src/features/game-home/sections/ToolsRail.client.tsx' },
+  { file: 'src/features/game-home/sections/GuidesCarousel.client.tsx' },
+  { file: 'src/features/game-home/sections/Trust.tsx' },
+  { file: 'src/features/game-home/sections/About.tsx' },
 ]
 
 describe('below-the-fold images are lazy and decode async', () => {

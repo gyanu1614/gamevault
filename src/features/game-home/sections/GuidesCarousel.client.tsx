@@ -76,7 +76,7 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
                     }}
                     src={post.cover}
                     alt=""
-                    loading={i === 0 ? 'eager' : 'lazy'}
+                    loading="lazy"
                     decoding="async"
                     className="absolute inset-0 h-full w-full scale-[1.12] object-cover transition-[filter] duration-300 group-hover:brightness-110"
                   />
