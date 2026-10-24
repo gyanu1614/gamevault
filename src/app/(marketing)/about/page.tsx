@@ -80,7 +80,7 @@ export default function AboutPage() {
                 Fees &amp; Charges
               </Link>{' '}
               and{' '}
-              <Link href="/safedrop-policy" className={link}>
+              <Link href="/refunds#part-safedrop" className={link}>
                 SafeDrop Protection Terms
               </Link>
               .

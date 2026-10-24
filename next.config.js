@@ -134,6 +134,13 @@ const nextConfig = {
       { source: '/about-us', destination: '/about', permanent: true },
       { source: '/contact-us', destination: '/contact', permanent: true },
       { source: '/help', destination: '/support', permanent: true },
+      // Short legal documents merged into their host page as parts
+      // (2026-10-23): the old URL lands on the part's heading.
+      { source: '/buyer-terms', destination: '/terms#part-buyer-terms', permanent: true },
+      { source: '/risk', destination: '/terms#part-risk', permanent: true },
+      { source: '/safedrop-policy', destination: '/refunds#part-safedrop', permanent: true },
+      { source: '/chargebacks', destination: '/refunds#part-chargebacks', permanent: true },
+      { source: '/acceptable-use', destination: '/trust-safety#part-acceptable-use', permanent: true },
       // A game keeps one accounts page (owner 2026-10-23): the retired
       // modded-accounts pages and their listings live under buy-accounts.
       { source: '/:game/buy-modded-accounts', destination: '/:game/buy-accounts', permanent: true },
@@ -280,8 +287,9 @@ const nextConfig = {
         // segment — so /legal/terms never existed, only /terms. The mobile
         // footer linked the /legal/* form on every page, so Google has very
         // likely crawled these 404s. Recovers them, plus any external links
-        // or bookmarks that picked them up.
-        source: '/legal/:path*',
+        // or bookmarks that picked them up. `:path+`, not `:path*`: bare /legal
+        // is the policy hub now (2026-10-23), and `*` sent it to the homepage.
+        source: '/legal/:path+',
         destination: '/:path*',
         permanent: true,
       },
