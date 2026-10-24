@@ -10,6 +10,12 @@
     animation: gh-rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  /* Floating art (Start Selling cards, trust icons): a slow bob, out of phase. */
+  .gh-float {
+    animation: gh-bob 6.5s ease-in-out infinite;
+    animation-delay: calc(var(--gh-i, 0) * -2.1s);
+  }
+
   /*
    * How Buying Works: the row is one view timeline. As it scrolls in, the
    * connector draws left to right, each step rises in turn (--gh-i staggers
@@ -63,6 +69,16 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes gh-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
   }
 }
 

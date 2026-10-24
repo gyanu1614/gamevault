@@ -109,6 +109,16 @@ export interface OfferRowModel {
   offers: ItemOffer[]
 }
 
+export interface StartSellingModel {
+  gameSlug: string
+  gameName: string
+  itemNoun: string
+  /** Our highest-priced live item offers with a picture (own data only), up to 3. */
+  examples: { name: string; imageUrl: string; priceUsd: number }[]
+  /** No live offers in the game yet: the "be the first" variant. */
+  firstSeller: boolean
+}
+
 export interface GameHomeModel {
   gameSlug: string
   gameName: string
@@ -118,10 +128,9 @@ export interface GameHomeModel {
   currency: CurrencyModel | null
   /** Top Selling rows: items, then accounts. Empty when the game has neither. */
   topSelling: OfferRowModel[]
-  /** True when the game has no enabled categories yet (Opening Soon). */
-  openingSoon: boolean
   /** Hot New {Game} {Items}, or null without new items. */
   hotNew: HotNewModel | null
+  startSelling: StartSellingModel
   faq: { q: string; a: string }[]
   trademark: string
 }

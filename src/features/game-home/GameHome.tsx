@@ -8,36 +8,17 @@
  * islands (OfferRail, and the Embla rails added per section).
  */
 import './game-home.css'
-import Link from '@/components/navigation/AppLink'
 import { CurrencyBuyCard } from '@/components/marketplace/CurrencyBuyCard'
 import { OfferRail } from '@/components/marketplace/OfferRail'
 import { FaqSection } from '@/components/marketplace/FaqCards'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
-import { MARKET_CARD } from '@/lib/ui/surfaces'
-import { cn } from '@/lib/utils'
 import type { GameHomeModel } from './types'
 import { Hero } from './sections/Hero'
 import { HowBuying } from './sections/HowBuying'
 import { HotNew } from './sections/HotNew'
+import { StartSelling } from './sections/StartSelling'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
-
-function OpeningSoon({ gameSlug, gameName }: { gameSlug: string; gameName: string }) {
-  return (
-    <section className={cn('mt-10 rounded-xl px-6 py-12 text-center', MARKET_CARD)}>
-      <p className="text-[17px] font-semibold text-text-primary">{gameName} Is Opening Soon</p>
-      <p className="mx-auto mt-2 max-w-xl text-[14px] text-text-secondary">No one has listed {gameName} yet. Sellers can start here first.</p>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href={`/${gameSlug}/sell`}
-          className="inline-flex h-11 items-center justify-center rounded-md bg-white px-5 text-[14px] font-semibold text-black transition-colors hover:bg-white/90"
-        >
-          Sell {gameName}
-        </Link>
-      </div>
-    </section>
-  )
-}
 
 export function GameHome({ model }: { model: GameHomeModel }) {
   const { gameSlug, gameName } = model
@@ -45,8 +26,6 @@ export function GameHome({ model }: { model: GameHomeModel }) {
     <main className="min-h-screen pb-12">
       <div className={PAGE}>
         <Hero hero={model.hero} />
-
-        {model.openingSoon && <OpeningSoon gameSlug={gameSlug} gameName={gameName} />}
 
         {model.currency && (
           <CurrencyBuyCard
@@ -68,6 +47,8 @@ export function GameHome({ model }: { model: GameHomeModel }) {
         <HowBuying gameName={gameName} itemNoun={model.itemNoun} itemNounSingular={model.itemNounSingular} />
 
         {model.hotNew && <HotNew model={model.hotNew} gameName={gameName} />}
+
+        <StartSelling model={model.startSelling} />
 
         <FaqSection title={`${gameName} Marketplace FAQ`} items={model.faq} />
       </div>

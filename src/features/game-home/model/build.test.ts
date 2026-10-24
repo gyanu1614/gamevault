@@ -79,9 +79,26 @@ describe('buildGameHome', () => {
     expect(m.currency?.name).toBe('Robux')
   })
 
-  it('flags Opening Soon when the game has no categories', () => {
-    expect(buildGameHome(data(), NOW).openingSoon).toBe(true)
-    expect(buildGameHome(data({ cards: [card({})] }), NOW).openingSoon).toBe(false)
+  it('Start Selling shows our three highest-priced item offers that have a picture', () => {
+    const withImg = (id: string, price: number, imageUrl: string | null, name = id) => ({ ...offer(id, price), imageUrl, name })
+    const m = buildGameHome(
+      data({
+        cards: [card({ id: 'i', count: 4 })],
+        offers: {
+          items: [withImg('a', 10, '/a.png'), withImg('b', 300, '/b.png'), withImg('c', 500, null), withImg('d', 120, '/d.png'), withImg('e', 90, '/e.png')],
+          accounts: [],
+        },
+      }),
+      NOW,
+    )
+    expect(m.startSelling.examples.map((e) => e.name)).toEqual(['b', 'd', 'e'])
+    expect(m.startSelling.examples[0]).toEqual({ name: 'b', imageUrl: '/b.png', priceUsd: 300 })
+    expect(m.startSelling.firstSeller).toBe(false)
+  })
+
+  it('Start Selling asks for the first seller when the game has no offers', () => {
+    const m = buildGameHome(data({ cards: [card({ id: 'i', count: 0 })] }), NOW)
+    expect(m.startSelling).toMatchObject({ firstSeller: true, examples: [], itemNoun: 'Pets' })
   })
 
   it('shows Hot New only for a values game with new items, linking the value list and the sell page', () => {

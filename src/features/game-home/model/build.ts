@@ -80,8 +80,20 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
         }
       : null,
     topSelling,
-    openingSoon: cards.length === 0,
     hotNew: buildHotNew(data, noun, now),
+    startSelling: {
+      gameSlug: game.slug,
+      gameName: game.name,
+      itemNoun: noun,
+      examples: [...offers.items]
+        .filter((o): o is typeof o & { imageUrl: string } => typeof o.imageUrl === 'string' && o.imageUrl.length > 0)
+        .sort((a, b) => b.pricePerUnit - a.pricePerUnit)
+        // One card per picture: "NFR Bat Dragon" and "FR Bat Dragon" would show the same art twice.
+        .filter((o, i, all) => all.findIndex((x) => x.imageUrl === o.imageUrl) === i)
+        .slice(0, 3)
+        .map((o) => ({ name: o.name, imageUrl: o.imageUrl, priceUsd: o.pricePerUnit })),
+      firstSeller: cards.every((c) => c.count === 0),
+    },
     faq: data.faq,
     trademark: data.trademark,
   }
