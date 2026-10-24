@@ -6,8 +6,11 @@
  * can scroll. Event-driven (Embla's select/scroll), never a scroll listener.
  */
 import { useCallback, useEffect, useState } from 'react'
-import type { EmblaCarouselType } from 'embla-carousel'
+import type { UseEmblaCarouselType } from 'embla-carousel-react'
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
+
+/** The Embla API as the React hook returns it (embla-carousel itself is not a direct dependency). */
+type EmblaCarouselType = NonNullable<UseEmblaCarouselType[1]>
 
 export function useRailNav(api: EmblaCarouselType | undefined) {
   const [canPrev, setCanPrev] = useState(false)
