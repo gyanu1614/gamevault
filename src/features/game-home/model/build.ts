@@ -5,7 +5,7 @@
  * and GameHome leaves it out.
  */
 import { hubPitch, pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
-import type { GameHomeData, GameHomeModel, HotNewModel, OfferRowModel, PriceMovesModel, ToolsModel } from '../types'
+import type { GameHomeData, GameHomeModel, GuidesModel, HotNewModel, OfferRowModel, PriceMovesModel, ToolsModel } from '../types'
 import { gameTools } from './tools'
 import { heroFacts } from './hero'
 import { pickHotNew } from './hot-new'
@@ -14,6 +14,25 @@ import { itemNoun, itemNounSingular } from './item-noun'
 
 /** Offers per Top Selling row (the rail scrolls; See All goes to the category). */
 const ROW_LIMIT = 12
+
+const POST_TYPE: Record<string, { label: string; accent: string }> = {
+  guide: { label: 'Guide', accent: '#7DB4FF' },
+  value: { label: 'Values', accent: '#B6E36A' },
+  seller: { label: 'Selling Guide', accent: '#F5C451' },
+  codes: { label: 'Codes', accent: '#C18CFF' },
+}
+
+function buildGuides({ game, guides }: GameHomeData): GuidesModel | null {
+  if (guides.length === 0) return null
+  return {
+    title: `${game.name} Guides`,
+    moreHref: `/${game.slug}/blog`,
+    posts: guides.map((p) => {
+      const t = POST_TYPE[p.postType ?? 'guide'] ?? POST_TYPE.guide
+      return { href: p.href, title: p.title, excerpt: p.excerpt, cover: p.cover, readMinutes: p.readMinutes, typeLabel: t.label, accent: t.accent }
+    }),
+  }
+}
 
 function buildTools({ game, values }: GameHomeData, noun: string): ToolsModel | null {
   const tiles = gameTools(game.slug, game.name, noun)
@@ -112,6 +131,7 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
     hotNew: buildHotNew(data, noun, now),
     priceMoves: buildPriceMoves(data),
     tools: buildTools(data, noun),
+    guides: buildGuides(data),
     startSelling: {
       gameSlug: game.slug,
       gameName: game.name,

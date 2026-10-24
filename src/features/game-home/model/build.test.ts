@@ -40,6 +40,7 @@ function data(over: Partial<GameHomeData> = {}): GameHomeData {
     faq: [],
     trademark: 'tm',
     values: null,
+    guides: [],
     ...over,
   }
 }
@@ -108,6 +109,21 @@ describe('buildGameHome', () => {
     const m = buildGameHome(data({ values }), NOW)
     expect(m.priceMoves).toMatchObject({ title: 'Biggest Adopt Me Price Moves This Week', listHref: '/adopt-me/values', updatedLabel: 'Prices updated Oct 22' })
     expect(buildGameHome(data({ values: { ...values, updatedAt: null } }), NOW).priceMoves?.updatedLabel).toBe('Updated daily')
+  })
+
+  it('Guides: hidden without posts; each post keeps its link and gets its type label', () => {
+    expect(buildGameHome(data(), NOW).guides).toBeNull()
+    const post = {
+      href: '/adopt-me/blog/how-to-sell',
+      title: 'How to Sell',
+      excerpt: 'Price, list, get paid.',
+      cover: '/c.png',
+      readMinutes: 7,
+      postType: 'seller',
+    }
+    const m = buildGameHome(data({ guides: [post] as never }), NOW)
+    expect(m.guides).toMatchObject({ title: 'Adopt Me Guides', moreHref: '/adopt-me/blog' })
+    expect(m.guides?.posts[0]).toMatchObject({ href: '/adopt-me/blog/how-to-sell', title: 'How to Sell', cover: '/c.png', readMinutes: 7, typeLabel: 'Selling Guide' })
   })
 
   it('shows Hot New only for a values game with new items, linking the value list and the sell page', () => {

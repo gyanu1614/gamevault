@@ -11,8 +11,11 @@ import { buildHubCards, splitCards, type HubCategory } from '@/app/(marketplace)
 import type { GameHomeData } from '../types'
 import type { GameData } from './game'
 import { getValuesFeed } from './values-feed'
+import { getBlogRail } from '@/lib/blog/rail'
 
 const NO_CURRENCY = { iconUrl: null, unitSuffix: null, unitsPerPrice: null }
+/** Guides in the carousel (newest first). */
+const GUIDE_LIMIT = 8
 
 /**
  * Everything /[gameSlug] shows, in one parallel fan-out. Cookie-free reads
@@ -24,11 +27,12 @@ export async function loadGameHome(game: GameData): Promise<GameHomeData> {
   const categories = (game.categories ?? []) as HubCategory[]
   const hasCurrency = categories.some((c) => c.type === 'currency')
 
-  const [stats, currency, offers, values] = await Promise.all([
+  const [stats, currency, offers, values, guides] = await Promise.all([
     getHubCategoryStats(game.id, categories),
     hasCurrency ? getHubCurrency(game.slug) : Promise.resolve(NO_CURRENCY),
     getHubOffers(game.id, categories),
     getValuesFeed(game.slug),
+    getBlogRail(game.slug, GUIDE_LIMIT),
     // Anchor this render to every category's listings tag (no-op reads), so
     // revalidateListingSurfaces refreshes the page with its category pages.
     Promise.all(categories.map((c) => bindCategoryListingsTag(c.id))),
@@ -75,5 +79,6 @@ export async function loadGameHome(game: GameData): Promise<GameHomeData> {
     faq,
     trademark: gameTrademarkLine(game.name, { currency: spotlight?.name, owner: guide?.trademark_owner }),
     values,
+    guides,
   }
 }

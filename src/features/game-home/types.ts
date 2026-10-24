@@ -6,6 +6,7 @@
  */
 import type { HubCard, HubCategory, HubCategoryStat } from '@/app/(marketplace)/[gameSlug]/_hubModel'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
+import type { BlogRailPost } from '@/components/blog/BlogSection'
 import type { MoverRow } from './model/movers'
 import type { ToolTile } from './model/tools'
 
@@ -86,6 +87,8 @@ export interface GameHomeData {
   trademark: string
   /** The game's values feed, or null for a game without a value list (or when it failed to load). */
   values: ValuesFeed | null
+  /** Published posts tagged with the game, newest first (getBlogRail; DB rows carry their postType). */
+  guides: (BlogRailPost & { postType?: string })[]
 }
 
 export interface HeroModel {
@@ -129,6 +132,23 @@ export interface ToolsModel {
   art: string[]
 }
 
+export interface GuideCard {
+  href: string
+  title: string
+  excerpt: string
+  cover: string | null
+  readMinutes: number
+  /** "Selling Guide", "Values", … from the post type. */
+  typeLabel: string
+  accent: string
+}
+
+export interface GuidesModel {
+  title: string
+  moreHref: string
+  posts: GuideCard[]
+}
+
 export interface StartSellingModel {
   gameSlug: string
   gameName: string
@@ -155,6 +175,8 @@ export interface GameHomeModel {
   priceMoves: PriceMovesModel | null
   /** Free {Game} Trading Tools, or null for a game without tool pages. */
   tools: ToolsModel | null
+  /** {Game} Guides carousel, or null without published posts. */
+  guides: GuidesModel | null
   faq: { q: string; a: string }[]
   trademark: string
 }
