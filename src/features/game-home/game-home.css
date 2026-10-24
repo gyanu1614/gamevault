@@ -49,6 +49,25 @@
       animation-range: entry 10% cover 60%;
     }
 
+    /* About rows: copy slides in from its own side as it enters. */
+    .gh-slide-l,
+    .gh-slide-r,
+    .gh-reveal-self {
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
+    .gh-slide-l {
+      animation-name: gh-from-left;
+    }
+    .gh-slide-r {
+      animation-name: gh-from-right;
+    }
+    .gh-reveal-self {
+      animation-name: gh-rise;
+    }
+
     /* Card rows (Hot New, …): the row is the timeline, cards rise in turn. */
     .gh-reveal-group {
       view-timeline: --gh-row block;
@@ -65,6 +84,28 @@
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gh-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gh-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
   }
   to {
     opacity: 1;

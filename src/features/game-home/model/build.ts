@@ -7,6 +7,7 @@
 import { hubPitch, pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
 import type { GameHomeData, GameHomeModel, GuidesModel, HotNewModel, OfferRowModel, PriceMovesModel, ToolsModel } from '../types'
 import { gameTools } from './tools'
+import { aboutRows } from './about'
 import { heroFacts } from './hero'
 import { pickHotNew } from './hot-new'
 import { pickMovers } from './movers'
@@ -99,6 +100,16 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
     .map((c) => stats[c.id]?.lowPrice)
     .filter((p): p is number => typeof p === 'number' && p > 0)
   const delivery = (itemsCard && stats[itemsCard.id]?.avgDeliveryLabel) || goods.map((c) => stats[c.id]?.avgDeliveryLabel).find(Boolean) || null
+  const offerCount = cards.reduce((n, c) => n + c.count, 0)
+  const lowPrice = goodsLow.length > 0 ? Math.min(...goodsLow) : null
+
+  // About collage: the game's most valuable items, else our own offers' pictures.
+  const valuable = (data.values?.items ?? [])
+    .filter((i) => i.imageUrl && i.valueUsd != null)
+    .sort((a, b) => b.valueUsd! - a.valueUsd!)
+    .map((i) => i.imageUrl!)
+  const offerArt = offers.items.map((o) => o.imageUrl).filter((u): u is string => !!u)
+  const collage = [...new Set([...valuable, ...offerArt])].slice(0, 5)
 
   return {
     gameSlug: game.slug,
@@ -109,12 +120,7 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
       gameName: game.name,
       gameImageUrl: game.image_url,
       pitch: hubPitch(game.name, cards),
-      facts: heroFacts({
-        gameName: game.name,
-        offerCount: cards.reduce((n, c) => n + c.count, 0),
-        lowPrice: goodsLow.length > 0 ? Math.min(...goodsLow) : null,
-        avgDelivery: delivery,
-      }),
+      facts: heroFacts({ gameName: game.name, offerCount, lowPrice, avgDelivery: delivery }),
     },
     currency: spotlight
       ? {
@@ -144,6 +150,23 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
         .slice(0, 3)
         .map((o) => ({ name: o.name, imageUrl: o.imageUrl, priceUsd: o.pricePerUnit })),
       firstSeller: cards.every((c) => c.count === 0),
+    },
+    about: {
+      gameName: game.name,
+      gameImageUrl: game.image_url,
+      rows: aboutRows({
+        gameSlug: game.slug,
+        gameName: game.name,
+        itemNoun: noun,
+        itemNounSingular: itemNounSingular(game.slug),
+        categoryNames: cards.map((c) => c.name),
+        offerCount,
+        lowPrice,
+        hasValues: data.values != null,
+        currencyName: spotlight?.name ?? null,
+      }),
+      art: collage,
+      categories: cards.map((c) => ({ name: c.name, href: c.href, count: c.count })),
     },
     faq: data.faq,
     trademark: data.trademark,

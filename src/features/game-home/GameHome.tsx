@@ -21,6 +21,7 @@ import { PriceMoves } from './sections/PriceMoves'
 import { Tools } from './sections/Tools'
 import { Guides } from './sections/Guides'
 import { Trust } from './sections/Trust'
+import { About } from './sections/About'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
 
@@ -62,7 +63,9 @@ export function GameHome({ model }: { model: GameHomeModel }) {
 
         <Trust gameName={gameName} itemNoun={model.itemNoun} />
 
-        <FaqSection title={`${gameName} Marketplace FAQ`} items={model.faq} />
+        <FaqSection className="mt-20 sm:mt-28" title={`${gameName} Marketplace FAQ`} sub="Quick answers before you buy or sell." items={model.faq} />
+
+        <About model={model.about} />
       </div>
 
       <PaymentsMarquee disclaimer={model.trademark} />

@@ -9,8 +9,9 @@ import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_i
 import type { BlogRailPost } from '@/components/blog/BlogSection'
 import type { MoverRow } from './model/movers'
 import type { ToolTile } from './model/tools'
+import type { AboutRow } from './model/about'
 
-export type { MoverRow, ToolTile }
+export type { AboutRow, MoverRow, ToolTile }
 
 export interface GameRow {
   id: string
@@ -149,6 +150,16 @@ export interface GuidesModel {
   posts: GuideCard[]
 }
 
+export interface AboutModel {
+  gameName: string
+  gameImageUrl: string | null
+  rows: AboutRow[]
+  /** Up to 5 item pictures for the collage (most valuable items, else our offers). */
+  art: string[]
+  /** The game's categories as links with live counts, for the "what you can buy" art. */
+  categories: { name: string; href: string; count: number }[]
+}
+
 export interface StartSellingModel {
   gameSlug: string
   gameName: string
@@ -177,6 +188,7 @@ export interface GameHomeModel {
   tools: ToolsModel | null
   /** {Game} Guides carousel, or null without published posts. */
   guides: GuidesModel | null
+  about: AboutModel
   faq: { q: string; a: string }[]
   trademark: string
 }
