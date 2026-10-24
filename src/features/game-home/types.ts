@@ -7,8 +7,9 @@
 import type { HubCard, HubCategory, HubCategoryStat } from '@/app/(marketplace)/[gameSlug]/_hubModel'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import type { MoverRow } from './model/movers'
+import type { ToolTile } from './model/tools'
 
-export type { MoverRow }
+export type { MoverRow, ToolTile }
 
 export interface GameRow {
   id: string
@@ -121,6 +122,13 @@ export interface PriceMovesModel {
   falling: MoverRow[]
 }
 
+export interface ToolsModel {
+  title: string
+  tiles: ToolTile[]
+  /** Up to two item pictures for the featured tile (the game's most valuable items), or []. */
+  art: string[]
+}
+
 export interface StartSellingModel {
   gameSlug: string
   gameName: string
@@ -145,6 +153,8 @@ export interface GameHomeModel {
   startSelling: StartSellingModel
   /** Biggest Price Moves, or null for a game without trends. */
   priceMoves: PriceMovesModel | null
+  /** Free {Game} Trading Tools, or null for a game without tool pages. */
+  tools: ToolsModel | null
   faq: { q: string; a: string }[]
   trademark: string
 }

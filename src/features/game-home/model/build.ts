@@ -5,7 +5,8 @@
  * and GameHome leaves it out.
  */
 import { hubPitch, pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
-import type { GameHomeData, GameHomeModel, HotNewModel, OfferRowModel, PriceMovesModel } from '../types'
+import type { GameHomeData, GameHomeModel, HotNewModel, OfferRowModel, PriceMovesModel, ToolsModel } from '../types'
+import { gameTools } from './tools'
 import { heroFacts } from './hero'
 import { pickHotNew } from './hot-new'
 import { pickMovers } from './movers'
@@ -13,6 +14,17 @@ import { itemNoun, itemNounSingular } from './item-noun'
 
 /** Offers per Top Selling row (the rail scrolls; See All goes to the category). */
 const ROW_LIMIT = 12
+
+function buildTools({ game, values }: GameHomeData, noun: string): ToolsModel | null {
+  const tiles = gameTools(game.slug, game.name, noun)
+  if (tiles.length === 0) return null
+  const art = (values?.items ?? [])
+    .filter((i) => i.imageUrl && i.valueUsd != null)
+    .sort((a, b) => b.valueUsd! - a.valueUsd!)
+    .slice(0, 2)
+    .map((i) => i.imageUrl!)
+  return { title: `Free ${game.name} Trading Tools`, tiles, art }
+}
 
 function buildPriceMoves({ game, values }: GameHomeData): PriceMovesModel | null {
   if (!values) return null
@@ -99,6 +111,7 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
     topSelling,
     hotNew: buildHotNew(data, noun, now),
     priceMoves: buildPriceMoves(data),
+    tools: buildTools(data, noun),
     startSelling: {
       gameSlug: game.slug,
       gameName: game.name,

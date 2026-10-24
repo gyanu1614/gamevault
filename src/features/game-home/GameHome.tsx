@@ -18,6 +18,7 @@ import { HowBuying } from './sections/HowBuying'
 import { HotNew } from './sections/HotNew'
 import { StartSelling } from './sections/StartSelling'
 import { PriceMoves } from './sections/PriceMoves'
+import { Tools } from './sections/Tools'
 
 const PAGE = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
 
@@ -52,6 +53,8 @@ export function GameHome({ model }: { model: GameHomeModel }) {
         <StartSelling model={model.startSelling} />
 
         {model.priceMoves && <PriceMoves model={model.priceMoves} />}
+
+        {model.tools && <Tools model={model.tools} />}
 
         <FaqSection title={`${gameName} Marketplace FAQ`} items={model.faq} />
       </div>
