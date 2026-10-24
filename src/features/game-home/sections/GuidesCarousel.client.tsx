@@ -97,7 +97,7 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
                       Read Guide
                       <ArrowRightIcon size={13} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
                     </span>
-                    <span className="text-white/55">{post.readMinutes} min read</span>
+                    <span className="text-white/55">{post.readMinutes}&nbsp;min read</span>
                   </span>
                 </span>
               </Link>
@@ -108,16 +108,18 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
 
       {posts.length > 1 && (
         <div className="mt-5 flex items-center justify-center gap-4">
-          <div className="flex justify-center gap-2" role="tablist" aria-label="Choose a guide">
+          <div className="flex justify-center gap-2" role="group" aria-label="Choose a guide">
             {posts.map((post, i) => (
               <button
                 key={post.href}
                 type="button"
-                role="tab"
-                aria-selected={i === selected}
+                aria-current={i === selected ? 'true' : undefined}
                 aria-label={`Guide ${i + 1}: ${post.title}`}
                 onClick={() => api?.scrollTo(i)}
-                className={cn('h-1.5 rounded-full transition-all duration-300', i === selected ? 'w-6 bg-white/80' : 'w-1.5 bg-white/25 hover:bg-white/40')}
+                className={cn(
+                  'h-1.5 rounded-full transition-[width,background-color] duration-300',
+                  i === selected ? 'w-6 bg-white/80' : 'w-1.5 bg-white/25 hover:bg-white/40',
+                )}
               />
             ))}
           </div>

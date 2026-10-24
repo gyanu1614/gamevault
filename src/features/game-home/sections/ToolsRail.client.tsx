@@ -72,7 +72,7 @@ export function ToolsRail({ tiles, art }: { tiles: ToolTile[]; art: string[] }) 
         <RailArrows api={api} canPrev={canPrev} canNext={canNext} label="tools" />
       </div>
       <div className="-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0" ref={ref}>
-        <div className="flex gap-4">
+        <div className="flex touch-pan-y gap-4">
           {tiles.map((tile) => (
             <div key={tile.key} className={cn('min-w-0 shrink-0 grow-0', tile.featured ? 'basis-[86%] sm:basis-[440px]' : 'basis-[62%] sm:basis-[250px]')}>
               <Tile tile={tile} art={tile.featured ? art : []} />

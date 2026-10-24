@@ -22,9 +22,9 @@ const POSITIONS = [
 
 function proof(firstSeller: boolean) {
   return [
-    { icon: '/icons/set/store.svg', text: 'Free to list' },
-    { icon: '/icons/set/wallet.svg', text: 'Get paid when it sells' },
-    firstSeller ? { icon: '/icons/set/crown.svg', text: 'Your offer shows first' } : { icon: '/icons/set/bolt.svg', text: 'Buyers already shop here' },
+    { icon: '/icons/set/store.svg', text: 'Free to List' },
+    { icon: '/icons/set/wallet.svg', text: 'Get Paid When It Sells' },
+    firstSeller ? { icon: '/icons/set/crown.svg', text: 'Your Offer Shows First' } : { icon: '/icons/set/bolt.svg', text: 'Buyers Already Shop Here' },
   ]
 }
 
