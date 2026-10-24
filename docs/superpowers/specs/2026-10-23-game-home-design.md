@@ -69,13 +69,13 @@ Each section's model returns `null` when its data is missing, and a `null` secti
 - **The facts line**, when every part is known: "{N} {Game} offers from {$low}, delivered in about {avg}." Parts we
   don't know are dropped, never invented.
 - **Hot New ranking:**
-  1. items released in the last 14 days, by the existing new-item rule (`lib/values/new-item.ts`);
-  2. ordered by our live offers for the item, then release date (newest first);
+  1. items flagged New by the existing rule (`lib/values/new-item.ts`, already on the value list rows);
+  2. ordered by our own live offers for the item (`getValueStock`);
   3. ties broken by a day-seeded shuffle, so the order is stable within a UTC day and changes daily;
-  4. with fewer than 4 items, fill from the last 60 days;
-  5. maximum 8;
-  6. an item with no offer gets the CTA **Sell Yours First** (to `/[game]/sell`), and its secondary link goes to the
+  4. maximum 8;
+  5. an item with no offer gets the CTA **Sell Yours First** (to `/[game]/sell`), and its secondary link goes to the
      item's value page.
+  6. The rows carry no release dates, so there is no 60-day back-fill. The popularity PR can add a date-aware fill.
 - **Price Moves:** 7-day % from the existing trends (`lib/values/trends.ts`, 0.05% floor). Top 3 up and top 3 down,
   plus a real "Prices updated {date}" line from `getValuesFreshness`. Hidden when fewer than 2 items moved.
 
