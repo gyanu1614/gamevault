@@ -28,6 +28,27 @@ const LABELS: Record<HubToolLink['tool'], { footerLabel: string; tabLabel: strin
   inventory: { footerLabel: 'Inventory Calculator', tabLabel: 'Inventory' },
 }
 
+/**
+ * The ONE content tab a game's marketplace sub-nav shows after its category
+ * tabs, behind the grey divider (owner, 2026-10-23): "Values & Guides" to the
+ * game's blog hub (its values + guides home), else straight to the value list
+ * when the game has no blog hub; "Guides" for a guides-only game; none for a
+ * game without a content hub. The footer keeps the direct value-list links
+ * (hubToolLinks), so search engines still reach /[game]/values from every page.
+ */
+export interface HubNavTab {
+  href: string
+  label: 'Values & Guides' | 'Guides'
+}
+
+export function hubNavTab(gameSlug: string): HubNavTab | null {
+  if (!hasGameContentTheme(gameSlug)) return null
+  const { pages } = getGameContentTheme(gameSlug)
+  if (pages.values) return { href: `/${gameSlug}/${pages.blog ? 'blog' : 'values'}`, label: 'Values & Guides' }
+  if (pages.blog) return { href: `/${gameSlug}/blog`, label: 'Guides' }
+  return null
+}
+
 export function hubToolLinks(gameSlug: string): HubToolLink[] {
   if (!hasGameContentTheme(gameSlug)) return []
   const { pages } = getGameContentTheme(gameSlug)

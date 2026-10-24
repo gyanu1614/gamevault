@@ -43,13 +43,14 @@ describe('GameSubNav links', () => {
     expect(html).toMatch(/<a[^>]*href="\/fortnite\/buy-items"[^>]*aria-current="page"|<a[^>]*aria-current="page"[^>]*href="\/fortnite\/buy-items"/)
   })
 
-  it('links a hub game to its value list and calculator from the same strip', () => {
+  // Owner, 2026-10-23: one "Values & Guides" tab after the categories (grey
+  // divider) instead of separate Values + Calculator tabs; the footer keeps
+  // linking the value list itself.
+  it('links a hub game to its values and guides home from one tab', () => {
     const html = render('adopt-me', 'Adopt Me')
-    expect(html).toContain('href="/adopt-me/values"')
-    expect(html).toContain('href="/adopt-me/calculator"')
-    const mm2 = render('murder-mystery-2', 'Murder Mystery 2')
-    expect(mm2).toContain('href="/murder-mystery-2/values"')
-    expect(mm2).toContain('href="/murder-mystery-2/inventory"')
+    expect(html).toContain('href="/adopt-me/blog"')
+    expect(html).toContain('Values &amp; Guides')
+    expect(html).not.toContain('href="/adopt-me/calculator"')
   })
 
   it('adds no tool tabs (and no divider) for a game without a value hub', () => {

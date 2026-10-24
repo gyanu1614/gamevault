@@ -1,6 +1,27 @@
 import { describe, it, expect } from 'vitest'
-import { hubToolLinks } from '@/lib/content/hub-links'
+import { hubNavTab, hubToolLinks } from '@/lib/content/hub-links'
 import { CONTENT_HUB_GAME_SLUGS, hasHubPage } from '@/lib/content/theme'
+
+describe('hubNavTab', () => {
+  it('gives a values game one Values & Guides tab to its blog hub', () => {
+    expect(hubNavTab('adopt-me')).toEqual({ href: '/adopt-me/blog', label: 'Values & Guides' })
+  })
+
+  it('gives no tab to a game without a content hub', () => {
+    expect(hubNavTab('fortnite')).toBeNull()
+  })
+
+  it('only ever links a page the game publishes, the blog first, else the value list', () => {
+    for (const slug of CONTENT_HUB_GAME_SLUGS) {
+      const tab = hubNavTab(slug)
+      if (!tab) continue
+      const page = tab.href.split('/').pop() as 'blog' | 'values'
+      expect(hasHubPage(slug, page), tab.href).toBe(true)
+      if (page === 'values') expect(hasHubPage(slug, 'blog'), slug).toBe(false)
+      expect(tab.label).toBe(hasHubPage(slug, 'values') ? 'Values & Guides' : 'Guides')
+    }
+  })
+})
 
 const hrefs = (slug: string) => hubToolLinks(slug).map((l) => l.href)
 
