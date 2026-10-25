@@ -120,9 +120,3 @@ export function filterOptions(gameSlug: string, items: readonly GridItem[]): { r
   ).map((f) => ({ value: f, label: f }))
   return { rarities, types, forms }
 }
-
-export function pageSlice<T>(rows: readonly T[], page: number, perPage: number): { rows: T[]; page: number; pages: number } {
-  const pages = Math.max(1, Math.ceil(rows.length / perPage))
-  const p = Math.min(Math.max(1, Math.floor(page) || 1), pages)
-  return { rows: rows.slice((p - 1) * perPage, p * perPage), page: p, pages }
-}

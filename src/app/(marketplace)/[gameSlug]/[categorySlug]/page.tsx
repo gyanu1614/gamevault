@@ -83,7 +83,12 @@ function formatBundleDelivery(raw: string | null | undefined): string {
 // V15 — Items page dispatch + SEO slug resolver.
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
+import { VALUE_CATALOG_GAMES } from '@/lib/value-listings/catalogs'
+import { getValuesFeed } from '@/lib/value-listings/feed'
+import { filterOptions, toGridItems } from '@/features/items-grid/model/grid'
+import { itemNoun } from '@/features/game-home/model/item-noun'
 const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
+const ItemsGridClient = dynamic(() => import('@/features/items-grid/ItemsGridClient'))
 import { resolveItemBySlug } from './_itemResolver'
 import { hubNavExtras } from '../values/_HubNavExtras'
 import { seoMeta } from '@/lib/seo/fit'
@@ -847,7 +852,9 @@ async function CategoryBrowsePage({ params }: PageProps) {
       if (categoryType === 'top_up') return 'top-up'
       return 'items'
     })()
-    const [allCategories, taxonomy, listingsRaw, stats] = await Promise.all([
+    // Values games' items: one card per catalogue item (owner, 2026-10-24).
+    const isValuesGrid = categoryType === 'items' && VALUE_CATALOG_GAMES.includes(gameSlug)
+    const [allCategories, taxonomy, listingsRaw, stats, feed] = await Promise.all([
       getAllGameCategories(game.id),
       loadItemsTaxonomy(game.id, taxonomySlug),
       (async () => {
@@ -856,7 +863,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .from('listings')
           .select(`
             id, slug, title, price, original_price, delivery_time,
-            quantity, is_unlimited, images, template_data, status,
+            quantity, is_unlimited, images, template_data, status, value_item_slug,
             seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
@@ -873,10 +880,12 @@ async function CategoryBrowsePage({ params }: PageProps) {
         return (data ?? []) as any[]
       })(),
       getCategoryStats(game.id, category.id),
+      isValuesGrid ? getValuesFeed(gameSlug) : Promise.resolve(null),
     ])
 
     const offers = listingsRaw.map((l) => listingToItemOffer(l, taxonomy))
     const introLine = buildIntroLine(stats, game.name, category.name)
+    const gridItems = feed ? toGridItems(gameSlug, feed, category.slug) : null
 
     return (
       <>
@@ -911,20 +920,36 @@ async function CategoryBrowsePage({ params }: PageProps) {
         {/* The client reads ?attr_<slug>= / ?search= deep links through
             SearchParamsBridge, so it stays in the static HTML. */}
         <Suspense fallback={null}>
-          <ItemsPageClient
-            gameSlug={gameSlug}
-            gameName={game.name}
-            gameImageUrl={(game as any).image_url ?? null}
-            categoryLabel={category.name}
-            tagline={
-              (category as any).description ||
-              `Browse verified ${game.name} listings — every order covered by SafeDrop Protection.`
-            }
-            offers={offers}
-            taxonomy={taxonomy}
-            introLine={introLine}
-            stats={stats}
-          />
+          {gridItems ? (
+            <ItemsGridClient
+              gameSlug={gameSlug}
+              gameName={game.name}
+              gameImageUrl={(game as any).image_url ?? null}
+              categoryLabel={category.name}
+              itemNoun={itemNoun(gameSlug)}
+              items={gridItems}
+              options={filterOptions(gameSlug, gridItems)}
+              stats={stats}
+              introLine={introLine}
+              // Listings not linked to a catalogue item (bundles, odd titles) still sell here.
+              moreListings={offers.filter((_, i) => !listingsRaw[i]?.value_item_slug)}
+            />
+          ) : (
+            <ItemsPageClient
+              gameSlug={gameSlug}
+              gameName={game.name}
+              gameImageUrl={(game as any).image_url ?? null}
+              categoryLabel={category.name}
+              tagline={
+                (category as any).description ||
+                `Browse verified ${game.name} listings — every order covered by SafeDrop Protection.`
+              }
+              offers={offers}
+              taxonomy={taxonomy}
+              introLine={introLine}
+              stats={stats}
+            />
+          )}
         </Suspense>
         {/* Editorial SEO guide after the listings end. Reuses `stats`
             (request-memoised) so its live numbers match the header and

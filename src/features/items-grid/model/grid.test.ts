@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterGrid, filterOptions, pageSlice, sortGrid, toGridItems, EMPTY_FILTERS, type GridItem } from './grid'
+import { filterGrid, filterOptions, sortGrid, toGridItems, EMPTY_FILTERS, type GridItem } from './grid'
 import type { FeedItem, ValuesFeed } from '@/lib/value-listings/feed/types'
 
 const item = (slug: string, over: Partial<FeedItem> = {}): FeedItem => ({
@@ -109,15 +109,5 @@ describe('filterGrid', () => {
       ],
       forms: [{ value: 'Default', label: 'Default' }],
     })
-  })
-})
-
-describe('pageSlice', () => {
-  it('slices a page and clamps an out-of-range page', () => {
-    const xs = Array.from({ length: 50 }, (_, i) => i)
-    expect(pageSlice(xs, 1, 24)).toEqual({ rows: xs.slice(0, 24), page: 1, pages: 3 })
-    expect(pageSlice(xs, 3, 24)).toEqual({ rows: xs.slice(48), page: 3, pages: 3 })
-    expect(pageSlice(xs, 9, 24).page).toBe(3)
-    expect(pageSlice([], 1, 24)).toEqual({ rows: [], page: 1, pages: 1 })
   })
 })
