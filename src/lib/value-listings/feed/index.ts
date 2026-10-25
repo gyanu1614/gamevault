@@ -5,7 +5,10 @@ import type { BrainrotDirectoryItem } from '@/app/(marketplace)/[gameSlug]/value
 import type { ValueListRow } from '@/app/(marketplace)/[gameSlug]/values/_generic/valueListModel'
 import { getValueStock } from '@/lib/value-listings/stock-server'
 import { getValuesFreshness } from '@/lib/values/data'
-import type { FeedItem, ValuesFeed } from '../../types'
+import { amVariantCode, variantLabel } from '@/lib/value-listings/catalogs'
+import type { FeedItem, ValuesFeed } from './types'
+
+export type { FeedItem, ValuesFeed } from './types'
 import { fromAdoptMe, fromGeneric, fromSab } from './map'
 
 /**
@@ -38,16 +41,29 @@ export async function getValuesFeed(gameSlug: string): Promise<ValuesFeed | null
     const counts: Record<string, number> = {}
     const buyHref: Record<string, string> = {}
     const minPrice: Record<string, number> = {}
+    const forms: Record<string, string[]> = {}
     for (const [slug, s] of Object.entries(stock?.byItem ?? {})) {
       if (s.total <= 0) continue
       counts[slug] = s.total
       if (stock) buyHref[slug] = `/${gameSlug}/${stock.pair.categorySlug}/item/${slug}`
       if (s.minPriceUsd != null) minPrice[slug] = s.minPriceUsd
+      const labels = Object.keys(s.byVariant)
+        .map((key) => (gameSlug === 'adopt-me' ? amVariantCode(key) : variantLabel(gameSlug, key)))
+        .filter((l): l is string => !!l)
+      if (labels.length > 0) forms[slug] = labels
     }
 
-    return { items, stock: counts, buyHref, minPrice, updatedAt: freshness?.lastChangedAt ?? null }
+    return {
+      items,
+      stock: counts,
+      buyHref,
+      minPrice,
+      forms,
+      categorySlug: stock?.pair.categorySlug ?? null,
+      updatedAt: freshness?.lastChangedAt ?? null,
+    }
   } catch (e) {
-    console.error(`[game-home] values feed unavailable for ${gameSlug}:`, e instanceof Error ? e.message : e)
+    console.error(`[values-feed] values feed unavailable for ${gameSlug}:`, e instanceof Error ? e.message : e)
     return null
   }
 }

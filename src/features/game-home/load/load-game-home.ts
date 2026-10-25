@@ -10,7 +10,7 @@ import { getHubCategoryStats, getHubCurrency, getHubOffers } from '@/app/(market
 import { buildHubCards, splitCards, type HubCategory } from '@/app/(marketplace)/[gameSlug]/_hubModel'
 import type { GameHomeData } from '../types'
 import type { GameData } from './game'
-import { getValuesFeed } from './values-feed'
+import { getValuesFeed } from '@/lib/value-listings/feed'
 import { getBlogRail } from '@/lib/blog/rail'
 
 const NO_CURRENCY = { iconUrl: null, unitSuffix: null, unitsPerPrice: null }

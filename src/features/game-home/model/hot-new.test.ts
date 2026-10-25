@@ -7,6 +7,8 @@ const item = (slug: string, isNew = true): FeedItem => ({
   name: slug,
   imageUrl: null,
   href: `/x/values/${slug}`,
+  rarityKey: null,
+  itemType: null,
   isNew,
   trendPct: null,
   trendLabel: null,
@@ -17,6 +19,8 @@ const feed = (items: FeedItem[], stock: Record<string, number> = {}, minPrice: R
   stock,
   buyHref: Object.fromEntries(Object.keys(stock).map((s) => [s, `/x/buy-items/item/${s}`])),
   minPrice,
+  forms: {},
+  categorySlug: null,
   updatedAt: null,
 })
 const DAY = 86_400_000

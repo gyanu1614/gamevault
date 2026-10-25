@@ -22,35 +22,8 @@ export interface GameRow {
   image_url: string | null
 }
 
-/** One value-list item as the game home sees it, whatever the game's list shape. */
-export interface FeedItem {
-  slug: string
-  name: string
-  imageUrl: string | null
-  /** The item's value page, or null when it has none. */
-  href: string | null
-  /** The New badge rule (lib/values/new-item.ts), already applied by the list loader. */
-  isNew: boolean
-  /** 7-day % change, or null without two days of history. */
-  trendPct: number | null
-  /** The form the trend is for when the game prices forms ("FR"), else null. */
-  trendLabel: string | null
-  /** The item's headline value in USD (penny items are kept out of Price Moves). */
-  valueUsd: number | null
-}
-
-/** A values game's feed for the home sections: its items + OUR live stock per item. */
-export interface ValuesFeed {
-  items: FeedItem[]
-  /** DropMarket's own live listings per item slug (never another site's counts). */
-  stock: Record<string, number>
-  /** Our listings of an item ("Buy From $X"), or null when we have none. */
-  buyHref: Record<string, string>
-  /** Our cheapest live price per item slug. */
-  minPrice: Record<string, number>
-  /** When prices last changed, if the game's list reports it. */
-  updatedAt: string | null
-}
+export type { FeedItem, ValuesFeed } from '@/lib/value-listings/feed/types'
+import type { FeedItem, ValuesFeed } from '@/lib/value-listings/feed/types'
 
 export interface HotNewCard {
   slug: string

@@ -7,6 +7,8 @@ const m = (slug: string, pct: number | null, valueUsd: number | null = 10, trend
   name: slug,
   imageUrl: null,
   href: `/x/values/${slug}`,
+  rarityKey: null,
+  itemType: null,
   isNew: false,
   trendPct: pct,
   trendLabel,

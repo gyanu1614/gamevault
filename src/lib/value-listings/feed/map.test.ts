@@ -22,6 +22,8 @@ describe('values feed mappers', () => {
       name: 'Frost Dragon',
       imageUrl: '/f.png',
       href: '/adopt-me/values/frost-dragon',
+      rarityKey: 'legendary',
+      itemType: null,
       isNew: true,
       trendPct: 6.8,
       trendLabel: 'FR',
@@ -31,12 +33,12 @@ describe('values feed mappers', () => {
   })
 
   it('Steal a Brainrot: average price first, its value page, numeric strings parsed', () => {
-    const [b] = fromSab([{ slug: 'tung', name: 'Tung', image_url: '/t.png', average_usd: null, display_price_usd: '12.5', trendPct: -3, isNew: false }] as never)
-    expect(b).toEqual({ slug: 'tung', name: 'Tung', imageUrl: '/t.png', href: '/steal-a-brainrot/values/tung', isNew: false, trendPct: -3, trendLabel: null, valueUsd: 12.5 })
+    const [b] = fromSab([{ slug: 'tung', name: 'Tung', rarity: 'Secret', image_url: '/t.png', average_usd: null, display_price_usd: '12.5', trendPct: -3, isNew: false }] as never)
+    expect(b).toEqual({ slug: 'tung', name: 'Tung', imageUrl: '/t.png', href: '/steal-a-brainrot/values/tung', rarityKey: 'Secret', itemType: null, isNew: false, trendPct: -3, trendLabel: null, valueUsd: 12.5 })
   })
 
   it('generic: passes the row through, market price first', () => {
-    const [r] = fromGeneric([{ slug: 'harvester', name: 'Harvester', imageUrl: null, href: '/murder-mystery-2/values/harvester', trendPct: 2.1, marketUsd: 7, cheapestUsd: 6, isNew: true }] as never)
-    expect(r).toEqual({ slug: 'harvester', name: 'Harvester', imageUrl: null, href: '/murder-mystery-2/values/harvester', isNew: true, trendPct: 2.1, trendLabel: null, valueUsd: 7 })
+    const [r] = fromGeneric([{ slug: 'harvester', name: 'Harvester', rarity: 'Godly', itemType: 'knife', imageUrl: null, href: '/murder-mystery-2/values/harvester', trendPct: 2.1, marketUsd: 7, cheapestUsd: 6, isNew: true }] as never)
+    expect(r).toEqual({ slug: 'harvester', name: 'Harvester', imageUrl: null, href: '/murder-mystery-2/values/harvester', rarityKey: 'Godly', itemType: 'knife', isNew: true, trendPct: 2.1, trendLabel: null, valueUsd: 7 })
   })
 })
