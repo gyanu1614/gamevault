@@ -98,8 +98,6 @@ export async function orderPaymentMethodLabel(order: {
     }
   } else if (provider === 'coingate') {
     label = 'Crypto'
-  } else if (provider === 'stripe') {
-    label = 'Card'
   } else {
     label = provider.charAt(0).toUpperCase() + provider.slice(1)
   }

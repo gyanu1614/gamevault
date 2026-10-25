@@ -4,7 +4,6 @@
  * Use ONLY in:
  * - Server Actions performing admin/system operations
  * - API routes that need to bypass RLS (webhooks, crons)
- * - The Stripe Connect library
  *
  * NEVER import this in client components or expose to the browser.
  * The service role key has full DB access — treat it like a root password.
