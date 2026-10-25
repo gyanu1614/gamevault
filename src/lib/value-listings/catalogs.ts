@@ -5,6 +5,8 @@
  * actions, ISR pages, the cron route and the tsx backfill script alike — no
  * `server-only`, no `@/` imports.
  */
+import { VARIANTS, VARIANT_ALIASES, VARIANT_KEY, VARIANT_LABEL, isVariant, variantFromKey, type Variant } from '../adopt-me/variants'
+import { variantFromTitle } from '../adopt-me/variant-from-title'
 import type { ValueCatalog } from './match'
 import type { SimilarCandidate } from './stock'
 
@@ -28,46 +30,23 @@ const PIPELINE_IDENTITY_KEYS: Record<string, readonly string[]> = {
   'steal-an-egg': ['select-egg', 'select-pet', 'egg-area'],
 }
 
-/** Adopt Me value-page variant code → URL key (also the stored `value_variant`). */
-export const AM_VARIANT_KEY = {
-  N: 'normal',
-  F: 'fly',
-  R: 'ride',
-  FR: 'fly-ride',
-  NEON: 'neon',
-  NFR: 'neon-fly-ride',
-  MEGA: 'mega-neon',
-  MFR: 'mega-fly-ride',
-} as const
+/** Adopt Me value-page variant code → URL key (also the stored `value_variant`). One map: lib/adopt-me/variants. */
+export const AM_VARIANT_KEY = VARIANT_KEY
 
-export type AmVariantCode = keyof typeof AM_VARIANT_KEY
+export type AmVariantCode = Variant
 
 export function amVariantKey(code: string): string | null {
-  return (AM_VARIANT_KEY as Record<string, string>)[code] ?? null
+  return isVariant(code) ? VARIANT_KEY[code] : null
 }
 
-export function amVariantCode(key: string): AmVariantCode | null {
-  const hit = Object.entries(AM_VARIANT_KEY).find(([, k]) => k === key)
-  return (hit?.[0] as AmVariantCode | undefined) ?? null
-}
-
-const AM_VARIANT_NAMES: Record<AmVariantCode, readonly string[]> = {
-  N: ['Normal', 'No Potion'],
-  F: ['Fly', 'F'],
-  R: ['Ride', 'R'],
-  FR: ['Fly Ride', 'FR'],
-  NEON: ['Neon', 'N'],
-  NFR: ['Neon Fly Ride', 'NFR'],
-  MEGA: ['Mega Neon', 'Mega', 'M'],
-  MFR: ['Mega Fly Ride', 'Mega Neon Fly Ride', 'MFR'],
-}
+export const amVariantCode = variantFromKey
 
 /** Display label for a stored variant key, per game. */
 export function variantLabel(gameSlug: string, key: string | null, mutations?: ReadonlyArray<{ slug: string; name: string }>): string | null {
   if (!key) return null
   if (gameSlug === 'adopt-me') {
-    const code = amVariantCode(key)
-    return code ? AM_VARIANT_NAMES[code][0] : null
+    const code = variantFromKey(key)
+    return code ? VARIANT_LABEL[code] : null
   }
   if (key === 'default') return 'Default'
   return mutations?.find((m) => m.slug === key)?.name ?? key.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -114,12 +93,15 @@ export function buildValueCatalog(
       catalog: {
         gameSlug,
         items,
-        variants: (Object.keys(AM_VARIANT_KEY) as AmVariantCode[]).map((code) => ({
-          key: AM_VARIANT_KEY[code],
-          names: AM_VARIANT_NAMES[code],
-        })),
+        variants: VARIANTS.map((code) => ({ key: VARIANT_KEY[code], names: VARIANT_ALIASES[code] })),
         identityKeys: ['pet-name'],
         variantKeys: ['trait'],
+        // Real variants with no value page, and "no potion": not part of a pet's name.
+        skipWords: ['nf', 'nr', 'mf', 'mr', 'np', 'potion', 'potions'],
+        titleVariant: (title, itemName) => {
+          const code = variantFromTitle(title, { itemName })
+          return code ? VARIANT_KEY[code] : null
+        },
       },
     }
   }
@@ -185,14 +167,18 @@ export async function loadOptionLabels(client: AnyClient, gameCategoryId: string
   if (list.length === 0) return {}
   const { data: opts } = await client
     .from('attribute_options')
-    .select('attribute_id, slug, label')
+    .select('attribute_id, slug, value, label')
     .in('attribute_id', list.map((a) => a.id))
   const slugById = new Map(list.map((a) => [a.id, a.slug]))
   const out: Record<string, Record<string, string>> = {}
-  for (const o of (opts ?? []) as Array<{ attribute_id: string; slug: string; label: string }>) {
+  for (const o of (opts ?? []) as Array<{ attribute_id: string; slug: string; value: string | null; label: string }>) {
     const attr = slugById.get(o.attribute_id)
     if (!attr) continue
-    ;(out[attr] ??= {})[o.slug] = o.label
+    // Listings store the choice's VALUE (what the sell form writes); it equals
+    // the slug unless an admin set one, so key both.
+    const byCode = (out[attr] ??= {})
+    byCode[o.slug] = o.label
+    if (o.value) byCode[o.value] = o.label
   }
   return out
 }

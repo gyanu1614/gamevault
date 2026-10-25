@@ -113,7 +113,9 @@ export function resolveRow(raw: RawImportRow, ctx: ResolveContext): ResolvedRow 
     return row
   }
 
-  const match = matchItem(ctx.index, raw.item)
+  // No variant cell: the game may read it from the item cell ("FR Frost Dragon").
+  const fromText = raw.variant?.trim() ? null : ctx.config.variantFromItemText?.(raw.item) ?? null
+  const match = matchItem(ctx.index, fromText?.item || raw.item)
   if (match.status !== 'matched') {
     row.status = match.status
     row.candidates = match.candidates
@@ -129,7 +131,7 @@ export function resolveRow(raw: RawImportRow, ctx: ResolveContext): ResolvedRow 
   row.itemName = item.name
 
   // ── the variant ───────────────────────────────────────────────────────────
-  const variantMatch = matchVariant(ctx.index, raw.variant)
+  const variantMatch = matchVariant(ctx.index, fromText?.ref ?? raw.variant)
   if (variantMatch === 'unknown') {
     row.status = 'rejected'
     row.error = `"${raw.variant}" is not a ${ctx.config.variantNoun ?? 'variant'} this game has`
@@ -190,6 +192,7 @@ export function resolveRow(raw: RawImportRow, ctx: ResolveContext): ResolvedRow 
     variant,
     item: { ref: item.ref, name: item.name },
     hints: ctx.config.attributeHints,
+    variantOfLabel: ctx.config.variantOfChoiceLabel,
   })
   row.templateData = attrs.data
   row.unfilledAttributes = attrs.unfilled
