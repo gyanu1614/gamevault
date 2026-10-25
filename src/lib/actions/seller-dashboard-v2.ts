@@ -15,6 +15,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { isPaidOrder, pendingPayoutOf } from '@/lib/wallet/wallet-rows'
 import { fetchAllRows } from '@/lib/db/fetch-all'
@@ -93,7 +94,7 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
   const prevStart = new Date(now - 2 * windowDays * DAY).toISOString()
 
   // Pull everything in parallel.
-  const [ordersRes, listingsRes, reviewsRes, convosRes, profileRes] = await Promise.all([
+  const [ordersRes, listingsRes, reviewsRes, convosRes, profileRes, payoutDetailsRes] = await Promise.all([
     // Paged: pending payout / revenue are sums — a 1000-row cap would
     // under-count them.
     fetchAllRows<any>((from, to) =>
@@ -123,6 +124,16 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
       .select('shop_name, shop_slug, paypal_email, payout_enabled')
       .eq('id', user.id)
       .single(),
+    // Saved payout method (the Payouts tab writes it). The table holds
+    // encrypted secrets and is service-role only, so: this user's row,
+    // existence only. A failed first save can leave an empty row, hence the
+    // method filter.
+    createServiceRoleClient()
+      .from('seller_payout_details')
+      .select('seller_id')
+      .eq('seller_id', user.id)
+      .or('crypto_coin.not.is.null,payoneer_email_hash.not.is.null')
+      .limit(1),
   ])
 
   // seller_payout is the seller's private column: merged in, not selected.
@@ -266,10 +277,14 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
   }
 
   // ── Onboarding signals (real completion state) ────────────────────────
-  // Payout accepts legacy sellers: the payout_enabled flag or a saved PayPal
-  // email counts as connected.
+  // Payout: saved payout details, or a legacy signal (the payout_enabled
+  // flag, a saved PayPal email).
   const onboarding: OnboardingSignals = {
-    payoutConnected: !!(profile.payout_enabled || profile.paypal_email),
+    payoutConnected: !!(
+      (payoutDetailsRes.data ?? []).length > 0 ||
+      profile.payout_enabled ||
+      profile.paypal_email
+    ),
     hasListing: listings.length > 0,
     deliveryTimesSet: listings.some((l) => l.status === 'active' && !!l.delivery_time),
     shopNamed: !!profile.shop_name,
