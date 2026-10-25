@@ -128,6 +128,17 @@ export async function revalidateListingSurfaces(
     }
   }
   if (error) console.error('[revalidateListingSurfaces]', error, { target, tags })
+
+  // A listing of a value item changed (published, approved, re-linked…): the
+  // listings trigger may have made Notify Me alerts due, so send them after
+  // the response. Loaded lazily so this seam's many importers don't pull in
+  // the email stack; never blocks or fails the mutation.
+  if (valueItemTags.size > 0) {
+    void import('@/lib/stock-alerts/dispatch')
+      .then((m) => m.scheduleStockAlertDispatch())
+      .catch((e) => console.error('[revalidateListingSurfaces] stock alerts', e))
+  }
+
   return error ? { tags, error } : { tags }
 }
 

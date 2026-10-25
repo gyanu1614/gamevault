@@ -54,6 +54,9 @@ export const RATE_LIMITS = {
   /** Buyer order reports ("Cancel – Not Delivered"): each one notifies and
    *  emails the seller, so a few a minute per user is plenty. */
   orderReport: { limit: 5, windowSeconds: 60 },
+  /** Notify Me stock alerts (set / remove): a person taps a handful a minute;
+   *  this stops a script filling stock_alerts for one account. */
+  stockAlert: { limit: 20, windowSeconds: 60 },
 } as const satisfies Record<string, RateLimitBudget>
 
 export type RateLimitName = keyof typeof RATE_LIMITS

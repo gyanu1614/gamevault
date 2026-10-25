@@ -15,6 +15,7 @@
     { "path": "/api/cron/seo-indexnow", "schedule": "40 5 * * *" },
     { "path": "/api/cron/seo-gsc", "schedule": "20 6 * * *" },
     { "path": "/api/cron/seo-bing", "schedule": "40 7 * * *" },
-    { "path": "/api/cron/values-health", "schedule": "15 9 * * *" }
+    { "path": "/api/cron/values-health", "schedule": "15 9 * * *" },
+    { "path": "/api/cron/stock-alerts", "schedule": "25 9 * * *" }
   ]
 }

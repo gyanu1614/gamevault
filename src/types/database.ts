@@ -1227,6 +1227,87 @@ export type Database = {
           },
         ]
       }
+      catalogue_refs: {
+        Row: {
+          checked_at: string
+          first_seen_at: string
+          game_slug: string
+          item_slug: string | null
+          page_id: number
+          status: string
+          wiki_title: string
+        }
+        Insert: {
+          checked_at?: string
+          first_seen_at?: string
+          game_slug: string
+          item_slug?: string | null
+          page_id: number
+          status: string
+          wiki_title: string
+        }
+        Update: {
+          checked_at?: string
+          first_seen_at?: string
+          game_slug?: string
+          item_slug?: string | null
+          page_id?: number
+          status?: string
+          wiki_title?: string
+        }
+        Relationships: []
+      }
+      catalogue_runs: {
+        Row: {
+          added_slugs: string[]
+          adopted: number
+          candidates: number
+          details: Json
+          finished_at: string
+          game_slug: string
+          id: number
+          ignored: number
+          images_fixed: number
+          listed: number
+          message: string | null
+          started_at: string
+          status: string
+          trigger: string
+        }
+        Insert: {
+          added_slugs?: string[]
+          adopted?: number
+          candidates?: number
+          details?: Json
+          finished_at?: string
+          game_slug: string
+          id?: number
+          ignored?: number
+          images_fixed?: number
+          listed?: number
+          message?: string | null
+          started_at: string
+          status: string
+          trigger: string
+        }
+        Update: {
+          added_slugs?: string[]
+          adopted?: number
+          candidates?: number
+          details?: Json
+          finished_at?: string
+          game_slug?: string
+          id?: number
+          ignored?: number
+          images_fixed?: number
+          listed?: number
+          message?: string | null
+          started_at?: string
+          status?: string
+          trigger?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -4428,6 +4509,132 @@ export type Database = {
           },
         ]
       }
+      market_name_matches: {
+        Row: {
+          decided_at: string | null
+          decided_by: string | null
+          first_seen_at: string
+          game_slug: string
+          item_slug: string | null
+          last_seen_at: string
+          market_name: string
+          offers: number
+          score: number | null
+          source: string
+          status: string
+          suggestions: Json
+        }
+        Insert: {
+          decided_at?: string | null
+          decided_by?: string | null
+          first_seen_at?: string
+          game_slug: string
+          item_slug?: string | null
+          last_seen_at?: string
+          market_name: string
+          offers?: number
+          score?: number | null
+          source?: string
+          status: string
+          suggestions?: Json
+        }
+        Update: {
+          decided_at?: string | null
+          decided_by?: string | null
+          first_seen_at?: string
+          game_slug?: string
+          item_slug?: string | null
+          last_seen_at?: string
+          market_name?: string
+          offers?: number
+          score?: number | null
+          source?: string
+          status?: string
+          suggestions?: Json
+        }
+        Relationships: []
+      }
+      message_reactions: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          emoji: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          emoji: string
+          message_id: string
+          user_id?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          emoji?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           attachments: string[] | null
@@ -4437,6 +4644,7 @@ export type Database = {
           id: string
           is_read: boolean | null
           read_at: string | null
+          reply_to_id: string | null
           sender_id: string | null
         }
         Insert: {
@@ -4447,6 +4655,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           read_at?: string | null
+          reply_to_id?: string | null
           sender_id?: string | null
         }
         Update: {
@@ -4457,6 +4666,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           read_at?: string | null
+          reply_to_id?: string | null
           sender_id?: string | null
         }
         Relationships: [
@@ -4465,6 +4675,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
           {
@@ -10903,6 +11120,90 @@ export type Database = {
         }
         Relationships: []
       }
+      seo_bing_daily: {
+        Row: {
+          clicks: number | null
+          crawl_errors: number | null
+          crawled_pages: number | null
+          day: string
+          impressions: number | null
+          in_index: number | null
+          in_links: number | null
+          synced_at: string
+        }
+        Insert: {
+          clicks?: number | null
+          crawl_errors?: number | null
+          crawled_pages?: number | null
+          day: string
+          impressions?: number | null
+          in_index?: number | null
+          in_links?: number | null
+          synced_at?: string
+        }
+        Update: {
+          clicks?: number | null
+          crawl_errors?: number | null
+          crawled_pages?: number | null
+          day?: string
+          impressions?: number | null
+          in_index?: number | null
+          in_links?: number | null
+          synced_at?: string
+        }
+        Relationships: []
+      }
+      seo_bing_pages: {
+        Row: {
+          avg_position: number | null
+          clicks: number
+          impressions: number
+          section: string
+          url: string
+          week: string
+        }
+        Insert: {
+          avg_position?: number | null
+          clicks?: number
+          impressions?: number
+          section: string
+          url: string
+          week: string
+        }
+        Update: {
+          avg_position?: number | null
+          clicks?: number
+          impressions?: number
+          section?: string
+          url?: string
+          week?: string
+        }
+        Relationships: []
+      }
+      seo_bing_queries: {
+        Row: {
+          avg_position: number | null
+          clicks: number
+          impressions: number
+          query: string
+          week: string
+        }
+        Insert: {
+          avg_position?: number | null
+          clicks?: number
+          impressions?: number
+          query: string
+          week: string
+        }
+        Update: {
+          avg_position?: number | null
+          clicks?: number
+          impressions?: number
+          query?: string
+          week?: string
+        }
+        Relationships: []
+      }
       seo_index_overrides: {
         Row: {
           decided_at: string
@@ -10927,30 +11228,39 @@ export type Database = {
       seo_section_daily: {
         Row: {
           clicks: number
+          crawled: number
           day: string
+          discovered: number
           impressions: number
           indexed: number
           inspected: number
           section: string
           sitemap_urls: number
+          unknown: number
         }
         Insert: {
           clicks?: number
+          crawled?: number
           day: string
+          discovered?: number
           impressions?: number
           indexed?: number
           inspected?: number
           section: string
           sitemap_urls?: number
+          unknown?: number
         }
         Update: {
           clicks?: number
+          crawled?: number
           day?: string
+          discovered?: number
           impressions?: number
           indexed?: number
           inspected?: number
           section?: string
           sitemap_urls?: number
+          unknown?: number
         }
         Relationships: []
       }
@@ -11258,6 +11568,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      stock_alerts: {
+        Row: {
+          created_at: string
+          due_at: string | null
+          game_id: string
+          id: string
+          item_slug: string
+          notified_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_at?: string | null
+          game_id: string
+          id?: string
+          item_slug: string
+          notified_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_at?: string | null
+          game_id?: string
+          id?: string
+          item_slug?: string
+          notified_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -14857,6 +15205,14 @@ export type Database = {
         }
         Returns: string
       }
+      public_game_players: {
+        Args: { p_game_id: string }
+        Returns: {
+          captured_at: string
+          peak_7d: number
+          playing_now: number
+        }[]
+      }
       public_profiles_revoked_version: { Args: never; Returns: number }
       public_profiles_version: { Args: never; Returns: number }
       public_table_posture: {
@@ -14880,6 +15236,13 @@ export type Database = {
         Returns: number
       }
       rate_limits_version: { Args: never; Returns: number }
+      raw_market_prune: {
+        Args: { adopt_me_ended_days?: number; values_inactive_days?: number }
+        Returns: {
+          adopt_me_rows_pruned: number
+          values_rows_pruned: number
+        }[]
+      }
       refund_to_source_approve: {
         Args: { p_admin_id: string; p_request_id: string }
         Returns: Json
@@ -15056,6 +15419,7 @@ export type Database = {
           unmatched_count: number
         }[]
       }
+      sab_reprice_reference: { Args: never; Returns: Json }
       sab_roll_up_raw_listings: {
         Args: { retain_days?: number }
         Returns: {
@@ -15063,6 +15427,7 @@ export type Database = {
           rows_pruned: number
         }[]
       }
+      sab_slim_raw_payload: { Args: { p_item: Json }; Returns: Json }
       sab_sync_dropmarket_market_observations: {
         Args: { p_observed_at?: string }
         Returns: Json
@@ -15150,6 +15515,10 @@ export type Database = {
         Returns: Json
       }
       seller_withdrawal_gate: { Args: { p_seller_id: string }; Returns: Json }
+      seo_value_history_summary: {
+        Args: { p_game_slug: string; p_source: string }
+        Returns: Json
+      }
       seo_value_series: {
         Args: { p_game_slug: string; p_source: string }
         Returns: {
@@ -15157,6 +15526,19 @@ export type Database = {
           item_slug: string
           series_key: string
           vals: number[]
+        }[]
+      }
+      seo_value_series_for: {
+        Args: { p_game_slug: string; p_item_slugs: string[]; p_source: string }
+        Returns: Json
+      }
+      stock_alerts_claim_due: {
+        Args: { p_limit?: number }
+        Returns: {
+          game_id: string
+          id: string
+          item_slug: string
+          user_id: string
         }[]
       }
       storage_bucket_posture: { Args: { p_bucket: string }; Returns: Json }

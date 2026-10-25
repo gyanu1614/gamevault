@@ -122,6 +122,7 @@ export const DEPENDENT_TABLES: ReadonlyArray<readonly [string, readonly string[]
   ['referral_earnings', ['referrer_id', 'referred_user_id']],
   ['notifications', ['user_id']],
   ['admin_roles', ['user_id']],
+  ['stock_alerts', ['user_id']],
 ]
 
 export const GUARD_EMAIL_LIKE = 'guardtest-%@example.com'

@@ -145,6 +145,8 @@ describe('budget boundaries', () => {
       valueEvent: { limit: 60, windowSeconds: 60 },
       // Cancel – Not Delivered reports — each one notifies + emails the seller.
       orderReport: { limit: 5, windowSeconds: 60 },
+      // Notify Me — set/clear a stock alert, per signed-in user.
+      stockAlert: { limit: 20, windowSeconds: 60 },
     })
   })
 })
