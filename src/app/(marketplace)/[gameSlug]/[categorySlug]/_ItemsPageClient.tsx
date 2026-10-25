@@ -17,10 +17,10 @@ import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
 import { useUrlPage } from '@/hooks/use-url-page'
 import { Pagination } from '@/components/marketplace/Pagination'
-import { Search, Gamepad2, ShieldCheck, Store } from 'lucide-react'
+import { Search, Store } from 'lucide-react'
 import { track } from '@vercel/analytics'
 import { track as phTrack } from '@/lib/analytics/client'
-import { SellerPromptCard } from '@/components/seller/SellerPrompt'
+import { CategoryHeader } from '@/components/marketplace/CategoryHeader'
 import { useSellerPrompt } from '@/hooks/use-seller-prompt'
 import { SELLER_PROMPT_EVENT, listingsEmptyCopy, sellerPromptHref } from '@/lib/seller/seller-prompt'
 import { bestOfferId, sortOffers } from './_itemsSort'
@@ -35,14 +35,6 @@ import type {
 } from './_itemsTypes'
 import { MultiSelectFilter, PriceRangeFilter, SingleSelectFilter, iconForFilter, titleCase } from './_ItemFilters'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
-
-/** Local price formatter for stat chips (mirrors seo/page-stats without
- *  pulling that server-only module into this client component). */
-function formatStatPrice(price: number): string {
-  if (!Number.isFinite(price) || price <= 0) return '0'
-  if (price >= 1) return Number.isInteger(price) ? price.toFixed(0) : price.toFixed(2)
-  return price.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
-}
 
 const PAGE_SIZE = 24
 
@@ -299,83 +291,16 @@ export default function ItemsPageClient({
       {/* scroll-mt clears the fixed navbar when a page change scrolls here. */}
       <section ref={paged.topRef} className="relative scroll-mt-24 overflow-hidden">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
-          {/* V15s — Page header restored: big game logo on the left,
-              single-line "{Game} Items" title beside it. Sits between
-              the sub-nav and the filter row so the page has a proper
-              entry point instead of dumping filters under the sub-nav. */}
-          {/* Header — logo on the left, one-line "{Game} {Category}" title
-              beside it, on every width (owner, 2026-09-28). The stats line
-              stays in the HTML for search engines but is not shown. */}
-          <div className="mb-5 flex flex-wrap items-center gap-3.5 sm:mb-6 sm:gap-5">
-            {gameImageUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={gameImageUrl}
-                alt={`${gameName} logo`}
-                className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-[72px] sm:w-[72px]"
-              />
-            ) : (
-              <span
-                aria-hidden
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-bg-overlay text-lime-text sm:h-[72px] sm:w-[72px]"
-              >
-                <Gamepad2 className="h-6 w-6" />
-              </span>
-            )}
-            <div className="min-w-0 flex-1">
-              {/* Game on top, small; the category is the big line — like
-                  the homepage's "Every Gamer's Marketplace" split. The H1
-                  still reads "{Game} {Category}" to crawlers: the game name
-                  is inside it, visually hidden. */}
-              <p className="mb-1.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] text-text-secondary sm:text-[14px]">
-                {gameName}
-              </p>
-              <h1
-                className="font-black tracking-tight text-text-primary"
-                style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.05, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
-              >
-                <span className="sr-only">{gameName} </span>
-                {categoryLabel}
-              </h1>
-
-              {/* Stats — kept in the HTML for crawlers (listing count, from
-                  price, delivery, SafeDrop) but visually hidden: the owner
-                  wants the header to be logo + game + category only. */}
-              <div className="sr-only" style={{ fontSize: 'var(--fs-meta)' }}>
-                <span>
-                  <span className="font-bold tabular-nums text-text-primary">
-                    {sorted.length.toLocaleString('en-US')}
-                  </span>{' '}
-                  {sorted.length === 1 ? 'listing' : 'listings'}
-                </span>
-                {stats?.lowPrice != null && (
-                  <>
-                    <Dot />
-                    <span>
-                      from{' '}
-                      <span className="font-bold tabular-nums text-text-primary">
-                        ${formatStatPrice(stats.lowPrice)}
-                      </span>
-                    </span>
-                  </>
-                )}
-                {stats?.avgDeliveryLabel && (
-                  <>
-                    <Dot />
-                    <span>~{stats.avgDeliveryLabel} delivery</span>
-                  </>
-                )}
-                <Dot />
-                <span className="inline-flex items-center gap-1 font-semibold text-[#7ec98f]">
-                  <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
-                  SafeDrop Protected
-                </span>
-              </div>
-              {introLine && <p className="sr-only">{introLine}</p>}
-            </div>
-          </div>
-            {/* Seller prompt beside the title; its own row on phones. */}
-            <SellerPromptCard gameName={gameName} categoryLabel={categoryLabel} className="w-full sm:ml-auto sm:w-auto sm:max-w-[520px]" />
+          {/* Header: logo + game + category, seller prompt on the right (shared CategoryHeader). */}
+          <CategoryHeader
+            gameName={gameName}
+            gameImageUrl={gameImageUrl ?? null}
+            categoryLabel={categoryLabel}
+            count={sorted.length}
+            countNoun={{ one: 'listing', many: 'listings' }}
+            stats={stats}
+            introLine={introLine}
+          />
 
           {/* Filter bar (owner, 2026-09-28): the filters on one full-width
               row, the search on its own full-width row below.
@@ -508,10 +433,6 @@ export default function ItemsPageClient({
       </div>
     </main>
   )
-}
-
-function Dot() {
-  return <span aria-hidden className="text-text-disabled">·</span>
 }
 
 /**
