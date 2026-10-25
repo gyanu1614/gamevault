@@ -14,8 +14,9 @@
  *
  * Order: template identity → longest catalogue name in the title, both under
  * the whole-name rule below. Variant:
- * template field (by label) → longest variant name left in the title once the
- * item name is removed → the catalogue's default (SAB "default"; Adopt Me
+ * template field (by label of a live choice) → the game's title reader, or the
+ * longest variant name left in the title once the item name is removed → the
+ * catalogue's default (SAB "default"; Adopt Me
  * leaves it unknown, since a bare "Bat Dragon" title doesn't say "no potion").
  */
 
@@ -30,6 +31,13 @@ export interface ValueCatalog {
   variantKeys?: readonly string[]
   /** Variant assumed when a listing names none; omit to leave it unknown. */
   defaultVariant?: string
+  /**
+   * The game's own title reader (Adopt Me: `variantFromTitle`), used instead
+   * of the free-text name scan below. Returns a variant `key` or null.
+   */
+  titleVariant?: (title: string, itemName: string) => string | null
+  /** More words that may sit before an item name without naming another item (Adopt Me "MR", "NP"). */
+  skipWords?: readonly string[]
 }
 
 export interface ListingForMatch {
@@ -133,6 +141,7 @@ function prepare(catalog: ValueCatalog): PreparedCatalog {
   for (const v of catalog.variants) {
     for (const name of v.names) for (const w of normalizeText(name).split(' ')) if (w) variantTokens.add(w)
   }
+  for (const w of catalog.skipWords ?? []) variantTokens.add(normalizeText(w))
   const variantNames = catalog.variants
     .flatMap((v) => v.names.map((name) => ({ key: v.key, n: normalizeText(name) })))
     // One-letter codes ("N", "R") are too ambiguous in free text.
@@ -216,13 +225,21 @@ export function matchListingToValueItem(
   for (const key of catalog.variantKeys ?? []) {
     const raw = templateString(listing.templateData, key)
     if (!raw) continue
-    const label = listing.optionLabels?.[key]?.[raw] ?? raw
+    // A code the field no longer offers says nothing: choices get deleted and
+    // re-added, and a reused code can mean another variant (2026-10-12, old
+    // "r" = Fly Ride read back as Ride). Only a live choice's label counts.
+    const known = listing.optionLabels?.[key]
+    if (known && !Object.hasOwn(known, raw)) continue
+    const label = known?.[raw] ?? raw
     const variant = variantFromLabel(catalog, label)
     if (variant) return { itemSlug: item.slug, variant }
   }
 
   // 3. Variant from what is left of the title once the item name is removed,
   // so a mutation word inside an item's own name ("Lava Boss") isn't read.
+  if (catalog.titleVariant) {
+    return { itemSlug: item.slug, variant: catalog.titleVariant(listing.title ?? '', item.name) ?? catalog.defaultVariant ?? null }
+  }
   const itemName = normalizeText(item.name)
   const rest = itemName ? title.replace(pad(itemName), '  ') : title
   const hit = p.variantNames.find((x) => rest.includes(pad(x.n)))

@@ -66,6 +66,13 @@ export interface ResolveTemplateInput {
    * import config.
    */
   hints?: Record<string, string>
+  /**
+   * The game's own reader for a choice label → variant ref (Adopt Me:
+   * `variantFromChoiceLabel`). When given, the variant's choice is the one
+   * whose label it reads as that ref, and nothing else: codes like "N" have
+   * meant Normal and Neon at different times.
+   */
+  variantOfLabel?: (label: string) => string | null
 }
 
 export interface ResolvedTemplateData {
@@ -92,7 +99,8 @@ function splitLabel(label: string): { base: string; code: string | null } {
  * FR) or its words ("Fly Ride" ↔ Fly Ride). Exact only — "Fly Ride" must not
  * land on "Neon Fly Ride (NFR)", and "Neon" must not either.
  */
-function optionForVariant(options: Option[], v: CatalogueVariant): Option | null {
+function optionForVariant(options: Option[], v: CatalogueVariant, variantOfLabel?: (label: string) => string | null): Option | null {
+  if (variantOfLabel) return options.find((o) => variantOfLabel(o.label) === v.ref) ?? null
   const ref = norm(v.ref)
   const label = norm(v.label)
   for (const o of options) {
@@ -185,7 +193,7 @@ export function resolveTemplateData(
       const picked =
         hint != null
           ? optionForHint(options, hint) // a hint is the config's word: no fallthrough
-          : (input.variant ? optionForVariant(options, input.variant) : null) ??
+          : (input.variant ? optionForVariant(options, input.variant, input.variantOfLabel) : null) ??
             (input.item ? optionForItem(options, input.item) : null)
 
       if (picked) {

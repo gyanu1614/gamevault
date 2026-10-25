@@ -20,6 +20,7 @@ import Link from '@/components/navigation/AppLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { Drawer } from 'vaul'
 import {
+  ArrowsLeftRight,
   Article,
   ChartLineUp,
   GameController,
@@ -110,6 +111,7 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
     links: [
       { label: 'Games', href: '/admin/games', icon: GameController, roles: ['admin', 'super_admin'] },
       { label: 'Bulk Import', href: '/admin/imports', icon: UploadSimple, roles: ['admin', 'super_admin'] },
+      { label: 'Variant Mismatches', href: '/admin/variant-mismatches', icon: ArrowsLeftRight, roles: ['admin', 'moderator', 'super_admin'] },
       { label: 'Blog & Content', href: '/admin/blog', icon: Article, roles: ['admin', 'super_admin'] },
       { label: 'SEO Health', href: '/admin/seo', icon: MagnifyingGlass, roles: ['admin', 'super_admin'] },
       { label: 'Buy Rails', href: '/admin/buy-rails', icon: ShoppingCartSimple, roles: ['admin', 'super_admin'] },

@@ -5,7 +5,7 @@ import type { SellGameOption } from '@/lib/actions/sell-wizard'
 
 import { buildChildIndex } from './attribute-tree'
 import { EMPTY_OFFER_FORM, hasDetailsInput, offerFormFromListing, offerFormFromSnapshot, toSnapshot, type OfferForm } from './offer-form'
-import { canContinue, canPublishOffer, priceHintInputFor, publishPayloadFor, requiredAttributesFilled, templateDataFor } from './offer-rules'
+import { canContinue, canPublishOffer, fieldValuesFromTemplateData, priceHintInputFor, publishPayloadFor, requiredAttributesFilled, templateDataFor } from './offer-rules'
 
 const attr = (o: Partial<Attribute> & { id: string; slug: string }): Attribute =>
   ({ template_id: 't', parent_attribute_id: null, name: o.slug, description: null, type: 'select', is_required: false, placeholder: null, help_text: null, min_value: null, max_value: null, max_length: null, default_value: null, sort_order: 0, seo_title: null, seo_description: null, facet_indexed: false, ...o }) as Attribute
@@ -97,5 +97,27 @@ describe('offer form', () => {
     expect(hasDetailsInput(EMPTY_OFFER_FORM)).toBe(false)
     expect(hasDetailsInput({ ...EMPTY_OFFER_FORM, fieldValues: { a1: [] } })).toBe(false)
     expect(hasDetailsInput({ ...EMPTY_OFFER_FORM, price: '3' })).toBe(true)
+  })
+})
+
+// 2026-10-23: the edit page opened with every item field blank. The form keys
+// answers by attribute ID; a listing stores them by SLUG, and the edit prefill
+// passed the slug-keyed object straight in.
+describe('editing a listing keeps its item fields', () => {
+  const saved = { category_slug: 'items', game_id: 'g1', game_slug: 'mm2', game_category_id: 'gc1', bundle_id: null, title: 'Gingerscope', description: 'd', price: 7.5, original_price: null, quantity: 2, min_quantity: 1, delivery_method: 'manual', delivery_time: '1hr', region: null, platform: null, template_data: { item_type: 'gun', gun: 'ginger', rarity: 'Ancient' }, images: ['u1'], status: 'active', moderation_notes: null, delivery_method_type: null } as never
+
+  it('maps saved answers (by slug) back to the form (by id)', () => {
+    expect(fieldValuesFromTemplateData(template, { item_type: 'gun', gun: 'ginger', rarity: 'Ancient' })).toEqual({ a1: 'gun', a2: 'ginger', a3: 'Ancient' })
+  })
+
+  it('drops a choice the field no longer offers, so the seller sees it blank and re-picks', () => {
+    expect(fieldValuesFromTemplateData(template, { item_type: 'gun', gun: 'old-code' })).toEqual({ a1: 'gun' })
+  })
+
+  it('opens the edit form filled in, and saving unchanged writes the same fields', () => {
+    const form = offerFormFromListing(saved, template)
+    expect(form.fieldValues).toEqual({ a1: 'gun', a2: 'ginger', a3: 'Ancient' })
+    const p = publishPayloadFor({ form: { ...form, agreeSellerRules: true, agreeTos: true }, game, categorySlug: 'items', template, currencyConfig: null, asDraft: false })
+    expect(p.template_data).toEqual({ item_type: 'gun', gun: 'ginger', rarity: 'Ancient' })
   })
 })
