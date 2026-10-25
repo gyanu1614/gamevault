@@ -5,7 +5,7 @@ A full-stack peer-to-peer marketplace for trading in-game items, currency, accou
 ## What It Does
 
 - **18 supported games** — Roblox, Fortnite, Valorant, CS2, Genshin Impact, and more
-- **Escrow payments** — Stripe Connect holds funds until delivery is confirmed
+- **Payments** — Payssion for local methods, self-hosted BTCPay for crypto, and an internal wallet ledger; the seller is paid after the buyer confirms delivery
 - **VaultShield buyer protection** — up to 30-day warranty on purchases
 - **Seller verification & KYC** — 6-step onboarding with document upload
 - **5-tier seller system** — Bronze → Platinum with commission rates from 3.9% to 6.9%
@@ -23,7 +23,7 @@ A full-stack peer-to-peer marketplace for trading in-game items, currency, accou
 | UI | Tailwind CSS, Shadcn/ui, Framer Motion |
 | Database | Supabase PostgreSQL with Row-Level Security |
 | Auth | Supabase Auth (SSR + MFA/TOTP for admins) |
-| Payments | Stripe Connect (escrow, PaymentIntents, webhooks) |
+| Payments | Payssion (local methods), BTCPay Server (self-hosted crypto), wallet ledger |
 | Storage | Supabase Storage (listing images, KYC docs, delivery evidence) |
 | Real-time | Supabase Realtime (chat, presence, order updates) |
 | State | Zustand (client), TanStack Query (server) |
@@ -40,7 +40,7 @@ src/
 │   ├── (marketplace)/        # Game pages, category listings, listing detail
 │   ├── (marketing)/          # VaultShield landing page
 │   ├── account/              # Buyer/seller dashboard, orders, settings, wallet
-│   ├── api/                  # Stripe webhooks, cron jobs, presence
+│   ├── api/                  # Payment webhooks, cron jobs, presence
 │   ├── checkout/             # Payment flow with VaultShield tier selection
 │   └── shop/                 # Public seller storefronts
 ├── components/
@@ -55,7 +55,7 @@ src/
 ├── hooks/                    # Custom hooks (auth, orders, sellers, wishlist)
 ├── lib/
 │   ├── actions/              # Server actions (40+ files)
-│   ├── stripe/               # Stripe Connect integration
+│   ├── payments/             # Payment providers (Payssion, BTCPay) and the webhook router
 │   ├── supabase/             # Client, server, service-role clients
 │   ├── templates/            # Game-specific listing templates
 │   └── utils/                # Helpers (tiers, notifications, rate limiting)
@@ -80,7 +80,7 @@ pnpm install
 
 # Copy environment variables
 cp .env.local.example .env.local
-# Fill in Supabase and Stripe keys
+# Fill in the Supabase keys
 
 # Run dev server
 pnpm dev
@@ -92,7 +92,7 @@ Open http://localhost:3000
 
 See `.env.local.example` for the full list. You'll need:
 - Supabase project URL, anon key, and service role key
-- Stripe publishable key, secret key, and webhook secret
+- BTCPay / Payssion keys, only to test a real checkout (see `docs/checkout.md`)
 - Resend API key (for email notifications)
 - Cloudflare Turnstile site key (for bot protection)
 

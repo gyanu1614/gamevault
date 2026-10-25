@@ -288,9 +288,9 @@ export default function InformDisclosureClient({
             <Field label="Tax ID — Last 4 digits only (SSN or EIN)" name="taxIdLast4" value={form.taxIdLast4}
               onChange={set('taxIdLast4')} required placeholder="4321"
               hint="We store only the last 4 digits for verification purposes." />
-            <Field label="Bank Account — Last 4 digits (optional if Stripe Connected)" name="bankLast4" value={form.bankLast4}
+            <Field label="Bank Account — Last 4 digits (optional)" name="bankLast4" value={form.bankLast4}
               onChange={set('bankLast4')} placeholder="8765"
-              hint="If you've connected Stripe, this will be verified automatically." />
+              hint="We store only the last 4 digits." />
           </div>
 
           {/* Public contact */}

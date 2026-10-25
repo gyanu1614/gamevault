@@ -418,8 +418,8 @@ USD/EUR settlement only. Rate sheet is confidential — never publish it.
   (signatures, state map, webhook chain, routing, expiry, region filter) and
   `src/lib/payments/dispatch.test.ts`. Vitest loads `.env.test` — never let a
   test read `.env.local`.
-- Gate every change with `npx tsc --noEmit` + the payssion test file; the
-  full local build fails on Stripe env by design.
+- Gate every change with `npx tsc --noEmit` + the payssion test file. A full
+  local build runs against the local stack (`.env.test`), never `.env.local`.
 
 ### 8.1 Ops: fee resolution gaps (seller commission)
 

@@ -120,7 +120,7 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
       .eq('seller_id', user.id),
     supabase
       .from('profiles')
-      .select('shop_name, shop_slug, paypal_email, payout_enabled, stripe_connect_payouts_enabled, stripe_connect_status')
+      .select('shop_name, shop_slug, paypal_email, payout_enabled')
       .eq('id', user.id)
       .single(),
   ])
@@ -266,14 +266,10 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
   }
 
   // ── Onboarding signals (real completion state) ────────────────────────
-  // Payout accepts legacy sellers: any of the Stripe-connect flag, the legacy
-  // payout_enabled flag, or a saved PayPal email counts as connected.
+  // Payout accepts legacy sellers: the payout_enabled flag or a saved PayPal
+  // email counts as connected.
   const onboarding: OnboardingSignals = {
-    payoutConnected: !!(
-      profile.stripe_connect_payouts_enabled ||
-      profile.payout_enabled ||
-      profile.paypal_email
-    ),
+    payoutConnected: !!(profile.payout_enabled || profile.paypal_email),
     hasListing: listings.length > 0,
     deliveryTimesSet: listings.some((l) => l.status === 'active' && !!l.delivery_time),
     shopNamed: !!profile.shop_name,
