@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   catalog: ['frost-dragon'] as string[],
   live: false,
   openCount: 0,
+  openRows: null as Array<{ id: string; item_slug: string; variant: string | null }> | null,
   calls: [] as Call[],
   dispatched: 0,
 }))
@@ -25,7 +26,10 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 vi.mock('@/lib/security/rate-limit', () => ({ checkRateLimit: vi.fn(async () => ({ limited: h.limited })) }))
 vi.mock('@/lib/value-listings/stock-server', () => ({
-  getValueCatalog: vi.fn(async () => ({ items: h.catalog.map((slug) => ({ slug })) })),
+  getValueCatalog: vi.fn(async () => ({
+    items: h.catalog.map((slug) => ({ slug })),
+    catalog: { variants: [{ key: 'fly-ride' }, { key: 'neon-fly-ride' }] },
+  })),
 }))
 vi.mock('@/lib/stock-alerts/dispatch', () => ({ scheduleStockAlertDispatch: () => { h.dispatched += 1 } }))
 vi.mock('@/lib/supabase/service', () => ({
@@ -37,7 +41,8 @@ vi.mock('@/lib/supabase/service', () => ({
         const op = call.ops[0]?.[0]
         if (table === 'games') return { data: { id: 'g-1' }, error: null }
         if (table === 'listings') return { data: h.live ? [{ id: 'l-1' }] : [], error: null }
-        if (op === 'select') return { data: Array.from({ length: h.openCount }, (_, i) => ({ id: `a-${i}`, item_slug: `item-${i}` })), error: null }
+        if (op === 'select')
+          return { data: h.openRows ?? Array.from({ length: h.openCount }, (_, i) => ({ id: `a-${i}`, item_slug: `item-${i}`, variant: null })), error: null }
         return { data: null, error: null }
       }
       const builder: Record<string, unknown> = {}
@@ -53,7 +58,10 @@ vi.mock('@/lib/supabase/service', () => ({
 import { setStockAlert, clearStockAlert, listMyStockAlerts } from './stock-alerts'
 
 const alertCalls = () => h.calls.filter((c) => c.table === 'stock_alerts')
+const listingCalls = () => h.calls.filter((c) => c.table === 'listings')
 const eqs = (c: Call) => c.ops.filter(([m]) => m === 'eq').map(([, a]) => a)
+const iss = (c: Call) => c.ops.filter(([m]) => m === 'is').map(([, a]) => a)
+const upsertRow = () => alertCalls().flatMap((c) => c.ops).find(([m]) => m === 'upsert')?.[1][0] as Record<string, unknown> | undefined
 
 beforeEach(() => {
   h.userId = 'u-1'
@@ -61,6 +69,7 @@ beforeEach(() => {
   h.catalog = ['frost-dragon']
   h.live = false
   h.openCount = 0
+  h.openRows = null
   h.calls = []
   h.dispatched = 0
 })
@@ -108,13 +117,48 @@ describe('setStockAlert', () => {
     expect((await setStockAlert('adopt-me', 'frost-dragon')).ok).toBe(false)
     expect(alertCalls().some((c) => c.ops.some(([m]) => m === 'upsert'))).toBe(false)
   })
+  it('an item alert (no trait) stores variant null and checks any listing of the item', async () => {
+    await setStockAlert('adopt-me', 'frost-dragon')
+    expect(upsertRow()).toMatchObject({ variant: null })
+    expect(eqs(listingCalls()[0]).some(([k]) => k === 'value_variant')).toBe(false)
+  })
+
+  it('a trait alert stores the trait and only that trait counts as listed', async () => {
+    h.live = true
+    expect(await setStockAlert('adopt-me', 'frost-dragon', 'neon-fly-ride')).toEqual({ ok: true })
+    expect(upsertRow()).toMatchObject({ user_id: 'u-1', item_slug: 'frost-dragon', variant: 'neon-fly-ride' })
+    expect(eqs(listingCalls()[0])).toContainEqual(['value_variant', 'neon-fly-ride'])
+  })
+
+  it('refuses a trait the game does not have, and a malformed one before any read', async () => {
+    expect(await setStockAlert('adopt-me', 'frost-dragon', 'golden')).toEqual({ ok: false, error: 'That item could not be found.' })
+    expect(upsertRow()).toBeUndefined()
+    h.calls = []
+    expect(await setStockAlert('adopt-me', 'frost-dragon', "fr'; --")).toEqual({ ok: false, error: 'That item could not be found.' })
+    expect(h.calls).toEqual([])
+  })
 })
 
 describe('clearStockAlert / listMyStockAlerts', () => {
-  it('deletes only the session user’s row for that item', async () => {
+  it('deletes only the session user’s item alert (variant null)', async () => {
     expect(await clearStockAlert('adopt-me', 'frost-dragon')).toEqual({ ok: true })
     const del = alertCalls().find((c) => c.ops.some(([m]) => m === 'delete'))!
     expect(eqs(del)).toEqual([['user_id', 'u-1'], ['game_id', 'g-1'], ['item_slug', 'frost-dragon']])
+    expect(iss(del)).toEqual([['variant', null]])
+  })
+
+  it('deletes only that trait’s alert', async () => {
+    await clearStockAlert('adopt-me', 'frost-dragon', 'fly-ride')
+    const del = alertCalls().find((c) => c.ops.some(([m]) => m === 'delete'))!
+    expect(eqs(del)).toEqual([['user_id', 'u-1'], ['game_id', 'g-1'], ['item_slug', 'frost-dragon'], ['variant', 'fly-ride']])
+  })
+
+  it('lists item alerts by slug and trait alerts as slug:trait', async () => {
+    h.openRows = [
+      { id: 'a', item_slug: 'parrot', variant: null },
+      { id: 'b', item_slug: 'parrot', variant: 'neon-fly-ride' },
+    ]
+    expect(await listMyStockAlerts('adopt-me')).toEqual({ ok: true, slugs: ['parrot', 'parrot:neon-fly-ride'] })
   })
 
   it('lists the session user’s open alerts only', async () => {

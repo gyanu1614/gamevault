@@ -10,9 +10,9 @@ import { useAuth } from '@/hooks/use-auth'
 import { listMyStockAlerts } from '@/lib/actions/stock-alerts'
 
 interface StockAlertsState {
-  /** Item slugs the visitor has an open alert on (empty while signed out or loading). */
+  /** stockAlertKey of every open alert (empty while signed out or loading). */
   slugs: ReadonlySet<string>
-  setLocal: (slug: string, on: boolean) => void
+  setLocal: (key: string, on: boolean) => void
 }
 
 const Ctx = createContext<StockAlertsState | null>(null)
@@ -37,11 +37,11 @@ export function StockAlertsProvider({ gameSlug, children }: { gameSlug: string; 
     }
   }, [user, gameSlug])
 
-  const setLocal = useCallback((slug: string, on: boolean) => {
+  const setLocal = useCallback((key: string, on: boolean) => {
     setSlugs((prev) => {
       const next = new Set(prev)
-      if (on) next.add(slug)
-      else next.delete(slug)
+      if (on) next.add(key)
+      else next.delete(key)
       return next
     })
   }, [])

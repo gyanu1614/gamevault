@@ -3,6 +3,8 @@ import { waitUntil } from '@vercel/functions'
 import { SITE_URL } from '@/config/site'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getItemsPair, getValueCatalog } from '@/lib/value-listings/stock-server'
+import { itemBuyHref } from '@/lib/value-listings/buy-state'
+import { variantLabel } from '@/lib/value-listings/catalogs'
 import { sendStockAlertEmail } from '@/lib/email/stock-alert'
 
 /**
@@ -10,6 +12,9 @@ import { sendStockAlertEmail } from '@/lib/email/stock-alert'
  * the item goes live; this claims due alerts atomically (stock_alerts_claim_due,
  * so concurrent runs never double-send), emails each user once and releases a
  * claim whose email failed so the next run retries it.
+ *
+ * A trait alert names the trait ("Neon Fly Ride Parrot") and links to the pet
+ * page with that trait picked; an any-trait alert links to the pet page.
  *
  * Runs right after every listing mutation that touches a value item
  * (revalidateListingSurfaces → scheduleStockAlertDispatch, after the response
@@ -20,6 +25,13 @@ interface Claimed {
   user_id: string
   game_id: string
   item_slug: string
+  variant: string | null
+}
+
+interface GameInfo {
+  names: Map<string, { name: string; imageUrl: string | null }>
+  mutations: ReadonlyArray<{ slug: string; name: string }>
+  categorySlug: string | null
 }
 
 export async function sendDueStockAlerts(limit = 50): Promise<{ sent: number; failed: number }> {
@@ -47,12 +59,13 @@ export async function sendDueStockAlerts(limit = 50): Promise<{ sent: number; fa
   const userById = new Map((users ?? []).map((u: { id: string; email: string | null; username: string | null }) => [u.id, u]))
 
   // One catalogue + items page per game (cached reads).
-  const perGame = new Map<string, { names: Map<string, { name: string; imageUrl: string | null }>; categorySlug: string | null }>()
+  const perGame = new Map<string, GameInfo>()
   await Promise.all(
     [...gameById.values()].map(async (g) => {
       const [catalog, pair] = await Promise.all([getValueCatalog(g.slug), getItemsPair(g.slug)])
       perGame.set(g.id, {
         names: new Map((catalog?.items ?? []).map((i) => [i.slug, { name: i.name, imageUrl: i.imageUrl ?? null }])),
+        mutations: catalog?.mutations ?? [],
         categorySlug: pair?.categorySlug ?? null,
       })
     }),
@@ -70,13 +83,14 @@ export async function sendDueStockAlerts(limit = 50): Promise<{ sent: number; fa
         // Nothing to send (no email on file, item gone): the alert is done.
         return
       }
+      const trait = c.variant && c.variant !== 'default' ? variantLabel(game.slug, c.variant, info.mutations) : null
       try {
         await sendStockAlertEmail({
           to: user.email,
           name: user.username,
-          itemName: item.name,
+          itemName: trait ? `${trait} ${item.name}` : item.name,
           gameName: game.name,
-          url: `${SITE_URL}/${game.slug}/${info.categorySlug}/item/${c.item_slug}`,
+          url: `${SITE_URL}${itemBuyHref({ gameSlug: game.slug, categorySlug: info.categorySlug, itemSlug: c.item_slug, variant: c.variant })}`,
           imageUrl: item.imageUrl ?? game.image_url,
         })
         sent += 1

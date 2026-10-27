@@ -11580,6 +11580,7 @@ export type Database = {
           item_slug: string
           notified_at: string | null
           user_id: string
+          variant: string | null
         }
         Insert: {
           created_at?: string
@@ -11589,6 +11590,7 @@ export type Database = {
           item_slug: string
           notified_at?: string | null
           user_id: string
+          variant?: string | null
         }
         Update: {
           created_at?: string
@@ -11598,6 +11600,7 @@ export type Database = {
           item_slug?: string
           notified_at?: string | null
           user_id?: string
+          variant?: string | null
         }
         Relationships: [
           {
@@ -15539,6 +15542,7 @@ export type Database = {
           id: string
           item_slug: string
           user_id: string
+          variant: string
         }[]
       }
       storage_bucket_posture: { Args: { p_bucket: string }; Returns: Json }
