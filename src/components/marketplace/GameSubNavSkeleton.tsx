@@ -8,7 +8,7 @@ function Bone({ className }: { className: string }) {
 /** One tab's footprint: icon + label at the real tab's padding and height. */
 function TabBone({ label = 'w-14' }: { label?: string }) {
   return (
-    <div className="flex shrink-0 items-center gap-2 max-md:px-3 max-md:py-2.5 md:h-[60px] md:px-4">
+    <div className="flex shrink-0 items-center gap-2 max-md:h-10 max-md:px-3 md:h-[52px] md:px-4">
       <Bone className="h-[17px] w-[17px] md:h-[18px] md:w-[18px]" />
       <Bone className={cn('h-3.5', label)} />
     </div>

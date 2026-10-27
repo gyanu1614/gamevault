@@ -62,11 +62,11 @@
   --navbar-height: 60px;
   /* Where the fixed game sub-navbar sits (GameSubNav): flush under the
      navbar's visible bar. Below lg that is the 60px app bar; at lg the bar
-     is 57px (py-2 + 40px row + 1px border) inside an 84px spacer. */
+     is 64px (lg:h-16 in navbar-floating) inside an 84px spacer. */
   --subnav-top: calc(60px + var(--chrome-top));
-  /* Bottom of the fixed chrome on a game page (navbar + 60px sub-navbar):
+  /* Bottom of the fixed chrome on a game page (navbar + 52px sub-navbar):
      what scroll targets there must clear (scroll-mt-game-chrome). */
-  --game-chrome-bottom: calc(var(--subnav-top) + 60px);
+  --game-chrome-bottom: calc(var(--subnav-top) + 52px);
 
   /* iPhone status-bar area (0 everywhere else). The root viewport is
      viewport-fit=cover (layout.tsx), so the page runs under the status bar:
@@ -2477,7 +2477,7 @@
   :root {
     --navbar-bottom: calc(84px + var(--chrome-top));
     --navbar-height: 84px;
-    --subnav-top: calc(57px + var(--chrome-top));
+    --subnav-top: calc(64px + var(--chrome-top));
   }
 }
 

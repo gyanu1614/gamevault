@@ -959,6 +959,9 @@ export function Navbar({
               'transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out',
               // App-shell mobile bar: fixed 60px, square, edge-to-edge.
               'max-lg:h-[60px] max-lg:py-0',
+              // Desktop: 64px (owner, 2026-10-27: "a bit taller", GameBoost);
+              // --subnav-top in globals.css follows this height.
+              'lg:h-16 lg:py-0',
               // Transparent over the homepage hero film until Popular Games
               // reaches the bar, so the art reads behind the chrome. A scrim
               // below keeps the logo and icons legible on bright art.

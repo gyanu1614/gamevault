@@ -20,13 +20,15 @@ import { cn } from '@/lib/utils'
  * GameBoost/Eldorado). A sticky bar does both: it scrolls until it pins and
  * it follows the page when pulled past the top.
  *
- * Slot (the <nav>): reserves the strip's height in the flow. lg:-mt-[27px]
- * lifts it out of the navbar spacer (84px at lg, the bar itself 57px).
+ * Slot (the <nav>): reserves the strip's height in the flow. lg:-mt-5 lifts
+ * it out of the navbar spacer (84px at lg, the bar itself 64px).
+ *
+ * 52px tall everywhere (owner, 2026-10-27: thinner, GameBoost).
  * `!z-40` beats `.has-backdrop > *` (z-index 1), which would otherwise paint
  * page content over the strip.
  */
 export const SUBNAV_SLOT =
-  'relative !z-40 flex justify-center pointer-events-none h-[58px] md:mb-5 md:h-[60px] lg:-mt-[27px]'
+  'relative !z-40 flex justify-center pointer-events-none h-[52px] md:mb-5 lg:-mt-5'
 
 /**
  * The strip: frosted, one step lighter than the navbar, no edge lines (owner,
@@ -35,7 +37,7 @@ export const SUBNAV_SLOT =
 export const SUBNAV_STRIP = cn(
   'pointer-events-auto fixed inset-x-0 top-[var(--subnav-top)] z-[45] w-full backdrop-blur-2xl backdrop-saturate-150',
   'md:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.9)]',
-  'max-md:h-[58px] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c] max-md:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.85)]',
+  'h-[52px] max-md:flex max-md:items-center max-md:px-2 max-md:!bg-[#0b0f0c] max-md:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.85)]',
 )
 
 export const SUBNAV_BG = 'var(--subnav-bg, rgba(24, 25, 30, 0.74))'
@@ -59,10 +61,10 @@ export const SUBNAV_TAB = cn(
   'group relative flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold transition-colors',
   'text-text-secondary hover:text-text-primary',
   // Desktop: the bar's full height, GameBoost-sized.
-  'md:h-[60px] md:px-4 md:text-[15px]',
+  'md:h-[52px] md:px-4 md:text-[15px]',
   'md:hover:bg-[linear-gradient(to_top,rgba(255,255,255,0.07),rgba(255,255,255,0))]',
   // Phone: the compact scroll strip.
-  'max-md:rounded-md max-md:px-3 max-md:py-2.5 max-md:text-[13.5px]',
+  'max-md:h-10 max-md:rounded-md max-md:px-3 max-md:text-[13.5px]',
 )
 
 export const SUBNAV_TAB_ACTIVE = 'text-text-primary'
