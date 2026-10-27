@@ -117,6 +117,10 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
           // Charge in the order currency, always: our ledger is USD and the
           // confirm check compares against it.
           adaptive_pricing: { enabled: false },
+          // DropMarket is the merchant (owner 2026-10-27). Managed Payments
+          // (Stripe as merchant of record) is on by default on new accounts
+          // and refuses allowed_payment_method_types — off for every session.
+          managed_payments: { enabled: false },
           submit_type: 'pay',
           line_items: [
             {

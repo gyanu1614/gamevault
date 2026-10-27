@@ -119,6 +119,9 @@ describe('stripe: createCharge (hosted Checkout)', () => {
     expect(params.mode).toBe('payment')
     expect(params.allowed_payment_method_types).toEqual(['card'])
     expect(params.adaptive_pricing).toEqual({ enabled: false })
+    // DropMarket is the merchant: Stripe's Managed Payments (on by default on
+    // new accounts, and it refuses allowed_payment_method_types) stays off.
+    expect(params.managed_payments).toEqual({ enabled: false })
     expect(params.client_reference_id).toBe(ORDER)
     expect(params.metadata).toMatchObject({ order_id: ORDER, amount_minor: '1234', currency: 'USD', order_number: 'DM-ABCD-EFGH' })
     expect(params.payment_intent_data.metadata).toMatchObject({ order_id: ORDER })
