@@ -4,17 +4,19 @@
  * Rules:
  *   · unknown item, or a variant the game doesn't have → null (404, decided
  *     before any listing is rendered)
- *   · results = the item's live listings (and variant, when given), cheapest first
- *   · nothing to show → fallback, in this order: (1) other variants of the
- *     same item, (2) similar items with stock (same rarity, then closest
- *     market value), (3) the page's actions (sell / browse)
+ *   · itemRows = every live listing of the item (all variants), cheapest
+ *     first: the pet page's buy box, trait picker and offers list
+ *   · results = itemRows of the URL's variant (all of them without one): the
+ *     page's title and description
+ *   · the item has no live listing at all → similar items with stock (same
+ *     rarity, then closest market value)
  *   · indexable only when the item has ITEM_PAGE_MIN_LISTINGS live listings
  *     (all variants) and the page itself has results; a variant page
  *     canonicals to its item page
  */
 import { itemBuyHref, type ItemStock } from './buy-state'
 import { variantLabel, type CatalogItemRow, type LoadedCatalog } from './catalogs'
-import { aggregateStock, otherVariants, pickSimilarItems } from './stock'
+import { aggregateStock, pickSimilarItems } from './stock'
 
 export interface ItemPageRow {
   id: string
@@ -38,18 +40,16 @@ export interface ItemPageModel<T extends ItemPageRow> {
   variantLabel: string | null
   /** "Gold Dragon Cannelloni", "Neon Bat Dragon"; the bare name for SAB Default. */
   fullName: string
+  /** Every live listing of the item, all variants, cheapest first. */
+  itemRows: T[]
+  /** itemRows of the URL's variant (all of them without one). */
   results: T[]
   stock: ItemStock | null
   minPriceUsd: number | null
   indexable: boolean
   canonicalPath: string
-  /** Variants that have stock, for the chips row. */
-  variantsInStock: Array<{ variant: string; label: string; count: number; minPriceUsd: number; href: string }>
-  fallback: null | {
-    otherVariants: Array<{ variant: string; label: string; count: number; minPriceUsd: number; href: string }>
-    otherVariantRows: T[]
-    similar: Array<CatalogItemRow & { count: number; minPriceUsd: number; href: string }>
-  }
+  /** Items with stock to offer instead, only when this item has none at all. */
+  similar: Array<CatalogItemRow & { count: number; minPriceUsd: number; href: string }>
 }
 
 /**
@@ -61,7 +61,6 @@ export interface ItemPageModel<T extends ItemPageRow> {
 export const ITEM_PAGE_MIN_LISTINGS = 5
 
 const SIMILAR_LIMIT = 4
-const OTHER_VARIANT_ROWS = 6
 
 export function isKnownVariant(catalog: LoadedCatalog, variant: string): boolean {
   if (catalog.catalog.defaultVariant === variant) return true
@@ -86,39 +85,25 @@ export function buildItemPage<T extends ItemPageRow>(input: ItemPageInput<T>): I
   const itemRows = input.rows.filter((r) => r.value_item_slug === itemSlug).sort(byPrice)
   const results = variant ? itemRows.filter((r) => r.value_variant === variant) : itemRows
 
-  const ref = { gameSlug, categorySlug, itemSlug }
-  const variantEntry = (v: { variant: string; count: number; minPriceUsd: number }) => ({
-    ...v,
-    label: label(v.variant),
-    href: itemBuyHref({ ...ref, variant: v.variant }),
-  })
-  const variantsInStock = stock ? otherVariants(stock, null).map(variantEntry) : []
-
-  let fallback: ItemPageModel<T>['fallback'] = null
-  if (results.length === 0) {
-    const others = stock ? otherVariants(stock, variant).map(variantEntry) : []
-    const similar = pickSimilarItems(itemSlug, catalog.items, (s) => (stockMap.get(s)?.total ?? 0) > 0, SIMILAR_LIMIT).map((c) => {
-      const s = stockMap.get(c.slug)!
-      return { ...c, count: s.total, minPriceUsd: s.minPriceUsd ?? 0, href: itemBuyHref({ gameSlug, categorySlug, itemSlug: c.slug }) }
-    })
-    fallback = {
-      otherVariants: others,
-      otherVariantRows: variant ? itemRows.slice(0, OTHER_VARIANT_ROWS) : [],
-      similar,
-    }
-  }
+  const similar =
+    itemRows.length > 0
+      ? []
+      : pickSimilarItems(itemSlug, catalog.items, (s) => (stockMap.get(s)?.total ?? 0) > 0, SIMILAR_LIMIT).map((c) => {
+          const s = stockMap.get(c.slug)!
+          return { ...c, count: s.total, minPriceUsd: s.minPriceUsd ?? 0, href: itemBuyHref({ gameSlug, categorySlug, itemSlug: c.slug }) }
+        })
 
   return {
     item,
     variant,
     variantLabel: vLabel,
     fullName,
+    itemRows,
     results,
     stock,
     minPriceUsd: results.length ? Number(results[0].price) : null,
     indexable: results.length > 0 && itemRows.length >= ITEM_PAGE_MIN_LISTINGS,
-    canonicalPath: itemBuyHref({ ...ref, variant: null }),
-    variantsInStock,
-    fallback,
+    canonicalPath: itemBuyHref({ gameSlug, categorySlug, itemSlug, variant: null }),
+    similar,
   }
 }

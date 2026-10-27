@@ -27,8 +27,8 @@ const toOffers = async (gameId: string, rows: readonly ValueListingRow[]): Promi
 }
 
 /**
- * The item listings page. Null = 404, decided from the game, pair and
- * catalogue BEFORE any listing is read.
+ * The item listings page: every offer of the item with its trait. Null = 404,
+ * decided from the game, pair and catalogue BEFORE any listing is read.
  */
 export const loadItemListingsPage = cache(
   async (gameSlug: string, categorySlug: string, itemSlug: string, variant: string | null) => {
@@ -41,11 +41,10 @@ export const loadItemListingsPage = cache(
     const listings = await getValueListings(gameSlug)
     const model = buildItemPage({ gameSlug, categorySlug, catalog, itemSlug, variant, rows: listings?.rows ?? [] })
     if (!model) return null
-    const [offers, otherOffers] = await Promise.all([
-      toOffers(pair.gameId, model.results),
-      toOffers(pair.gameId, model.fallback?.otherVariantRows ?? []),
-    ])
-    return { pair, catalog, model, offers, otherOffers }
+    const offers = await toOffers(pair.gameId, model.itemRows)
+    // Trait per offer: the pet page's trait picker works on the client.
+    const offerVariants: Record<string, string | null> = Object.fromEntries(model.itemRows.map((r) => [r.id, r.value_variant]))
+    return { pair, catalog, model, offers, offerVariants }
   },
 )
 

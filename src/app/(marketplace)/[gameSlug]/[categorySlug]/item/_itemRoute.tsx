@@ -6,6 +6,9 @@ import { formatUsd } from '@/lib/value-listings/format'
 import { loadItemListingsPage } from '../_valueItemOffers'
 import { ItemListingsView } from './_ItemListingsView'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
+import GameSubNav from '@/components/marketplace/GameSubNav'
+import { getSubnavCategories } from '@/lib/categories/subnav-categories'
+import { hubNavExtras } from '../../values/_HubNavExtras'
 
 /**
  * Shared by /{game}/{category}/item/{item} and …/item/{item}/{variant}.
@@ -44,6 +47,8 @@ export async function itemRouteMetadata(p: ItemRouteParams): Promise<Metadata> {
 export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
   const data = await loadItemListingsPage(params.gameSlug, params.categorySlug, params.itemSlug, params.variant ?? null)
   if (!data) notFound()
+  // The game's tabs, Items active (GameBoost keeps them on an item page): one cached entry per game.
+  const categories = await getSubnavCategories(data.pair.gameId)
   return (
     <GameHeroBackdrop gameSlug={params.gameSlug} size="market">
       <JsonLd
@@ -53,6 +58,14 @@ export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
           { name: 'Buy Items', path: `/${params.gameSlug}/${data.pair.categorySlug}` },
           { name: data.model.item.name, path: data.model.canonicalPath },
         ])}
+      />
+      <GameSubNav
+        gameSlug={params.gameSlug}
+        gameName={data.pair.gameName}
+        gameImageUrl={data.pair.gameImageUrl}
+        currentCategorySlug={data.pair.categorySlug}
+        categories={categories}
+        extraTabs={hubNavExtras(params.gameSlug, data.pair.gameName)}
       />
       <ItemListingsView gameSlug={params.gameSlug} data={data} />
     </GameHeroBackdrop>

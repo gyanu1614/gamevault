@@ -15,9 +15,9 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
-import { withCurrencyNavLabel } from '@/lib/categories/currency-nav-label'
 import Image from 'next/image'
-import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
+import GameSubNav from '@/components/marketplace/GameSubNav'
+import { getSubnavCategories } from '@/lib/categories/subnav-categories'
 import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { getCurrencyShell as getCurrencyShellUncached, listingToOffer } from './_currencyData'
 import GenericListingsClient, { type GenericGridListing } from './_GenericListingsClient'
@@ -29,8 +29,6 @@ import {
 } from './_routeGate'
 import { getAllEnabledCategoryPairs } from '@/lib/seo/category-pairs'
 import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
-import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
-import { unstable_cache } from 'next/cache'
 import RouteSkeleton from './_RouteSkeleton'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 // PERF-004 — the three page variants below are mutually exclusive: a category
@@ -320,35 +318,8 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
 // gate costs no extra queries.
 const getCurrencyShell = cache(getCurrencyShellUncached)
 
-// Step 7b — per game, not per page: a game's sub-nav tabs are identical on
-// every one of its category pages, so this is one tagged cache entry per game
-// per build/hour (GAME_DIRECTORY_TAG, like the footer directory).
-const getAllGameCategories = unstable_cache(
-  async (gameId: string): Promise<GameCategory[]> => {
-    const supabase = createAnonClient()
-    const [{ data }, { data: currencyCfg }] = await Promise.all([
-      supabase
-        .from('game_categories')
-        .select('id, name, slug, type')
-        .eq('game_id', gameId)
-        .eq('is_enabled', true)
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true }) as any,
-      supabase
-        .from('category_configs')
-        .select('config')
-        .eq('game_id', gameId)
-        .eq('category_type', 'currency')
-        .maybeSingle() as any,
-    ])
-    // The currency tab reads like its page title ("Gems", not "Currency").
-    return withCurrencyNavLabel((data || []) as GameCategory[], currencyCfg?.config?.unit_label)
-  },
-  ['game-categories-nav'],
-  // Admin category edits revalidate GAME_DIRECTORY_TAG; daily is the backstop
-  // (hourly capped every category page at one hour).
-  { tags: [GAME_DIRECTORY_TAG], revalidate: 86400 },
-)
+// Step 7b: the sub-nav tabs are one cached entry per game (shared with the pet page).
+const getAllGameCategories = getSubnavCategories
 
 // V21/P7.ae — Apply an "exclude offline sellers" filter to a listings
 // query. Sellers in Offline Mode have all their offers hidden from

@@ -62,6 +62,13 @@ const AM_VARIANT_NAMES: Record<AmVariantCode, readonly string[]> = {
   MFR: ['Mega Fly Ride', 'Mega Neon Fly Ride', 'MFR'],
 }
 
+/** Adopt Me trade shorthand for a variant key ("FR", "NFR", "M"); null for Normal and other games. */
+export function variantShortCode(gameSlug: string, key: string): string | null {
+  if (gameSlug !== 'adopt-me') return null
+  const code = amVariantCode(key)
+  return code ? (AM_VARIANT_NAMES[code].find((n) => /^[A-Z]{1,3}$/.test(n)) ?? null) : null
+}
+
 /** Display label for a stored variant key, per game. */
 export function variantLabel(gameSlug: string, key: string | null, mutations?: ReadonlyArray<{ slug: string; name: string }>): string | null {
   if (!key) return null

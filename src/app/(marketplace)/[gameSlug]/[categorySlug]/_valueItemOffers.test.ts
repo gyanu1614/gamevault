@@ -1,7 +1,8 @@
 /**
  * Item listings page data: 404 is decided from the game, pair and catalogue
  * BEFORE any listing is read (CLAUDE.md "404 before the DB"), and the page is
- * filtered on the server (the first HTML holds only this item / variant).
+ * filtered on the server (the first HTML holds only this item's offers, each
+ * with its trait, so the trait picker works without another request).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { buildValueCatalog } from '@/lib/value-listings/catalogs'
@@ -49,16 +50,18 @@ describe('loadItemListingsPage', () => {
     expect(getValueListings).not.toHaveBeenCalled()
   })
 
-  it('returns only the requested item and variant', async () => {
+  it('returns every offer of the item (no other item), cheapest first, with its trait', async () => {
     const data = await loadItemListingsPage('adopt-me', 'buy-items', 'bat-dragon', 'neon')
-    expect(data!.offers.map((o) => o.id)).toEqual(['b'])
+    expect(data!.offers.map((o) => o.id)).toEqual(['a', 'b'])
+    expect(data!.offerVariants).toEqual({ a: 'fly-ride', b: 'neon' })
+    expect(data!.model.results.map((r) => r.id)).toEqual(['b'])
     expect(data!.model.canonicalPath).toBe('/adopt-me/buy-items/item/bat-dragon')
   })
 
-  it('falls back to other variants when the variant has none', async () => {
+  it('a trait nobody sells still loads the item’s other offers', async () => {
     const data = await loadItemListingsPage('adopt-me', 'buy-items', 'bat-dragon', 'mega-neon')
-    expect(data!.offers).toEqual([])
-    expect(data!.otherOffers.map((o) => o.id)).toEqual(['a', 'b'])
+    expect(data!.model.results).toEqual([])
+    expect(data!.offers.map((o) => o.id)).toEqual(['a', 'b'])
   })
 })
 

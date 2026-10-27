@@ -32,16 +32,6 @@ export function aggregateStock(rows: readonly MatchedListingRow[]): Map<string, 
   return map
 }
 
-export function otherVariants(
-  stock: ItemStock,
-  chosen: string | null,
-): Array<{ variant: string } & VariantStock> {
-  return Object.entries(stock.byVariant)
-    .filter(([variant, v]) => variant !== chosen && v.count > 0)
-    .map(([variant, v]) => ({ variant, ...v }))
-    .sort((a, b) => a.minPriceUsd - b.minPriceUsd)
-}
-
 export interface SimilarCandidate {
   slug: string
   name: string

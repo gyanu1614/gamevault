@@ -1,151 +1,97 @@
-import Link from 'next/link'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import { cn } from '@/lib/utils'
-import { ValueOfferGrid } from '@/components/value-listings/ValueOfferGrid'
+import Link from '@/components/navigation/AppLink'
+import { IconChevronRight } from '@tabler/icons-react'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
+import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
+import { PictureBox } from '@/features/item-buy/PictureBox'
+import { initialTrait, traitNoun } from '@/features/item-buy/model/offers'
+import { traitDefs } from '@/features/item-buy/model/traits'
 import { formatUsd } from '@/lib/value-listings/format'
+import { rarityMeta } from '@/lib/values/rarity'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
+import { cn } from '@/lib/utils'
 import type { loadItemListingsPage } from '../_valueItemOffers'
 
 type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
 
 /**
- * Item listings page body (Bundle 2): filtered on the server, so the first
- * HTML already shows only this item (and variant). With nothing to show it
- * never renders an empty page: one line, then other variants, then similar
- * items, then the sell / browse actions.
+ * The pet page body (owner, 2026-10-26, GameBoost/Eldorado as the
+ * reference): the picture in a box with the trust strip, the buy box (seller,
+ * price, trait picker, Buy or Notify Me), then the trait's other offers.
+ * Filtered on the server, so the first HTML holds this pet's offers only. A
+ * pet nobody sells still renders: Notify Me, then similar pets that have
+ * offers, then a way to sell one.
  */
 export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: Data }) {
-  const { pair, catalog, model, offers, otherOffers } = data
-  const { item, fullName, fallback } = model
+  const { pair, catalog, model, offers, offerVariants } = data
+  const { item } = model
+  const traits = traitDefs(gameSlug, catalog)
+  const r = item.rarity ? rarityMeta(gameSlug, item.rarity) : null
+  const rarity = r?.label ? { label: r.label, color: r.color } : null
   const browseHref = `/${gameSlug}/${pair.categorySlug}`
-  const sellHref = `/${gameSlug}/sell?src=item-buy-page`
-  const valueHref = item.hasPage === false ? null : `/${gameSlug}/values/${item.slug}`
-  const showVariantChips = model.variantsInStock.length > 0 && catalog.catalog.variants.length > 0
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
-      <nav aria-label="Breadcrumb" className="mb-4 text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
-        <ol className="flex flex-wrap items-center gap-1.5">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pt-0 lg:px-8">
+      <nav aria-label="Breadcrumb" className="mb-5 text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+        <ol className="flex flex-wrap items-center gap-1">
           <li>
-            <Link href={`/${gameSlug}`} className="hover:text-text-primary">{pair.gameName}</Link>
+            <Link href={`/${gameSlug}`} className="transition-colors hover:text-text-primary">
+              {pair.gameName}
+            </Link>
           </li>
-          <li aria-hidden>/</li>
+          <li aria-hidden>
+            <IconChevronRight size={14} stroke={2} />
+          </li>
           <li>
-            <Link href={browseHref} className="hover:text-text-primary">Buy Items</Link>
+            <Link href={browseHref} className="transition-colors hover:text-text-primary">
+              Buy Items
+            </Link>
           </li>
-          <li aria-hidden>/</li>
-          <li className="text-text-secondary" aria-current="page">{fullName}</li>
+          <li aria-hidden>
+            <IconChevronRight size={14} stroke={2} />
+          </li>
+          <li className="text-text-secondary" aria-current="page">
+            {item.name}
+          </li>
         </ol>
       </nav>
 
-      <header className="mb-6 flex items-center gap-3.5 sm:gap-5">
-        {item.imageUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- catalogue art from storage, same as the value pages */
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            width={72}
-            height={72}
-            loading="eager"
-            className="h-16 w-16 shrink-0 rounded-lg bg-bg-raised object-contain sm:h-[72px] sm:w-[72px]"
-          />
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <h1
-            className="text-balance break-words text-text-primary"
-            style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.05, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
-          >
-            Buy {fullName}
-          </h1>
-          <p className="mt-2 text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>
-            {model.results.length > 0 ? (
-              <>
-                {model.results.length} {model.results.length === 1 ? 'listing' : 'listings'} from{' '}
-                <span className="font-semibold text-text-primary tabular-nums">{formatUsd(model.minPriceUsd!)}</span>. Every order covered by SafeDrop Protection.
-              </>
-            ) : (
-              <>No {fullName} listed right now.</>
-            )}
-          </p>
-          {valueHref ? (
-            <Link href={valueHref} className="mt-1.5 inline-flex items-center gap-1 font-semibold text-lime-text hover:underline" style={{ fontSize: 'var(--fs-meta)' }}>
-              See {item.name} Value
-              <ArrowForwardIcon sx={{ fontSize: 15 }} />
-            </Link>
-          ) : null}
-        </div>
-      </header>
+      <ItemBuyClient
+        gameSlug={gameSlug}
+        gameName={pair.gameName}
+        itemSlug={item.slug}
+        itemName={item.name}
+        rarity={rarity}
+        noun={traitNoun(gameSlug)}
+        traits={traits}
+        offers={offers}
+        offerVariants={offerVariants}
+        initialTrait={initialTrait(traits, model.variant)}
+        basePath={model.canonicalPath}
+        picture={<PictureBox imageUrl={item.imageUrl ?? null} name={`${pair.gameName} ${item.name}`} />}
+      />
 
-      {showVariantChips ? (
-        <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0" role="navigation" aria-label="Variants">
-          <ul className="flex gap-2">
-            <li>
-              <Chip href={model.canonicalPath} active={!model.variant} label="All" />
-            </li>
-            {model.variantsInStock.map((v) => (
-              <li key={v.variant}>
-                <Chip href={v.href} active={model.variant === v.variant} label={v.label} price={formatUsd(v.minPriceUsd)} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {model.results.length > 0 ? (
-        <ValueOfferGrid
-          offers={offers}
-          gameSlug={gameSlug}
-          gameName={pair.gameName}
-          surface="item_buy"
-          itemSlug={item.slug}
-          variant={model.variant}
-        />
-      ) : fallback ? (
-        <div className="space-y-10">
+      {offers.length === 0 ? (
+        <>
           <TrackOnMount event={{ event: 'fallback_shown', surface: 'item_buy', game: gameSlug, item: item.slug, variant: model.variant }} />
-
-          {fallback.otherVariants.length > 0 ? (
-            <section aria-labelledby="other-variants">
-              <h2 id="other-variants" className="mb-4 font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)' }}>
-                Other Variants
-              </h2>
-              <ValueOfferGrid
-                offers={otherOffers}
-                gameSlug={gameSlug}
-                gameName={pair.gameName}
-                surface="item_buy"
-                itemSlug={item.slug}
-                variant={null}
-              />
-              {model.stock && model.stock.total > otherOffers.length ? (
-                <Link href={model.canonicalPath} className="mt-4 inline-flex items-center gap-1 font-semibold text-text-primary hover:underline" style={{ fontSize: 'var(--fs-meta)' }}>
-                  View All {model.stock.total}
-                  <ArrowForwardIcon sx={{ fontSize: 15 }} />
-                </Link>
-              ) : null}
-            </section>
-          ) : null}
-
-          {fallback.similar.length > 0 ? (
-            <section aria-labelledby="similar-items">
-              <h2 id="similar-items" className="mb-4 font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)' }}>
-                Similar Items
+          {model.similar.length > 0 ? (
+            <section aria-labelledby="similar-items" className="mt-12 sm:mt-14">
+              <h2 id="similar-items" className="mb-5 text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]">
+                Similar Items For Sale
               </h2>
               <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 'var(--gap-grid)' }}>
-                {fallback.similar.map((s) => (
+                {model.similar.map((s) => (
                   <li key={s.slug}>
-                    <Link
-                      href={s.href}
-                      className="flex h-full items-center gap-3 rounded-lg bg-bg-raised p-3 transition-colors hover:bg-bg-raised-hover active:scale-[0.99]"
-                    >
+                    <Link href={s.href} className={cn('flex h-full items-center gap-3 rounded-lg p-3', MARKET_CARD, MARKET_CARD_HOVER)}>
                       {s.imageUrl ? (
                         /* eslint-disable-next-line @next/next/no-img-element -- catalogue art */
-                        <img src={s.imageUrl} alt={s.name} aria-hidden width={48} height={48} loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-contain" />
+                        <img src={s.imageUrl} alt="" aria-hidden width={48} height={48} loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-contain" />
                       ) : null}
                       <span className="min-w-0">
-                        <span className="block truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-meta)' }}>{s.name}</span>
-                        <span className="block text-text-secondary tabular-nums" style={{ fontSize: 'var(--fs-meta)' }}>
-                          {s.count} listed, from {formatUsd(s.minPriceUsd)}
+                        <span className="block truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-body)' }}>
+                          {s.name}
+                        </span>
+                        <span className="block tabular-nums text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>
+                          {s.count} {s.count === 1 ? 'Offer' : 'Offers'} from {formatUsd(s.minPriceUsd)}
                         </span>
                       </span>
                     </Link>
@@ -154,42 +100,18 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
               </ul>
             </section>
           ) : null}
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={sellHref}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-lime px-5 font-bold text-text-inverse transition-colors hover:bg-lime-hover active:bg-lime-pressed"
-              style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
-            >
-              Sell Yours For Cash
-              <ArrowForwardIcon sx={{ fontSize: 16 }} />
+          <p className="mt-10 text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
+            Have a {item.name}?{' '}
+            <Link href={`/${gameSlug}/sell?src=item-buy-page`} className="font-semibold text-lime-text hover:underline">
+              Sell it on DropMarket
             </Link>
-            <Link
-              href={browseHref}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white/[0.07] px-5 font-semibold text-text-primary transition-colors hover:bg-white/[0.11]"
-              style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
-            >
+            <span aria-hidden className="mx-2 text-text-tertiary">·</span>
+            <Link href={browseHref} className="font-semibold text-text-primary hover:underline">
               Browse All {pair.gameName} Items
             </Link>
-          </div>
-        </div>
+          </p>
+        </>
       ) : null}
     </main>
-  )
-}
-
-function Chip({ href, active, label, price }: { href: string; active: boolean; label: string; price?: string }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors',
-        active ? 'bg-lime text-text-inverse' : 'bg-bg-raised-hover text-text-secondary hover:bg-white/[0.12] hover:text-text-primary',
-      )}
-    >
-      {label}
-      {price ? <span className={cn('tabular-nums', active ? 'opacity-80' : 'text-text-tertiary')}>{price}</span> : null}
-    </Link>
   )
 }
