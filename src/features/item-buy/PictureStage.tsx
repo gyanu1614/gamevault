@@ -13,9 +13,9 @@ const MAX_UPSCALE = 1.5
 const FLOAT = { duration: 6, repeat: Infinity, ease: 'easeInOut' } as const
 
 /**
- * The pet on a lit stage, with the trust strip fixed to its foot (owner,
- * 2026-10-27; Skinport's image stage + GameBoost's trust strip, given depth:
- * a studio light from above, a darker floor, the house matte grain). The pet
+ * The pet on a light studio stage, with the trust strip fixed to its foot
+ * (owner, 2026-10-27: the dark stage was "dark and gloomy"; StockX's white
+ * image card on a dark page, and the game's own light inventory tiles). The pet
  * floats slowly over a contact shadow (still for reduced motion) and is
  * capped near its real resolution once loaded, so small catalogue art stays
  * sharp. The picked trait's badges sit bottom-right, where the game puts
@@ -40,15 +40,14 @@ export function PictureStage({
 
   return (
     <div className="overflow-hidden rounded-lg bg-[#17181C] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_40px_80px_-48px_rgba(0,0,0,0.95)]">
-      <div className="relative isolate grid aspect-[16/11] place-items-center bg-[linear-gradient(180deg,#23242B_0%,#18191E_58%,#111216_100%)] sm:aspect-[4/3] lg:aspect-[16/10]">
-        <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(64%_58%_at_50%_0%,rgba(255,255,255,0.075),transparent_72%)]" />
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[36%] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.32))]" />
+      <div className="relative isolate grid aspect-[16/11] place-items-center bg-[linear-gradient(180deg,#F4F5F8_0%,#E1E4EA_100%)] sm:aspect-[4/3] lg:aspect-[16/10]">
+        <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_0%,rgba(255,255,255,0.9),transparent_70%)]" />
 
         {imageUrl ? (
           <div className="relative flex h-[62%] w-full items-end justify-center">
             <motion.span
               aria-hidden
-              className="absolute bottom-[-7%] h-[9%] w-[36%] rounded-[50%] bg-black/60 blur-[10px]"
+              className="absolute bottom-[-7%] h-[9%] w-[36%] rounded-[50%] bg-black/25 blur-[10px]"
               animate={reduce ? undefined : { scaleX: [1, 0.86, 1], opacity: [1, 0.7, 1] }}
               transition={FLOAT}
             />
@@ -69,18 +68,16 @@ export function PictureStage({
             />
           </div>
         ) : (
-          <span className="font-medium uppercase tracking-[0.14em] text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
+          <span className="font-medium uppercase tracking-[0.14em] text-[#8A8F9A]" style={{ fontSize: 'var(--fs-micro)' }}>
             Picture Coming Soon
           </span>
         )}
-
-        <span aria-hidden className="seller-grain" />
 
         <AnimatePresence mode="popLayout" initial={false}>
           {traitCode ? (
             <motion.div
               key={traitCode}
-              className="absolute bottom-4 right-4 z-[4] drop-shadow-[0_6px_10px_rgba(0,0,0,0.5)] sm:bottom-5 sm:right-5"
+              className="absolute bottom-4 right-4 drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] sm:bottom-5 sm:right-5"
               initial={reduce ? false : { opacity: 0, scale: 0.8, y: 6 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={reduce ? undefined : { opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}

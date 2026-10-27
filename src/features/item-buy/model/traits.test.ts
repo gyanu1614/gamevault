@@ -55,19 +55,15 @@ describe('traitDefs', () => {
 })
 
 describe('traitPicker', () => {
-  const opt = (variant: string, short: string | null) => ({ variant, label: variant, short, count: 0, minPriceUsd: null })
+  const opt = (variant: string) => ({ variant })
 
-  it('Adopt Me: badge tiles (every form but Normal has a badge)', () => {
+  it('Adopt Me: on/off filters', () => {
     const defs = traitDefs('adopt-me', buildValueCatalog('adopt-me', { items: [{ slug: 'parrot', name: 'Parrot' }] })!)
-    expect(traitPicker(defs.map((d) => opt(d.key, d.short)))).toBe('tiles')
+    expect(traitPicker(defs.map((d) => opt(d.key)))).toBe('toggles')
   })
 
-  it('mutations (no badges) keep the dropdown', () => {
-    expect(traitPicker([opt('default', null), opt('gold', null), opt('diamond', null)])).toBe('dropdown')
-  })
-
-  it('more than eight options keep the dropdown', () => {
-    expect(traitPicker([opt('normal', null), ...'ABCDEFGH'.split('').map((c) => opt(c, c))])).toBe('dropdown')
+  it('mutations keep the dropdown', () => {
+    expect(traitPicker([opt('default'), opt('gold'), opt('diamond')])).toBe('dropdown')
   })
 
   it('no options, no picker', () => {
