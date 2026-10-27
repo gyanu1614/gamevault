@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import { IconBolt, IconHeadset, IconShieldCheck, type Icon as TablerIcon } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { TraitMarks } from './TraitMarks'
 
 /** Never blow the art up beyond this many times its own pixels (it blurs). */
 const MAX_UPSCALE = 1.5
@@ -11,20 +12,21 @@ const MAX_UPSCALE = 1.5
  * The pet on a calm stage, with the trust strip fixed to its foot (owner,
  * 2026-10-27; Skinport's image stage + GameBoost's trust strip). The art sits
  * on a soft floor shadow and is capped near its real resolution once loaded,
- * so small catalogue art stays sharp. The picked trait's shorthand sits in
- * the corner. The promises are the site's own (TrustBand copy), each with a
+ * so small catalogue art stays sharp. The picked trait's badges sit in the
+ * corner. The promises are the site's own (TrustBand copy), each with a
  * blue icon; `trustpilot` is the server-rendered row, shown only with 10+
  * reviews.
  */
 export function PictureStage({
   imageUrl,
   name,
-  badge,
+  traitCode,
   trustpilot,
 }: {
   imageUrl: string | null
   name: string
-  badge: { text: string; tone: string | null } | null
+  /** Adopt Me shorthand of the trait on show ("NFR"), drawn as the game's badges. */
+  traitCode: string | null
   trustpilot: ReactNode
 }) {
   const [cap, setCap] = useState<number | null>(null)
@@ -54,11 +56,7 @@ export function PictureStage({
             Picture Coming Soon
           </span>
         )}
-        {badge ? (
-          <span className={cn('absolute left-4 top-4 inline-flex h-7 items-center rounded-md bg-black/40 px-2.5 text-[12px] font-bold tracking-wide backdrop-blur-sm', badge.tone ?? 'text-text-primary')}>
-            {badge.text}
-          </span>
-        ) : null}
+        {traitCode ? <TraitMarks code={traitCode} size={28} className="absolute left-4 top-4" /> : null}
       </div>
 
       <ul className="grid grid-cols-3 bg-[#1A1B20] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">

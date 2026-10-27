@@ -24,10 +24,8 @@ const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maxi
 
 export interface BuyBoxProps {
   gameSlug: string
-  gameName: string
   itemSlug: string
   itemName: string
-  rarity: { label: string; color: string } | null
   noun: 'Trait' | 'Mutation'
   traits: TraitOption[]
   trait: string | null
@@ -57,19 +55,8 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome">
-      {p.rarity ? (
-        <p className="flex items-center gap-2 font-medium" style={{ fontSize: 'var(--fs-meta)', color: p.rarity.color }}>
-          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
-          {p.rarity.label}
-        </p>
-      ) : null}
-      <h1 id="item-title" className="mt-2 text-text-primary">
-        <span className="block font-semibold uppercase tracking-[0.14em] text-text-tertiary" style={{ fontSize: 'var(--fs-caption)' }}>
-          {p.gameName}
-        </span>
-        <span className="mt-1 block text-balance font-bold" style={{ fontSize: 'clamp(32px, 26px + 1.2vw, 42px)', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
-          {p.itemName}
-        </span>
+      <h1 id="item-title" className="text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(32px, 26px + 1.2vw, 42px)', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+        {p.itemName}
       </h1>
 
       {p.traits.length > 0 ? (

@@ -6,7 +6,6 @@ import { TrustpilotRow } from '@/features/item-buy/TrustpilotRow'
 import { traitNoun } from '@/features/item-buy/model/offers'
 import { traitDefs } from '@/features/item-buy/model/traits'
 import { formatUsd } from '@/lib/value-listings/format'
-import { rarityMeta } from '@/lib/values/rarity'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import type { loadItemListingsPage } from '../_valueItemOffers'
@@ -26,8 +25,6 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
   const { pair, catalog, model, offers, offerVariants } = data
   const { item } = model
   const traits = traitDefs(gameSlug, catalog)
-  const r = item.rarity ? rarityMeta(gameSlug, item.rarity) : null
-  const rarity = r?.label ? { label: r.label, color: r.color } : null
   const browseHref = `/${gameSlug}/${pair.categorySlug}`
 
   return (
@@ -62,7 +59,6 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
         itemSlug={item.slug}
         itemName={item.name}
         imageUrl={item.imageUrl ?? null}
-        rarity={rarity}
         noun={traitNoun(gameSlug)}
         traits={traits}
         offers={offers}

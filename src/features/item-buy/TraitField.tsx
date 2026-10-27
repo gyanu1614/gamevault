@@ -7,6 +7,7 @@ import { IconCheck, IconChevronDown, IconX } from '@tabler/icons-react'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
+import { TraitMarks } from './TraitMarks'
 import { TraitName } from './TraitName'
 import type { TraitOption } from './model/offers'
 
@@ -54,7 +55,7 @@ export function TraitField({
         {noun}
       </span>
       <span className="flex min-w-0 flex-1 items-center justify-end gap-2.5">
-        {current?.short ? <Code text={current.short} /> : null}
+        {current?.short ? <TraitMarks code={current.short} size={22} /> : null}
         <span className="truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
           {current ? <TraitName traitKey={current.variant} label={current.label} /> : `Choose a ${noun}`}
         </span>
@@ -124,7 +125,7 @@ function TraitList({ options, value, onPick, labelId }: { options: TraitOption[]
               onClick={() => onPick(o.variant)}
               className={cn('flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-white/[0.04]', selected && 'bg-white/[0.035]')}
             >
-              <span className="w-12 shrink-0">{o.short ? <Code text={o.short} muted={o.count === 0} /> : null}</span>
+              <span className="w-[62px] shrink-0">{o.short ? <TraitMarks code={o.short} className={cn(o.count === 0 && 'opacity-40')} /> : null}</span>
               <span className={cn('min-w-0 flex-1 truncate', selected ? 'font-semibold' : 'font-medium', o.count === 0 && 'text-text-secondary')} style={{ fontSize: 'var(--fs-body)' }}>
                 <TraitName traitKey={o.count > 0 ? o.variant : null} label={o.label} />
               </span>
@@ -143,14 +144,5 @@ function TraitList({ options, value, onPick, labelId }: { options: TraitOption[]
         )
       })}
     </ul>
-  )
-}
-
-/** "FR", "NFR": Adopt Me's trade shorthand in a small box. */
-function Code({ text, muted = false }: { text: string; muted?: boolean }) {
-  return (
-    <span className={cn('inline-grid h-6 min-w-[36px] place-items-center rounded px-1.5 text-[11.5px] font-bold tracking-wide', muted ? 'bg-white/[0.04] text-text-tertiary' : 'bg-white/[0.08] text-text-secondary')}>
-      {text}
-    </span>
   )
 }

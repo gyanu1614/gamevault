@@ -12,6 +12,7 @@ import { sellerDisplayName } from '@/lib/seller/identity'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
 import { cn } from '@/lib/utils'
+import { TraitMarks } from './TraitMarks'
 import { TraitName } from './TraitName'
 import { fmtUsd } from './money'
 import type { TraitDef, TraitOption } from './model/offers'
@@ -205,11 +206,7 @@ function TraitsTable({ traits, onSelect, noun }: { traits: TraitOption[]; onSele
           <li key={t.variant} className="shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.8fr)_auto] items-center gap-4 rounded-md px-3 py-3 transition-colors hover:bg-white/[0.025]">
               <span className="flex min-w-0 items-center gap-2.5">
-                {t.short ? (
-                  <span className="inline-grid h-6 min-w-[36px] place-items-center rounded bg-white/[0.07] px-1.5 text-[11.5px] font-bold tracking-wide text-text-secondary">{t.short}</span>
-                ) : (
-                  <span className="w-9 shrink-0" />
-                )}
+                <span className="w-[62px] shrink-0">{t.short ? <TraitMarks code={t.short} /> : null}</span>
                 <span className="truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-body)' }}>
                   <TraitName traitKey={t.variant} label={t.label} />
                 </span>

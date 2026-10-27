@@ -8,7 +8,6 @@ import { OfferTabs } from './OfferTabs'
 import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
 import { defaultTrait, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
-import { traitTone } from './model/traits'
 import { useBuyOffer } from './use-buy-offer'
 
 export interface ItemBuyClientProps {
@@ -17,7 +16,6 @@ export interface ItemBuyClientProps {
   itemSlug: string
   itemName: string
   imageUrl: string | null
-  rarity: { label: string; color: string } | null
   noun: 'Trait' | 'Mutation'
   traits: TraitDef[]
   /** Every live offer of the pet, any trait. */
@@ -30,8 +28,6 @@ export interface ItemBuyClientProps {
   /** Trustpilot row (server-rendered, gated on the review count). */
   trustpilot: ReactNode
 }
-
-const BADGE_TONE: Record<string, string> = { neon: 'text-[#4ADE80]', mega: 'text-[#C9B0FF]', gold: 'text-[#F5C542]', diamond: 'text-[#7FE3F0]' }
 
 /**
  * The pet page (owner, 2026-10-27; built from the research board: Skinport's
@@ -67,7 +63,6 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
   }
   const offerVariant = offer ? offerVariants[offer.id] ?? null : null
   const shown = traitDef(offer ? offerVariant : trait)
-  const badgeTone = traitTone(shown?.key ?? null)
   const isOwn = !!offer && !!viewerId && offer.sellerId === viewerId
 
   const setUrlTrait = (next: string | null) => {
@@ -124,7 +119,7 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
           <PictureStage
             imageUrl={p.imageUrl}
             name={`${p.gameName} ${p.itemName}`}
-            badge={shown?.short ? { text: shown.short, tone: badgeTone ? BADGE_TONE[badgeTone] : null } : null}
+            traitCode={shown?.short ?? null}
             trustpilot={p.trustpilot}
           />
         </div>
@@ -132,10 +127,8 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
         <div className="min-w-0 [grid-area:buy] lg:sticky lg:top-[calc(var(--game-chrome-bottom)+24px)] lg:self-start">
           <BuyBox
             gameSlug={p.gameSlug}
-            gameName={p.gameName}
             itemSlug={p.itemSlug}
             itemName={p.itemName}
-            rarity={p.rarity}
             noun={p.noun}
             traits={options}
             trait={trait}
