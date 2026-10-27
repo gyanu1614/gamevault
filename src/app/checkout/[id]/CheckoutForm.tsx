@@ -50,7 +50,8 @@ import { orderMethodsForRegion, regionForCountry } from '@/lib/payments/regions'
 import { countryName, flagEmoji } from '@/lib/geo/countries'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { clampCheckoutQty } from './qty'
-import { TILE_SLOT, markSize, toRow, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { TILE_SLOT, markSize, methodIdForRow, toRow, walletRows, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { useWalletAvailability } from './_wallets'
 import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustList, TrustSeals } from './_trust'
 import type { SiteRating } from '@/lib/reviews/site-rating'
 import { lowestFeeMethodId } from '@/lib/payments/lowest-fee'
@@ -371,8 +372,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // re-quoted by quoteCheckoutMethods when the promo, the store-credit
   // toggle or the quantity changes — the SQL quote is the only fee math.
   const [quotedMethods, setQuotedMethods] = useState<ClientMethod[]>(methods)
-  // The Stripe card row: worldwide, first for every buyer (owner 2026-10-27).
+  // The Stripe card row: worldwide, first for every buyer (owner 2026-10-27),
+  // with this device's wallet (Apple Pay or Google Pay) above it once mounted.
   const cardRows = quotedMethods.filter((m) => m.kind === 'card').map(toRow)
+  const wallets = useWalletAvailability()
+  const walletRowList = wallets ? walletRows(cardRows[0] ?? null, wallets) : []
+  const stripeRows = [...walletRowList, ...cardRows]
   const allLocalRows = quotedMethods.filter((m) => m.kind === 'local').map(toRow)
   // The crypto row for the env-active provider; absent = crypto is not
   // payable for this order (no fee row / hidden) and its row is not shown.
@@ -382,7 +387,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const geo = /^[A-Z]{2}$/.test(geoCc) ? geoCc : null
   const [country, setCountry] = useState<string | null>(geo)
   const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, regionForCountry(country), country)
-  const orderedRows = [...cardRows, ...localRows, ...regionalRows]
+  const orderedRows = [...stripeRows, ...localRows, ...regionalRows]
   // "Lowest Fee" tag: the cheapest of the buyer's OWN-country methods for
   // this order — never a regional rail they can't use (a Vietnamese buyer is
   // not pointed at Indonesia's QRIS) and never crypto. Re-derived from the
@@ -416,7 +421,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     const cc = v === OTHER_COUNTRY ? null : v
     setCountry(cc)
     const next = orderMethodsForRegion(allLocalRows, regionForCountry(cc), cc)
-    const rows = [...cardRows, ...next.local, ...next.regional]
+    const rows = [...stripeRows, ...next.local, ...next.regional]
     if (payMethod && payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(null)
   }
   // Coin + network selection (within the crypto card).
@@ -451,7 +456,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       ? null
       : payMethod === 'crypto'
         ? cryptoMethod?.quote ?? null
-        : [...cardRows, ...allLocalRows].find((r) => r.id === payMethod)?.quote ?? null
+        : [...stripeRows, ...allLocalRows].find((r) => r.id === payMethod)?.quote ?? null
   const walletBalanceCents = Math.round(walletBalance * 100)
   const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= walletQuote.totalMinor
   const activeQuote = walletCoversAll ? walletQuote : methodQuote
@@ -575,7 +580,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         walletAmount,
         // Local methods route the charge to Payssion, the card row to
         // Stripe; crypto stays default.
-        paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,
+        paymentMethodId: payMethod === 'crypto' ? undefined : methodIdForRow(payMethod),
       })
       if (!result.success) {
         // Paid on the provider page, Back, then Pay again before the webhook
@@ -909,7 +914,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       ) : (
         <div className="flex flex-col gap-2" role="radiogroup" aria-label="Payment Method">
           <AnimatePresence initial={false} mode="popLayout">
-            {cardRows.map((m) => (
+            {stripeRows.map((m) => (
               <motion.div key={m.id} {...rowMotion}>
                 {renderMethodRow(m)}
               </motion.div>

@@ -89,6 +89,14 @@ export const CARD_SCHEME_MARKS = {
   mastercard: { logo: '/payments/ondark/mastercard.svg', aspect: 1.54 },
 } as const satisfies Record<string, MethodMark>
 
+/** Wallet marks for the rows that open Stripe Checkout with the wallet on top
+ *  (owner 2026-10-27). Google Pay: Shopify payment_icons (MIT), card
+ *  background removed, "Pay" set white. */
+export const WALLET_MARKS = {
+  applepay: PAYMENT_METHOD_ONDARK.applepay_sa,
+  googlepay: { logo: '/payments/ondark/googlepay.svg', aspect: 2.5 },
+} as const satisfies Record<string, MethodMark>
+
 /** Methods that show more than one mark (in this order); the rest show their one on-dark mark. */
 export const PAYMENT_METHOD_MULTI_MARKS: Record<string, MethodMark[]> = {
   stripe: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],

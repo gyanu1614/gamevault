@@ -12,7 +12,7 @@
 import { Barcode, CreditCard, Landmark, QrCode, Smartphone, Store, Wallet, Zap, type LucideIcon } from 'lucide-react'
 
 import type { ClientMethod } from '@/lib/payments/eligibility'
-import { PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK, type MethodMark } from '@/lib/payments/method-marks'
+import { PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK, WALLET_MARKS, type MethodMark } from '@/lib/payments/method-marks'
 import { flagEmoji } from '@/lib/geo/countries'
 
 export type MethodIcon = LucideIcon
@@ -100,6 +100,36 @@ export function toRow(m: ClientMethod): LocalMethodRow {
     Icon: ui.Icon,
     points: ui.points,
   }
+}
+
+/**
+ * Apple Pay / Google Pay rows (owner 2026-10-27, like Eldorado): above the
+ * card row, one per device — Apple Pay where the browser can pay with it,
+ * Google Pay elsewhere. Both are the Stripe card method with the same quote;
+ * Stripe's page shows the wallet button on top of its card form.
+ */
+export type WalletAvailability = { applePay: boolean; googlePay: boolean }
+
+const WALLET_ROWS = [
+  { id: 'applepay', label: 'Apple Pay', mark: WALLET_MARKS.applepay, points: ['Pay with Apple Pay on the next page', INSTANT] },
+  { id: 'googlepay', label: 'Google Pay', mark: WALLET_MARKS.googlepay, points: ['Pay with Google Pay on the next page', INSTANT] },
+] as const
+
+export function walletRows(card: LocalMethodRow | null, available: WalletAvailability): LocalMethodRow[] {
+  if (!card) return []
+  return WALLET_ROWS.filter((w) => (w.id === 'applepay' ? available.applePay : available.googlePay)).map((w) => ({
+    ...card,
+    id: w.id,
+    label: w.label,
+    marks: [w.mark],
+    Icon: Wallet,
+    points: [...w.points],
+  }))
+}
+
+/** The payment_method_fees method a checkout row pays with (wallet rows → the Stripe card method). */
+export function methodIdForRow(rowId: string): string {
+  return WALLET_ROWS.some((w) => w.id === rowId) ? 'stripe' : rowId
 }
 
 /** The mark slot on a payment row. */

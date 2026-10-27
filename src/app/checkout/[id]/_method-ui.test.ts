@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, toRow } from './_method-ui'
+import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, methodIdForRow, toRow, walletRows } from './_method-ui'
 import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
 import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
 
@@ -35,6 +35,25 @@ describe('checkout method rows', () => {
     expect(card).toMatchObject({ id: 'stripe', label: 'Credit / Debit Card', flag: '🌍', qrPay: false })
     expect(card.marks.map((m) => m.logo)).toEqual(['/payments/ondark/visa.svg', '/payments/ondark/mastercard.svg'])
     expect(card.points).toEqual(['Pay with a Visa or Mastercard, credit or debit', 'Payment confirms instantly'])
+  })
+
+  it('Apple Pay / Google Pay rows ride on the card row: same quote, Stripe method, one per device', () => {
+    const quote = { serviceFeeMinor: 123 } as any
+    const card = toRow({ method: 'stripe', label: 'Credit / Debit Card', countries: [], coverage: 'Worldwide', quote } as any)
+    const apple = walletRows(card, { applePay: true, googlePay: false })
+    expect(apple.map((r) => r.id)).toEqual(['applepay'])
+    expect(apple[0]).toMatchObject({ label: 'Apple Pay', quote, flag: '🌍' })
+    expect(apple[0].marks.map((m) => m.logo)).toEqual(['/payments/ondark/applepay_sa.svg'])
+    const google = walletRows(card, { applePay: false, googlePay: true })
+    expect(google.map((r) => r.id)).toEqual(['googlepay'])
+    expect(google[0].marks.map((m) => m.logo)).toEqual(['/payments/ondark/googlepay.svg'])
+    expect(walletRows(null, { applePay: true, googlePay: true })).toEqual([])
+    // Every wallet row pays through the Stripe card method.
+    expect(methodIdForRow('applepay')).toBe('stripe')
+    expect(methodIdForRow('googlepay')).toBe('stripe')
+    expect(methodIdForRow('stripe')).toBe('stripe')
+    expect(methodIdForRow('pix_br')).toBe('pix_br')
+    expect(existsSync(join(process.cwd(), 'public/payments/ondark/googlepay.svg'))).toBe(true)
   })
 
   it('every method with a brand mark has its on-dark version, and the file exists', () => {
