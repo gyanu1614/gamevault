@@ -39,6 +39,7 @@
     "discord:register:global": "node scripts/register-discord-commands.mjs --global",
     "discord:list": "node scripts/register-discord-commands.mjs --list",
     "adoptme:images": "node scripts/adopt-me-wiki-images.mjs",
+    "adoptme:images:upgrade": "tsx scripts/adopt-me-image-upgrade.mjs",
     "adoptme:cash:eldorado": "node scripts/collect-eldorado-adoptme.mjs",
     "adoptme:cash:eldorado:crawl": "node scripts/collect-eldorado-adoptme.mjs --crawl",
     "adoptme:cash:u7buy": "node scripts/collect-u7buy-adoptme.mjs",

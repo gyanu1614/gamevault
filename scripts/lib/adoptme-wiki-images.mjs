@@ -42,7 +42,7 @@ export async function wikiApi(params, { fetchImpl = fetch } = {}) {
 }
 
 /** Requested title → the title the response's pages carry (normalised, redirected). */
-function finalTitles(query) {
+export function finalTitles(query) {
   const map = new Map()
   for (const n of query?.normalized ?? []) map.set(n.from, n.to)
   for (const r of query?.redirects ?? []) map.set(r.from, r.to)
