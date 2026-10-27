@@ -149,7 +149,7 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, cate
             </div>
           ) : (
             <>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style={{ gap: 'var(--gap-grid)' }}>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>
                 {paged.visible.map((item) => (
                   <li key={item.slug}>
                     <GridCard item={item} gameSlug={gameSlug} />
