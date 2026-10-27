@@ -10,10 +10,13 @@
  *
  * `relative isolate` keeps the old stacking contract: page content (and the
  * hero band it carries) stays in its own context under the fixed navbar.
+ * `z-[1]` lifts that context above the site footer (positioned, later in the
+ * DOM), so the fixed game sub-navbar stays on top as the footer scrolls under
+ * it; the navbar (z-50) and its menus stay above both.
  */
 
 import type { ReactNode } from 'react'
 
 export default function MarketplaceLayout({ children }: { children: ReactNode }) {
-  return <div className="relative isolate min-h-screen">{children}</div>
+  return <div className="relative isolate z-[1] min-h-screen">{children}</div>
 }

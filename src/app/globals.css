@@ -60,6 +60,10 @@
      the navbar as soon as such a bar is mounted. */
   --navbar-bottom: calc(60px + var(--chrome-top));
   --navbar-height: 60px;
+  /* Where the fixed game sub-navbar sits (GameSubNav): flush under the
+     navbar's visible bar. Below lg that is the 60px app bar; at lg the bar
+     is 57px (py-2 + 40px row + 1px border) inside an 84px spacer. */
+  --subnav-top: calc(60px + var(--chrome-top));
 
   /* iPhone status-bar area (0 everywhere else). The root viewport is
      viewport-fit=cover (layout.tsx), so the page runs under the status bar:
@@ -71,8 +75,12 @@
      announcement bar while it's on screen (its offset counts the status bar). */
   --chrome-top: max(var(--safe-top), var(--beta-banner-offset, 0px));
 
-  /* Navbar surface vars — used by navbar-floating.tsx inline styles */
-  --navbar-bg:               rgba(29, 30, 35, 0.78);
+  /* Navbar surface vars — used by navbar-floating.tsx inline styles.
+     Owner, 2026-10-26: "a bit transparent yet bold, not just grey" — the
+     navbar is a deep frosted near-black; the game sub-navbar under it is one
+     step lighter (GameSubNav), so the two bars read as two layers. */
+  --navbar-bg:               rgba(12, 13, 16, 0.76);
+  --subnav-bg:               rgba(26, 27, 32, 0.74);
   --navbar-mobile-bg:        #16171B;
   --navbar-dropdown-bg:      #1D1E23;
 
@@ -2460,6 +2468,7 @@
   :root {
     --navbar-bottom: calc(84px + var(--chrome-top));
     --navbar-height: 84px;
+    --subnav-top: calc(57px + var(--chrome-top));
   }
 }
 
