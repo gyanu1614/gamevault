@@ -12,7 +12,7 @@ import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import { MARKET_CARD } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
-import { fmtUsd } from './BuyBox'
+import { fmtUsd } from './money'
 
 /** Rows shown before "Show All". */
 const FIRST = 8

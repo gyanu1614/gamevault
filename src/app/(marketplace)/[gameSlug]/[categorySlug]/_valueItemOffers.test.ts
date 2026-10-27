@@ -12,6 +12,7 @@ vi.mock('server-only', () => ({}))
 vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <T,>(fn: T) => fn }))
 const getValueListings = vi.fn()
 const getValueItemListings = vi.fn()
+const getValueItemDescriptions = vi.fn(async () => ({ b: 'Fast trade, message me first.' }))
 vi.mock('@/lib/value-listings/stock-server', () => ({
   getItemsPair: vi.fn(async (game: string) =>
     game === 'adopt-me' ? { gameId: 'g1', gameName: 'Adopt Me', gameImageUrl: null, pairId: 'p1', categorySlug: 'buy-items' } : null,
@@ -20,6 +21,7 @@ vi.mock('@/lib/value-listings/stock-server', () => ({
     buildValueCatalog('adopt-me', { items: [{ slug: 'bat-dragon', name: 'Bat Dragon' }, { slug: 'owl', name: 'Owl' }] }),
   ),
   getValueListings: (...a: unknown[]) => getValueListings(...a),
+  getValueItemDescriptions: (...a: unknown[]) => getValueItemDescriptions(...(a as [])),
   getValueItemListings: (...a: unknown[]) => getValueItemListings(...a),
 }))
 vi.mock('./_itemsData', () => ({
@@ -48,12 +50,14 @@ describe('loadItemListingsPage', () => {
   ])('404s an %s without reading listings', async (_label, game, cat, item, variant) => {
     expect(await loadItemListingsPage(game, cat, item, variant)).toBeNull()
     expect(getValueListings).not.toHaveBeenCalled()
+    expect(getValueItemDescriptions).not.toHaveBeenCalled()
   })
 
   it('returns every offer of the item (no other item), cheapest first, with its trait', async () => {
     const data = await loadItemListingsPage('adopt-me', 'buy-items', 'bat-dragon', 'neon')
     expect(data!.offers.map((o) => o.id)).toEqual(['a', 'b'])
     expect(data!.offerVariants).toEqual({ a: 'fly-ride', b: 'neon' })
+    expect(data!.offers.map((o) => o.description)).toEqual([null, 'Fast trade, message me first.'])
     expect(data!.model.results.map((r) => r.id)).toEqual(['b'])
     expect(data!.model.canonicalPath).toBe('/adopt-me/buy-items/item/bat-dragon')
   })

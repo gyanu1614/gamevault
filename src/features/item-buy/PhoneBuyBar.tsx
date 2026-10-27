@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
-import { fmtUsd } from './BuyBox'
+import { fmtUsd } from './money'
 
 /**
  * Phones: the Buy bar docked at the bottom while the buy box's own button is

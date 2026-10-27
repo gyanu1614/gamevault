@@ -2,7 +2,7 @@ import Link from '@/components/navigation/AppLink'
 import { IconChevronRight } from '@tabler/icons-react'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
-import { PictureBox } from '@/features/item-buy/PictureBox'
+import { TrustStrip } from '@/features/item-buy/TrustStrip'
 import { initialTrait, traitNoun } from '@/features/item-buy/model/offers'
 import { traitDefs } from '@/features/item-buy/model/traits'
 import { formatUsd } from '@/lib/value-listings/format'
@@ -14,9 +14,10 @@ import type { loadItemListingsPage } from '../_valueItemOffers'
 type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
 
 /**
- * The pet page body (owner, 2026-10-26, GameBoost/Eldorado as the
- * reference): the picture in a box with the trust strip, the buy box (seller,
- * price, trait picker, Buy or Notify Me), then the trait's other offers.
+ * The pet page body (owner, 2026-10-26/27, GameBoost/Eldorado as the
+ * reference): a compact picture with the name and facts, the trait picker and
+ * trust strip, the buy panel (seller, description, price, quantity, Buy or
+ * Notify Me), then the trait's other offers.
  * Filtered on the server, so the first HTML holds this pet's offers only. A
  * pet nobody sells still renders: Notify Me, then similar pets that have
  * offers, then a way to sell one.
@@ -60,6 +61,7 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
         gameName={pair.gameName}
         itemSlug={item.slug}
         itemName={item.name}
+        imageUrl={item.imageUrl ?? null}
         rarity={rarity}
         noun={traitNoun(gameSlug)}
         traits={traits}
@@ -67,7 +69,7 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
         offerVariants={offerVariants}
         initialTrait={initialTrait(traits, model.variant)}
         basePath={model.canonicalPath}
-        picture={<PictureBox imageUrl={item.imageUrl ?? null} name={`${pair.gameName} ${item.name}`} />}
+        trust={<TrustStrip />}
       />
 
       {offers.length === 0 ? (
