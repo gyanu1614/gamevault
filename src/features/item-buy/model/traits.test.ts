@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildValueCatalog } from '@/lib/value-listings/catalogs'
-import { traitDefs, traitTone } from './traits'
+import { traitDefs, traitPicker, traitTone } from './traits'
 
 describe('traitTone', () => {
   it('Neon green, Mega rainbow, the plain forms uncoloured', () => {
@@ -51,5 +51,26 @@ describe('traitDefs', () => {
   it('a game without variants has no traits', () => {
     const loaded = buildValueCatalog('murder-mystery-2', { items: [{ slug: 'icebreaker', name: 'Icebreaker' }] })!
     expect(traitDefs('murder-mystery-2', loaded)).toEqual([])
+  })
+})
+
+describe('traitPicker', () => {
+  const opt = (variant: string, short: string | null) => ({ variant, label: variant, short, count: 0, minPriceUsd: null })
+
+  it('Adopt Me: badge tiles (every form but Normal has a badge)', () => {
+    const defs = traitDefs('adopt-me', buildValueCatalog('adopt-me', { items: [{ slug: 'parrot', name: 'Parrot' }] })!)
+    expect(traitPicker(defs.map((d) => opt(d.key, d.short)))).toBe('tiles')
+  })
+
+  it('mutations (no badges) keep the dropdown', () => {
+    expect(traitPicker([opt('default', null), opt('gold', null), opt('diamond', null)])).toBe('dropdown')
+  })
+
+  it('more than eight options keep the dropdown', () => {
+    expect(traitPicker([opt('normal', null), ...'ABCDEFGH'.split('').map((c) => opt(c, c))])).toBe('dropdown')
+  })
+
+  it('no options, no picker', () => {
+    expect(traitPicker([])).toBe('none')
   })
 })

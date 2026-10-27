@@ -1,5 +1,5 @@
 import { variantLabel, variantShortCode, type LoadedCatalog } from '@/lib/value-listings/catalogs'
-import type { TraitDef } from './offers'
+import type { TraitDef, TraitOption } from './offers'
 
 export type TraitTone = 'neon' | 'mega' | 'gold' | 'diamond' | null
 
@@ -30,4 +30,15 @@ export function traitDefs(gameSlug: string, loaded: LoadedCatalog): TraitDef[] {
     label: variantLabel(gameSlug, key, mutations) ?? key,
     short: variantShortCode(gameSlug, key),
   }))
+}
+
+/**
+ * How the buy column offers the traits: Adopt Me's forms as a grid of badge
+ * tiles, each with its price (StockX's size grid, the game's own badges);
+ * anything else — mutations have long names and no badges — in the dropdown.
+ */
+export function traitPicker(options: readonly Pick<TraitOption, 'short'>[]): 'tiles' | 'dropdown' | 'none' {
+  if (options.length === 0) return 'none'
+  const plain = options.filter((o) => !o.short).length
+  return options.length <= 8 && plain <= 1 ? 'tiles' : 'dropdown'
 }

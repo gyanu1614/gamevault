@@ -17,8 +17,10 @@ import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { cn } from '@/lib/utils'
 import { PaymentMarks } from './PaymentMarks'
 import { TraitField } from './TraitField'
+import { TraitTiles } from './TraitTiles'
 import { maxQtyOf } from './money'
 import type { TraitOption } from './model/offers'
+import { traitPicker } from './model/traits'
 
 const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 } as const
 
@@ -43,7 +45,7 @@ export interface BuyBoxProps {
 
 /**
  * The buy column (owner, 2026-10-27; StockX's buy box as the reference): the
- * pet's name, the trait field, then ONE framed box with the price ("Buy Now
+ * pet's name, the trait picker (Adopt Me's badge tiles, else the dropdown), then ONE framed box with the price ("Buy Now
  * For", rolling when the trait changes), quantity, Buy and ways to pay — the
  * decision and its reassurance in one place. The seller is one line under it.
  * A trait nobody sells gets Notify Me in the box instead.
@@ -61,7 +63,11 @@ export function BuyBox(p: BuyBoxProps) {
 
       {p.traits.length > 0 ? (
         <div className="mt-6">
-          <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
+          {traitPicker(p.traits) === 'tiles' ? (
+            <TraitTiles noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
+          ) : (
+            <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
+          )}
         </div>
       ) : null}
 
