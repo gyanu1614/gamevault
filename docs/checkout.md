@@ -26,7 +26,10 @@ Two providers are live on one shared "payments spine":
 - **BTCPay** (self-hosted): crypto — USDT (TRC20 live; Polygon/ETH flagged soon)
   and BTC. The default provider when no `paymentMethodId` is given.
 - **Payssion**: fiat local-methods rail (GCash, Pix, OXXO, …). No global
-  Visa/MC — mainstream cards come later from Glocash (KYB in progress).
+  Visa/MC.
+- **Stripe** (2026-10-27, off until go-live): the worldwide "Credit / Debit
+  Card" row — hosted Checkout, standard account, DropMarket is the merchant
+  (no Connect). See §7b.
 
 ---
 
@@ -396,6 +399,42 @@ order + returns the wallet hold (PAY-006) and tells the buyer the minimum.
 
 Terms to remember: settlement T+15, **$20 flat per wire** (batch withdrawals),
 USD/EUR settlement only. Rate sheet is confidential — never publish it.
+
+---
+
+## 7b. Stripe card rail (2026-10-27)
+
+- **Code:** `src/lib/payments/providers/stripe/` (env, lazy `client.ts` with the
+  pinned API version, `status-map.ts`, adapter) and
+  `src/app/api/webhooks/stripe/route.ts`. Method key `stripe`
+  (`STRIPE_CARD_METHOD`), provider `stripe`, `pm_id` null.
+- **Switches:** the card row is a checkout candidate only while
+  `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are both set, AND its
+  `payment_method_fees` row is "Shown" (ships off, migration
+  `20261027035324_stripe_card_method`). A `sk_test_` key is refused on
+  Vercel production. Placement: first row for every buyer (owner 2026-10-27).
+- **Create:** one Checkout Session per attempt (idempotency key = attempt id),
+  card only, Adaptive Pricing off (always charged in the order currency),
+  60-minute expiry. The session's metadata carries the order id and the
+  amount we asked; success and back links both go to `/checkout/return`.
+- **Webhook:** signature over the raw body → re-fetch the session / charge /
+  dispute from Stripe → canonical events. Session events confirm, keep
+  pending or fail the order (dedupe `<session>:<outcome>`). `charge.refunded`
+  and `charge.dispute.created` become `PAYMENT_NOTICE`: one admin alert each,
+  **no money moves** (a dashboard refund on top of store credit would pay the
+  buyer twice; disputes are an admin call).
+- **Refunds:** Refund To Card (`refund_to_source` outbox) calls
+  `provider.refund()` → Stripe refund on the session's PaymentIntent.
+- **Fee:** Stripe's worst case at cost (international card 3.15% + 20p, +2%
+  FX because we charge USD and settle GBP, buffer 0); the marketplace fee is
+  the margin on every order size.
+- **Endpoint events:** `checkout.session.completed`,
+  `checkout.session.async_payment_succeeded`,
+  `checkout.session.async_payment_failed`, `checkout.session.expired`,
+  `charge.refunded`, `charge.dispute.created`.
+- **Localhost:** sandbox `sk_test_` key in `.env.development.local`;
+  `stripe listen --forward-to localhost:3000/api/webhooks/stripe` prints the
+  `whsec_` for `STRIPE_WEBHOOK_SECRET`. Test card 4242 4242 4242 4242.
 
 ---
 

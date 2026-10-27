@@ -66,8 +66,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       let paid = PAID_LIFECYCLE.has(prior.status)
       if (!paid && prior.status === 'pending') {
         const { openAttemptForOrder } = await import('@/lib/payments/attempts')
-        const { payssionPaidAtProvider } = await import('@/lib/payments/provider-paid-probe')
-        paid = await payssionPaidAtProvider(await openAttemptForOrder(prior.id), prior.id)
+        const { paidAtProvider } = await import('@/lib/payments/provider-paid-probe')
+        paid = await paidAtProvider(await openAttemptForOrder(prior.id), prior.id)
         unfinishedPayment = !paid
       }
       if (paid) redirect(`/checkout/paid/${prior.id}`)

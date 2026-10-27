@@ -36,6 +36,19 @@ export type CanonicalEvent =
   | { type: 'PAYOUT_FAILED'; payoutId: string; reason: string }
   | { type: 'CHARGEBACK_OPENED'; orderId: string; providerChargeId: string; amount: Money }
   | { type: 'CHARGEBACK_RESOLVED'; orderId: string; providerChargeId: string; won: boolean }
+  /** Stripe (2026-10-27): a refund or card dispute seen at the provider,
+   *  RECORDED for admins (admin_alert_once) and nothing else — no order
+   *  transition, no wallet or ledger move. Owner rule: money never moves
+   *  automatically on these; an admin settles the order by hand. `amount` is
+   *  the refunded total so far (refund) or the disputed amount (dispute). */
+  | {
+      type: 'PAYMENT_NOTICE'
+      kind: 'refund' | 'dispute'
+      orderId: string
+      providerChargeId: string
+      amount: Money
+      detail: string | null
+    }
 
 export type CanonicalEventType = CanonicalEvent['type']
 
@@ -68,6 +81,9 @@ export interface CreateChargeInput {
    *  Falls back to returnUrl if omitted. */
   cancelUrl?: string
   metadata?: Record<string, string>
+  /** One key per payment attempt (the attempt id): a retried create returns
+   *  the charge already minted instead of a second one. Stripe requires it. */
+  idempotencyKey?: string
 }
 
 export interface CreateChargeResult {

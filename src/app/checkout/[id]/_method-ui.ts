@@ -56,6 +56,9 @@ const METHOD_UI: Record<string, { Icon: MethodIcon; points: string[] }> = {
   creditcard_za: { Icon: CreditCard, points: ['Pay with a card issued in South Africa', INSTANT] },
   kakaopay_kr: { Icon: Smartphone, points: ['Approve the payment in Kakao Pay', INSTANT] },
   // ── Worldwide ──
+  // Stripe hosted Checkout. Apple Pay / Google Pay show on Stripe's page when
+  // the device has them; not promised here until Stripe confirms them.
+  stripe: { Icon: CreditCard, points: ['Pay with a Visa or Mastercard, credit or debit', INSTANT] },
   skrill: { Icon: Wallet, points: ['Log in to your Skrill wallet', INSTANT] },
   paysafecard: { Icon: CreditCard, points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your Store Balance'] },
 }

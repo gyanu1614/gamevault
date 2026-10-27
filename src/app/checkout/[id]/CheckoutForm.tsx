@@ -371,6 +371,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // re-quoted by quoteCheckoutMethods when the promo, the store-credit
   // toggle or the quantity changes — the SQL quote is the only fee math.
   const [quotedMethods, setQuotedMethods] = useState<ClientMethod[]>(methods)
+  // The Stripe card row: worldwide, first for every buyer (owner 2026-10-27).
+  const cardRows = quotedMethods.filter((m) => m.kind === 'card').map(toRow)
   const allLocalRows = quotedMethods.filter((m) => m.kind === 'local').map(toRow)
   // The crypto row for the env-active provider; absent = crypto is not
   // payable for this order (no fee row / hidden) and its row is not shown.
@@ -380,7 +382,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const geo = /^[A-Z]{2}$/.test(geoCc) ? geoCc : null
   const [country, setCountry] = useState<string | null>(geo)
   const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, regionForCountry(country), country)
-  const orderedRows = [...localRows, ...regionalRows]
+  const orderedRows = [...cardRows, ...localRows, ...regionalRows]
   // "Lowest Fee" tag: the cheapest of the buyer's OWN-country methods for
   // this order — never a regional rail they can't use (a Vietnamese buyer is
   // not pointed at Indonesia's QRIS) and never crypto. Re-derived from the
@@ -414,7 +416,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     const cc = v === OTHER_COUNTRY ? null : v
     setCountry(cc)
     const next = orderMethodsForRegion(allLocalRows, regionForCountry(cc), cc)
-    const rows = [...next.local, ...next.regional]
+    const rows = [...cardRows, ...next.local, ...next.regional]
     if (payMethod && payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(null)
   }
   // Coin + network selection (within the crypto card).
@@ -445,7 +447,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // order and that quote applies — exactly the routing createCheckout
   // performs, so page and snapshot agree to the cent.
   const methodQuote =
-    payMethod == null ? null : payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
+    payMethod == null
+      ? null
+      : payMethod === 'crypto'
+        ? cryptoMethod?.quote ?? null
+        : [...cardRows, ...allLocalRows].find((r) => r.id === payMethod)?.quote ?? null
   const walletBalanceCents = Math.round(walletBalance * 100)
   const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= walletQuote.totalMinor
   const activeQuote = walletCoversAll ? walletQuote : methodQuote
@@ -567,7 +573,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         // AUTH-003 — send the CODE; the server derives the discount.
         promoCode: promoResult?.valid ? promoResult.code : undefined,
         walletAmount,
-        // Local methods route the charge to Payssion; crypto stays default.
+        // Local methods route the charge to Payssion, the card row to
+        // Stripe; crypto stays default.
         paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,
       })
       if (!result.success) {
@@ -596,7 +603,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       }
       if (result.checkoutUrl) {
         if (payMethod !== 'crypto') {
-          // The provider's page (Payssion) in THIS tab; its return comes back
+          // The provider's page (Payssion, Stripe) in THIS tab; its return comes back
           // through /checkout/return → Order Paid.
           leaveFor(result.orderId, result.checkoutUrl)
           return
@@ -902,6 +909,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       ) : (
         <div className="flex flex-col gap-2" role="radiogroup" aria-label="Payment Method">
           <AnimatePresence initial={false} mode="popLayout">
+            {cardRows.map((m) => (
+              <motion.div key={m.id} {...rowMotion}>
+                {renderMethodRow(m)}
+              </motion.div>
+            ))}
             {localRows.map((m) => (
               <motion.div key={m.id} {...rowMotion}>
                 {renderMethodRow(m)}

@@ -29,6 +29,14 @@ describe('checkout method rows', () => {
     expect(sk.qrPay).toBe(false)
   })
 
+  it('the Stripe card row: worldwide, Visa + Mastercard marks, card notes', () => {
+    const quote = { serviceFeeMinor: 100 } as any
+    const card = toRow({ method: 'stripe', label: 'Credit / Debit Card', countries: [], coverage: 'Worldwide', quote } as any)
+    expect(card).toMatchObject({ id: 'stripe', label: 'Credit / Debit Card', flag: '🌍', qrPay: false })
+    expect(card.marks.map((m) => m.logo)).toEqual(['/payments/ondark/visa.svg', '/payments/ondark/mastercard.svg'])
+    expect(card.points).toEqual(['Pay with a Visa or Mastercard, credit or debit', 'Payment confirms instantly'])
+  })
+
   it('every method with a brand mark has its on-dark version, and the file exists', () => {
     for (const pm of Object.keys(PAYMENT_METHOD_LOGOS)) {
       const mark = PAYMENT_METHOD_ONDARK[pm]

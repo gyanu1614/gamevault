@@ -267,8 +267,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       }
       // Same-tab pay: the buyer may have PAID on Payssion and pressed Back
       // before the webhook landed. Never supersede money that is on its way.
-      const { payssionPaidAtProvider } = await import('@/lib/payments/provider-paid-probe')
-      if (await payssionPaidAtProvider(attempt, existingPending.id)) {
+      const { paidAtProvider } = await import('@/lib/payments/provider-paid-probe')
+      if (await paidAtProvider(attempt, existingPending.id)) {
         return { success: false, orderId: existingPending.id, alreadyPaid: true, error: ALREADY_PAID_MESSAGE }
       }
       // Amounts drifted (quantity/promo/wallet changed), the invoice expired,
@@ -428,16 +428,19 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         // Payssion has ONE return URL for paid AND cancelled — the smart
         // /checkout/return route inspects the outcome and lands the buyer on
         // Order Paid (paid / confirming), back at checkout (cancelled or
-        // unfinished) or the order page (a voucher still open).
-        returnUrl:
-          providerName === 'payssion'
-            ? `${base}/checkout/return/${orderId}`
-            : `${base}/account/orders/${orderId}?paid=1`,
-        cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
+        // unfinished) or the order page (a voucher still open). Stripe's
+        // success and back links both go there too.
+        returnUrl: usesReturnRoute(providerName)
+          ? `${base}/checkout/return/${orderId}`
+          : `${base}/account/orders/${orderId}?paid=1`,
+        cancelUrl: usesReturnRoute(providerName)
+          ? `${base}/checkout/return/${orderId}`
+          : `${base}/checkout/${input.listingId}?qty=${quantity}`,
         metadata: {
           listing_id: input.listingId,
           ...(pmId ? { pm_id: pmId } : {}),
         },
+        idempotencyKey: attemptId,
       })
     } catch (chargeError: any) {
       // PAY-006: no charge exists, but the order does — and the wallet hold
@@ -505,12 +508,18 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     }
     const msg = String(e?.message ?? '')
     // Provider/config internals never reach the buyer verbatim.
-    if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:')) {
-      console.error('[createCheckout] payssion call failed:', msg)
+    if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:') || msg.startsWith('[Stripe]') || msg.startsWith('stripe:')) {
+      console.error('[createCheckout] provider call failed:', msg)
       return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
     }
     return { success: false, error: e?.message ?? 'Checkout failed' }
   }
+}
+
+/** Hosted pages that send the buyer back through the smart return route
+ *  (/checkout/return/[orderId]) instead of straight to the order page. */
+function usesReturnRoute(providerName: string): boolean {
+  return providerName === 'payssion' || providerName === 'stripe'
 }
 
 /**
@@ -704,7 +713,13 @@ export async function retryOrderPayment(orderId: string): Promise<{
         error: 'This payment link is no longer available — please place the order again.',
       }
     }
-    const providerName = pmId ? providerNameForMethod(pmId) : activePaymentProviderName()
+    // A card (Stripe) attempt has no pm_id: it re-mints on Stripe, never on
+    // the env-active crypto provider.
+    const providerName = pmId
+      ? providerNameForMethod(pmId)
+      : current?.provider === 'stripe'
+        ? 'stripe'
+        : activePaymentProviderName()
 
     // Supersede the stale attempt (history kept), then reserve the slot for
     // the fresh one — the unique index makes two concurrent retries impossible.
@@ -737,12 +752,12 @@ export async function retryOrderPayment(orderId: string): Promise<{
         orderId,
         orderNumber: order.order_number ?? null,
         amount: money(remainingMinor, ORDER_CURRENCY),
-        returnUrl:
-          providerName === 'payssion'
-            ? `${base}/checkout/return/${orderId}`
-            : `${base}/account/orders/${orderId}?paid=1`,
+        returnUrl: usesReturnRoute(providerName)
+          ? `${base}/checkout/return/${orderId}`
+          : `${base}/account/orders/${orderId}?paid=1`,
         cancelUrl: `${base}/account/orders/${orderId}`,
         metadata: { listing_id: order.listing_id, retry: 'true', ...(pmId ? { pm_id: pmId } : {}) },
+        idempotencyKey: attemptId,
       })
     } catch (chargeError: any) {
       // The fresh attempt never got a charge: close it so the next retry is

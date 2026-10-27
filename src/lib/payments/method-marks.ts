@@ -91,6 +91,7 @@ export const CARD_SCHEME_MARKS = {
 
 /** Methods that show more than one mark (in this order); the rest show their one on-dark mark. */
 export const PAYMENT_METHOD_MULTI_MARKS: Record<string, MethodMark[]> = {
+  stripe: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],
   creditcard_br: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],
   creditcard_mx: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],
   creditcard_za: [CARD_SCHEME_MARKS.visa, CARD_SCHEME_MARKS.mastercard],
