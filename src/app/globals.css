@@ -64,6 +64,9 @@
      navbar's visible bar. Below lg that is the 60px app bar; at lg the bar
      is 57px (py-2 + 40px row + 1px border) inside an 84px spacer. */
   --subnav-top: calc(60px + var(--chrome-top));
+  /* Bottom of the fixed chrome on a game page (navbar + 60px sub-navbar):
+     what scroll targets there must clear (scroll-mt-game-chrome). */
+  --game-chrome-bottom: calc(var(--subnav-top) + 60px);
 
   /* iPhone status-bar area (0 everywhere else). The root viewport is
      viewport-fit=cover (layout.tsx), so the page runs under the status bar:
@@ -2219,6 +2222,12 @@
 
 /* ─── Utility Classes ────────────────────────────────────────── */
 @layer utilities {
+  /* A scroll target on a game page lands just under the fixed navbar +
+     sub-navbar, not under them. */
+  .scroll-mt-game-chrome {
+    scroll-margin-top: calc(var(--game-chrome-bottom) + 16px);
+  }
+
   /* Skeleton shimmer — apply to skeleton elements */
   .skeleton {
     /* V22 — Neutral white shimmer (was off-brand violet) so .skeleton loaders

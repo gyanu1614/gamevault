@@ -288,8 +288,8 @@ export default function ItemsPageClient({
           pages. */}
       {/* No bottom divider — the band ends with the filter row and the
           results start below it; a full-width rule added nothing. */}
-      {/* scroll-mt clears the fixed navbar when a page change scrolls here. */}
-      <section ref={paged.topRef} className="relative scroll-mt-24 overflow-hidden">
+      {/* scroll-mt clears the fixed navbar + sub-navbar when a page change scrolls here. */}
+      <section ref={paged.topRef} className="relative scroll-mt-game-chrome overflow-hidden">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
           {/* Header: logo + game + category, seller prompt on the right (shared CategoryHeader). */}
           <CategoryHeader

@@ -70,7 +70,7 @@ export function titleCase(s: string): string {
 
 const EDGE = 12 // panels keep this far from the screen edges
 const PANEL_WIDTH = 260
-const TOP_CLEARANCE = 96 // fixed navbar + a little air
+const TOP_CLEARANCE = 136 // fixed navbar + game sub-navbar (≤120px) + a little air
 const ROOM_WANTED = 360 // header + search + about six rows
 
 /**

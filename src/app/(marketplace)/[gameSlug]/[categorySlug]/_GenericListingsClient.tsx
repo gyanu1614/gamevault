@@ -105,7 +105,7 @@ export default function GenericListingsClient({
       )}
 
       {/* ── Main content with collapsible filter ─────────────────────── */}
-      <div ref={topRef} className="scroll-mt-24 pb-20">
+      <div ref={topRef} className="scroll-mt-game-chrome pb-20">
         <CategoryPageLayout maxPrice={view.maxPrice} totalListings={view.totalListings}>
           {view.listings.length === 0 ? (
             <EmptyState gameSlug={gameSlug} gameName={gameName} categoryName={categoryName} />

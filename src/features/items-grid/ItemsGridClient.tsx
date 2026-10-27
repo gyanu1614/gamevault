@@ -88,7 +88,7 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, cate
       <main className="min-h-screen">
         <SearchParamsBridge onParams={seedFromUrl} />
         <SearchParamsBridge onParams={paged.onParams} />
-        <section ref={paged.topRef} className="relative scroll-mt-24 overflow-hidden">
+        <section ref={paged.topRef} className="relative scroll-mt-game-chrome overflow-hidden">
           <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
             <CategoryHeader
               gameName={gameName}
