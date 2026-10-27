@@ -1,9 +1,9 @@
 /**
- * The pet page's offer model (owner, 2026-10-26): one page per pet; the buy
- * box shows the cheapest offer of the picked trait ("Any Trait" = cheapest
- * overall, the default from the items grid; a values page's Buy arrives with
- * its trait picked); the trait picker shows each trait's price, or nothing to
- * buy (Notify Me); the list below shows the trait's other offers.
+ * The pet page's offer model (owner, 2026-10-26/27): one page per pet; the
+ * buy panel shows the cheapest offer of the picked trait — the URL's (a values
+ * page's Buy) or else the cheapest offer's own trait (from the items grid);
+ * the trait picker shows each trait's price, or nothing to buy (Notify Me);
+ * the list below shows the pet's other offers, any trait.
  */
 
 export interface TraitDef {
@@ -14,8 +14,7 @@ export interface TraitDef {
 }
 
 export interface TraitOption {
-  /** null = Any Trait. */
-  variant: string | null
+  variant: string
   label: string
   short: string | null
   count: number
@@ -36,22 +35,12 @@ export function offersOfTrait<T extends OfferLike>(offers: readonly T[], variant
   return inTrait.sort(byPrice)
 }
 
-/** Any Trait first, then every trait in catalogue order. Empty for a game without traits. */
-export function traitOptions(
-  traits: readonly TraitDef[],
-  offers: readonly OfferLike[],
-  variantOf: Readonly<Record<string, string | null>>,
-  anyLabel = 'Any Trait',
-): TraitOption[] {
-  if (traits.length === 0) return []
-  const summary = (variant: string | null) => {
-    const list = offersOfTrait(offers, variantOf, variant)
-    return { count: list.length, minPriceUsd: list[0]?.pricePerUnit ?? null }
-  }
-  return [
-    { variant: null, label: anyLabel, short: null, ...summary(null) },
-    ...traits.map((t) => ({ variant: t.key, label: t.label, short: t.short, ...summary(t.key) })),
-  ]
+/** Every trait in catalogue order with its offer count and cheapest price. Empty for a game without traits. */
+export function traitOptions(traits: readonly TraitDef[], offers: readonly OfferLike[], variantOf: Readonly<Record<string, string | null>>): TraitOption[] {
+  return traits.map((t) => {
+    const list = offersOfTrait(offers, variantOf, t.key)
+    return { variant: t.key, label: t.label, short: t.short, count: list.length, minPriceUsd: list[0]?.pricePerUnit ?? null }
+  })
 }
 
 /** The buy box's offer: the one the buyer chose from the list while it fits the trait, else the trait's cheapest. */
@@ -65,9 +54,18 @@ export function pickOffer<T extends OfferLike>(
   return list.find((o) => o.id === chosenId) ?? list[0] ?? null
 }
 
-/** The trait the page opens on: the URL's, when the game has it; else Any Trait. */
-export function initialTrait(traits: readonly TraitDef[], urlVariant: string | null): string | null {
-  return urlVariant && traits.some((t) => t.key === urlVariant) ? urlVariant : null
+/** The trait the page opens on: the URL's when the game has it, else the cheapest offer's; null = none (no offers). */
+export function defaultTrait(
+  traits: readonly TraitDef[],
+  urlVariant: string | null,
+  offers: readonly OfferLike[],
+  variantOf: Readonly<Record<string, string | null>>,
+): string | null {
+  const known = (v: string | null | undefined): v is string => !!v && traits.some((t) => t.key === v)
+  if (known(urlVariant)) return urlVariant
+  const cheapest = offersOfTrait(offers, variantOf, null)[0]
+  const v = cheapest ? variantOf[cheapest.id] : null
+  return known(v) ? v : null
 }
 
 /** What a game calls its variants. */

@@ -2,8 +2,8 @@ import Link from '@/components/navigation/AppLink'
 import { IconChevronRight } from '@tabler/icons-react'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
-import { TrustStrip } from '@/features/item-buy/TrustStrip'
-import { initialTrait, traitNoun } from '@/features/item-buy/model/offers'
+import { TrustpilotRow } from '@/features/item-buy/TrustpilotRow'
+import { traitNoun } from '@/features/item-buy/model/offers'
 import { traitDefs } from '@/features/item-buy/model/traits'
 import { formatUsd } from '@/lib/value-listings/format'
 import { rarityMeta } from '@/lib/values/rarity'
@@ -15,9 +15,9 @@ type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
 
 /**
  * The pet page body (owner, 2026-10-26/27, GameBoost/Eldorado as the
- * reference): a compact picture with the name and facts, the trait picker and
- * trust strip, the buy panel (seller, description, price, quantity, Buy or
- * Notify Me), then the trait's other offers.
+ * reference): the picture with the pet's facts and the other offers on the
+ * left; on the right the buy panel (name, price, trait box, quantity, Buy or
+ * Notify Me, trust promises) and a small seller card.
  * Filtered on the server, so the first HTML holds this pet's offers only. A
  * pet nobody sells still renders: Notify Me, then similar pets that have
  * offers, then a way to sell one.
@@ -67,9 +67,9 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
         traits={traits}
         offers={offers}
         offerVariants={offerVariants}
-        initialTrait={initialTrait(traits, model.variant)}
+        urlVariant={model.variant}
         basePath={model.canonicalPath}
-        trust={<TrustStrip />}
+        trustpilot={<TrustpilotRow />}
       />
 
       {offers.length === 0 ? (

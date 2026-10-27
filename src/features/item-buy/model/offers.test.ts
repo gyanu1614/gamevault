@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { initialTrait, offersOfTrait, pickOffer, traitNoun, traitOptions, type TraitDef } from './offers'
+import { defaultTrait, offersOfTrait, pickOffer, traitNoun, traitOptions, type TraitDef } from './offers'
 
 const VARIANTS: TraitDef[] = [
   { key: 'fly-ride', label: 'Fly Ride', short: 'FR' },
@@ -12,9 +12,8 @@ const OFFERS = [o('a', 60), o('b', 54.99), o('c', 120), o('d', 54.99, 90), o('e'
 const VARIANT_OF: Record<string, string | null> = { a: 'fly-ride', b: 'fly-ride', c: 'neon-fly-ride', d: 'fly-ride', e: 'neon-fly-ride' }
 
 describe('traitOptions', () => {
-  it('lists Any Trait first, then every trait in catalogue order with its count and cheapest price', () => {
+  it('every trait in catalogue order with its count and cheapest price', () => {
     expect(traitOptions(VARIANTS, OFFERS, VARIANT_OF)).toEqual([
-      { variant: null, label: 'Any Trait', short: null, count: 5, minPriceUsd: 54.99 },
       { variant: 'fly-ride', label: 'Fly Ride', short: 'FR', count: 3, minPriceUsd: 54.99 },
       { variant: 'neon-fly-ride', label: 'Neon Fly Ride', short: 'NFR', count: 2, minPriceUsd: 120 },
       { variant: 'mega-fly-ride', label: 'Mega Fly Ride', short: 'MFR', count: 0, minPriceUsd: null },
@@ -23,7 +22,7 @@ describe('traitOptions', () => {
 
   it('a pet nobody sells still lists every trait, all empty', () => {
     const opts = traitOptions(VARIANTS, [], {})
-    expect(opts).toHaveLength(4)
+    expect(opts).toHaveLength(3)
     expect(opts.every((t) => t.count === 0 && t.minPriceUsd === null)).toBe(true)
   })
 
@@ -37,7 +36,7 @@ describe('offersOfTrait', () => {
     expect(offersOfTrait(OFFERS, VARIANT_OF, 'fly-ride').map((x) => x.id)).toEqual(['d', 'b', 'a'])
   })
 
-  it('Any Trait is every offer', () => {
+  it('no trait = every offer', () => {
     expect(offersOfTrait(OFFERS, VARIANT_OF, null).map((x) => x.id)).toEqual(['d', 'b', 'a', 'c', 'e'])
   })
 
@@ -65,14 +64,23 @@ describe('pickOffer', () => {
   })
 })
 
-describe('initialTrait', () => {
-  it('the trait in the URL (values Buy → FR Parrot) when the game has it', () => {
-    expect(initialTrait(VARIANTS, 'neon-fly-ride')).toBe('neon-fly-ride')
+describe('defaultTrait', () => {
+  it('the trait in the URL (values Buy → NFR Parrot) when the game has it', () => {
+    expect(defaultTrait(VARIANTS, 'neon-fly-ride', OFFERS, VARIANT_OF)).toBe('neon-fly-ride')
   })
 
-  it('Any Trait otherwise (from the grid: cheapest overall)', () => {
-    expect(initialTrait(VARIANTS, null)).toBeNull()
-    expect(initialTrait(VARIANTS, 'golden')).toBeNull()
+  it('else the cheapest offer’s trait (from the grid: the cheapest Parrot is FR)', () => {
+    expect(defaultTrait(VARIANTS, null, OFFERS, VARIANT_OF)).toBe('fly-ride')
+    expect(defaultTrait(VARIANTS, 'golden', OFFERS, VARIANT_OF)).toBe('fly-ride')
+  })
+
+  it('no offers, or the cheapest offer has no known trait: none picked', () => {
+    expect(defaultTrait(VARIANTS, null, [], {})).toBeNull()
+    expect(defaultTrait(VARIANTS, null, [o('x', 5)], { x: null })).toBeNull()
+  })
+
+  it('a game without traits never picks one', () => {
+    expect(defaultTrait([], 'fly-ride', OFFERS, VARIANT_OF)).toBeNull()
   })
 })
 

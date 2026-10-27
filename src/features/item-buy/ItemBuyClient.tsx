@@ -3,14 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { StockAlertsProvider } from '@/features/items-grid/stock-alerts-context'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
-import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
-import { BuyPanel } from './BuyPanel'
-import { FACT_ICONS, ItemFacts, type Fact } from './ItemFacts'
-import { OffersList } from './OffersList'
+import { BuyBox } from './BuyBox'
+import { OfferTabs } from './OfferTabs'
 import { PhoneBuyBar } from './PhoneBuyBar'
-import { PictureBox } from './PictureBox'
-import { TraitSelect } from './TraitSelect'
-import { offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
+import { PictureStage } from './PictureStage'
+import { defaultTrait, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
+import { traitTone } from './model/traits'
 import { useBuyOffer } from './use-buy-offer'
 
 export interface ItemBuyClientProps {
@@ -25,36 +23,40 @@ export interface ItemBuyClientProps {
   /** Every live offer of the pet, any trait. */
   offers: ItemOffer[]
   offerVariants: Record<string, string | null>
-  /** The trait the page opens on (the URL's), or null for Any. */
-  initialTrait: string | null
+  /** The trait in the URL (a values page's Buy), if any. */
+  urlVariant: string | null
   /** The pet page without a trait: the URL base when the trait changes. */
   basePath: string
-  /** The trust strip (server-rendered: its Trustpilot row reads the review count). */
-  trust: ReactNode
+  /** Trustpilot row (server-rendered, gated on the review count). */
+  trustpilot: ReactNode
 }
 
+const BADGE_TONE: Record<string, string> = { neon: 'text-[#4ADE80]', mega: 'text-[#C9B0FF]', gold: 'text-[#F5C542]', diamond: 'text-[#7FE3F0]' }
+
 /**
- * The pet page's top half and offers (owner, 2026-10-27, Eldorado's offer
- * page as the reference, our own look): a compact picture with the name and
- * the offer's facts beside it, the trait picker and trust strip under it, and
- * the buy panel (seller, description, price, quantity, Buy) on the right.
+ * The pet page (owner, 2026-10-27; built from the research board: Skinport's
+ * stage + tabs, StockX's trait field and buy box, GameBoost's trust strip).
  *
- * One trait at a time: the panel shows its cheapest offer (or one picked from
- * the list), the list shows the rest of that trait. Changing the trait swaps
- * both in place and replaces the URL with the trait's page (it canonicals
- * here), so a shared link opens on the same trait. Personal state (own
- * listing, alerts) is client-side; the page stays static.
+ * Desktop: the picture stage with the trust strip on the left and the offer
+ * tabs under it; the buy column sticky on the right. Phones: picture, buy
+ * column, tabs — the name, trait, price and Buy fit the first screen, and a
+ * Buy bar docks at the bottom once the box scrolls away.
+ *
+ * The page opens on the URL's trait, else the cheapest offer's. Picking a
+ * trait shows its cheapest offer; picking a row shows that offer and its
+ * trait. The URL follows the trait (its page canonicals here). Personal state
+ * (own listing, alerts) is client-side; the page stays static.
  */
 export function ItemBuyClient(p: ItemBuyClientProps) {
   const { offers, offerVariants, traits } = p
-  const [trait, setTrait] = useState<string | null>(p.initialTrait)
+  const [trait, setTrait] = useState<string | null>(() => defaultTrait(traits, p.urlVariant, offers, offerVariants))
   const [chosenId, setChosenId] = useState<string | null>(null)
   const [qty, setQty] = useState(1)
   const { buy, navigating, viewerId } = useBuyOffer(p.gameSlug, p.itemSlug)
 
-  const options = useMemo(() => traitOptions(traits, offers, offerVariants, `Any ${p.noun}`), [traits, offers, offerVariants, p.noun])
+  const options = useMemo(() => traitOptions(traits, offers, offerVariants), [traits, offers, offerVariants])
   const offer = useMemo(() => pickOffer(offers, offerVariants, trait, chosenId), [offers, offerVariants, trait, chosenId])
-  const others = useMemo(() => offersOfTrait(offers, offerVariants, trait).filter((o) => o.id !== offer?.id), [offers, offerVariants, trait, offer])
+  const allOffers = useMemo(() => offersOfTrait(offers, offerVariants, null), [offers, offerVariants])
 
   useEffect(() => setQty(1), [offer?.id])
 
@@ -64,41 +66,43 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
     return t && t.key !== 'default' ? `${t.label} ${p.itemName}` : p.itemName
   }
   const offerVariant = offer ? offerVariants[offer.id] ?? null : null
-  const shownTrait = traitDef(offer ? offerVariant : trait)
+  const shown = traitDef(offer ? offerVariant : trait)
+  const badgeTone = traitTone(shown?.key ?? null)
   const isOwn = !!offer && !!viewerId && offer.sellerId === viewerId
 
-  const facts: Fact[] = [
-    ...(p.rarity ? [{ key: 'rarity', label: 'Rarity', value: p.rarity.label, icon: FACT_ICONS.rarity, tone: p.rarity.color }] : []),
-    ...(traits.length > 0 ? [{ key: 'trait', label: p.noun, value: shownTrait?.label ?? `Any ${p.noun}`, icon: FACT_ICONS.trait }] : []),
-    ...(offer
-      ? [
-          { key: 'delivery', label: 'Delivery', value: formatDeliveryLabel(offer.deliveryTime), icon: FACT_ICONS.delivery },
-          { key: 'stock', label: 'In Stock', value: offer.isUnlimited ? 'Unlimited' : String(offer.stock ?? 1), icon: FACT_ICONS.stock },
-        ]
-      : []),
-  ]
-
-  const onTrait = (next: string | null) => {
-    setTrait(next)
-    setChosenId(null)
+  const setUrlTrait = (next: string | null) => {
     try {
       window.history.replaceState(window.history.state, '', next ? `${p.basePath}/${encodeURIComponent(next)}` : p.basePath)
     } catch {
       // A blocked history API only costs the shareable URL.
     }
   }
-
-  const onSelect = (o: ItemOffer) => {
-    setChosenId(o.id)
+  const toBuyBox = () => {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     document.getElementById('buy-box')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
   }
 
+  const onTrait = (next: string) => {
+    setTrait(next)
+    setChosenId(null)
+    setUrlTrait(next)
+  }
+  const onSelectOffer = (o: ItemOffer) => {
+    const v = offerVariants[o.id] ?? null
+    setTrait(v)
+    setChosenId(o.id)
+    setUrlTrait(v)
+    toBuyBox()
+  }
+  const onSelectTrait = (v: string) => {
+    onTrait(v)
+    toBuyBox()
+  }
   const onBuy = () => {
     if (offer) buy(offer, qty, offerVariant)
   }
 
-  // Phones: the docked bar shows while the panel's Buy button is off screen and the footer is not on screen.
+  // Phones: the docked bar shows while the box's Buy button is off screen and the footer is not on screen.
   const buyRef = useRef<HTMLDivElement>(null)
   const [buyInView, setBuyInView] = useState(true)
   const [footerInView, setFooterInView] = useState(false)
@@ -115,47 +119,29 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,380px)] lg:gap-x-10 xl:gap-x-14">
-        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-          <div className="flex items-start gap-4 sm:gap-6">
-            <PictureBox imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} badge={shownTrait?.short ?? null} className="w-[112px] sm:w-[200px] lg:w-[232px]" />
-            <div className="min-w-0 flex-1 sm:pt-1">
-              <p className="flex items-center gap-2 font-medium" style={{ fontSize: 'var(--fs-meta)' }}>
-                {p.rarity ? (
-                  <>
-                    <span style={{ color: p.rarity.color }}>{p.rarity.label}</span>
-                    <span aria-hidden className="text-text-tertiary">·</span>
-                  </>
-                ) : null}
-                <span className="text-text-secondary">{p.gameName}</span>
-              </p>
-              <h1
-                id="item-title"
-                className="mt-1.5 text-balance text-text-primary"
-                style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.1, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
-              >
-                {p.gameName} {p.itemName}
-              </h1>
-              <ItemFacts facts={facts} className="mt-5 hidden sm:grid" />
-            </div>
-          </div>
-          <ItemFacts facts={facts} className="mt-5 sm:hidden" />
-          {options.length > 0 ? (
-            <div className="mt-6">
-              <TraitSelect noun={p.noun} options={options} value={trait} onChange={onTrait} />
-            </div>
-          ) : null}
+      <div className="grid grid-cols-1 gap-y-8 [grid-template-areas:'media'_'buy'_'tabs'] lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-12 lg:gap-y-10 lg:[grid-template-areas:'media_buy'_'tabs_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-16">
+        <div className="min-w-0 [grid-area:media]">
+          <PictureStage
+            imageUrl={p.imageUrl}
+            name={`${p.gameName} ${p.itemName}`}
+            badge={shown?.short ? { text: shown.short, tone: badgeTone ? BADGE_TONE[badgeTone] : null } : null}
+            trustpilot={p.trustpilot}
+          />
         </div>
 
-        <aside className="min-w-0 lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
-          <BuyPanel
+        <div className="min-w-0 [grid-area:buy] lg:sticky lg:top-[calc(var(--game-chrome-bottom)+24px)] lg:self-start">
+          <BuyBox
             gameSlug={p.gameSlug}
+            gameName={p.gameName}
             itemSlug={p.itemSlug}
+            itemName={p.itemName}
+            rarity={p.rarity}
             noun={p.noun}
+            traits={options}
             trait={trait}
+            onTrait={onTrait}
             offer={offer}
             wantedName={named(trait)}
-            otherTraitsHaveOffers={offers.length > 0}
             qty={qty}
             onQty={setQty}
             onBuy={onBuy}
@@ -163,22 +149,21 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
             isOwn={isOwn}
             buyRef={buyRef}
           />
-        </aside>
+        </div>
 
-        <div className="min-w-0 lg:col-start-1 lg:row-start-2">{p.trust}</div>
+        <div className="min-w-0 [grid-area:tabs]">
+          <OfferTabs
+            noun={p.noun}
+            offers={allOffers}
+            offerVariants={offerVariants}
+            traitDefs={traits}
+            traits={options}
+            selectedId={offer?.id ?? null}
+            onSelectOffer={onSelectOffer}
+            onSelectTrait={onSelectTrait}
+          />
+        </div>
       </div>
-
-      {others.length > 0 ? (
-        <OffersList
-          title={trait ? `${traitDef(trait)?.label ?? ''} Offers` : 'Other Offers'}
-          offers={others}
-          traitOf={(o) => {
-            const t = traitDef(offerVariants[o.id] ?? null)
-            return t ? t.short ?? t.label : null
-          }}
-          onSelect={onSelect}
-        />
-      ) : null}
 
       <PhoneBuyBar
         visible={!!offer && !buyInView && !footerInView}

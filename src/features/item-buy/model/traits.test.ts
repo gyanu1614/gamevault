@@ -1,6 +1,23 @@
 import { describe, it, expect } from 'vitest'
 import { buildValueCatalog } from '@/lib/value-listings/catalogs'
-import { traitDefs } from './traits'
+import { traitDefs, traitTone } from './traits'
+
+describe('traitTone', () => {
+  it('Neon green, Mega rainbow, the plain forms uncoloured', () => {
+    expect(['normal', 'fly-ride', 'neon', 'neon-fly-ride', 'mega-neon', 'mega-fly-ride'].map(traitTone)).toEqual([
+      null,
+      null,
+      'neon',
+      'neon',
+      'mega',
+      'mega',
+    ])
+  })
+
+  it('Steal a Brainrot: Gold, Diamond and Rainbow mutations', () => {
+    expect(['default', 'gold', 'diamond', 'rainbow'].map(traitTone)).toEqual([null, 'gold', 'diamond', 'mega'])
+  })
+})
 
 describe('traitDefs', () => {
   it('Adopt Me: the eight forms in order, with their shorthand', () => {
