@@ -25,7 +25,13 @@ function call(event: CardCase): { fn: string; args: Record<string, unknown> } {
     case 'refund_external':
       return {
         fn: 'card_refund_external_book',
-        args: { p_order_id: event.orderId, p_ref: event.providerRef, p_amount_minor: amount, p_currency: event.amount.currency },
+        args: {
+          p_order_id: event.orderId,
+          p_ref: event.providerRef,
+          p_session: event.sessionRef ?? null,
+          p_amount_minor: amount,
+          p_currency: event.amount.currency,
+        },
       }
     case 'dispute_opened':
       return {
@@ -33,6 +39,7 @@ function call(event: CardCase): { fn: string; args: Record<string, unknown> } {
         args: {
           p_order_id: event.orderId,
           p_ref: event.providerRef,
+          p_session: event.sessionRef ?? null,
           p_amount_minor: amount,
           p_currency: event.amount.currency,
           p_reason: event.reason ?? null,

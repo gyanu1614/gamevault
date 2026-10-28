@@ -59,6 +59,9 @@ export type CanonicalEvent =
       orderId: string
       /** `<charge id>:refund` for a refund, the dispute id (dp_…) for a dispute. */
       providerRef: string
+      /** The Checkout Session (cs_…) the charge belongs to. A case is booked
+       *  only when it is the session that paid the order. */
+      sessionRef?: string | null
       amount: Money
       /** dispute_opened: the bank's reason and the evidence deadline (ISO). */
       reason?: string | null

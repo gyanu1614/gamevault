@@ -68,7 +68,7 @@ export async function loadDisputeEvidenceInput(orderId: string, itemTitle: strin
     svc.from('conversations').select('id').eq('order_id', orderId).maybeSingle() as any,
   ])
   const { data: msgs } = convo?.id
-    ? ((await svc.from('messages').select('sender_id, content, created_at').eq('conversation_id', convo.id).order('created_at', { ascending: true }).limit(500)) as any)
+    ? ((await svc.from('messages').select('sender_id, content, created_at').eq('conversation_id', convo.id).order('created_at', { ascending: false }).limit(60)) as any)
     : { data: [] }
 
   const from = (id: string | null): 'Buyer' | 'Seller' | 'DropMarket' =>
@@ -87,6 +87,7 @@ export async function loadDisputeEvidenceInput(orderId: string, itemTitle: strin
     completedAt: o.completed_at,
     deliveryProofFiles: Array.isArray(o.delivery_evidence_urls) ? o.delivery_evidence_urls.length : 0,
     messages: ((msgs ?? []) as any[])
+      .reverse()
       .filter((m) => typeof m.content === 'string' && m.content.trim())
       .map((m) => ({ at: m.created_at, from: from(m.sender_id), text: m.content })),
     policyUrl: `${SITE_URL}/refunds`,

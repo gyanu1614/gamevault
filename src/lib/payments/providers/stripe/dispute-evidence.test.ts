@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { buildDisputeEvidence, type DisputeEvidenceInput } from './dispute-evidence'
+import { buildDisputeEvidence, redactChatLine, type DisputeEvidenceInput } from './dispute-evidence'
 
 function input(over: Partial<DisputeEvidenceInput> = {}): DisputeEvidenceInput {
   return {
@@ -39,7 +39,10 @@ describe('buildDisputeEvidence', () => {
       'The seller uploaded 2 delivery proof file(s) to the order.',
     ])
     expect(e.uncategorized_text).toContain('The buyer confirmed on 2026-10-01 11:00 UTC')
-    expect(e.uncategorized_text).toContain('[2026-10-01 10:19 UTC] Seller: sent! check your trades')
+    expect(e.uncategorized_text).toContain('[2026-10-01 10:05 UTC] Buyer: hi, my user is sam123')
+    // Seller messages carry login details on account sales: times only.
+    expect(e.uncategorized_text).toContain('[2026-10-01 10:19 UTC] Seller: (message sent)')
+    expect(e.uncategorized_text).not.toContain('check your trades')
     expect(e.refund_policy_disclosure).toContain('https://dropmarket.gg/legal/refunds')
   })
 
@@ -60,5 +63,14 @@ describe('buildDisputeEvidence', () => {
     for (const v of Object.values(e)) expect(String(v).length).toBeLessThanOrEqual(20_000)
     expect(e.uncategorized_text).toContain('most recent 60 messages')
     expect(e.uncategorized_text).not.toContain('m439 ')
+  })
+})
+
+describe('redactChatLine', () => {
+  it('drops login details and masks emails and long numbers', () => {
+    expect(redactChatLine('email: me@x.com pass: hunter2')).toBe('(account details, not included)')
+    expect(redactChatLine('Password - abc123')).toBe('(account details, not included)')
+    expect(redactChatLine('write me at me@x.com or +44 7700 900123')).toBe('write me at [email] or [number]')
+    expect(redactChatLine('got it,\n thanks!')).toBe('got it, thanks!')
   })
 })

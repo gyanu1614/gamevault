@@ -35,20 +35,20 @@ function dispute(over: Partial<StripeDisputeView> = {}): StripeDisputeView {
 
 describe('stripeRefundEvents', () => {
   it('a full refund made outside DropMarket books a CARD_CASE on the charge', () => {
-    const r = stripeRefundEvents(charge({ data: [refund(1000)], has_more: false }))
+    const r = stripeRefundEvents(charge({ data: [refund(1000)], has_more: false }), 'cs_1')
     expect(r.providerEventId).toBe('ch_1:refunded:1000')
     expect(r.events).toEqual([
-      { type: 'CARD_CASE', kind: 'refund_external', orderId: ORDER, providerRef: 'ch_1:refund', amount: { amountMinor: 1000n, currency: 'USD' } },
+      { type: 'CARD_CASE', kind: 'refund_external', orderId: ORDER, providerRef: 'ch_1:refund', sessionRef: 'cs_1', amount: { amountMinor: 1000n, currency: 'USD' } },
     ])
   })
 
   it('several outside refunds that add up to the payment are one full refund', () => {
-    const r = stripeRefundEvents(charge({ data: [refund(400), refund(600)], has_more: false }))
+    const r = stripeRefundEvents(charge({ data: [refund(400), refund(600)], has_more: false }), 'cs_1')
     expect(r.events[0]).toMatchObject({ type: 'CARD_CASE', amount: { amountMinor: 1000n } })
   })
 
   it('our own Refund To Card (dm_refund metadata) books nothing: the outbox already did', () => {
-    expect(stripeRefundEvents(charge({ data: [refund(1000, true)], has_more: false })).events).toEqual([])
+    expect(stripeRefundEvents(charge({ data: [refund(1000, true)], has_more: false }), 'cs_1').events).toEqual([])
   })
 
   it('a partial or mixed outside refund is an admin notice only', () => {
@@ -56,29 +56,30 @@ describe('stripeRefundEvents', () => {
       { data: [refund(300)], has_more: false },
       { data: [refund(300), refund(700, true)], has_more: false },
       { data: [refund(1000)], has_more: true },
+      { data: [refund(1000, false, 'pending')], has_more: false },
     ]) {
-      const [e] = stripeRefundEvents(charge(refunds)).events
+      const [e] = stripeRefundEvents(charge(refunds), 'cs_1').events
       expect(e).toMatchObject({ type: 'PAYMENT_NOTICE', kind: 'refund', orderId: ORDER, providerChargeId: 'ch_1' })
     }
   })
 
   it('failed or cancelled refunds do not count', () => {
-    const r = stripeRefundEvents(charge({ data: [refund(1000, false, 'failed')], has_more: false }))
+    const r = stripeRefundEvents(charge({ data: [refund(1000, false, 'failed')], has_more: false }), 'cs_1')
     expect(r.events).toEqual([])
   })
 
   it('a charge that is not one of our orders records nothing', () => {
-    expect(stripeRefundEvents(charge({ data: [refund(1000)], has_more: false }, { payment_intent: { id: 'pi_2', metadata: {} } })).events).toEqual([])
+    expect(stripeRefundEvents(charge({ data: [refund(1000)], has_more: false }, { payment_intent: { id: 'pi_2', metadata: {} } }), 'cs_1').events).toEqual([])
   })
 })
 
 describe('stripe disputes', () => {
   it('opened: a CARD_CASE with the reason and the evidence deadline', () => {
-    const d = stripeDisputeOpened(dispute())
+    const d = stripeDisputeOpened(dispute(), 'cs_1')
     expect(d.providerEventId).toBe('dp_1:created')
     expect(d.events).toEqual([
       {
-        type: 'CARD_CASE', kind: 'dispute_opened', orderId: ORDER, providerRef: 'dp_1',
+        type: 'CARD_CASE', kind: 'dispute_opened', orderId: ORDER, providerRef: 'dp_1', sessionRef: 'cs_1',
         amount: { amountMinor: 1000n, currency: 'USD' }, reason: 'fraudulent', dueBy: '2027-01-15T08:00:00.000Z',
       },
     ])
@@ -93,7 +94,13 @@ describe('stripe disputes', () => {
     expect(stripeDisputeClosed(dispute({ status: 'under_review' })).events).toEqual([])
   })
 
+  it('opened after the verdict (a late retry): opened and closed in the same run', () => {
+    const d = stripeDisputeOpened(dispute({ status: 'lost' }), 'cs_1')
+    expect(d.events.map((e: any) => e.kind)).toEqual(['dispute_opened', 'dispute_closed'])
+    expect(d.events[1]).toMatchObject({ outcome: 'lost' })
+  })
+
   it('a dispute on a payment that is not ours records nothing', () => {
-    expect(stripeDisputeOpened(dispute({ payment_intent: 'pi_9' })).events).toEqual([])
+    expect(stripeDisputeOpened(dispute({ payment_intent: 'pi_9' }), null).events).toEqual([])
   })
 })

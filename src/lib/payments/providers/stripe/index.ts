@@ -86,6 +86,15 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
     return stripeClient()
   }
 
+  /** The Checkout Session a PaymentIntent belongs to (cs_…), or null. A card
+   *  case is booked only when it is the session that paid the order. */
+  const sessionOfIntent = async (pi: { id: string } | string | null): Promise<string | null> => {
+    const id = typeof pi === 'string' ? pi : pi?.id
+    if (!id) return null
+    const list = await api().checkout.sessions.list({ payment_intent: id, limit: 1 })
+    return list.data[0]?.id ?? null
+  }
+
   async function session(id: string): Promise<StripeSessionView> {
     return (await api().checkout.sessions.retrieve(id)) as unknown as StripeSessionView
   }
@@ -209,13 +218,15 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
       }
       if (event.type === 'charge.refunded') {
         if (!objectId) throw new Error('stripe: charge.refunded without a charge id')
-        const charge = await api().charges.retrieve(objectId, { expand: ['payment_intent', 'refunds'] })
-        return stripeRefundEvents(charge as unknown as StripeChargeView)
+        const charge = (await api().charges.retrieve(objectId, { expand: ['payment_intent', 'refunds'] })) as unknown as StripeChargeView
+        return stripeRefundEvents(charge, await sessionOfIntent(charge.payment_intent))
       }
       if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {
         if (!objectId) throw new Error(`stripe: ${event.type} without a dispute id`)
         const dispute = (await api().disputes.retrieve(objectId, { expand: ['payment_intent'] })) as unknown as StripeDisputeView
-        return event.type === 'charge.dispute.created' ? stripeDisputeOpened(dispute) : stripeDisputeClosed(dispute)
+        return event.type === 'charge.dispute.created'
+          ? stripeDisputeOpened(dispute, await sessionOfIntent(dispute.payment_intent))
+          : stripeDisputeClosed(dispute)
       }
       // Verified but not an event we act on: record it, change nothing.
       return { providerEventId: `${event.id}:ignored`, events: [] }

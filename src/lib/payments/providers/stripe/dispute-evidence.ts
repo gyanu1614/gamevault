@@ -5,6 +5,10 @@
  *
  * Text only — no file uploads, so the restricted key needs Disputes: Write
  * and nothing more. Every field stays under Stripe's 20,000-character limit.
+ *
+ * Privacy: the bank sees the buyer's OWN chat words, with emails, long numbers
+ * and anything that looks like login details taken out. Seller messages go as
+ * timestamps only — on account sales they carry the login details.
  */
 
 export interface DisputeEvidenceInput {
@@ -39,6 +43,14 @@ const MESSAGE_MAX = 600
 const MESSAGES_KEPT = 60
 
 const clip = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, max - 1)}…`)
+
+const SECRET_HINT = /\b(pass(word|code)?|pwd|pin|2fa|otp|code|login|e-?mail|user ?name|recovery)\b\s*[:=-]/i
+/** A buyer chat line as the bank may see it. */
+export function redactChatLine(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim()
+  if (SECRET_HINT.test(flat)) return '(account details, not included)'
+  return flat.replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[email]').replace(/\+?\d[\d\s().-]{6,}\d/g, '[number]')
+}
 const stamp = (iso: string) => `${iso.slice(0, 16).replace('T', ' ')} UTC`
 
 function timeline(i: DisputeEvidenceInput): string[] {
@@ -59,7 +71,7 @@ export function buildDisputeEvidence(i: DisputeEvidenceInput): DisputeEvidence {
 
   const chat = i.messages
     .slice(-MESSAGES_KEPT)
-    .map((m) => `[${stamp(m.at)}] ${m.from}: ${clip(m.text.replace(/\s+/g, ' ').trim(), MESSAGE_MAX)}`)
+    .map((m) => `[${stamp(m.at)}] ${m.from}: ${m.from === 'Buyer' ? clip(redactChatLine(m.text), MESSAGE_MAX) : '(message sent)'}`)
   const summary = [
     `Order ${i.orderRef} on DropMarket (dropmarket.gg), a marketplace for digital game items.`,
     `The cardholder bought ${item} for ${i.amount}. The item is delivered inside the game or as account details, through the order page and its chat.`,
@@ -68,7 +80,7 @@ export function buildDisputeEvidence(i: DisputeEvidenceInput): DisputeEvidence {
       : i.deliveredAt || i.sellerMarkedDeliveredAt
         ? 'The order was marked delivered; the buyer did not report a problem through our order dispute process.'
         : 'The order record is below.',
-    chat.length ? `\nOrder chat between the buyer and the seller (most recent ${chat.length} messages):\n${chat.join('\n')}` : '',
+    chat.length ? `\nOrder chat (most recent ${chat.length} messages; the buyer's words, the seller's as times only):\n${chat.join('\n')}` : '',
   ].join('\n')
 
   const deliveredAt = i.deliveredAt ?? i.sellerMarkedDeliveredAt

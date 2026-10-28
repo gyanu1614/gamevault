@@ -44,6 +44,9 @@ vi.mock('@/lib/payments/providers/stripe/client', () => ({
           if (!stripeState.sessions[id]) throw new Error(`no such session ${id}`)
           return stripeState.sessions[id]
         },
+        list: async ({ payment_intent }: { payment_intent: string }) => ({
+          data: Object.values(stripeState.sessions).filter((s: any) => s.payment_intent === payment_intent),
+        }),
       },
     },
     charges: { retrieve: async (id: string) => stripeState.charges[id] },

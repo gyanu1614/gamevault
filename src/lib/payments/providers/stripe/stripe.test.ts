@@ -47,6 +47,7 @@ function fakeApi(over: { session?: Record<string, unknown> } = {}) {
           expires_at: params.expires_at,
         })),
         retrieve: vi.fn(async () => session),
+        list: vi.fn(async () => ({ data: [session] })),
         expire: vi.fn(async () => ({ ...session, status: 'expired', payment_status: 'unpaid' })),
       },
     },

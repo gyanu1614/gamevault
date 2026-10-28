@@ -4,10 +4,14 @@
  *
  *   charge.refunded         only refunds DropMarket did NOT send count (ours
  *                           carry `dm_refund` metadata — the outbox books them):
- *                             all outside + the whole payment → CARD_CASE refund_external
- *                             partial / mixed / unlisted      → PAYMENT_NOTICE (admin only)
- *   charge.dispute.created  → CARD_CASE dispute_opened
+ *                             all outside, succeeded, the whole payment → CARD_CASE refund_external
+ *                             partial / mixed / pending / unlisted      → PAYMENT_NOTICE (admin only)
+ *   charge.dispute.created  → CARD_CASE dispute_opened (+ dispute_closed when the
+ *                           re-fetch already shows the verdict)
  *   charge.dispute.closed   won / warning_closed → won, lost → lost; else nothing
+ *
+ * `sessionId` is the Checkout Session the charge belongs to (the adapter looks
+ * it up by PaymentIntent); SQL books a case only against the paying session.
  *
  * Dedupe ids: `<charge>:refunded:<total refunded>`, `<dispute>:created`,
  * `<dispute>:closed:<status>`. The SQL seams are idempotent on the provider
@@ -66,7 +70,7 @@ function intentOrderId(pi: IntentView | string | null): string | null {
 
 const DEAD_REFUND = new Set(['failed', 'canceled'])
 
-export function stripeRefundEvents(charge: StripeChargeView): StripeMapped {
+export function stripeRefundEvents(charge: StripeChargeView, sessionId: string | null): StripeMapped {
   const providerEventId = `${charge.id}:refunded:${charge.amount_refunded}`
   const orderId = intentOrderId(charge.payment_intent)
   if (!orderId) return { providerEventId, events: [] }
@@ -76,12 +80,21 @@ export function stripeRefundEvents(charge: StripeChargeView): StripeMapped {
 
   const currency = charge.currency.toUpperCase()
   const outsideMinor = outside.reduce((s, r) => s + r.amount, 0)
-  const full = !charge.refunds?.has_more && outside.length === live.length && outsideMinor === charge.amount
+  // Only money that has actually gone back counts: a pending refund may still fail.
+  const settled = outside.every((r) => r.status === 'succeeded')
+  const full = !charge.refunds?.has_more && settled && outside.length === live.length && outsideMinor === charge.amount
   if (full) {
     return {
       providerEventId,
       events: [
-        { type: 'CARD_CASE', kind: 'refund_external', orderId, providerRef: `${charge.id}:refund`, amount: money(BigInt(outsideMinor), currency) },
+        {
+          type: 'CARD_CASE',
+          kind: 'refund_external',
+          orderId,
+          providerRef: `${charge.id}:refund`,
+          sessionRef: sessionId,
+          amount: money(BigInt(outsideMinor), currency),
+        },
       ],
     }
   }
@@ -100,31 +113,39 @@ export function stripeRefundEvents(charge: StripeChargeView): StripeMapped {
   }
 }
 
-export function stripeDisputeOpened(dispute: StripeDisputeView): StripeMapped {
+function disputeOutcome(status: string): 'won' | 'lost' | null {
+  if (status === 'lost') return 'lost'
+  return status === 'won' || status === 'warning_closed' ? 'won' : null
+}
+
+export function stripeDisputeOpened(dispute: StripeDisputeView, sessionId: string | null): StripeMapped {
   const providerEventId = `${dispute.id}:created`
   const orderId = intentOrderId(dispute.payment_intent)
   if (!orderId) return { providerEventId, events: [] }
   const due = dispute.evidence_details?.due_by
-  return {
-    providerEventId,
-    events: [
-      {
-        type: 'CARD_CASE',
-        kind: 'dispute_opened',
-        orderId,
-        providerRef: dispute.id,
-        amount: money(BigInt(dispute.amount), dispute.currency.toUpperCase()),
-        reason: dispute.reason,
-        dueBy: due ? new Date(due * 1000).toISOString() : null,
-      },
-    ],
-  }
+  const amount = money(BigInt(dispute.amount), dispute.currency.toUpperCase())
+  const events: CanonicalEvent[] = [
+    {
+      type: 'CARD_CASE',
+      kind: 'dispute_opened',
+      orderId,
+      providerRef: dispute.id,
+      sessionRef: sessionId,
+      amount,
+      reason: dispute.reason,
+      dueBy: due ? new Date(due * 1000).toISOString() : null,
+    },
+  ]
+  // Delivered late (a retry after the verdict): close it in the same run.
+  const outcome = disputeOutcome(dispute.status)
+  if (outcome) events.push({ type: 'CARD_CASE', kind: 'dispute_closed', orderId, providerRef: dispute.id, amount, outcome })
+  return { providerEventId, events }
 }
 
 export function stripeDisputeClosed(dispute: StripeDisputeView): StripeMapped {
   const providerEventId = `${dispute.id}:closed:${dispute.status}`
   const orderId = intentOrderId(dispute.payment_intent)
-  const outcome = dispute.status === 'lost' ? 'lost' : dispute.status === 'won' || dispute.status === 'warning_closed' ? 'won' : null
+  const outcome = disputeOutcome(dispute.status)
   if (!orderId || !outcome) return { providerEventId, events: [] }
   return {
     providerEventId,

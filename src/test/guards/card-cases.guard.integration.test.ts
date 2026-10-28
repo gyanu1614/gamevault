@@ -99,6 +99,12 @@ async function paidOrder(walletMinor = 0): Promise<string> {
     })
   }
   await rpc('safedrop_transition', { p_order_id: id, p_event: 'CHARGE_CONFIRMED', p_dedupe_key: null, p_release_method: null, p_refund_minor: null })
+  // The Checkout Session that paid it: cases are booked only against this one.
+  const { error: attErr } = await fx!.svc.from('payment_attempts').insert({
+    order_id: id, provider: 'stripe', provider_charge_id: `cs_${id}`, status: 'paid',
+    amount_minor: 100 - walletMinor, wallet_minor: walletMinor, order_total_minor: 100, currency: CUR,
+  } as any)
+  if (attErr) throw new Error(`attempt insert: ${attErr.message}`)
   return id
 }
 async function delivered(): Promise<string> {
@@ -111,16 +117,19 @@ async function completed(): Promise<string> {
   await rpc('order_confirm_receipt', { p_order_id: id, p_buyer_id: fx!.buyer.id })
   return id
 }
-const refund = (id: string, amount = 100) =>
-  rpc('card_refund_external_book', { p_order_id: id, p_ref: `ch_${id}:refund`, p_amount_minor: amount, p_currency: CUR })
-const disputeOpen = (id: string) =>
-  rpc('card_dispute_open', { p_order_id: id, p_ref: `dp_${id}`, p_amount_minor: 100, p_currency: CUR, p_reason: 'fraudulent', p_due_by: null })
+const refund = (id: string, amount = 100, session = `cs_${id}`) =>
+  rpc('card_refund_external_book', { p_order_id: id, p_ref: `ch_${id}:refund`, p_session: session, p_amount_minor: amount, p_currency: CUR })
+const disputeOpen = (id: string, amount = 100) =>
+  rpc('card_dispute_open', { p_order_id: id, p_ref: `dp_${id}`, p_session: `cs_${id}`, p_amount_minor: amount, p_currency: CUR, p_reason: 'fraudulent', p_due_by: null })
+async function safedropDisputes(id: string) {
+  return ((await fx!.svc.from('disputes').select('id, status').eq('transaction_id', id)).data ?? []) as any[]
+}
 const disputeClose = (id: string, outcome: 'won' | 'lost') => rpc('card_dispute_close', { p_ref: `dp_${id}`, p_outcome: outcome })
 
 describe.skipIf(!hasEnv)('card safeguards: external refunds, chargebacks, buyer block (integration)', () => {
   beforeAll(async () => {
     fx = await makeFixture()
-    ready = !(await fx.svc.rpc('card_paid_minor' as any, { p_order_id: fx.pendingOrderId })).error
+    ready = !(await (fx.svc as any).from('card_cases').select('session_ref').limit(1)).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
     await activateFixtureListing(fx.svc, fx.listingId, fx.admin.id)
     await fx.svc.from('orders').update({ status: 'cancelled' }).eq('id', fx.pendingOrderId)
@@ -128,11 +137,12 @@ describe.skipIf(!hasEnv)('card safeguards: external refunds, chargebacks, buyer 
 
   afterAll(async () => {
     if (!fx) return
-    const links = orders.flatMap((id) => [`/admin/orders/${id}`, `/account/orders/${id}`])
-    await fx.svc.from('notifications').delete().in('link', links)
+    for (const id of orders) await fx.svc.from('notifications').delete().like('link', `%${id}%`)
     await fx.svc.from('order_dispute_events').delete().in('order_id', orders)
     await fx.svc.from('disputes').delete().in('transaction_id', orders)
     await fx.svc.from('buyer_blocks').delete().eq('user_id', fx.buyer.id)
+    await fx.svc.from('dispute_resolutions').delete().in('dispute_id', (await fx.svc.from('disputes').select('id').in('transaction_id', orders)).data?.map((d: any) => d.id) ?? [])
+    await fx.svc.from('payment_attempts').delete().in('order_id', orders)
     for (const id of orders) await fx.svc.rpc('ledger_test_cleanup_by_order' as any, { p_order_id: id })
     await fx.svc.from('orders').delete().in('id', orders) // card_cases cascade
     await fx.cleanup()
@@ -286,18 +296,74 @@ describe.skipIf(!hasEnv)('card safeguards: external refunds, chargebacks, buyer 
     expect(r.error?.message).toMatch(/permission denied/i)
   })
 
+  it('a refund or dispute of a payment that did not pay the order (duplicate / late) is only recorded', async () => {
+    const id = await paidOrder()
+    expect(await refund(id, 100, 'cs_duplicate')).toMatchObject({ booked: false, reason: 'review' })
+    expect(await order(id)).toMatchObject({ status: 'paid', escrow_status: 'held' })
+    await fx!.svc.from('payment_attempts').update({ credited_minor: 100, credit_reason: 'late' } as any).eq('order_id', id)
+    expect(await disputeOpen(id)).toMatchObject({ opened: false, status: 'review' })
+    expect(await order(id)).toMatchObject({ status: 'paid' })
+  })
+
+  it('one active case per order: a chargeback during a refund decision is only recorded; settling twice is refused', async () => {
+    const id = await completed()
+    await refund(id)
+    expect(await disputeOpen(id)).toMatchObject({ opened: false, status: 'review' })
+    const [refundCase] = (await cases(id)).filter((c) => c.kind === 'refund')
+    await rpc('card_case_settle', { p_case_id: refundCase.id, p_bearer: 'seller', p_actor_id: fx!.admin.id })
+    expect(await order(id)).toMatchObject({ status: 'refunded' })
+    const again = await (fx!.svc.rpc as any)('card_case_settle_internal', { p_case_id: refundCase.id, p_bearer: 'seller', p_actor_id: null })
+    expect(again.data).toMatchObject({ settled: false, reason: 'already_settled' })
+  })
+
+  it('freezes under its own key even after an earlier admin dispute on the order was released', async () => {
+    const id = await completed()
+    const opened = await rpc('order_dispute_open', { p_order_id: id, p_actor_id: fx!.admin.id, p_actor_role: 'admin', p_reason: 'other', p_title: 'guard', p_description: 'guard admin dispute' })
+    await rpc('order_dispute_resolve', { p_dispute_id: opened.dispute_id, p_admin_id: fx!.admin.id, p_outcome: 'release', p_refund_minor: null, p_notes: 'guard release' })
+    const avail = await bal('seller', 'seller_available')
+    await disputeOpen(id)
+    expect(await order(id)).toMatchObject({ status: 'disputed', escrow_status: 'frozen' })
+    expect(await bal('seller', 'seller_available')).toBe(avail - 80)
+  })
+
+  it('won while the buyer\'s own dispute is open: nothing is released, their dispute stays open', async () => {
+    const id = await delivered()
+    await rpc('order_dispute_open', { p_order_id: id, p_actor_id: fx!.buyer.id, p_actor_role: 'buyer', p_reason: 'item_not_received', p_title: 'guard', p_description: 'guard buyer dispute' })
+    await disputeOpen(id)
+    await disputeClose(id, 'won')
+    expect(await order(id)).toMatchObject({ status: 'disputed' })
+    expect((await safedropDisputes(id)).map((d) => d.status)).toEqual(['open'])
+  })
+
+  it('a partial chargeback lost: the hold lifts and the order goes back to the admin tools', async () => {
+    const id = await delivered()
+    await disputeOpen(id, 60)
+    expect(await disputeClose(id, 'lost')).toMatchObject({ closed: true, settled: false })
+    expect((await cases(id))[0]).toMatchObject({ status: 'review' })
+    const [d] = await safedropDisputes(id)
+    expect(d.status).toBe('open')
+    // The SafeDrop seam may now settle it (the guard no longer holds the order).
+    await rpc('order_dispute_resolve', { p_dispute_id: d.id, p_admin_id: fx!.admin.id, p_outcome: 'release', p_refund_minor: null, p_notes: 'guard settle' })
+    expect(await order(id)).toMatchObject({ status: 'completed' })
+  })
+
+  it('a close for a dispute not recorded yet raises, so Stripe retries', async () => {
+    const r = await (fx!.svc.rpc as any)('card_dispute_close', { p_ref: 'dp_never_opened', p_outcome: 'lost' })
+    expect(r.error?.message).toMatch(/not recorded yet/)
+  })
+
   it.skipIf(!TARGET_IS_LOCAL)('a fault inside a step rolls the whole step back', async () => {
     const id = await paidOrder()
     const before = await order(id)
     const err = withFault('card_case_settle:after_journal',
-      `SELECT public.card_refund_external_book('${id}', 'ch_fault_${id}:refund', 100, 'USD')`)
+      `SELECT public.card_refund_external_book('${id}', 'ch_fault_${id}:refund', 'cs_${id}', 100, 'USD')`)
     expect(err).toMatch(/money_fault/)
     expect(await cases(id)).toHaveLength(0)
     expect(await order(id)).toMatchObject({ status: before.status, escrow_status: before.escrow_status })
 
     await fx!.svc.from('buyer_blocks').delete().eq('user_id', fx!.buyer.id)
     const err2 = withFault('card_dispute_open:after_hold',
-      `SELECT public.card_dispute_open('${id}', 'dp_fault_${id}', 100, 'USD', 'fraudulent', NULL)`)
+      `SELECT public.card_dispute_open('${id}', 'dp_fault_${id}', 'cs_${id}', 100, 'USD', 'fraudulent', NULL)`)
     expect(err2).toMatch(/money_fault/)
     expect(await cases(id)).toHaveLength(0)
     expect(await blocked()).toBe(false)
