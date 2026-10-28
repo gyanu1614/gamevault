@@ -338,7 +338,6 @@ type PayMethodId = 'crypto' | (string & {})
 interface CheckoutFormProps {
   listing: any
   user: any
-  buyerProfile?: { username: string | null; avatar_url: string | null } | null
   sellerReviews?: any[]
   initialQty?: number
   bundleSummary?: { name: string; iconUrl: string | null } | null
@@ -359,7 +358,7 @@ interface CheckoutFormProps {
   sellerOnline?: boolean
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false, siteRating = null, sellerOnline = false }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false, siteRating = null, sellerOnline = false }: CheckoutFormProps) {
   const router = useRouter()
 
   // Flat selector (checkout regions, 2026-09-26): the buyer's own-country
@@ -911,7 +910,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Payment Method">
+        <div className="flex flex-col gap-2.5" role="radiogroup" aria-label="Payment Method">
           <AnimatePresence initial={false} mode="popLayout">
             {stripeRows.map((m) => (
               <motion.div key={m.id} {...rowMotion}>
@@ -960,11 +959,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     <ItemCard
       title={title}
       imageSrc={imageSrc}
-      details={[
-        [listing.game?.name, listing.category?.name].filter(Boolean).join(' · '),
-        `Delivery Time: ${fmtDelivery(deliveryTime)}`,
-        `Quantity: ${quantity.toLocaleString()}`,
-      ].filter(Boolean)}
+      subtitle={[listing.game?.name, listing.category?.name].filter(Boolean).join(' · ')}
+      details={[`Delivery Time: ${fmtDelivery(deliveryTime)}`, `Quantity: ${quantity.toLocaleString()}`]}
       deliveryMethod={deliveryMethod}
       seller={{
         name: sellerName,
@@ -1114,8 +1110,16 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // ── The buy box under the item card (desktop): discount, the money rows,
   //    Pay and the terms. Phones get the same rows under the list and Pay in
   //    the sticky bar.
+  // The box is its own panel, so it carries its own centered title.
+  const summaryTitle = (
+    <h2 className="mb-4 text-center text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.ink }}>
+      Order Summary
+    </h2>
+  )
+
   const buyBox = (
     <div className={cn(PANEL_CLASS, 'p-5 xl:p-6')} style={PANEL_STYLE}>
+      {summaryTitle}
       {promoSection}
       {moneySummary}
       <div className="mt-4">
@@ -1147,12 +1151,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   return (
     // The faded homepage art sits behind the top (page.tsx wraps this in
     // HeroBackdrop, owner 2026-10-27), so the page itself paints nothing.
-    <div className="relative min-h-screen">
-      <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
+    <div className="relative flex min-h-screen flex-col">
+      <CheckoutNavbar />
 
       {/* Same width and gutters as the item page (max-w-7xl), so the two
           pages line up; the order panel is wider than the item page's rail. */}
-      <div className="relative mx-auto w-full max-w-7xl px-3 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pb-14">
+      <div className="relative mx-auto w-full max-w-7xl flex-1 px-3 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pb-14">
         {/* Header row */}
         <div className="flex items-center gap-3">
           <button
@@ -1184,16 +1188,17 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             {paymentList}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
-            <div className={cn(PANEL_CLASS, 'mt-4 px-4 pb-4 pt-4 lg:hidden')} style={PANEL_STYLE}>
+            <div className={cn(PANEL_CLASS, 'mt-5 px-4 pb-4 pt-4 lg:hidden')} style={PANEL_STYLE}>
+              {summaryTitle}
               {promoSection}
               {moneySummary}
               {needHelp}
             </div>
             {/* Why it's safe, at the moment of commitment, then the steps. */}
-            <div className="mt-6">
+            <div className="mt-8">
               <TrustSeals marks={sealData.shown} more={sealData.more} />
             </div>
-            <div className="mt-6">
+            <div className="mt-8">
               <HowItWorks />
             </div>
           </div>

@@ -2,8 +2,9 @@
 
 /**
  * How Your Order Works (owner 2026-10-27, "Before you buy" reference): one
- * tinted panel under the seals — an info disc, the title and a chevron —
- * that opens to the four steps. Open by default; the buyer can fold it.
+ * slim tinted bar under the seals — an info tile, the title and a chevron —
+ * that opens to the four steps. Closed by default (owner: "closed on
+ * default", "sleek and rectangular", less padding).
  * The old "Chat / Fast Delivery / 24/7 Support" card folded into the steps.
  * Radix Accordion for the disclosure (keyboard, aria-expanded), the house
  * accordion-down/up keyframes for the height.
@@ -31,29 +32,28 @@ export function HowItWorks() {
     <Accordion.Root
       type="single"
       collapsible
-      defaultValue="how"
-      className="rounded-lg bg-[rgba(18,24,40,0.78)] shadow-[inset_0_0_0_1px_rgba(106,168,255,0.22)] backdrop-blur-xl"
+      className="rounded-md bg-[rgba(18,24,40,0.78)] shadow-[inset_0_0_0_1px_rgba(106,168,255,0.22)] backdrop-blur-xl"
     >
       <Accordion.Item value="how">
         <Accordion.Header className="m-0">
-          <Accordion.Trigger className="group flex w-full items-center gap-3.5 px-4 py-3.5 text-left sm:px-5">
-            <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[rgba(106,168,255,0.16)]">
-              <Info size={20} weight="fill" color={TRUST_BLUE} />
+          <Accordion.Trigger className="group flex w-full items-center gap-3 rounded-md px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.02] sm:px-4">
+            <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-[rgba(106,168,255,0.16)]">
+              <Info size={17} weight="fill" color={TRUST_BLUE} />
             </span>
-            <span className="text-[16px] font-semibold tracking-[-0.01em] text-[#E9EDF2]">How Your Order Works</span>
+            <span className="text-[15px] font-semibold tracking-[-0.01em] text-[#E9EDF2]">How Your Order Works</span>
             <CaretDown
               aria-hidden
-              size={18}
+              size={16}
               weight="bold"
               className="ml-auto shrink-0 text-[#C9D2DC] transition-transform duration-200 group-data-[state=open]:rotate-180"
             />
           </Accordion.Trigger>
         </Accordion.Header>
         <Accordion.Content className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <ol className="mx-4 grid grid-cols-1 gap-x-8 gap-y-4 border-t border-white/[0.08] pb-5 pt-4 sm:mx-5 sm:grid-cols-2">
+          <ol className="mx-3.5 grid grid-cols-1 gap-x-8 gap-y-3.5 border-t border-white/[0.08] pb-4 pt-3.5 sm:mx-4 sm:grid-cols-2">
             {STEPS.map(({ Icon, title, sub }) => (
               <li key={title} className="flex items-start gap-3">
-                <Icon aria-hidden size={22} weight="duotone" color={TRUST_BLUE} className="mt-[1px] shrink-0" />
+                <Icon aria-hidden size={20} weight="duotone" color={TRUST_BLUE} className="mt-[1px] shrink-0" />
                 <span className="min-w-0">
                   <span className="block text-[14px] font-semibold leading-snug text-[#E9EDF2]">{title}</span>
                   <span className="mt-0.5 block text-[13px] leading-snug text-[#9AA6B3]">{sub}</span>

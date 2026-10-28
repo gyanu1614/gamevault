@@ -18,16 +18,17 @@ import { LockKey } from '@phosphor-icons/react/dist/ssr/LockKey'
 import { CreditCard } from '@phosphor-icons/react/dist/ssr/CreditCard'
 import { Star } from '@phosphor-icons/react/dist/ssr/Star'
 import { StarHalf } from '@phosphor-icons/react/dist/ssr/StarHalf'
+import { UsersThree } from '@phosphor-icons/react/dist/ssr/UsersThree'
 import type { ReactNode } from 'react'
 
 import type { MethodMark } from '@/lib/payments/method-marks'
 import type { SiteRating } from '@/lib/reviews/site-rating'
-import { cn } from '@/lib/utils'
-import { PANEL_CLASS, PANEL_STYLE, TRUST_BLUE } from './_surfaces'
+import { TRUST_BLUE } from './_surfaces'
 
 /** Trust blue: the security signals only; brand green stays on Pay. */
 export { TRUST_BLUE }
-const STAR = '#F5B83D'
+/** The rating card's green (owner 2026-10-27: the How It Works bar, in green). */
+const RATING_GREEN = '#3FD986'
 
 /** The seal logos: our on-dark marks, greyed to one quiet tone. */
 const LOGO_HEIGHT = 11
@@ -97,30 +98,38 @@ function Stars({ value }: { value: number }) {
       {[0, 1, 2, 3, 4].map((i) => {
         const left = halves - i * 2
         return left === 1 ? (
-          <StarHalf key={i} size={18} weight="fill" color={STAR} />
+          <StarHalf key={i} weight="fill" color={RATING_GREEN} className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         ) : (
-          <Star key={i} size={18} weight={left >= 2 ? 'fill' : 'regular'} color={STAR} />
+          <Star key={i} weight={left >= 2 ? 'fill' : 'regular'} color={RATING_GREEN} className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         )
       })}
     </span>
   )
 }
 
+/** The rating card (owner 2026-10-27): the How It Works bar's shape in
+ *  green — a slim tinted bar, an icon tile, the count, then the stars and
+ *  the real average. Still hidden below MIN_REVIEWS (never padded). */
 export function BuyerRating({ rating }: { rating: SiteRating | null }) {
   if (!rating) return null
   return (
     <div
-      className={cn(PANEL_CLASS, 'flex items-center gap-3 px-5 py-3.5')}
-      style={PANEL_STYLE}
+      className="flex items-center gap-3 rounded-md bg-[rgba(12,30,22,0.78)] px-3.5 py-2.5 shadow-[inset_0_0_0_1px_rgba(63,217,134,0.24)] backdrop-blur-xl sm:px-4"
       aria-label={`Buyer rating ${rating.average} out of 5 from ${rating.count} reviews`}
     >
-      <span className="min-w-0">
-        <span className="block text-[14px] font-semibold text-[#E9EDF2]">Buyer Rating</span>
-        <span className="block text-[12px] text-[#9AA6B3]">From {rating.count.toLocaleString('en-US')} buyer reviews</span>
+      <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-[rgba(63,217,134,0.16)]">
+        <UsersThree size={17} weight="fill" color={RATING_GREEN} />
       </span>
-      <span className="ml-auto flex items-center gap-2">
+      <span className="min-w-0">
+        <span className="block text-[15px] font-semibold leading-snug tracking-[-0.01em] text-[#E9EDF2]">Buyer Rating</span>
+        <span className="block text-[12.5px] leading-snug text-[#9AA6B3]">
+          <span className="max-sm:hidden">From </span>
+          {rating.count.toLocaleString('en-US')} buyer reviews
+        </span>
+      </span>
+      <span className="ml-auto flex shrink-0 items-center gap-2">
         <Stars value={rating.average} />
-        <span className="text-[13px] font-semibold tabular-nums text-[#E9EDF2]">
+        <span className="text-[14px] font-semibold tabular-nums text-[#E9EDF2]">
           {rating.average.toFixed(1)}
           <span className="font-normal text-[#9AA6B3]"> / 5</span>
         </span>

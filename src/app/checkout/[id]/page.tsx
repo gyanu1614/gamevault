@@ -86,18 +86,12 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // is testable on localhost and debuggable anywhere (UI-only, harmless).
   const buyerCountry = countryOverride ?? (await headers()).get('x-vercel-ip-country')
 
-  // STATE-007 — the buyer profile, the bundle's category_config, the seller's
-  // reviews and presence are mutually independent and each only needs data
-  // already loaded, so the guarded reads are hoisted into one fan-out rather
-  // than serial round-trips. A guard that does not apply resolves to { data: null }.
-  const [profileRes, configRes, reviewsRes, presenceRes] = await Promise.all([
-    user
-      ? (supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', user.id)
-          .maybeSingle() as any)
-      : Promise.resolve({ data: null }),
+  // STATE-007 — the bundle's category_config, the seller's reviews and
+  // presence are mutually independent and each only needs data already loaded,
+  // so the guarded reads are hoisted into one fan-out rather than serial
+  // round-trips. A guard that does not apply resolves to { data: null }. (The
+  // buyer's own avatar comes from the site account menu's useAuth.)
+  const [configRes, reviewsRes, presenceRes] = await Promise.all([
     // The currency config also names the listing's delivery method.
     listing.bundle_id || listing.delivery_method_type
       ? (supabase
@@ -124,11 +118,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           .maybeSingle() as any)
       : Promise.resolve({ data: null }),
   ])
-
-  // V73 — Buyer profile for the checkout identity strip (username +
-  // avatar; the auth user alone has only the email).
-  const buyerProfile: { username: string | null; avatar_url: string | null } | null =
-    (profileRes as any).data ?? null
 
   // V19/P24/P7.l — Bundle currency: pull the matching bundle row out
   // of the game's currency category_config so the checkout summary
@@ -211,7 +200,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       methods={toClientMethods(eligibility.methods)}
       listing={listing}
       user={user}
-      buyerProfile={buyerProfile}
       sellerReviews={sellerReviews}
       initialQty={parsedQty}
       bundleSummary={bundleSummary}
@@ -230,7 +218,10 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   return (
     <main className="w-full">
       <HeroBackdropPreload name="home" />
-      <HeroBackdrop name="home" navbarOffset={0} className="hero-dim-deep">
+      {/* overflow-clip: the art box is a fixed clamp() height, taller than
+          a short checkout, and would add a scroll of bare art under the
+          footer. clip (not hidden) keeps the summary column sticky. */}
+      <HeroBackdrop name="home" navbarOffset={0} className="hero-dim-deep overflow-clip">
         {form}
       </HeroBackdrop>
     </main>
