@@ -8,7 +8,7 @@
  * first on phones).
  */
 
-import { PANEL_CLASS, PANEL_STYLE, rowStyle } from './_surfaces'
+import { BAND_CLASS, CARD_CLASS, rowStyle } from './_surfaces'
 
 const GROUND = '#16171B'
 
@@ -18,8 +18,8 @@ function Block({ className = '' }: { className?: string }) {
 
 function ItemCardSkeleton({ className = '' }: { className?: string }) {
   return (
-    <Card className={`p-4 sm:p-5 ${className}`}>
-      <div className="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3 sm:grid-cols-[64px_minmax(0,1fr)] sm:gap-x-4">
+    <Card className={className}>
+      <div className="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3 p-4 sm:grid-cols-[64px_minmax(0,1fr)] sm:gap-x-4">
         <Block className="h-12 w-12 sm:row-span-2 sm:h-16 sm:w-16" />
         <div className="min-w-0 self-center sm:self-start">
           <Block className="h-4 w-44" />
@@ -27,7 +27,7 @@ function ItemCardSkeleton({ className = '' }: { className?: string }) {
         </div>
         <Block className="col-span-2 mt-3 h-3.5 w-full max-w-[260px] sm:col-span-1 sm:col-start-2 sm:mt-1.5" />
       </div>
-      <div className="mt-4 border-t border-white/[0.08] pt-3.5">
+      <div className={`${BAND_CLASS} px-4 pb-3.5 pt-3`}>
         <Block className="h-3 w-12" />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2.5">
           <Block className="h-4 w-28" />
@@ -42,9 +42,36 @@ function ItemCardSkeleton({ className = '' }: { className?: string }) {
   )
 }
 
+/** Order Summary's top: title, discount toggle, line items (no lines). */
+function SummaryTop() {
+  return (
+    <div className="px-4 pb-4 pt-4 lg:px-5">
+      <Block className="mb-3.5 h-4 w-32" />
+      <Block className="h-3.5 w-40" />
+      <div className="mt-4 space-y-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex justify-between">
+            <Block className="h-3.5 w-28" />
+            <Block className="h-3.5 w-14" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TotalRow() {
+  return (
+    <div className="flex justify-between">
+      <Block className="h-5 w-12" />
+      <Block className="h-6 w-20" />
+    </div>
+  )
+}
+
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`${PANEL_CLASS} ${className}`} style={PANEL_STYLE}>
+    <div className={`${CARD_CLASS} ${className}`}>
       {children}
     </div>
   )
@@ -96,16 +123,11 @@ export default function CheckoutLoading() {
             </div>
 
             {/* Phones: discount + money rows under the list */}
-            <Card className="mt-5 px-4 pb-4 pt-4 lg:hidden">
-              <Block className="mb-3.5 h-4 w-32" />
-              <Block className="h-3.5 w-40" />
-              <div className="mt-3 space-y-2 border-t border-white/[0.08] pt-3.5">
-                {[0, 1].map((i) => (
-                  <div key={i} className="flex justify-between">
-                    <Block className="h-3.5 w-28" />
-                    <Block className="h-3.5 w-14" />
-                  </div>
-                ))}
+            <Card className="mt-5 lg:hidden">
+              <SummaryTop />
+              <div className={`${BAND_CLASS} px-4 pb-4 pt-3.5`}>
+                <TotalRow />
+                <Block className="mx-auto mt-3 h-3 w-44" />
               </div>
             </Card>
 
@@ -132,24 +154,14 @@ export default function CheckoutLoading() {
           {/* Right — the item card, then the buy box */}
           <div className="hidden flex-col gap-3.5 lg:flex">
             <ItemCardSkeleton />
-            <Card className="p-5">
-              <Block className="mb-3.5 h-4 w-32" />
-              <Block className="h-3.5 w-40" />
-              <div className="mt-4 space-y-2 border-t border-white/[0.08] pt-3.5">
-                {[0, 1].map((i) => (
-                  <div key={i} className="flex justify-between">
-                    <Block className="h-3.5 w-28" />
-                    <Block className="h-3.5 w-14" />
-                  </div>
-                ))}
-                <div className="flex justify-between border-t border-white/[0.08] pt-3">
-                  <Block className="h-5 w-12" />
-                  <Block className="h-6 w-20" />
-                </div>
+            <Card>
+              <SummaryTop />
+              <div className={`${BAND_CLASS} px-5 pb-4 pt-3.5`}>
+                <TotalRow />
+                <Block className="mt-3.5 h-12 w-full" />
+                <Block className="mx-auto mt-3 h-3 w-56" />
+                <Block className="mx-auto mt-3 h-3 w-44" />
               </div>
-              <Block className="mt-4 h-12 w-full" />
-              <Block className="mx-auto mt-3 h-3 w-56" />
-              <Block className="mx-auto mt-3 h-3 w-44" />
             </Card>
             {/* Buyer rating: the slim green bar */}
             <div className="flex items-center gap-3 rounded-md bg-[rgba(12,30,22,0.78)] px-3.5 py-2.5 shadow-[inset_0_0_0_1px_rgba(63,217,134,0.24)] sm:px-4">

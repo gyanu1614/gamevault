@@ -56,3 +56,17 @@ export const FLAT_BOX_CLASS = 'rounded-lg bg-[#1C1D22] shadow-[inset_0_0_0_1px_r
 
 /** The logo tile at the right of a row: a slim flat chip. */
 export const TILE_CLASS = 'grid h-7 w-[48px] shrink-0 place-items-center rounded-[6px] bg-[#2A2B32]'
+
+/**
+ * The summary column's cards — item card, Order Summary (owner 2026-10-27:
+ * the glow looked "too flashy or too fat"): a flat matte fill like the
+ * payment rows, no sheen, grain or drop shadow. The hairline ring is drawn
+ * ABOVE the content (::after) so a BAND can run edge to edge; sections are
+ * split by bands (block style), not by lines.
+ */
+export const CARD_CLASS =
+  "relative overflow-hidden rounded-lg bg-[#18191D] after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)] after:content-['']"
+
+/** A card's lower block: one step lighter than the card (the seller, the total + Pay). */
+export const BAND_CLASS = 'bg-[#1F2025]'
+

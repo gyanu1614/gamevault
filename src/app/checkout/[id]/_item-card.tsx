@@ -1,9 +1,10 @@
 /**
  * The checkout item card (owner 2026-10-27, Eldorado-style reference): the
- * item — thumbnail, title, game · category, a "|"-separated detail line — then a hairline and
- * the seller: name, verified mark, an Online dot when the heartbeat is fresh,
- * and real-data pills (src/lib/seller/stat-line.ts `sellerPills`). The money
- * lives in the buy box below it, never here.
+ * item — thumbnail, title, game · category, a "|"-separated detail line —
+ * then, in the card's lower block (flat card, no glow), the seller: name,
+ * verified mark, an Online dot when the heartbeat is fresh, and real-data
+ * pills (src/lib/seller/stat-line.ts `sellerPills`). The money lives in the
+ * buy box below it, never here.
  */
 import Image from 'next/image'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
@@ -18,7 +19,7 @@ import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
 import type { SellerPill } from '@/lib/seller/stat-line'
 import { cn } from '@/lib/utils'
-import { PANEL_CLASS, PANEL_STYLE, TRUST_BLUE } from './_surfaces'
+import { BAND_CLASS, CARD_CLASS, TRUST_BLUE } from './_surfaces'
 
 const PILL_ICON: Record<SellerPill['kind'], PhosphorIcon> = {
   positive: ThumbsUp,
@@ -32,8 +33,6 @@ const PILL_ICON: Record<SellerPill['kind'], PhosphorIcon> = {
 /** One item-detail: a hairline divider on its left (clipped at a line start). */
 const DETAIL = 'border-l border-white/20 pl-2.5'
 
-/** The panel fill plus the faint hairline the payment rows carry. */
-const CARD_STYLE = { ...PANEL_STYLE, boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.07), ${PANEL_STYLE.boxShadow}` }
 
 export function ItemCard({
   title,
@@ -53,11 +52,11 @@ export function ItemCard({
   seller: { name: string; verified: boolean; online: boolean; pills: SellerPill[] }
 }) {
   return (
-    <section aria-label="Your Order" className={cn(PANEL_CLASS, 'p-4 sm:p-5')} style={CARD_STYLE}>
+    <section aria-label="Your Order" className={CARD_CLASS}>
       {/* Phones: a 48px thumb beside the title, the detail line full width
           under both (owner 2026-10-27: the stacked phone card "doesn't look
           good"). sm+: the 64px thumb spans the title and the details. */}
-      <div className="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3 sm:grid-cols-[64px_minmax(0,1fr)] sm:gap-x-4">
+      <div className="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3 p-4 sm:grid-cols-[64px_minmax(0,1fr)] sm:gap-x-4">
         <Image
           src={imageSrc}
           alt={title}
@@ -90,7 +89,8 @@ export function ItemCard({
         </div>
       </div>
 
-      <div className="mt-4 border-t border-white/[0.08] pt-3.5">
+      {/* The seller in the card's lower block (block style, no divider). */}
+      <div className={cn(BAND_CLASS, 'px-4 pb-3.5 pt-3')}>
         <p className="text-[12.5px] text-[#9AA6B3]">Seller</p>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
           <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold text-[#E9EDF2]">

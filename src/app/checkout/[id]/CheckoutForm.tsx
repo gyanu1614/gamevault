@@ -50,7 +50,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { clampCheckoutQty } from './qty'
 import { TILE_SLOT, markSize, methodIdForRow, sealMarks, toRow, walletRows, type LocalMethodRow, type MethodIcon } from './_method-ui'
 import { useWalletAvailability } from './_wallets'
-import { PANEL_CLASS, PANEL_STYLE, ROW_CHECKED_CLASS, ROW_CLASS, ROW_IDLE_CLASS, TILE_CLASS, rowStyle } from './_surfaces'
+import { BAND_CLASS, CARD_CLASS, PANEL_CLASS, PANEL_STYLE, ROW_CHECKED_CLASS, ROW_CLASS, ROW_IDLE_CLASS, TILE_CLASS, rowStyle } from './_surfaces'
 import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustSeals } from './_trust'
 import { ItemCard } from './_item-card'
 import { HowItWorks } from './_how-it-works'
@@ -1045,8 +1045,10 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
         </div>
   )
 
-  const moneySummary = (
-      <div className="mt-4 flex flex-col gap-2 border-t pt-3.5 text-[14px]" style={{ borderColor: T.line }}>
+  // The line items, then the total on its own (block style: the total sits
+  // in the card's lower band with Pay, no divider lines).
+  const lineItems = (
+      <div className="mt-4 flex flex-col gap-2 text-[14px]">
         <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
         <Row
           label={SERVICE_FEE_LABEL}
@@ -1077,18 +1079,18 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
             </span>
           </div>
         )}
-        <div
-          className="mt-1 flex items-center justify-between gap-3 border-t pt-3"
-          style={{ borderColor: T.line }}
-        >
-          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
-            Total
-          </span>
-          <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
-            ${total.toFixed(2)}
-          </span>
-        </div>
       </div>
+  )
+
+  const totalRow = (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+        Total
+      </span>
+      <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
+        ${total.toFixed(2)}
+      </span>
+    </div>
   )
 
   const needHelp = (
@@ -1119,12 +1121,15 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
   )
 
   const buyBox = (
-    <div className={cn(PANEL_CLASS, 'p-5 xl:p-6')} style={PANEL_STYLE}>
-      {summaryTitle}
-      {promoSection}
-      {moneySummary}
-      <div className="mt-4">
-        {payButton()}
+    <div className={CARD_CLASS}>
+      <div className="px-5 pb-4 pt-4">
+        {summaryTitle}
+        {promoSection}
+        {lineItems}
+      </div>
+      <div className={cn(BAND_CLASS, 'px-5 pb-4 pt-3.5')}>
+        {totalRow}
+        <div className="mt-3.5">{payButton()}</div>
         {payErrorNote && <div className="mt-2.5">{payErrorNote}</div>}
         <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: T.dis }}>
           By paying you agree to our{' '}
@@ -1189,11 +1194,16 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
             {paymentList}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
-            <div className={cn(PANEL_CLASS, 'mt-5 px-4 pb-4 pt-4 lg:hidden')} style={PANEL_STYLE}>
-              {summaryTitle}
-              {promoSection}
-              {moneySummary}
-              {needHelp}
+            <div className={cn(CARD_CLASS, 'mt-5 lg:hidden')}>
+              <div className="px-4 pb-4 pt-4">
+                {summaryTitle}
+                {promoSection}
+                {lineItems}
+              </div>
+              <div className={cn(BAND_CLASS, 'px-4 pb-4 pt-3.5')}>
+                {totalRow}
+                {needHelp}
+              </div>
             </div>
             {/* Why it's safe, at the moment of commitment, then the steps. */}
             <div className="mt-8">
