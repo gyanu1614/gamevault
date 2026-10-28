@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { isUuid } from '@/lib/ids'
+import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import { CheckoutForm } from './CheckoutForm'
 import { getSiteRating } from '@/lib/reviews/site-rating'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
@@ -12,6 +13,7 @@ import { clampCheckoutQty } from './qty'
 import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
 import { PAID_LIFECYCLE } from '@/lib/payments/return-destination'
 import { loadPaidOrderSummary } from '../_components/paid-order'
+import { isSellerOnline } from '@/lib/presence/online'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -66,8 +68,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       let paid = PAID_LIFECYCLE.has(prior.status)
       if (!paid && prior.status === 'pending') {
         const { openAttemptForOrder } = await import('@/lib/payments/attempts')
-        const { payssionPaidAtProvider } = await import('@/lib/payments/provider-paid-probe')
-        paid = await payssionPaidAtProvider(await openAttemptForOrder(prior.id), prior.id)
+        const { paidAtProvider } = await import('@/lib/payments/provider-paid-probe')
+        paid = await paidAtProvider(await openAttemptForOrder(prior.id), prior.id)
         unfinishedPayment = !paid
       }
       if (paid) redirect(`/checkout/paid/${prior.id}`)
@@ -84,18 +86,12 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // is testable on localhost and debuggable anywhere (UI-only, harmless).
   const buyerCountry = countryOverride ?? (await headers()).get('x-vercel-ip-country')
 
-  // STATE-007 — the buyer profile, the bundle's category_config and the seller's
-  // reviews are mutually independent and each only needs data already loaded, so
-  // the three guarded reads are hoisted into one fan-out rather than three
-  // serial round-trips. A guard that does not apply resolves to { data: null }.
-  const [profileRes, configRes, reviewsRes] = await Promise.all([
-    user
-      ? (supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', user.id)
-          .maybeSingle() as any)
-      : Promise.resolve({ data: null }),
+  // STATE-007 — the bundle's category_config, the seller's reviews and
+  // presence are mutually independent and each only needs data already loaded,
+  // so the guarded reads are hoisted into one fan-out rather than serial
+  // round-trips. A guard that does not apply resolves to { data: null }. (The
+  // buyer's own avatar comes from the site account menu's useAuth.)
+  const [configRes, reviewsRes, presenceRes] = await Promise.all([
     // The currency config also names the listing's delivery method.
     listing.bundle_id || listing.delivery_method_type
       ? (supabase
@@ -113,12 +109,15 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           .order('created_at', { ascending: false })
           .limit(5) as any)
       : Promise.resolve({ data: null }),
+    // The item card's "Online" dot. Its own read, so a miss only hides the dot.
+    listing.seller?.id
+      ? (supabase
+          .from('seller_presence')
+          .select('is_online, last_seen_at')
+          .eq('seller_id', listing.seller.id)
+          .maybeSingle() as any)
+      : Promise.resolve({ data: null }),
   ])
-
-  // V73 — Buyer profile for the checkout identity strip (username +
-  // avatar; the auth user alone has only the email).
-  const buyerProfile: { username: string | null; avatar_url: string | null } | null =
-    (profileRes as any).data ?? null
 
   // V19/P24/P7.l — Bundle currency: pull the matching bundle row out
   // of the game's currency category_config so the checkout summary
@@ -196,22 +195,35 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     getSiteRating(),
   ])
 
+  const form = (
+    <CheckoutForm
+      methods={toClientMethods(eligibility.methods)}
+      listing={listing}
+      user={user}
+      sellerReviews={sellerReviews}
+      initialQty={parsedQty}
+      bundleSummary={bundleSummary}
+      buyerCountry={buyerCountry}
+      deliveryMethod={deliveryMethod}
+      unfinishedPayment={unfinishedPayment}
+      siteRating={siteRating}
+      sellerOnline={isSellerOnline((presenceRes as any).data)}
+    />
+  )
+
+  // The homepage art behind the top, heavily faded (owner 2026-10-27: "a
+  // subtle touch, a minimal bare background") with the deep dim the Order
+  // Paid page uses, so the form stays the loudest thing on the page. The
+  // checkout draws its own navbar, so the art starts at the page top.
   return (
-    // Neutral page (owner 2026-10-21): no hero art behind the checkout.
     <main className="w-full">
-      <CheckoutForm
-        methods={toClientMethods(eligibility.methods)}
-        listing={listing}
-        user={user}
-        buyerProfile={buyerProfile}
-        sellerReviews={sellerReviews}
-        initialQty={parsedQty}
-        bundleSummary={bundleSummary}
-        buyerCountry={buyerCountry}
-        deliveryMethod={deliveryMethod}
-        unfinishedPayment={unfinishedPayment}
-        siteRating={siteRating}
-      />
+      <HeroBackdropPreload name="home" />
+      {/* overflow-clip: the art box is a fixed clamp() height, taller than
+          a short checkout, and would add a scroll of bare art under the
+          footer. clip (not hidden) keeps the summary column sticky. */}
+      <HeroBackdrop name="home" navbarOffset={0} className="hero-dim-deep overflow-clip">
+        {form}
+      </HeroBackdrop>
     </main>
   )
 }

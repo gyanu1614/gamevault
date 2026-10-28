@@ -21,16 +21,11 @@ import { cn } from '@/lib/utils'
 import { safeInternalPath } from '@/lib/utils/safe-link'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
 import { beginLogout } from '@/lib/auth/logout-signal'
-import { getAvatarUrl } from '@/lib/utils/avatar'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { navCategoriesQuery } from '@/lib/nav/nav-categories-query'
 import { useSpotlightGames } from '@/features/home/hooks/useSpotlightGames'
 import { useIsAdmin } from '@/hooks/use-is-admin'
-import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
-import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
-import { safeBackground } from '@/lib/utils/safe-background'
-import { toast } from 'sonner'
 import { RevealGroup, RevealItem } from '@/components/account/Reveal'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import {
@@ -42,8 +37,9 @@ import {
   MagnifyingGlassIcon,
   XIcon,
 } from '@phosphor-icons/react'
-import { NavIconButton, NavPanel, NavPanelHeader } from '@/components/navbar/NavChrome'
+import { NavAccountButton, NavIconButton, NavPanel, NavPanelHeader } from '@/components/navbar/NavChrome'
 import { ProfileMenu } from '@/components/navbar/ProfileMenu'
+import { useNavWalletBalance, useStoreOfflineMode } from '@/components/navbar/use-profile-menu-data'
 import { OrderStatusPill } from '@/components/account/OrderStatusPill'
 
 // 5 fixed nav tabs with their DB type keys
@@ -463,52 +459,9 @@ export function Navbar({
   }, [awaitingHomePaint, pathname])
 
   const isAdmin = useIsAdmin(user?.id)
-  // V21/P7.ae — Offline Mode (store pause). When on, the seller's offers
-  // are taken down for buyers until toggled back. `pendingOffline` blocks
-  // double-clicks while the server action is in flight.
-  const [offlineMode, setOfflineMode] = useState(false)
-  const [pendingOffline, setPendingOffline] = useState(false)
-
   // Admin badge/menu: one cached read per user (useIsAdmin), not one per mount.
-
-  // V21/P7.ae — Hydrate Offline Mode for approved sellers.
-  useEffect(() => {
-    if (!user?.isApprovedSeller) { setOfflineMode(false); return }
-    let active = true
-    // A `.then()` with no `.catch()` here was JAVASCRIPT-NEXTJS-5: on a flaky
-    // mobile connection the server-action POST rejects with WebKit's opaque
-    // "TypeError: Load failed" and, with nothing handling it, reaches Sentry as
-    // an unhandled rejection. Offline Mode is an enrichment — degrade to the
-    // safe default (store online) rather than break the navbar.
-    void safeBackground(() => getMyStorePaused(), false, 'navbar:storePaused').then((v) => {
-      if (active) setOfflineMode(v)
-    })
-    return () => { active = false }
-  }, [user?.id, user?.isApprovedSeller])
-
-  // V21/P7.ae — Toggle store online/offline. Optimistic flip with
-  // rollback on failure.
-  const toggleOfflineMode = useCallback(async () => {
-    if (pendingOffline) return
-    const next = !offlineMode
-    setOfflineMode(next)
-    setPendingOffline(true)
-    // A rejected POST here (same "Load failed" transport failure) would skip
-    // setPendingOffline(false) and leave the toggle permanently stuck, so the
-    // network failure degrades into the existing rollback path.
-    const res = await safeBackground(
-      () => setStorePaused(next),
-      { success: false as const },
-      'navbar:setStorePaused',
-    )
-    setPendingOffline(false)
-    if (!res.success) {
-      setOfflineMode(!next) // rollback
-      toast.error('Could not update store status')
-      return
-    }
-    toast.success(next ? 'Store is now offline — your offers are hidden' : 'Store is back online')
-  }, [offlineMode, pendingOffline])
+  // V21/P7.ae — Offline Mode (store pause), shared with the checkout bar.
+  const { offlineMode, pendingOffline, toggleOfflineMode } = useStoreOfflineMode(user)
 
   // Unread message count — shared with the account sidebar (one query key,
   // one request); chat realtime invalidates it, the poll is a fallback.
@@ -617,19 +570,9 @@ export function Navbar({
     enabled: !!user,
     ...foregroundPoll(POLL_MS.navActiveOrders),
   })
-  // V63 — Wallet balance for the profile-menu Wallet row (sellers).
-  // Ledger-backed store credit (wallet-ledger); the legacy wallet_balances
-  // float table is archived and must not be read.
-  const { data: navWalletBalance } = useQuery({
-    queryKey: ['wallet-balance-navbar', user?.id],
-    queryFn: async () => {
-      const result = await getMyWalletBalance()
-      return result.success ? result.balance : null
-    },
-    enabled: !!user?.isApprovedSeller,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  })
+  // V63 — Wallet balance for the profile-menu Wallet row (sellers), shared
+  // with the checkout bar (one query key, one cache).
+  const navWalletBalance = useNavWalletBalance(user)
 
   const activeOrders = activeOrdersData || { buying: [], selling: [] }
   const totalActiveOrders = activeOrders.buying.length + activeOrders.selling.length
@@ -1372,42 +1315,16 @@ export function Navbar({
                 <div className="h-10 w-10 animate-pulse rounded-full bg-white/10 max-lg:h-9 max-lg:w-9 lg:w-[62px] lg:rounded-[8px]" />
               ) : user ? (
                 <div className="relative" data-dropdown>
-                  {/* Avatar + caret on desktop, avatar alone on phones. */}
-                  <button
-                    type="button"
-                    aria-label="Account menu"
-                    aria-expanded={userMenuOpen}
+                  <NavAccountButton
+                    user={user}
+                    open={userMenuOpen}
                     onClick={() => {
                       setUserMenuOpen(!userMenuOpen)
                       setNotificationsOpen(false)
                       setActivityOpen(false)
                       setMobileMenuOpen(false)
                     }}
-                    className={cn(
-                      'group flex h-10 items-center gap-1.5 rounded-[8px] p-1 transition-[background-color,transform] duration-150 hover:bg-white/[0.07] active:scale-[0.96] lg:pr-2',
-                      'max-lg:h-9 max-lg:w-9 max-lg:justify-center max-lg:rounded-full max-lg:p-0',
-                      userMenuOpen && 'bg-white/[0.09]',
-                    )}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
-                      alt={`${user.profile?.username || 'User'} avatar`}
-                      aria-hidden
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 rounded-full object-cover ring-1 ring-white/15"
-                    />
-                    <CaretDownIcon
-                      size={12}
-                      weight="bold"
-                      aria-hidden
-                      className={cn(
-                        'hidden text-white/55 transition-[transform,color] duration-200 group-hover:text-white/85 lg:block',
-                        userMenuOpen && 'rotate-180 text-white/85',
-                      )}
-                    />
-                  </button>
+                  />
 
                   {userMenuOpen && (
                     <NavPanel
@@ -1418,7 +1335,7 @@ export function Navbar({
                       <ProfileMenu
                         user={user}
                         isAdmin={isAdmin}
-                        walletBalance={navWalletBalance != null ? Number(navWalletBalance.available_balance ?? 0) : null}
+                        walletBalance={navWalletBalance}
                         unreadMessages={unreadCount}
                         offlineMode={offlineMode}
                         pendingOffline={pendingOffline}

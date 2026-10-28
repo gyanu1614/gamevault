@@ -16,6 +16,7 @@ Brand marks belong to their owners and are shown only to identify the payment me
 | touchngo_my.svg, mada_sa.svg, bcp_pe.svg | Wikimedia Commons "Touch 'n Go eWallet logo.svg", "Mada Logo.svg", "Logo-bcp-vector.svg" | public domain (text/simple-geometry logos); marks © their owners |
 | vietqr_vn.svg | Wikimedia Commons "VietQR Logo.svg" | CC0; mark © NAPAS |
 | ondark/visa.svg, ondark/mastercard.svg | Shopify payment_icons (github.com/activemerchant/payment_icons, visa.svg and master.svg), card background removed, trimmed to the mark | MIT (icon files); marks © Visa Inc. and Mastercard |
+| ondark/googlepay.svg | Shopify payment_icons (github.com/activemerchant/payment_icons, google_pay.svg), card background removed, grey "Pay" set white, trimmed to the mark (2026-10-27) | MIT (icon files); mark © Google LLC |
 
 Added 2026-10-15; each file was rendered and checked by eye before use (no scripts, no embedded rasters). PayNow has no clean vector (the published "SVG" wraps a PNG), so its row keeps an icon.
 
