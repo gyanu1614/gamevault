@@ -52,6 +52,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { clampCheckoutQty } from './qty'
 import { TILE_SLOT, markSize, methodIdForRow, toRow, walletRows, type LocalMethodRow, type MethodIcon } from './_method-ui'
 import { useWalletAvailability } from './_wallets'
+import { PANEL_CLASS, PANEL_STYLE, ROW_CHECKED_CLASS, ROW_CLASS, ROW_IDLE_CLASS, TILE_CLASS, rowStyle } from './_surfaces'
 import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustList, TrustSeals } from './_trust'
 import type { SiteRating } from '@/lib/reviews/site-rating'
 import { lowestFeeMethodId } from '@/lib/payments/lowest-fee'
@@ -771,20 +772,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   /** Row (owner 2026-10-21, Eldorado shape): radio, name and one line, the
-   *  brand logo in a tile at the right. Flat on the neutral page; the pick
-   *  takes the green ring. */
-  const rowClass = (checked: boolean) =>
-    cn(
-      'rounded-md transition-[background-color,box-shadow] duration-150',
-      checked ? 'bg-[rgba(86,184,127,0.06)]' : 'bg-white/[0.03] hover:bg-white/[0.05]'
-    )
-  const rowSurface = (checked: boolean) =>
-    checked ? `inset 0 0 0 1.5px ${T.accentText}` : 'inset 0 0 0 1px rgba(255,255,255,0.09)'
+   *  brand logo in a tile at the right. A filled glossy box with no outline
+   *  (owner 2026-10-27); the pick takes a green-tinted fill. */
+  const rowClass = (checked: boolean) => cn(ROW_CLASS, checked ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS)
 
   /** The brand mark in a tile at the right of the row (the row's icon when a
    *  method has no mark); every mark at one optical size inside the tile. */
   const logoTile = (children: React.ReactNode, key?: string) => (
-    <span key={key} className="grid h-9 w-[60px] shrink-0 place-items-center rounded-md bg-white/[0.07] ring-1 ring-inset ring-white/[0.06]">
+    <span key={key} className={TILE_CLASS}>
       {children}
     </span>
   )
@@ -821,7 +816,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
     return (
-      <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
+      <div className={rowClass(checked)} style={rowStyle(checked)}>
         <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
           {radio(checked)}
           {rowText(m.label)}
@@ -839,7 +834,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // Crypto: always the last row; opens the coin picker when picked.
   const cryptoChecked = payMethod === 'crypto'
   const cryptoRow = cryptoMethod && (
-    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
+    <div className={rowClass(cryptoChecked)} style={rowStyle(cryptoChecked)}>
       <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
         {radio(cryptoChecked)}
         {rowText('Crypto')}
@@ -850,7 +845,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         </span>
       </button>
       {cryptoChecked && (
-        <div className="border-t px-4 pb-4 pt-3.5" style={{ borderColor: T.line }}>
+        <div className="border-t border-white/[0.08] px-4 pb-4 pt-3.5">
           {cryptoPicker}
         </div>
       )}
@@ -903,7 +898,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         <Callout variant="warning">Your last payment wasn’t finished. Pick a method to try again.</Callout>
       )}
       {orderedRows.length === 0 && !cryptoMethod ? (
-        <div className="rounded-lg px-5 py-6 text-center" style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}>
+        <div className={cn(PANEL_CLASS, 'px-5 py-6 text-center')} style={PANEL_STYLE}>
           <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
             No Payment Methods Available
           </p>
@@ -951,7 +946,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // ── Phones: one compact strip — thumbnail, title, game · category · qty,
   //    the seller's name, the price. Everything else lives under the list.
   const orderStrip = (
-    <div className="rounded-lg border p-3.5 backdrop-blur-md" style={{ borderColor: T.lineSubtle, background: T.glass }}>
+    <div className={cn(PANEL_CLASS, 'p-3.5')} style={PANEL_STYLE}>
       <p className="mb-2.5 text-[15px] font-semibold" style={{ color: T.ink }}>
         Your Order
       </p>
@@ -1100,7 +1095,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   const summaryCard = (compact = false) => (
-    <div className="rounded-lg border border-white/[0.08] bg-white/[0.035] p-5">
+    <div className={cn(PANEL_CLASS, 'p-5 xl:p-6')} style={PANEL_STYLE}>
       {/* Item */}
       <div className="flex items-center gap-3.5">
         <Image
@@ -1211,12 +1206,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   return (
-    // Neutral ground (owner 2026-10-21): no hero art, no game art behind the
-    // form; a flat grey page so the payment is the only thing on it.
-    <div className="relative min-h-screen bg-[#16171B]">
+    // The game's hero art sits behind the top (page.tsx wraps this in
+    // GameHeroBackdrop, owner 2026-10-27), so the page itself paints nothing.
+    <div className="relative min-h-screen">
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
-      <div className="relative mx-auto w-full max-w-[1040px] px-4 pb-10 pt-7 sm:px-6 lg:pb-14">
+      {/* Same width and gutters as the item page (max-w-7xl), so the two
+          pages line up; the order panel is wider than the item page's rail. */}
+      <div className="relative mx-auto w-full max-w-7xl px-3 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pb-14">
         {/* Header row */}
         <div className="flex items-center gap-3">
           <button
@@ -1235,7 +1232,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         </div>
 
         {/* Two columns (desktop) / stacked with the order first (mobile) */}
-        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_392px] lg:gap-8">
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_460px] xl:gap-10">
           {/* Phones: the compact order strip first */}
           <div className="lg:hidden">{orderStrip}</div>
 
@@ -1249,7 +1246,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             {paymentList}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
-            <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.035] px-4 pb-4 pt-1 lg:hidden">
+            <div className={cn(PANEL_CLASS, 'mt-4 px-4 pb-4 pt-1 lg:hidden')} style={PANEL_STYLE}>
               {promoSection}
               {moneySummary}
             </div>
@@ -1271,7 +1268,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         <h2 className="mb-5 mt-16 text-center text-heading" style={{ color: T.ink }}>
           How Your Order Works
         </h2>
-        <div className="rounded-lg border border-white/[0.08] bg-white/[0.035] px-5 py-5 sm:px-8 sm:py-6">
+        <div className={cn(PANEL_CLASS, 'px-5 py-5 sm:px-8 sm:py-6')} style={PANEL_STYLE}>
           <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
             {[
               {

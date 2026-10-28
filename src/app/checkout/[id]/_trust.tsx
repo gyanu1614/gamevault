@@ -24,6 +24,8 @@ import { Star } from '@phosphor-icons/react/dist/ssr/Star'
 import { StarHalf } from '@phosphor-icons/react/dist/ssr/StarHalf'
 
 import type { SiteRating } from '@/lib/reviews/site-rating'
+import { cn } from '@/lib/utils'
+import { PANEL_CLASS, PANEL_STYLE } from './_surfaces'
 
 /** Trust blue: the security signals only; brand green stays on Pay. */
 export const TRUST_BLUE = '#6AA8FF'
@@ -74,7 +76,8 @@ export function BuyerRating({ rating }: { rating: SiteRating | null }) {
   if (!rating) return null
   return (
     <div
-      className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.035] px-5 py-3.5"
+      className={cn(PANEL_CLASS, 'flex items-center gap-3 px-5 py-3.5')}
+      style={PANEL_STYLE}
       aria-label={`Buyer rating ${rating.average} out of 5 from ${rating.count} reviews`}
     >
       <span className="min-w-0">
@@ -100,7 +103,7 @@ const LIST: Array<{ Icon: PhosphorIcon; title: string; sub: string }> = [
 
 export function TrustList() {
   return (
-    <ul className="flex flex-col gap-3.5 rounded-lg border border-white/[0.08] bg-white/[0.035] px-5 py-4">
+    <ul className={cn(PANEL_CLASS, 'flex flex-col gap-3.5 px-5 py-4')} style={PANEL_STYLE}>
       {LIST.map(({ Icon, title, sub }) => (
         <li key={title} className="flex items-start gap-3">
           <Icon aria-hidden size={20} weight="duotone" color={TRUST_BLUE} className="mt-[1px] shrink-0" />
@@ -125,7 +128,7 @@ const LEGAL = [
 export function CheckoutFooter() {
   return (
     <footer className="border-t border-white/[0.06] bg-[#131417]">
-      <div className="mx-auto flex w-full max-w-[1040px] flex-col items-center gap-3 px-4 py-6 text-center sm:px-6 lg:flex-row lg:justify-between lg:text-left">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-3 px-3 py-6 text-center sm:px-6 lg:flex-row lg:justify-between lg:px-8 lg:text-left">
         <div>
           <p className="text-body-sm text-[#9AA6B3]">© {new Date().getFullYear()} DropMarket Ltd. All rights reserved.</p>
           <p className="mt-0.5 text-[12.5px] text-[#6C7684]">Registered in the United Kingdom · Company No. 17309867</p>

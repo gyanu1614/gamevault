@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { isUuid } from '@/lib/ids'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { CheckoutForm } from './CheckoutForm'
 import { getSiteRating } from '@/lib/reviews/site-rating'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
@@ -196,22 +197,34 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     getSiteRating(),
   ])
 
+  const form = (
+    <CheckoutForm
+      methods={toClientMethods(eligibility.methods)}
+      listing={listing}
+      user={user}
+      buyerProfile={buyerProfile}
+      sellerReviews={sellerReviews}
+      initialQty={parsedQty}
+      bundleSummary={bundleSummary}
+      buyerCountry={buyerCountry}
+      deliveryMethod={deliveryMethod}
+      unfinishedPayment={unfinishedPayment}
+      siteRating={siteRating}
+    />
+  )
+
+  // The game's hero art behind the top, like the item page (owner
+  // 2026-10-27; replaces the plain page of 2026-10-21).
+  const gameSlug = listing.game?.slug as string | undefined
   return (
-    // Neutral page (owner 2026-10-21): no hero art behind the checkout.
     <main className="w-full">
-      <CheckoutForm
-        methods={toClientMethods(eligibility.methods)}
-        listing={listing}
-        user={user}
-        buyerProfile={buyerProfile}
-        sellerReviews={sellerReviews}
-        initialQty={parsedQty}
-        bundleSummary={bundleSummary}
-        buyerCountry={buyerCountry}
-        deliveryMethod={deliveryMethod}
-        unfinishedPayment={unfinishedPayment}
-        siteRating={siteRating}
-      />
+      {gameSlug ? (
+        <GameHeroBackdrop gameSlug={gameSlug} size="market">
+          {form}
+        </GameHeroBackdrop>
+      ) : (
+        form
+      )}
     </main>
   )
 }

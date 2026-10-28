@@ -1,9 +1,12 @@
 /**
- * Checkout skeleton — the same frame as the live page (owner 2026-10-21):
- * neutral grey ground, the Secure Checkout header, then the 1fr / 392px grid —
+ * Checkout skeleton — the same frame as the live page (owner 2026-10-27):
+ * the item page's max-w-7xl width, the Secure Checkout header, then the
+ * 1fr / 420px (xl 460px) grid —
  * payment rows (radio, name + line, logo tile) and the seal strip on the
  * left; the order card, the rating card and the trust list on the right.
  */
+
+import { PANEL_CLASS, PANEL_STYLE, rowStyle } from './_surfaces'
 
 const GROUND = '#16171B'
 
@@ -12,7 +15,11 @@ function Block({ className = '' }: { className?: string }) {
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-lg border border-white/[0.08] bg-white/[0.035] ${className}`}>{children}</div>
+  return (
+    <div className={`${PANEL_CLASS} ${className}`} style={PANEL_STYLE}>
+      {children}
+    </div>
+  )
 }
 
 export default function CheckoutLoading() {
@@ -27,7 +34,7 @@ export default function CheckoutLoading() {
         <div className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1040px] px-4 pb-24 pt-7 sm:px-6">
+      <div className="mx-auto w-full max-w-7xl px-3 pb-24 pt-8 sm:px-6 sm:pt-10 lg:px-8">
         {/* Header row */}
         <div className="flex items-center gap-3">
           <Block className="h-9 w-9" />
@@ -35,7 +42,7 @@ export default function CheckoutLoading() {
           <Block className="h-7 w-48" />
         </div>
 
-        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_392px] lg:gap-8">
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_460px] xl:gap-10">
           {/* Phones: compact order strip */}
           <Card className="p-3.5 lg:hidden">
             <Block className="h-4 w-20" />
@@ -61,8 +68,8 @@ export default function CheckoutLoading() {
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="flex min-h-[56px] items-center gap-3.5 rounded-md bg-white/[0.03] px-4 py-2"
-                  style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.09)' }}
+                  className="flex min-h-[56px] items-center gap-3.5 rounded-md bg-[#1D1E23]/55 px-4 py-2"
+                  style={rowStyle(false)}
                 >
                   <Block className="h-5 w-5 rounded-full" />
                   <Block className="h-4 w-28 flex-1" />
