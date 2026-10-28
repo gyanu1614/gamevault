@@ -10,6 +10,8 @@
 export interface RecordedQuery {
   table: string
   calls: string[]
+  /** Arguments of each call, index-aligned with `calls`. */
+  args: unknown[][]
 }
 
 export interface SupabaseRecorder {
@@ -22,12 +24,13 @@ export function createSupabaseRecorder(seed: Record<string, any[]> = {}): Supaba
   const queries: RecordedQuery[] = []
 
   const from = (table: string) => {
-    const rec: RecordedQuery = { table, calls: [] }
+    const rec: RecordedQuery = { table, calls: [], args: [] }
     queries.push(rec)
     const rows = seed[table] ?? []
     const builder: any = {}
-    const chain = (name: string) => (..._args: unknown[]) => {
+    const chain = (name: string) => (...args: unknown[]) => {
       rec.calls.push(name)
+      rec.args.push(args)
       return builder
     }
     for (const name of [
@@ -36,12 +39,14 @@ export function createSupabaseRecorder(seed: Record<string, any[]> = {}): Supaba
     ]) builder[name] = chain(name)
     builder.single = async () => {
       rec.calls.push('single')
+      rec.args.push([])
       return rows[0]
         ? { data: rows[0], error: null }
         : { data: null, error: { code: 'PGRST116', message: 'no rows' } }
     }
     builder.maybeSingle = async () => {
       rec.calls.push('maybeSingle')
+      rec.args.push([])
       return { data: rows[0] ?? null, error: null }
     }
     builder.then = (resolve: (v: any) => unknown, reject?: (e: any) => unknown) =>
@@ -53,7 +58,7 @@ export function createSupabaseRecorder(seed: Record<string, any[]> = {}): Supaba
     from,
     auth: {
       getUser: async () => {
-        queries.push({ table: '<auth.getUser>', calls: [] })
+        queries.push({ table: '<auth.getUser>', calls: [], args: [] })
         return { data: { user: null }, error: null }
       },
     },

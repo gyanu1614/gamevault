@@ -45,7 +45,7 @@ vi.mock('@/lib/payments/registry', async (importOriginal) => {
 })
 // The provider-state probe is the seam under test; Payssion itself is not called.
 vi.mock('@/lib/payments/provider-paid-probe', () => ({
-  payssionPaidAtProvider: async () => providerPaid,
+  paidAtProvider: async () => providerPaid,
 }))
 
 let fx: Fixture | null = null

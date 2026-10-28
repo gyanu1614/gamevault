@@ -210,9 +210,19 @@ export default function RouteProgress() {
     lastPathRef.current = pathname
     if (pathChanged) {
       try {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
-        document.documentElement.scrollTop = 0
-        document.body.scrollTop = 0
+        // 2026-10-23: a URL with a #fragment that names an element on the new
+        // page (a legal section, a merged policy's part, a help-centre deep
+        // link) lands on that element, not the top. The top-reset used to win
+        // on every first load, so no deep link ever arrived.
+        const id = window.location.hash ? decodeURIComponent(window.location.hash.slice(1)) : ''
+        const target = id ? document.getElementById(id) : null
+        if (target) {
+          target.scrollIntoView({ block: 'start', behavior: 'instant' as ScrollBehavior })
+        } else {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+          document.documentElement.scrollTop = 0
+          document.body.scrollTop = 0
+        }
       } catch {
         /* noop */
       }

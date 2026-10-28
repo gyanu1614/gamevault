@@ -10,6 +10,7 @@ import 'server-only'
  * the two can never disagree:
  *
  *   candidates  = the crypto row for the env-active provider
+ *               + the Stripe card row, only while both STRIPE_* keys are set
  *               + every Payssion selector method in the registry (methods.ts)
  *               + 'wallet' when a buyer is signed in (store credit covers all)
  *   eligible    = candidates whose payment_method_fees row is selectable,
@@ -25,10 +26,12 @@ import 'server-only'
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { activePaymentProviderName } from '@/lib/payments/registry'
+import { activePaymentProviderName, STRIPE_CARD_METHOD } from '@/lib/payments/registry'
 import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
+import { stripeConfigured } from '@/lib/payments/providers/stripe/env'
 
-export type MethodKind = 'crypto' | 'local' | 'wallet'
+/** card = the Stripe card rail (Visa / Mastercard, Apple Pay, Google Pay). */
+export type MethodKind = 'crypto' | 'local' | 'wallet' | 'card'
 
 export interface MethodQuote {
   /** Marketplace fee (max($0.30, 2%), raised for the $1 minimum order; 0 for store credit). */
@@ -135,6 +138,9 @@ function candidates(buyerId: string | null): Candidate[] {
   const crypto = activePaymentProviderName()
   const out: Candidate[] = [
     { method: crypto, provider: crypto, pmId: null, kind: 'crypto', label: 'Crypto', countries: [], coverage: 'Worldwide' },
+    ...(stripeConfigured()
+      ? [{ method: STRIPE_CARD_METHOD, provider: 'stripe', pmId: null, kind: 'card' as const, label: 'Credit / Debit Card', countries: [], coverage: 'Worldwide' }]
+      : []),
     ...payssionSelectorMethods().map((m) => ({
       method: m.pmId, provider: 'payssion', pmId: m.pmId, kind: 'local' as const, label: m.label, countries: m.countries, coverage: m.coverage,
     })),

@@ -200,3 +200,24 @@ describe('a game with no variant axis', () => {
     expect(r.rows[0].title).toBe('Jungle Egg | Steal An Egg')
   })
 })
+
+// A sheet with the variant written into the item cell and no variant column.
+describe('Adopt Me: variant read from the item cell', () => {
+  it('"FR Frost Dragon" with no variant → Frost Dragon, FR', () => {
+    const r = run('item,quantity\nFR Frost Dragon,1\nFrost Dragon NFR,2')
+    expect(r.rows[0]).toMatchObject({ status: 'matched', itemRef: 'frost-dragon', variantRef: 'FR' })
+    expect(r.rows[1]).toMatchObject({ status: 'matched', itemRef: 'frost-dragon', variantRef: 'NFR' })
+  })
+
+  it('no variant in the text → no variant (as before)', () => {
+    expect(run('item\nFrost Dragon').rows[0]).toMatchObject({ itemRef: 'frost-dragon', variantRef: null })
+  })
+
+  it('unclear text → no variant guessed', () => {
+    expect(run('item\nFrost Dragon not FR').rows[0].variantRef).toBeNull()
+  })
+
+  it('a filled variant cell always wins', () => {
+    expect(run('item,variant\nFrost Dragon,NFR').rows[0]).toMatchObject({ itemRef: 'frost-dragon', variantRef: 'NFR' })
+  })
+})

@@ -6,6 +6,8 @@ import { type Attribute, type AttributeTemplateFull } from '@/lib/actions/new-sc
 import { isVisible } from '@/app/(sell)/_components/sell-wizard/attribute-tree'
 import { FieldInput } from '@/app/(sell)/_components/sell-wizard/steps/FieldInput'
 import { SubCard } from '@/app/(sell)/_components/sell-wizard/ui/SubCard'
+import { FieldHintLine } from '@/app/(sell)/_components/sell-wizard/ui/form-fields'
+import type { FieldHint } from '@/app/(sell)/_components/sell-wizard/hooks/use-trait-hint'
 
 // ─── Step 3: dynamic details (with nested sub-fields) ────────────────────────
 
@@ -15,7 +17,7 @@ import { SubCard } from '@/app/(sell)/_components/sell-wizard/ui/SubCard'
  * fieldValues object, which only changes when an item field does.
  */
 export const Step3Details = memo(function Step3Details({
-  templateLoading, template, topLevel, childrenOf, values, onChange,
+  templateLoading, template, topLevel, childrenOf, values, onChange, hint = null,
 }: {
   templateLoading: boolean
   template: AttributeTemplateFull | null
@@ -23,6 +25,8 @@ export const Step3Details = memo(function Step3Details({
   childrenOf: Map<string, Map<string, Attribute[]>>
   values: Record<string, unknown>
   onChange: (id: string, value: unknown) => void
+  /** A one-line note under one field (Adopt Me: the title names another trait). */
+  hint?: FieldHint | null
 }) {
   // R8 — when there are no admin-defined extra fields for this (game, category),
   // skip the Offer Details sub-card entirely. The seller starts straight at the
@@ -55,6 +59,7 @@ export const Step3Details = memo(function Step3Details({
             values={values}
             onChange={onChange}
             childrenOf={childrenOf}
+            hint={hint}
           />
         ))}
       </div>
@@ -68,12 +73,13 @@ export const Step3Details = memo(function Step3Details({
  * indented INSIDE this card.
  */
 export function FieldCard({
-  attribute, values, onChange, childrenOf,
+  attribute, values, onChange, childrenOf, hint = null,
 }: {
   attribute: Attribute
   values: Record<string, unknown>
   onChange: (id: string, value: unknown) => void
   childrenOf: Map<string, Map<string, Attribute[]>>
+  hint?: FieldHint | null
 }) {
   if (!isVisible(attribute, values)) return null
 
@@ -98,6 +104,9 @@ export function FieldCard({
         // and applies option sets, in one update.
         onChange={(v) => onChange(attribute.id, v)}
       />
+      {hint?.attributeId === attribute.id && (
+        <FieldHintLine text={hint.text} actionLabel={hint.actionLabel} onAction={hint.onAction} />
+      )}
 
       {/* Nested sub-fields (animated) */}
       <AnimatePresence initial={false}>
@@ -122,6 +131,7 @@ export function FieldCard({
                     values={values}
                     onChange={onChange}
                     childrenOf={childrenOf}
+                    hint={hint}
                   />
                 ))}
               </div>

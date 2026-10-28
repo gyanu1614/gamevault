@@ -42,7 +42,7 @@ export async function WhyBuyCard({
   const why: Array<{ icon: string; title: string }> = [
     { icon: '/icons/set/shield-check.svg', title: 'Full Refund If It Never Arrives' },
     { icon: '/icons/set/clock.svg', title: 'Delivery Time Shown Before You Pay' },
-    { icon: '/icons/set/verified.svg', title: 'Every Seller Is ID-Verified' },
+    { icon: '/icons/set/verified.svg', title: 'Seller Ratings on Every Listing' },
     {
       icon: '/icons/set/tag.svg',
       title: hasOffers

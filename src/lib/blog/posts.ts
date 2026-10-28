@@ -98,7 +98,7 @@ export const BLOG_POSTS: BlogPost[] = [
       'Every order on DropMarket is covered by SafeDrop Protection. The promise is simple: get what you ordered, or your money back, whichever seller you buy from.',
       'The seller delivers in-game within their stated window. You confirm receipt from your order page and the order is complete — or it completes on its own once your protection window closes without an issue.',
       'If something goes wrong — no delivery, wrong item, mis-described listing — you open a dispute and get a full refund. The order stays open while the dispute is reviewed, and an order that wasn’t delivered as described is always refunded.',
-      'This is why the same item often costs less on DropMarket than in official stores while being just as safe: sellers compete on price, and SafeDrop removes the trust problem that usually comes with player-to-player trading.',
+      'This is how DropMarket keeps prices competitive and trading safe: sellers compete on price, and SafeDrop removes the trust problem that usually comes with player-to-player trading.',
     ],
   },
   {

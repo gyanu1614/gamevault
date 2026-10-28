@@ -1,6 +1,8 @@
+import type { AttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { DuplicatePrefill } from '@/lib/actions/sell-wizard'
 
 import type { WizardSnapshot } from './constants'
+import { fieldValuesFromTemplateData } from './offer-rules'
 
 /**
  * The seller's answers on the Details step, as ONE value. The wizard keeps it
@@ -52,8 +54,12 @@ export const EMPTY_OFFER_FORM: OfferForm = {
   agreeTos: false,
 }
 
-/** An existing listing's answers (edit / duplicate). The terms boxes start unticked. */
-export function offerFormFromListing(d: DuplicatePrefill): OfferForm {
+/**
+ * An existing listing's answers (edit / duplicate). The terms boxes start
+ * unticked. Item fields need the template: the listing stores them by slug,
+ * the form by id. Without one (it failed to load) they pass through as saved.
+ */
+export function offerFormFromListing(d: DuplicatePrefill, template?: AttributeTemplateFull | null): OfferForm {
   return {
     ...EMPTY_OFFER_FORM,
     region: d.region ?? '',
@@ -69,7 +75,7 @@ export function offerFormFromListing(d: DuplicatePrefill): OfferForm {
     deliveryMethod: d.delivery_method,
     deliveryTime: d.delivery_time ?? '1hr',
     images: d.images,
-    fieldValues: d.template_data ?? {},
+    fieldValues: template ? fieldValuesFromTemplateData(template, d.template_data ?? {}) : (d.template_data ?? {}),
   }
 }
 

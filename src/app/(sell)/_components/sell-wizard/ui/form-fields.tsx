@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded'
 import { inputCls } from '@/app/(sell)/_components/sell-wizard/styles'
 
 // ─── FieldRow — input + caption + hint vertical stack ───────────────────────
@@ -110,6 +111,27 @@ export function FieldHint({ children, className }: { children: React.ReactNode; 
  * FieldError — red message shown beneath a touched-but-empty required field.
  * Mirrors FieldHint's shape so the layout doesn't jump when error replaces hint.
  */
+/**
+ * One line under a field that suggests a change, with one button
+ * ("Your title says FR. Switch to Fly Ride?" [Switch]). Never blocks, never
+ * changes the field by itself.
+ */
+export function FieldHintLine({ text, actionLabel, onAction }: { text: string; actionLabel: string; onAction: () => void }) {
+  return (
+    <div role="status" className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-left">
+      <SwapHorizRoundedIcon aria-hidden sx={{ width: 14, height: 14, color: 'var(--color-warning)', flexShrink: 0 }} />
+      <p className="text-[12px] leading-[17px] text-text-secondary">{text}</p>
+      <button
+        type="button"
+        onClick={onAction}
+        className="min-h-[26px] rounded-[5px] border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-warning-bg px-2.5 text-[12px] font-semibold text-warning hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      >
+        {actionLabel}
+      </button>
+    </div>
+  )
+}
+
 export function FieldError({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <p

@@ -147,7 +147,7 @@ export function buyWay(c: CopyCtx, u: UnboxMaths, b: BoxBuy) {
   if (b.pet && u.eggPetHatches != null) {
     steps.push({ icon: 'pet', title: `Pet Chromas From ${usd(b.pet.usd)}`, value: `${b.pet.name}, skip ~${fmtCount(u.eggPetHatches)} hatches` })
   }
-  steps.push({ icon: 'delivery', title: 'Delivered in Minutes', value: 'From ID-verified sellers, in a trade' })
+  steps.push({ icon: 'delivery', title: 'Delivered in Minutes', value: 'From rated sellers, in a trade' })
   const from = b.range ? usd(b.range.min) : null
   return {
     heading: from ? `Or Buy One: Box Chromas From ${from}` : `Or Buy a ${c.shortName} Chroma`,
@@ -156,7 +156,7 @@ export function buyWay(c: CopyCtx, u: UnboxMaths, b: BoxBuy) {
     callout: b.weapon
       ? {
           title: `~${fmtCount(u.rounds)} Rounds or ${usd(b.weapon.usd)}`,
-          body: `a box Chroma on average, or ${b.weapon.name} bought from ID-verified sellers and delivered in minutes`,
+          body: `a box Chroma on average, or ${b.weapon.name} bought from rated sellers and delivered in minutes`,
         }
       : null,
   }

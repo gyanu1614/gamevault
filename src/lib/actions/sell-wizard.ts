@@ -593,7 +593,10 @@ export interface PublishListingInput {
  * rows. We resolve the old game-scoped category_id from (game_id, type)
  * so marketplace filters like `category_id = X` keep matching.
  */
-export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string }>> {
+/** Adopt Me: the title names another variant than the Trait pick. A warning only; the pick is saved. */
+type VariantWarning = { variantWarning?: string }
+
+export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string } & VariantWarning>> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -752,7 +755,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       await notifyModeratorsListingInReview(resolvedTitle || input.title || 'Untitled', 'new')
     }
     // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
-    await linkListingsToValueItems(getAdminSupabase(), [createdId])
+    const link = await linkListingsToValueItems(getAdminSupabase(), [createdId])
 
     revalidatePath('/account/listings')
     // Step 7b — the category page is prerendered (24 h TTL); tell it.
@@ -797,7 +800,10 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       /* analytics only */
     }
 
-    return { success: true, data: { id: createdId, status: finalStatus, path: categoryPath } }
+    return {
+      success: true,
+      data: { id: createdId, status: finalStatus, path: categoryPath, variantWarning: link.variantMismatches[0]?.text },
+    }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }
@@ -821,7 +827,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
 export async function updateListingFromWizard(
   listingId: string,
   input: PublishListingInput,
-): Promise<Result<{ id: string; status: string }>> {
+): Promise<Result<{ id: string; status: string } & VariantWarning>> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -933,7 +939,7 @@ export async function updateListingFromWizard(
       .single()
     if (error) return { success: false, error: error.message }
     // Bundle 2 — re-link after an edit (never blocks; see value-listings/link).
-    await linkListingsToValueItems(getAdminSupabase(), [listingId])
+    const link = await linkListingsToValueItems(getAdminSupabase(), [listingId])
     const finalStatus: string = (written as { status?: string } | null)?.status
       ?? (requestedStatus === 'draft' ? 'draft' : isResubmit || priceReview ? 'pending_approval' : existingStatus)
 
@@ -953,7 +959,7 @@ export async function updateListingFromWizard(
     revalidatePath(`/sell/edit/${listingId}`)
     revalidatePath(`/account/listings/${listingId}/edit`)
     await submitListingChanges(indexNowBefore, await snapshotListings(getAdminSupabase(), [listingId]))
-    return { success: true, data: { id: listingId, status: finalStatus } }
+    return { success: true, data: { id: listingId, status: finalStatus, variantWarning: link.variantMismatches[0]?.text } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }

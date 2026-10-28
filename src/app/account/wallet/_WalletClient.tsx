@@ -8,8 +8,6 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchAllRows, chunk } from '@/lib/db/fetch-all'
 import { orderItemImage, orderItemTitle, type CurrencyTitleConfig } from '@/lib/orders/display-title'
 import { withOwnOrderFields } from '@/lib/orders/own-fields'
-import { createTopUpCheckout } from '@/lib/actions/wallet'
-import { WALLET_TOPUP_ENABLED } from '@/lib/config/purchases'
 // Ledger-backed balance (funds-flow cutover): refund credits post to the
 // ledger wallet, which the legacy wallet_balances float table never sees.
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
@@ -22,7 +20,6 @@ import {
   TrendingUp,
   Search,
   X,
-  Loader2,
   CreditCard,
   Package,
   ExternalLink,
@@ -35,7 +32,6 @@ import {
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 import WithdrawalRequestCard from '@/components/wallet/WithdrawalRequestCard'
 import { lifetimeSpentOf, matchesPurchaseFilter, saleRowAmounts } from '@/lib/wallet/wallet-rows'
 import { WalletSkeleton } from './_WalletSkeleton'
@@ -376,7 +372,6 @@ export default function WalletClient({ userId, isSeller }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>(isSeller ? 'earnings' : 'purchases')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
-  const [isTopUpLoading, setIsTopUpLoading] = useState(false)
 
   const { data: purchaseData, isLoading: purchasesLoading, error: purchasesError, refetch: refetchPurchases } = useQuery({
     queryKey: ['wallet-purchases', userId],
@@ -441,19 +436,6 @@ export default function WalletClient({ userId, isSeller }: Props) {
   })
 
   const { stats: earningsStats, payouts, isLoading: earningsLoading } = useSellerEarnings()
-
-  // Handle top-up
-  const handleTopUp = async (amount: number) => {
-    setIsTopUpLoading(true)
-    const result = await createTopUpCheckout(amount)
-    setIsTopUpLoading(false)
-
-    if (result.success && result.url) {
-      window.location.href = result.url
-    } else {
-      toast.error(result.error || 'Failed to create top-up')
-    }
-  }
 
   const isLoading = purchasesLoading || walletLoading || (isSeller && (salesLoading || earningsLoading))
 
@@ -580,27 +562,6 @@ export default function WalletClient({ userId, isSeller }: Props) {
                   value={walletBalance.available_balance}
                   caption="Refunds and credit. Spend it at checkout with no service fee. To withdraw it, contact support."
                 />
-                {/* Top-up stays gated behind its own flag even after
-                    purchases open (compliance — lib/config/purchases). */}
-                {WALLET_TOPUP_ENABLED && (
-                  <div className="flex w-full gap-2 sm:w-auto">
-                    {[25, 50].map((amt) => (
-                      <button
-                        key={amt}
-                        onClick={() => handleTopUp(amt)}
-                        disabled={isTopUpLoading}
-                        className={cn(
-                          'flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-md px-4 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed sm:flex-none',
-                          amt === 25
-                            ? 'bg-lime text-text-inverse hover:bg-lime-hover'
-                            : 'border border-border-default bg-white/[0.03] text-text-primary hover:border-border-strong',
-                        )}
-                      >
-                        {isTopUpLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="h-3.5 w-3.5" />${amt}</>}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-white/[0.07] px-5 py-3 text-[12.5px]">

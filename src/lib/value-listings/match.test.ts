@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { matchListingToValueItem, type ValueCatalog } from './match'
+import { buildValueCatalog } from './catalogs'
 
 // Shapes taken from live listings (2026-10-02).
 const SAB: ValueCatalog = {
@@ -22,27 +23,14 @@ const SAB: ValueCatalog = {
   defaultVariant: 'default',
 }
 
-const AM: ValueCatalog = {
-  gameSlug: 'adopt-me',
+const AM: ValueCatalog = buildValueCatalog('adopt-me', {
   items: [
     { slug: 'bat-dragon', name: 'Bat Dragon' },
     { slug: 'chocolate-chip-bat-dragon', name: 'Chocolate Chip Bat Dragon' },
     { slug: 'parrot', name: 'Parrot' },
     { slug: 'evil-unicorn', name: 'Evil Unicorn' },
   ],
-  variants: [
-    { key: 'normal', names: ['Normal', 'No Potion'] },
-    { key: 'fly', names: ['Fly', 'F'] },
-    { key: 'ride', names: ['Ride', 'R'] },
-    { key: 'fly-ride', names: ['Fly Ride', 'FR'] },
-    { key: 'neon', names: ['Neon', 'N'] },
-    { key: 'neon-fly-ride', names: ['Neon Fly Ride', 'NFR'] },
-    { key: 'mega-neon', names: ['Mega Neon', 'M', 'Mega'] },
-    { key: 'mega-fly-ride', names: ['Mega Fly Ride', 'Mega Neon Fly Ride', 'MFR'] },
-  ],
-  identityKeys: ['pet-name'],
-  variantKeys: ['trait'],
-}
+})!.catalog
 
 // The live Adopt Me taxonomy: option slugs do not match their labels.
 const AM_LABELS = {
@@ -169,8 +157,55 @@ describe('matchListingToValueItem — Adopt Me', () => {
     })
   })
 
-  it('ignores one-letter codes in titles (too ambiguous)', () => {
-    expect(matchListingToValueItem({ title: 'R Bat Dragon', templateData: {} }, AM)?.variant).toBeNull()
+  // F and R are the game's own shorthand; the title parser reads them alone.
+  it('reads a lone F or R from the title', () => {
+    expect(matchListingToValueItem({ title: 'R Bat Dragon', templateData: {} }, AM)?.variant).toBe('ride')
+    expect(matchListingToValueItem({ title: 'Bat Dragon F', templateData: {} }, AM)?.variant).toBe('fly')
+  })
+
+  // 2026-10-12: every Trait choice was deleted and re-added; old listings kept
+  // codes whose choice no longer existed, and the raw code "r" was read as Ride.
+  it('never reads a code the Trait field no longer offers; the title decides', () => {
+    expect(
+      matchListingToValueItem(
+        {
+          title: 'FR Bat Dragon | Adopt Me',
+          templateData: { trait: 'r', 'pet-name': 'bat-dragon' },
+          optionLabels: { trait: { fr: 'FR', nfr: 'NFR' } },
+        },
+        AM,
+      ),
+    ).toEqual({ itemSlug: 'bat-dragon', variant: 'fly-ride' })
+  })
+
+  it("keeps the seller's pick when the title disagrees", () => {
+    expect(
+      matchListingToValueItem(
+        {
+          title: 'FR Bat Dragon',
+          templateData: { trait: 'r', 'pet-name': 'bat-dragon' },
+          optionLabels: { trait: { r: 'R', fr: 'FR' } },
+        },
+        AM,
+      ),
+    ).toEqual({ itemSlug: 'bat-dragon', variant: 'ride' })
+  })
+
+  it('reads the title with the Adopt Me parser (unclear → no variant)', () => {
+    const v = (title: string) => matchListingToValueItem({ title, templateData: {} }, AM)?.variant
+    expect(v('Neon Bat Dragon (NFR)')).toBe('neon-fly-ride')
+    expect(v('Bat Dragon FR/NFR')).toBeNull()
+    expect(v('Bat Dragon not FR')).toBeNull()
+    expect(v('MR Bat Dragon')).toBeNull()
+  })
+
+  it('reads the "None" choice as Normal', () => {
+    expect(
+      matchListingToValueItem(
+        { title: 'Bat Dragon', templateData: { trait: 'none', 'pet-name': 'bat-dragon' }, optionLabels: { trait: { none: 'None' } } },
+        AM,
+      ),
+    ).toEqual({ itemSlug: 'bat-dragon', variant: 'normal' })
   })
 })
 

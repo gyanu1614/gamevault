@@ -476,7 +476,7 @@ export function buyRow(
         title: `${g.name} From ${usd(g.cheapestUsd)}`,
         value: draws ? `Skip ~${fmtDraws(expectedDraws(draws))} ${spin(v.box)}s` : `No box to open: trade only`,
       },
-      { icon: 'cart', title: 'Reputable Sellers', value: `${c.shortName} listings, ID-verified` },
+      { icon: 'cart', title: 'Reputable Sellers', value: `${c.shortName} listings from rated sellers` },
       { icon: 'bolt', title: 'Get It In Minutes', value: `Delivered by in-game trade in ${c.gameName}` },
     ],
   }

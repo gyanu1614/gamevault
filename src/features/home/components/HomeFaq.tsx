@@ -18,6 +18,7 @@
 import Link from '@/components/navigation/AppLink'
 
 import { FaqCards } from '@/components/marketplace/FaqCards'
+import { acceptedMethodsPhrase } from '@/lib/payments/accepted-methods'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
 import { CANCEL_REQUEST_MIN_DELIVERY_HOURS } from '@/lib/legal/protection-windows'
 
@@ -40,11 +41,11 @@ const ITEMS = [
   },
   {
     q: 'Who am I buying from?',
-    a: 'Real players and verified sellers. Every seller completes identity verification before they can list anything, and their rating and sales history sit on each listing so you can see who you are dealing with.',
+    a: 'Independent sellers, from players to dedicated stores. Their rating and sales history sit on each listing, so you can see who you are dealing with.',
   },
   {
     q: 'What can I buy, and how do I pay?',
-    a: 'In-game currency, items and accounts, across every game we support. Pay with local payment methods through Payssion, or in crypto through BTCPay.',
+    a: `In-game currency, items and accounts, across every game we support. You can pay with ${acceptedMethodsPhrase()}`,
   },
 ]
 

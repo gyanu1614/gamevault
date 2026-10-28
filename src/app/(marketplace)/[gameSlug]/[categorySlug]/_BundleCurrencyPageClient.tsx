@@ -126,6 +126,7 @@ export default function BundleCurrencyPageClient({
   guide,
   gameImageUrl,
   trademark,
+  paymentsStrip,
 }: {
   data: BundleCurrencyPageData
   /** SEO intro sentence (live stats), server-computed so it lands in
@@ -139,6 +140,8 @@ export default function BundleCurrencyPageClient({
   gameImageUrl?: string | null
   /** Per-game trademark line under the payments strip (lib/seo/trademark). */
   trademark?: string | null
+  /** Server-rendered PaymentsStrip (only the methods checkout has on), passed as a slot. */
+  paymentsStrip?: React.ReactNode
 }) {
   // V19/P24/P4 — Region selection defaults to the first enabled region.
   // When admin disabled regions entirely we use empty string as a
@@ -713,7 +716,7 @@ export default function BundleCurrencyPageClient({
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}
-      <PaymentsMarquee disclaimer={trademark} />
+      {paymentsStrip ?? <PaymentsMarquee disclaimer={trademark} />}
     </main>
   )
 }

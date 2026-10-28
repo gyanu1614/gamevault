@@ -12,13 +12,19 @@ import { coinGateProvider } from '@/lib/payments/providers/coingate'
 import { btcpayProvider } from '@/lib/payments/providers/btcpay'
 import { payssionProvider } from '@/lib/payments/providers/payssion'
 import { isPayssionMethod } from '@/lib/payments/providers/payssion/methods'
+import { stripeProvider } from '@/lib/payments/providers/stripe'
 
 const REGISTRY: Record<string, PaymentProvider> = {
   [fakeProvider.name]: fakeProvider,
   [coinGateProvider.name]: coinGateProvider,
   [btcpayProvider.name]: btcpayProvider,
   [payssionProvider.name]: payssionProvider,
+  [stripeProvider.name]: stripeProvider,
 }
+
+/** The checkout method key (payment_method_fees.method) of the Stripe card
+ *  rail: hosted Checkout — Visa / Mastercard, Apple Pay, Google Pay. */
+export const STRIPE_CARD_METHOD = 'stripe'
 
 /**
  * The provider NEW charges are created with (webhooks stay per-provider, so a
@@ -34,11 +40,13 @@ export function activePaymentProviderName(): string {
  * Per-METHOD provider routing — since Payssion, "which provider" is a property
  * of the payment method the buyer picked, not one global switch:
  *   · a Payssion pm_id (paysafecard / ideal_nl / upi_in / …) → 'payssion'
+ *   · 'stripe' (the card row)                                 → 'stripe'
  *   · anything else (crypto coins, no method given)          → the env-active
  *     provider (btcpay in production)
  * Webhooks stay on per-provider routes, so mixed providers never cross wires.
  */
 export function providerNameForMethod(paymentMethodId?: string | null): string {
+  if (paymentMethodId === STRIPE_CARD_METHOD) return 'stripe'
   if (isPayssionMethod(paymentMethodId)) return 'payssion'
   return activePaymentProviderName()
 }

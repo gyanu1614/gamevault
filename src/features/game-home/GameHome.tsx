@@ -20,7 +20,7 @@ import { OfferRail } from '@/components/marketplace/OfferRail'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { WhyBuyCard } from '@/components/marketplace/WhyBuyCard'
 import { FaqSection } from '@/components/marketplace/FaqCards'
-import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { PaymentsStrip } from '@/components/marketplace/PaymentsStrip'
 import { SellerCta } from '@/features/home/components/SellerCta'
 import type { GameHomeModel } from './types'
 import { Header } from './sections/Header'
@@ -100,7 +100,7 @@ export function GameHome({ model }: { model: GameHomeModel }) {
         </div>
       </div>
 
-      <PaymentsMarquee disclaimer={model.trademark} />
+      <PaymentsStrip disclaimer={model.trademark} />
     </main>
   )
 }

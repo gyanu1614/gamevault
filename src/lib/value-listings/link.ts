@@ -16,6 +16,7 @@
  * Takes the service-role client (writes are backend-only). No `server-only`
  * and no `@/` imports, so the tsx backfill script can load it.
  */
+import { AM_TRAIT_FIELD, savedTraitMismatch, traitHintText, type TraitChoice } from '../adopt-me/trait-hint'
 import { loadOptionLabels, loadValueCatalog, type LoadedCatalog } from './catalogs'
 import { matchListingToValueItem } from './match'
 
@@ -50,11 +51,39 @@ export interface LinkOutcome {
   changedItems: Array<{ gameSlug: string; itemSlug: string }>
   /** Rows whose stored link was wrong or stale and was rewritten. */
   relinked: number
+  /**
+   * Adopt Me rows whose title names another variant than the Trait pick. A
+   * warning only: the pick is kept (publish/edit return it to the seller).
+   */
+  variantMismatches: Array<{ id: string; text: string; switchTo: TraitChoice }>
 }
 
 const ROW_COLUMNS = 'id, game_id, game_category_id, title, template_data, value_item_slug, value_variant, value_matched_at'
 
-const empty = (): LinkOutcome => ({ checked: 0, linked: 0, unmatched: [], errors: [], gameCategoryIds: [], changedItems: [], relinked: 0 })
+const empty = (): LinkOutcome => ({
+  checked: 0,
+  linked: 0,
+  unmatched: [],
+  errors: [],
+  gameCategoryIds: [],
+  changedItems: [],
+  relinked: 0,
+  variantMismatches: [],
+})
+
+const itemNames = new WeakMap<LoadedCatalog, Map<string, string>>()
+
+/** slug → name, built once per loaded catalogue (not a scan per row). */
+function itemNameOf(loaded: LoadedCatalog, slug: string): string | undefined {
+  let names = itemNames.get(loaded)
+  if (!names) itemNames.set(loaded, (names = new Map(loaded.items.map((i) => [i.slug, i.name]))))
+  return names.get(slug)
+}
+
+function amMismatch(row: ListingRow, itemName: string | undefined, labels: Record<string, Record<string, string>>) {
+  const m = savedTraitMismatch({ title: row.title ?? '', itemName, templateData: row.template_data, traitLabels: labels[AM_TRAIT_FIELD] })
+  return m ? { id: row.id, text: traitHintText(m.hint), switchTo: m.hint.choice } : null
+}
 
 const message = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as any).message) : String(e))
 
@@ -81,8 +110,8 @@ async function linkRows(client: AnyClient, rows: ListingRow[], out: LinkOutcome,
       }
 
       let match: ReturnType<typeof matchListingToValueItem> = null
+      let optionLabels: Record<string, Record<string, string>> = {}
       if (loaded) {
-        let optionLabels: Record<string, Record<string, string>> = {}
         if (row.game_category_id) {
           if (!labels.has(row.game_category_id)) labels.set(row.game_category_id, loadOptionLabels(client, row.game_category_id))
           optionLabels = await labels.get(row.game_category_id)!
@@ -121,6 +150,11 @@ async function linkRows(client: AnyClient, rows: ListingRow[], out: LinkOutcome,
           if (storedSlug) out.changedItems.push({ gameSlug, itemSlug: storedSlug })
           if (nextSlug && nextSlug !== storedSlug) out.changedItems.push({ gameSlug, itemSlug: nextSlug })
         }
+      }
+      if (match && gameSlug === 'adopt-me') {
+        const itemName = loaded ? itemNameOf(loaded, match.itemSlug) : undefined
+        const mismatch = amMismatch(row, itemName, optionLabels)
+        if (mismatch) out.variantMismatches.push(mismatch)
       }
       if (match) {
         out.linked += 1

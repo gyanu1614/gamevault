@@ -62,7 +62,7 @@ const SHORTCUTS = [
 
 /** Beat 2's proof row — the same claims the homepage TrustStrip makes. */
 const PROOF = [
-  { icon: '/icons/set/verified.svg', label: 'Verified Sellers' },
+  { icon: '/icons/set/verified.svg', label: 'Rated Sellers' },
   { icon: '/icons/set/wallet.svg', label: 'Secure Payments' },
   { icon: '/icons/set/support.svg', label: 'Real Human Support' },
 ] as const
@@ -284,8 +284,8 @@ export function HeroFilm() {
 
               {/* Two rows: what you can buy, then the promise. */}
               <p className="hero-film__rise hero-film__sub" style={{ '--enter-delay': '0.35s' } as React.CSSProperties}>
-                <span>Buy Skins, Accounts and In-Game Currency From Verified Sellers.</span>
-                <span className="hero-film__sub-promise">Delivery Guaranteed in Minutes or Full Refund.</span>
+                <span>Buy Skins, Accounts and In-Game Currency From Independent Sellers.</span>
+                <span className="hero-film__sub-promise">Item Guaranteed or Full Refund.</span>
               </p>
 
               {/* relative z-10: the results panel must paint over the

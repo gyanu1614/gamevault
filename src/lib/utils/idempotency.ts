@@ -26,7 +26,6 @@ export type OperationType =
   | 'release_escrow'
   | 'create_order'
   | 'refund_order'
-  | 'stripe_transfer'
 
 interface IdempotentResult {
   response_status: number

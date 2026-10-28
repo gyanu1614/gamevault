@@ -20,7 +20,7 @@ export type StoredCanonicalEvent = Record<string, unknown> & { type: CanonicalEv
 
 const TYPES = new Set<CanonicalEvent['type']>([
   'CHARGE_PENDING', 'CHARGE_CONFIRMED', 'CHARGE_FAILED', 'REFUND_COMPLETED',
-  'PAYOUT_COMPLETED', 'PAYOUT_FAILED', 'CHARGEBACK_OPENED', 'CHARGEBACK_RESOLVED',
+  'PAYOUT_COMPLETED', 'PAYOUT_FAILED', 'CHARGEBACK_OPENED', 'CHARGEBACK_RESOLVED', 'PAYMENT_NOTICE',
 ])
 const MONEY_FIELDS = ['settled', 'paid', 'amount'] as const
 

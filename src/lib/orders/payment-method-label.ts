@@ -96,10 +96,10 @@ export async function orderPaymentMethodLabel(order: {
     } catch {
       // Keep "Crypto": the label must never break the page.
     }
+  } else if (provider === 'stripe') {
+    label = 'Credit / Debit Card'
   } else if (provider === 'coingate') {
     label = 'Crypto'
-  } else if (provider === 'stripe') {
-    label = 'Card'
   } else {
     label = provider.charAt(0).toUpperCase() + provider.slice(1)
   }

@@ -19,6 +19,7 @@ import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { ensureGameCategory } from '@/lib/categories'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { SELL_TEMPLATE_TAG } from '@/lib/sell/template-tags'
+import { guardChoiceCodeChange, guardChoiceDelete, guardFieldDelete } from '@/lib/listings/choice-usage'
 
 /** Admin pages + the seller form's cached template (getSellTemplate). */
 function refreshTemplates() {
@@ -486,6 +487,8 @@ export async function deleteAttribute(id: string): Promise<Result<{ id: string }
   try {
     await requireAdmin()
     const supabase = getAdminSupabase()
+    const inUse = await guardFieldDelete(supabase, id)
+    if (inUse) return { success: false, error: inUse }
     const { error } = await supabase.from('attributes').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
     refreshTemplates()
@@ -698,6 +701,9 @@ export async function bulkDeleteOptions(input: {
   try {
     await requireAdmin()
     const supabase = getAdminSupabase()
+    // Never orphan live listings: a choice in use is renamed, not deleted.
+    const inUse = await guardChoiceDelete(supabase, { attributeId: input.attribute_id, optionIds: input.ids })
+    if (inUse) return { success: false, error: inUse }
 
     let q: any = supabase
       .from('attribute_options')
@@ -733,7 +739,11 @@ export async function updateOption(input: UpdateOptionInput): Promise<Result<{ i
     const supabase = getAdminSupabase()
     const patch: Record<string, unknown> = {}
     if (input.label       !== undefined) patch.label = input.label.trim()
-    if (input.value       !== undefined) patch.value = input.value.trim()
+    if (input.value       !== undefined) {
+      patch.value = input.value.trim()
+      const inUse = await guardChoiceCodeChange(supabase, input.id, patch.value as string)
+      if (inUse) return { success: false, error: inUse }
+    }
     if (input.description !== undefined) patch.description = input.description?.trim() || null
     if (input.icon_url    !== undefined) patch.icon_url = input.icon_url
     if (input.sort_order  !== undefined) patch.sort_order = input.sort_order
@@ -815,6 +825,8 @@ export async function deleteOption(id: string): Promise<Result<{ id: string }>> 
   try {
     await requireAdmin()
     const supabase = getAdminSupabase()
+    const inUse = await guardChoiceDelete(supabase, { optionIds: [id] })
+    if (inUse) return { success: false, error: inUse }
     const { error } = await supabase.from('attribute_options').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
     refreshTemplates()

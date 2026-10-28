@@ -144,8 +144,7 @@ export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
     `Compare prices, stock and delivery times, then buy with confidence. ` +
     `Every order is covered by SafeDrop Protection, so you get ` +
     `exactly what was described. ` +
-    `If something is wrong or never arrives, you get your money back. Every ` +
-    `${name} seller is verified before they can list.`
+    `If something is wrong or never arrives, you get your money back.`
 
   return {
     title: pick(o.seo_title, titleTemplate),
@@ -175,8 +174,8 @@ function gameFaq(name: string): SeoFaqItem[] {
       a: `Most ${name} orders are delivered within minutes by verified sellers. The exact delivery time is shown on every listing before you buy.`,
     },
     {
-      q: `Are ${name} sellers on DropMarket verified?`,
-      a: `Yes — every ${name} seller is ID-checked and payment-verified before they can list, and each storefront shows live ratings and trade history.`,
+      q: `Who sells ${name} on DropMarket?`,
+      a: `Independent sellers, from players to dedicated stores. Each storefront shows live ratings and trade history, and every order is covered by SafeDrop Protection.`,
     },
   ]
 }
@@ -268,7 +267,7 @@ function categoryFaq(game: string, label: string, type: string): SeoFaqItem[] {
     },
     {
       q: `How much does ${game} ${lc(label)} cost?`,
-      a: `Prices are set by independent verified sellers competing on price, speed and reputation, so ${game} ${lc(label)} is usually cheaper than first-party stores. The lowest live price is shown at the top of the page.`,
+      a: `Prices are set by independent sellers competing on price, speed and reputation. The lowest live price is shown at the top of the page.`,
     },
   ]
   if (type === 'account') {

@@ -48,6 +48,7 @@ import { GoBackDialog } from './sell-wizard/GoBackDialog'
 import { Step1Category } from './sell-wizard/steps/Step1Category'
 import { Step2Game } from './sell-wizard/steps/Step2Game'
 import { Step3Details } from './sell-wizard/steps/Step3Details'
+import { useTraitHint } from './sell-wizard/hooks/use-trait-hint'
 import { Step4Publish } from './sell-wizard/steps/Step4Publish'
 
 export interface SellWizardProps {
@@ -72,7 +73,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
   const startCategory = !prefill && !isEditMode && start ? categories.find((c) => c.slug === start.categorySlug) ?? null : null
   const [category, setCategory] = useState<GlobalCategory | null>(prefillCategory ?? startCategory)
   const [game, setGame] = useState<SellGameOption | null>(prefillCategory ? prefill?.game ?? null : startCategory ? start?.game ?? null : null)
-  const { form, setForm, update, setters } = useOfferForm(prefill && prefillCategory ? offerFormFromListing(prefill.listing) : EMPTY_OFFER_FORM)
+  const { form, setForm, update, setters } = useOfferForm(prefill && prefillCategory ? offerFormFromListing(prefill.listing, prefill.template) : EMPTY_OFFER_FORM)
   const { step, setStep, direction } = useWizardSteps({
     initialStep: prefillCategory || startCategory ? 3 : 1,
     historyEnabled: !isEditMode,
@@ -169,6 +170,9 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     },
     [template, update],
   )
+
+  // Adopt Me: the title's variant pre-selects or flags the Trait pick.
+  const traitHint = useTraitHint({ gameSlug: game?.game_slug, template, title: form.title, values: form.fieldValues, onFieldChange })
 
   const selectCategory = (c: GlobalCategory) => {
     setCategory(c)
@@ -285,6 +289,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
                   childrenOf={childrenOf}
                   values={form.fieldValues}
                   onChange={onFieldChange}
+                  hint={traitHint}
                 />
                 <Step4Publish
                   title={form.title}

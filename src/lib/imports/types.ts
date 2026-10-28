@@ -150,6 +150,14 @@ export interface GameImportConfig {
    * is mapped separately and automatically.
    */
   attributeHints?: Record<string, string>
+  /**
+   * Reads the variant out of the item cell when the row's variant cell is
+   * empty ("FR Frost Dragon" → FR + "frost dragon"). Null when the text names
+   * none or is unclear; the row then imports with no variant, as before.
+   */
+  variantFromItemText?: (text: string) => { ref: string; item: string } | null
+  /** Reads a filter choice's label as a variant ref (see resolveTemplateData's `variantOfLabel`). */
+  variantOfChoiceLabel?: (label: string) => string | null
   loadCatalogue(client: ImportReader, gameId: string): Promise<ImportCatalogue>
   loadMarketPrices(client: ImportReader, gameId: string): Promise<MarketPriceMap>
   /** ≤ 100 chars (TITLE_MAX) and ≥ 5 (TITLE_MIN); the validator enforces both. */

@@ -53,14 +53,14 @@
     }
   ],
   "page": {
-    "subtitle": "What COD Points are, how much you can save, how they reach your account and how to buy them safely.",
+    "subtitle": "What COD Points are, what they cost, how they reach your account and how to buy them safely.",
     "what_is": {
       "heading": "What Are COD Points?",
       "text": "COD Points (CP) are Call of Duty's money. You spend them on operator skins, weapon blueprints and the Battle Pass, in Warzone and the current games."
     },
     "savings": {
-      "heading": "How Much Do You Save on COD Points?",
-      "text": "The official store sells CP at fixed prices. Sellers here set their own, and many charge less for the same CP.",
+      "heading": "COD Points Prices",
+      "text": "Official pack prices next to the lowest price from sellers here.",
       "amounts": [
         1100,
         2400,

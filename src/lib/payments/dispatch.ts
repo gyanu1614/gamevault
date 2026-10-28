@@ -39,6 +39,9 @@ export function orderEventFor(event: CanonicalEvent): OrderEvent | null {
     case 'PAYOUT_FAILED':
     case 'CHARGEBACK_RESOLVED':
       return null
+    case 'PAYMENT_NOTICE':
+      // Recorded for admins in dispatch() below; never an order transition.
+      return null
     default: {
       // Exhaustiveness guard: if a new CanonicalEvent type is added, TS errors here.
       const _never: never = event
@@ -70,6 +73,14 @@ export async function dispatch(
     providerVoidOutcome?: 'voided' | 'already_closed' | 'unsupported'
   }
 ): Promise<{ applied: boolean; orderId?: string; status?: string }> {
+  // A refund / dispute seen at the provider: admins are told, nothing moves.
+  // A failed alert throws → the router marks the event failed → retry.
+  if (event.type === 'PAYMENT_NOTICE') {
+    const { recordPaymentNotice } = await import('@/lib/payments/payment-notice')
+    await recordPaymentNotice(event, providerName)
+    return { applied: false, orderId: event.orderId }
+  }
+
   const orderEvent = orderEventFor(event)
   if (orderEvent === null) {
     return { applied: false }

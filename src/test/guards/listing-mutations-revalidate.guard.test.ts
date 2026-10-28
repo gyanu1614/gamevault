@@ -38,6 +38,10 @@ const EXEMPT: Record<string, string> = {
   // caller does, so a 500-row import revalidates once per category instead of
   // once per listing. Every caller of it is itself in the pinned set below.
   'src/lib/listings/create.ts': 'the shared insert seam; its callers revalidate (and are pinned here)',
+  // Admin Variant Mismatches (2026-10-23): switches an Adopt Me Trait pick.
+  // Its only caller, lib/actions/admin-variant-mismatches, re-links and then
+  // calls the seam for every fixed listing.
+  'src/lib/value-listings/variant-mismatches.ts': 'Trait pick only; its admin caller re-links and revalidates',
 }
 
 const SEAM = '@/lib/revalidation/listings'
@@ -147,6 +151,8 @@ describe('listing mutations revalidate the category surfaces', () => {
       'src/lib/listings/submit-applicant-drafts.ts',
       // Bundle 2: the value item link (exempt above; callers revalidate).
       'src/lib/value-listings/link.ts',
+      // Admin Variant Mismatches: the Trait pick fix (exempt above; its caller revalidates).
+      'src/lib/value-listings/variant-mismatches.ts',
     ])
   })
 })

@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, toRow } from './_method-ui'
+import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, methodIdForRow, sealMarks, toRow, walletRows } from './_method-ui'
 import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
-import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
+import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK, WALLET_MARKS } from '@/lib/payments/method-marks'
 
 describe('checkout method rows', () => {
   it('every selectable registry method has its own icon + notes line (none falls back)', () => {
@@ -27,6 +27,33 @@ describe('checkout method rows', () => {
     expect(pn.marks).toEqual([]) // no clean PayNow vector → the row's icon
     expect(pn.qrPay).toBe(true)
     expect(sk.qrPay).toBe(false)
+  })
+
+  it('the Stripe card row: worldwide, Visa + Mastercard marks, card notes', () => {
+    const quote = { serviceFeeMinor: 100 } as any
+    const card = toRow({ method: 'stripe', label: 'Credit / Debit Card', countries: [], coverage: 'Worldwide', quote } as any)
+    expect(card).toMatchObject({ id: 'stripe', label: 'Credit / Debit Card', flag: '🌍', qrPay: false })
+    expect(card.marks.map((m) => m.logo)).toEqual(['/payments/ondark/visa.svg', '/payments/ondark/mastercard.svg'])
+    expect(card.points).toEqual(['Pay with a Visa or Mastercard, credit or debit', 'Payment confirms instantly'])
+  })
+
+  it('Apple Pay / Google Pay rows ride on the card row: same quote, Stripe method, one per device', () => {
+    const quote = { serviceFeeMinor: 123 } as any
+    const card = toRow({ method: 'stripe', label: 'Credit / Debit Card', countries: [], coverage: 'Worldwide', quote } as any)
+    const apple = walletRows(card, { applePay: true, googlePay: false })
+    expect(apple.map((r) => r.id)).toEqual(['applepay'])
+    expect(apple[0]).toMatchObject({ label: 'Apple Pay', quote, flag: '🌍' })
+    expect(apple[0].marks.map((m) => m.logo)).toEqual(['/payments/ondark/applepay_sa.svg'])
+    const google = walletRows(card, { applePay: false, googlePay: true })
+    expect(google.map((r) => r.id)).toEqual(['googlepay'])
+    expect(google[0].marks.map((m) => m.logo)).toEqual(['/payments/ondark/googlepay.svg'])
+    expect(walletRows(null, { applePay: true, googlePay: true })).toEqual([])
+    // Every wallet row pays through the Stripe card method.
+    expect(methodIdForRow('applepay')).toBe('stripe')
+    expect(methodIdForRow('googlepay')).toBe('stripe')
+    expect(methodIdForRow('stripe')).toBe('stripe')
+    expect(methodIdForRow('pix_br')).toBe('pix_br')
+    expect(existsSync(join(process.cwd(), 'public/payments/ondark/googlepay.svg'))).toBe(true)
   })
 
   it('every method with a brand mark has its on-dark version, and the file exists', () => {
@@ -62,6 +89,33 @@ describe('checkout method rows', () => {
       expect(s.width).toBeLessThanOrEqual(TILE_SLOT.width)
       expect(s.height).toBeLessThanOrEqual(TILE_SLOT.height)
     }
-    expect(markSize(1, TILE_SLOT)).toEqual({ width: 22, height: 22 })
+    expect(markSize(1, TILE_SLOT)).toEqual({ width: 16, height: 16 })
+  })
+})
+
+describe('Payment Methods seal (owner 2026-10-27: grey logos, then "+N More")', () => {
+  const quote = { serviceFeeMinor: 100 } as any
+  const row = (method: string) => toRow({ method, label: method, countries: ['BR'], coverage: 'Brazil', quote } as any)
+  const coins = [
+    { logo: '/crypto/usdt.svg', aspect: 1 },
+    { logo: '/crypto/btc.svg', aspect: 1 },
+  ]
+
+  it('card rail open → Apple Pay, Google Pay, Visa, Mastercard lead; the rest count as more', () => {
+    const seal = sealMarks({ cardRail: true, rows: [row('stripe')], extra: coins })
+    expect(seal.shown).toEqual([WALLET_MARKS.applepay, WALLET_MARKS.googlepay, ...PAYMENT_METHOD_MULTI_MARKS.stripe])
+    expect(seal.more).toBe(2)
+  })
+
+  it('a mark shared by two rails counts once; a rail with no logo still counts', () => {
+    const seal = sealMarks({ cardRail: true, rows: [row('stripe'), row('creditcard_br'), row('pix_br'), row('paynow_sg')], extra: coins })
+    // pix + paynow (no logo) + 2 coins; creditcard_br's Visa/Mastercard are already shown.
+    expect(seal.more).toBe(4)
+  })
+
+  it('no card rail → the local rails lead', () => {
+    const seal = sealMarks({ cardRail: false, rows: [row('pix_br')], extra: coins })
+    expect(seal.shown.map((m) => m.logo)).toEqual([PAYMENT_METHOD_ONDARK.pix_br.logo, '/crypto/usdt.svg', '/crypto/btc.svg'])
+    expect(seal.more).toBe(0)
   })
 })

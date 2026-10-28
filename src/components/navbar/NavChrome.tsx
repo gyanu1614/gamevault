@@ -22,7 +22,9 @@ import { forwardRef, type ReactNode } from 'react'
 import Link from '@/components/navigation/AppLink'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { CaretDownIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { getAvatarUrl } from '@/lib/utils/avatar'
 
 /** One menu row. `group` lets the leading icon brighten with the label. */
 export const navMenuRowCls =
@@ -94,6 +96,51 @@ export const NavIconButton = forwardRef<HTMLButtonElement, NavIconButtonProps>(f
     </button>
   )
 })
+
+/** The account trigger: avatar + caret on desktop, avatar alone on phones.
+ *  The site bar and the checkout bar both draw it (owner 2026-10-27). */
+export function NavAccountButton({
+  user,
+  open,
+  onClick,
+}: {
+  user: { profile?: { avatar_url?: string | null; username?: string | null } | null } | null
+  open: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="Account menu"
+      aria-expanded={open}
+      onClick={onClick}
+      className={cn(
+        'group flex h-10 items-center gap-1.5 rounded-[8px] p-1 transition-[background-color,transform] duration-150 hover:bg-white/[0.07] active:scale-[0.96] lg:pr-2',
+        'max-lg:h-9 max-lg:w-9 max-lg:justify-center max-lg:rounded-full max-lg:p-0',
+        open && 'bg-white/[0.09]',
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={getAvatarUrl(user?.profile?.avatar_url, user?.profile?.username || 'user')}
+        alt={`${user?.profile?.username || 'User'} avatar`}
+        aria-hidden
+        width={32}
+        height={32}
+        className="h-8 w-8 rounded-full object-cover ring-1 ring-white/15"
+      />
+      <CaretDownIcon
+        size={12}
+        weight="bold"
+        aria-hidden
+        className={cn(
+          'hidden text-white/55 transition-[transform,color] duration-200 group-hover:text-white/85 lg:block',
+          open && 'rotate-180 text-white/85',
+        )}
+      />
+    </button>
+  )
+}
 
 export function NavPanel({
   onClose,

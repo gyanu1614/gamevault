@@ -18,6 +18,8 @@ import ViewTracker from '@/components/listings/ViewTracker'
 import { TrustpilotShowcase } from '@/components/trust/TrustpilotShowcase'
 import ListingDetailClient, { type ListingForDetail } from './_ListingDetailClient'
 import { BlogRail } from '@/components/blog/BlogRail'
+import { PaymentsStrip } from '@/components/marketplace/PaymentsStrip'
+import { gameTrademarkLine } from '@/lib/seo/trademark'
 import { listingToOffer as listingToItemOffer, loadItemsTaxonomy } from '../_itemsData'
 import { partitionSameItem } from '../_offerMatching'
 import type { ItemsTaxonomy } from '../_itemsTypes'
@@ -317,6 +319,7 @@ export async function ListingDetailBody({
         listing={shaped}
         blogRail={<BlogRail gameSlug={shaped.gameSlug} gameName={shaped.gameName} />}
         trustpilot={<TrustpilotShowcase className="mt-3 flex justify-center" />}
+        paymentsStrip={<PaymentsStrip disclaimer={gameTrademarkLine(shaped.gameName)} />}
         // Owner/admin preview of a non-active listing: amber banner +
         // purchase disabled (buying would bypass moderation).
         previewStatus={isPreview ? (listing.status as string) : null}

@@ -3,23 +3,20 @@
 /**
  * CheckoutNavbar — the shared dark strip over every checkout-flow surface
  * (checkout page + payment page): logo home-link left, Need Help + the
- * account menu right. One component so the two pages stay pixel-identical.
+ * site's own account menu right. One component so the two pages stay pixel-identical.
  */
 
 import Link from '@/components/navigation/AppLink'
 import { Info } from 'lucide-react'
 import { AccountMenu } from './AccountMenu'
 
-export function CheckoutNavbar({
-  user,
-  buyerProfile,
-}: {
-  user: any
-  buyerProfile?: { username: string | null; avatar_url: string | null } | null
-}) {
+export function CheckoutNavbar() {
   return (
+    // backdrop-blur-0 is invisible but load-bearing (as on the site bar): it
+    // makes this strip the containing block for the account menu's `fixed
+    // top-full` phone sheet, so the sheet hangs flush under the bar.
     <div
-      className="flex h-16 items-center justify-between px-4 sm:px-10"
+      className="relative z-50 flex h-16 items-center justify-between px-4 backdrop-blur-0 sm:px-10"
       style={{ background: '#16171B' }}
     >
       <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-85">
@@ -37,7 +34,7 @@ export function CheckoutNavbar({
           <Info className="h-4 w-4" />
           <span className="hidden sm:inline">Need Help?</span>
         </Link>
-        <AccountMenu user={user} buyerProfile={buyerProfile} />
+        <AccountMenu />
       </div>
     </div>
   )

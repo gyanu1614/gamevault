@@ -53,3 +53,53 @@ export const VARIANT_NOTE: Record<Variant, string | null> = {
 export function isVariant(raw: string): raw is Variant {
   return (VARIANTS as readonly string[]).includes(raw)
 }
+
+/** The value-page URL segment for each code, also stored as `listings.value_variant`. */
+export const VARIANT_KEY: Record<Variant, string> = {
+  N: 'normal',
+  F: 'fly',
+  R: 'ride',
+  FR: 'fly-ride',
+  NEON: 'neon',
+  NFR: 'neon-fly-ride',
+  MEGA: 'mega-neon',
+  MFR: 'mega-fly-ride',
+}
+
+export function variantFromKey(key: string): Variant | null {
+  return VARIANTS.find((code) => VARIANT_KEY[code] === key) ?? null
+}
+
+/**
+ * Every name a Trait choice label may use for a code: today's short labels
+ * ("FR", "N" = Neon, "M" = Mega, "None") and the older long ones ("Fly Ride
+ * (FR)", "Mega Neon"). The listing matcher and the sell form both read
+ * choices through this, never through the choice's stored code: the codes
+ * have meant different things over time.
+ */
+export const VARIANT_ALIASES: Record<Variant, readonly string[]> = {
+  N: ['Normal', 'No Potion', 'None'],
+  F: ['Fly', 'F'],
+  R: ['Ride', 'R'],
+  FR: ['Fly Ride', 'FR'],
+  NEON: ['Neon', 'N'],
+  NFR: ['Neon Fly Ride', 'NFR'],
+  MEGA: ['Mega Neon', 'Mega', 'M'],
+  MFR: ['Mega Fly Ride', 'Mega Neon Fly Ride', 'MFR'],
+}
+
+const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+const BY_ALIAS: ReadonlyMap<string, Variant> = new Map(
+  VARIANTS.flatMap((code) => VARIANT_ALIASES[code].map((name) => [squash(name), code] as const)),
+)
+
+/** The code a Trait choice label names: "Fly Ride (FR)", its "(FR)", or the whole label. */
+export function variantFromChoiceLabel(label: string): Variant | null {
+  const paren = label.match(/\(([^)]+)\)/)?.[1]
+  for (const candidate of [label.replace(/\([^)]*\)/g, ''), paren, label]) {
+    const hit = candidate ? BY_ALIAS.get(squash(candidate)) : undefined
+    if (hit) return hit
+  }
+  return null
+}

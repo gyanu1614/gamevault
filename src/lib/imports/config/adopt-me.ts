@@ -14,7 +14,8 @@
  *     the catalogue was seeded before there were sales. They are surfaced as
  *     `estimated: true` so an auto-priced batch refuses them by default.
  */
-import { VARIANTS, VARIANT_LABEL, VARIANT_NOTE } from '@/lib/adopt-me/variants'
+import { VARIANTS, VARIANT_LABEL, VARIANT_NOTE, variantFromChoiceLabel } from '@/lib/adopt-me/variants'
+import { titleWithoutVariant, variantFromTitle } from '@/lib/adopt-me/variant-from-title'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import { buildTitle, buildDescription, variantTitleToken } from '../copy'
 import { priceKey, type GameImportConfig, type ImportReader, type ImportCatalogue, type MarketPrice } from '../types'
@@ -33,6 +34,12 @@ export const adoptMeImportConfig: GameImportConfig = {
   // Everything this config imports is a pet. The Trait attribute is filled
   // from the row's variant automatically; this covers the Item Type filter.
   attributeHints: { 'item type': 'Pets' },
+  variantOfChoiceLabel: variantFromChoiceLabel,
+  // A sheet that writes the potion into the pet cell and has no variant column.
+  variantFromItemText(text) {
+    const ref = variantFromTitle(text)
+    return ref ? { ref, item: titleWithoutVariant(text) } : null
+  },
 
   async loadCatalogue(client: ImportReader): Promise<ImportCatalogue> {
     // Paged: one PostgREST response stops at 1,000 rows, silently.

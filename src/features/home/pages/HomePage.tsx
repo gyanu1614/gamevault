@@ -12,7 +12,7 @@
 
 import type { ReactNode } from 'react'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { PaymentsStrip } from '@/components/marketplace/PaymentsStrip'
 import { HeroFilm } from '../components/HeroFilm'
 import { SellerCta } from '../components/SellerCta'
 import { HomeFaq } from '../components/HomeFaq'
@@ -74,7 +74,7 @@ export function HomePage({
 
       {/* The payment methods the checkout really offers, above the footer like
           every marketplace page. */}
-      <PaymentsMarquee />
+      <PaymentsStrip />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { fillMissingAttributes, resolveTemplateData, type TemplateAttributeLike } from './attributes'
+import { variantFromChoiceLabel } from '@/lib/adopt-me/variants'
 
 const opt = (label: string, value = label) => ({
   slug: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
@@ -266,5 +267,45 @@ describe('re-import fills only what a listing is missing', () => {
   it('treats an empty stored value as missing and copes with a listing that has none', () => {
     expect(fillMissingAttributes({ trait: '' }, { trait: 'r' })).toEqual({ trait: 'r' })
     expect(fillMissingAttributes(null, { trait: 'r' })).toEqual({ trait: 'r' })
+  })
+})
+
+// Production since 2026-10-12: every Trait choice re-added with short labels.
+// "N" now means Neon and "None" means no potion; matching codes would tag a
+// Normal pet as Neon. Adopt Me reads choice labels through lib/adopt-me/variants.
+describe('against the production template since 2026-10-12', () => {
+  const TODAY: TemplateAttributeLike[] = [
+    PROD[0],
+    PROD[1],
+    {
+      id: 'a-trait', slug: 'trait', name: 'Trait', type: 'select',
+      options: ['none', 'n', 'm', 'f', 'r', 'fr', 'nf', 'nr', 'mf', 'mr', 'nfr', 'mfr'].map((v) => ({
+        slug: v, value: v, label: v === 'none' ? 'None' : v.toUpperCase(),
+      })),
+    },
+  ]
+  const tag = (ref: string, label: string) =>
+    resolveTemplateData(TODAY, { variant: variant(ref, label), item: frost, hints: HINTS, variantOfLabel: variantFromChoiceLabel }).data.trait
+
+  it.each([
+    ['N', 'Normal', 'none'],
+    ['F', 'Fly', 'f'],
+    ['R', 'Ride', 'r'],
+    ['FR', 'Fly Ride', 'fr'],
+    ['NEON', 'Neon', 'n'],
+    ['NFR', 'Neon Fly Ride', 'nfr'],
+    ['MEGA', 'Mega Neon', 'm'],
+    ['MFR', 'Mega Fly Ride', 'mfr'],
+  ])('%s → %s choice → stores %s', (ref, label, value) => {
+    expect(tag(ref, label)).toBe(value)
+  })
+
+  it('the Oct 10 template still tags the same way through the shared reader', () => {
+    const old = (ref: string, label: string) =>
+      resolveTemplateData(PROD, { variant: variant(ref, label), item: frost, hints: HINTS, variantOfLabel: variantFromChoiceLabel }).data.trait
+    expect([old('N', 'Normal'), old('FR', 'Fly Ride'), old('NEON', 'Neon'), old('MEGA', 'Mega Neon'), old('MFR', 'Mega Fly Ride')]).toEqual([
+      'n', 'r', 'fr', 'mfr', 'mega-fly-ride',
+    ])
+    expect(old('R', 'Ride')).toBeUndefined()
   })
 })

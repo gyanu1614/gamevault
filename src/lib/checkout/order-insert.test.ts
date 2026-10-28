@@ -30,7 +30,7 @@ describe('classifyUniqueViolation', () => {
     expect(classifyUniqueViolation(pg('orders_order_number_key'))).toBe('order_number_collision')
   })
   it('any other unique index is "other"', () => {
-    expect(classifyUniqueViolation(pg('orders_stripe_payment_intent_id_key'))).toBe('other')
+    expect(classifyUniqueViolation(pg('orders_some_other_key'))).toBe('other')
   })
   it('a non-23505 error is not a unique violation', () => {
     expect(classifyUniqueViolation({ code: '42501', message: 'permission denied' })).toBeNull()
@@ -91,9 +91,9 @@ describe('runOrderInsert', () => {
 
   it('any other unique index → OrderInsertConflictError on the first attempt, no retry', async () => {
     let calls = 0
-    const p = runOrderInsert(async () => { calls++; return { data: null, error: pg('orders_stripe_payment_intent_id_key') } })
+    const p = runOrderInsert(async () => { calls++; return { data: null, error: pg('orders_some_other_key') } })
     await expect(p).rejects.toBeInstanceOf(OrderInsertConflictError)
-    await expect(p).rejects.toMatchObject({ constraint: 'orders_stripe_payment_intent_id_key', attempts: 1 })
+    await expect(p).rejects.toMatchObject({ constraint: 'orders_some_other_key', attempts: 1 })
     expect(calls).toBe(1)
   })
 
@@ -105,8 +105,8 @@ describe('runOrderInsert', () => {
   })
 
   it('the typed error carries a buyer-safe message, not the constraint text', async () => {
-    const p = runOrderInsert(async () => ({ data: null, error: pg('orders_stripe_payment_intent_id_key') }))
+    const p = runOrderInsert(async () => ({ data: null, error: pg('orders_some_other_key') }))
     await expect(p).rejects.toThrow('Could not create the order — please try again')
-    await expect(p).rejects.not.toThrow(/stripe/)
+    await expect(p).rejects.not.toThrow(/orders_some_other_key/)
   })
 })

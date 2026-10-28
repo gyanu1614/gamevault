@@ -20,6 +20,8 @@ const ALL: CanonicalEvent[] = [
   { type: 'PAYOUT_FAILED', payoutId: 'p1', reason: 'x' },
   { type: 'CHARGEBACK_OPENED', orderId: 'o1', providerChargeId: 'c1', amount: money(999n, 'USD') },
   { type: 'CHARGEBACK_RESOLVED', orderId: 'o1', providerChargeId: 'c1', won: true },
+  { type: 'PAYMENT_NOTICE', kind: 'dispute', orderId: 'o1', providerChargeId: 'ch_1', amount: money(1234n, 'USD'), detail: 'reason fraudulent' },
+  { type: 'PAYMENT_NOTICE', kind: 'refund', orderId: 'o1', providerChargeId: 'ch_1', amount: money(500n, 'USD'), detail: null },
 ]
 
 describe('webhook events serde', () => {

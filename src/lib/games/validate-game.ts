@@ -35,9 +35,9 @@ export const RESERVED_GAME_SLUGS = new Set([
   'acceptable-use', 'aml', 'buyer-terms', 'chargebacks', 'company',
   'complaints', 'cookies', 'fees', 'ip', 'privacy', 'prohibited',
   'refunds', 'risk', 'safedrop-policy', 'seller-agreement', 'terms',
-  'trust-safety',
+  'trust-safety', 'legal',
   // (marketing) group
-  'safedrop',
+  'safedrop', 'about', 'contact', 'delivery',
   // well-known / static assets
   'robots.txt', 'sitemap.xml', 'sitemaps', 'favicon.ico', 'icon', 'apple-icon',
   'opengraph-image', '_next', 'static', 'public',

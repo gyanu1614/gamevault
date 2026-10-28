@@ -90,7 +90,7 @@ describe('how-to-get copy', () => {
     expect(fast.total).toEqual({
       label: 'Total Cost',
       value: 'Around $2.17',
-      detail: 'Sold by ID-verified sellers · Safe and quick service.',
+      detail: 'Sold by rated sellers · Safe and quick service.',
     })
   })
 

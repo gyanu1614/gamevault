@@ -36,7 +36,7 @@ export function howItWorksHighlight({
   return {
     label: 'Live Now',
     value: `${totalOffers.toLocaleString('en-US')} ${totalOffers === 1 ? 'Offer' : 'Offers'} Live`,
-    note: 'From ID-verified sellers',
+    note: 'From rated sellers',
     backdropUrl: gameImageUrl,
   }
 }

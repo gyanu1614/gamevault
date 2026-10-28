@@ -72,7 +72,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     links: [
       { label: 'How Refunds Are Paid', href: REFUNDS_ANCHORS.paid },
       { label: 'Fees & Charges', href: '/fees' },
-      { label: 'Chargebacks', href: '/chargebacks' },
+      { label: 'Chargebacks', href: '/refunds#part-chargebacks' },
     ],
     keywords: ['refund', 'money back', 'payment', 'pay', 'fee', 'charge', 'card', 'crypto', 'store credit', 'balance'],
   },
@@ -82,8 +82,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     summary: 'Item Guaranteed or Full Refund — what every order is covered for, and what is not.',
     links: [
       { label: 'How SafeDrop Works', href: '/safedrop' },
-      { label: 'SafeDrop Protection Terms', href: '/safedrop-policy' },
-      { label: 'Buyer Terms', href: '/buyer-terms' },
+      { label: 'SafeDrop Protection Terms', href: '/refunds#part-safedrop' },
+      { label: 'Buyer Terms', href: '/terms#part-buyer-terms' },
     ],
     keywords: ['safe', 'protection', 'guarantee', 'covered', 'scam', 'trust'],
   },
@@ -193,7 +193,7 @@ export const HELP_FAQ: HelpFaq[] = [
     topic: 'selling',
     q: 'Who am I buying from?',
     // Homepage FAQ copy (HomeFaq).
-    a: 'Real players and verified sellers. Every seller completes identity verification before they can list anything, and their rating and sales history sit on each listing so you can see who you are dealing with.',
+    a: 'Independent sellers, from players to dedicated stores. Their rating and sales history sit on each listing, so you can see who you are dealing with.',
     keywords: ['seller', 'verified', 'rating', 'reviews', 'identity'],
   },
   {

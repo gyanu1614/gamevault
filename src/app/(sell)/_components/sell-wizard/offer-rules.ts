@@ -104,6 +104,30 @@ export function templateDataFor(template: AttributeTemplateFull | null, values: 
   return out
 }
 
+/** Field types whose answer must be one of the field's current choices. */
+const CHOICE_TYPES: ReadonlySet<string> = new Set(['select', 'image_select', 'multiselect'])
+
+/**
+ * The inverse of templateDataFor: a saved listing's answers (keyed by slug)
+ * back into the form (keyed by id), for edit and duplicate. A choice the field
+ * no longer offers is dropped, so the seller sees the field blank and re-picks
+ * instead of saving a code that now means something else.
+ */
+export function fieldValuesFromTemplateData(template: AttributeTemplateFull, saved: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const a of template.attributes) {
+    const v = saved[a.slug]
+    if (v === undefined || v === null || v === '') continue
+    const offered = CHOICE_TYPES.has(a.type) && a.options ? new Set(a.options.map((o) => o.value)) : null
+    if (!offered) out[a.id] = v
+    else if (Array.isArray(v)) {
+      const kept = v.filter((x) => offered.has(x as string))
+      if (kept.length > 0) out[a.id] = kept
+    } else if (offered.has(v as string)) out[a.id] = v
+  }
+  return out
+}
+
 /**
  * What the market price helper asks about: the pair, plus (items only) the
  * visible dropdown picks keyed by slug. Never free text or the title, so
