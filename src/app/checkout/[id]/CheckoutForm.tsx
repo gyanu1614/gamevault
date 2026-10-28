@@ -1110,9 +1110,10 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
   // ── The buy box under the item card (desktop): discount, the money rows,
   //    Pay and the terms. Phones get the same rows under the list and Pay in
   //    the sticky bar.
-  // The box is its own panel, so it carries its own centered title.
+  // The box is its own panel, so it carries its own title: left-aligned, the
+  // item card's title size (owner 2026-10-27: centered "looks bad").
   const summaryTitle = (
-    <h2 className="mb-4 text-center text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.ink }}>
+    <h2 className="mb-3.5 text-[16px] font-semibold tracking-[-0.01em]" style={{ color: T.ink }}>
       Order Summary
     </h2>
   )

@@ -97,7 +97,7 @@ export default function CheckoutLoading() {
 
             {/* Phones: discount + money rows under the list */}
             <Card className="mt-5 px-4 pb-4 pt-4 lg:hidden">
-              <Block className="mx-auto mb-4 h-4 w-32" />
+              <Block className="mb-3.5 h-4 w-32" />
               <Block className="h-3.5 w-40" />
               <div className="mt-3 space-y-2 border-t border-white/[0.08] pt-3.5">
                 {[0, 1].map((i) => (
@@ -133,7 +133,7 @@ export default function CheckoutLoading() {
           <div className="hidden flex-col gap-3.5 lg:flex">
             <ItemCardSkeleton />
             <Card className="p-5">
-              <Block className="mx-auto mb-4 h-4 w-32" />
+              <Block className="mb-3.5 h-4 w-32" />
               <Block className="h-3.5 w-40" />
               <div className="mt-4 space-y-2 border-t border-white/[0.08] pt-3.5">
                 {[0, 1].map((i) => (
