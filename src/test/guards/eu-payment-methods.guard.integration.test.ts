@@ -296,8 +296,10 @@ describe.skipIf(!hasEnv)('checkout B4 — EU Payssion methods (integration)', ()
   it('no app code calls a provider refund(); paysafecard (refundable=false) is promised "Store credit only" on /fees', () => {
     const files = ['src/lib/payments/dispatch.ts', 'src/lib/actions/orders.ts', 'src/lib/actions/admin-disputes.ts', 'src/lib/wallet/order-money.ts']
     for (const f of files) expect(read(f), `${f} must not call provider.refund()`).not.toMatch(/\.refund\(/)
-    const rates = read('src/lib/fees/buyer-public-rates.ts')
-    expect(rates).toMatch(/r\.refundable \? 'Yes' : 'Store credit only'/)
+    // /fees (redesigned 2026-10-23): the row's flag rides through the overview
+    // to the "Refund to method" column of the by-region tables.
+    expect(read('src/lib/fees/buyer-fee-overview.ts')).toMatch(/refundable: m\.refundable/)
+    expect(read('src/app/(marketing)/fees/_FeeTables.tsx')).toMatch(/m\.refundable \? 'Yes' : 'Store credit only'/)
     // The checkout tile tells a paysafecard buyer the same thing.
     // The checkout row notes live in _method-ui.ts (split out of CheckoutForm 2026-10-15).
     expect(read('src/app/checkout/[id]/_method-ui.ts')).toMatch(/paysafecard: \{[\s\S]*?Refunds go to your Store Balance/)

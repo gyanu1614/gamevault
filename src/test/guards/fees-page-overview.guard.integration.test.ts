@@ -36,5 +36,7 @@ describe.skipIf(!hasEnv)('/fees overview: fee per method from the buyer quote (i
     expect(card.name).toBe('Credit / Debit Card (Brazil)')
     expect(card.sample).toEqual({ marketplaceMinor: 40, processingMinor: 113, serviceFeeMinor: 153, totalMinor: 2153 })
     expect(card.terms).toMatch(/4\.25%/)
+    // The "Refund to method" column reads this: paysafecard is "Store credit only".
+    expect(o.methods.find((m) => m.method === 'paysafecard')?.refundable).toBe(false)
   })
 })
