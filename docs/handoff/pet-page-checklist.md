@@ -7,7 +7,7 @@ Rule: ✅ done · 🔨 code written, not yet checked · ⏳ waits for the owner 
 ## A. Design (owner picks)
 - [x] A1 🔨 (lab ready: scratchpad preview/lab2.html — 1 outline tiles · 2 round badges · 3 sliding outline + check rows · 4 chip row) Trait buttons: 3–4 versions — picked = outline in the trait's colour (no full fill), round badge buttons like N/F/R, a mix. Layout = segmented Normal/Neon/Mega + Fly/Ride (lab variant A). Clear CTA, no confusion.
 - [x] A2 🔨 (lab: plain wide card in 1–4, Eldorado square card in 5) Picture: plain image in a card like Eldorado's (natural size, not the big stage).
-- [ ] A3 Owner picks a version → wire it into the page → real page check.
+- [x] A3 🔨 Owner picked 1 (outline tiles + plain card), badges top right → in the code (fef0efff); real page check still owed.
 
 ## B. Pet pictures (owner: best option, no DB load, low complexity)
 - [ ] B1 Dry run → show the owner the count (last run: 519 of 808 sharper from the wiki).
