@@ -33,14 +33,16 @@ export const PANEL_STYLE: CSSProperties = {
 /** Rounded + blur for a panel; pair with PANEL_STYLE. */
 export const PANEL_CLASS = 'rounded-lg backdrop-blur-xl'
 
-/** A payment row: a slim, glossy grey box, no outline. Owner 2026-10-27,
- *  the standard way: hover lifts it one step lighter, the picked row sinks
- *  to a darker grey (pressed), never green. */
+/** A payment row: a slim, glossy grey box, no outline and no green (owner
+ *  2026-10-27). States climb in brightness, never sink: idle grey, hover one
+ *  step lighter, picked clearly the lightest and raised (brighter top edge,
+ *  soft drop shadow). Stripe's checkout guidance says the same: the active
+ *  method must be the most noticeable, never equally weighted. */
 export function rowStyle(checked: boolean): CSSProperties {
   return checked
     ? {
-        backgroundImage: [GRAIN, 'linear-gradient(180deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.10) 100%)'].join(', '),
-        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.04)',
+        backgroundImage: [GRAIN, 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)'].join(', '),
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.16), 0 10px 24px -14px rgba(0,0,0,0.9)',
       }
     : {
         backgroundImage: [GRAIN, 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 100%)'].join(', '),
@@ -48,10 +50,10 @@ export function rowStyle(checked: boolean): CSSProperties {
       }
 }
 
-/** Row base under the layers: idle grey, hover one step lighter, picked darker. */
+/** Row base under the layers: idle grey, hover lighter, picked lightest. */
 export const ROW_CLASS = 'rounded-md backdrop-blur-md transition-[background-color,box-shadow] duration-150'
-export const ROW_IDLE_CLASS = 'bg-[#202127]/75 hover:bg-[#2B2C33]/85'
-export const ROW_CHECKED_CLASS = 'bg-[#141519]/90'
+export const ROW_IDLE_CLASS = 'bg-[#1F2025]/75 hover:bg-[#28292F]/85'
+export const ROW_CHECKED_CLASS = 'bg-[#33343B]/95'
 
 /** The logo tile at the right of a row: a slim filled chip, no ring. */
 export const TILE_CLASS =

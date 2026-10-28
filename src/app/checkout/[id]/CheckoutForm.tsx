@@ -690,7 +690,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               aria-checked={selected}
               onClick={() => setCoin(c.value)}
               // Same states as the payment rows (owner 2026-10-27): grey,
-              // lighter on hover, darker when picked; no ring, no green.
+              // lighter on hover, lightest and raised when picked; no ring,
+              // no green.
               className={cn(
                 'flex min-h-[44px] items-center gap-2.5 rounded-md px-3.5 py-2 text-left transition-[background-color,box-shadow]',
                 selected ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS
@@ -775,7 +776,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
   /** Row (owner 2026-10-21, Eldorado shape): radio, name and one line, the
    *  brand logo in a tile at the right. A slim filled box with no outline
-   *  (owner 2026-10-27): hover lighter grey, the pick a darker grey. */
+   *  (owner 2026-10-27): hover lighter grey, the pick the lightest, raised,
+   *  with a bolder label. */
   const rowClass = (checked: boolean) => cn(ROW_CLASS, checked ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS)
 
   /** The brand mark in a tile at the right of the row (the row's icon when a
@@ -809,8 +811,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const rowButton = 'flex min-h-[48px] w-full items-center gap-3 rounded-md px-3.5 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
   // Name only (owner 2026-10-21): the logo and the provider page say the rest.
-  const rowText = (label: string) => (
-    <span className="min-w-0 flex-1 truncate text-[14px] font-medium tracking-[-0.005em]" style={{ color: T.ink }}>
+  const rowText = (label: string, checked = false) => (
+    <span
+      className={cn('min-w-0 flex-1 truncate text-[14px] tracking-[-0.005em]', checked ? 'font-semibold' : 'font-medium')}
+      style={{ color: checked ? '#FFFFFF' : '#D3D9E0' }}
+    >
       {label}
     </span>
   )
@@ -821,7 +826,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       <div className={rowClass(checked)} style={rowStyle(checked)}>
         <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
           {radio(checked)}
-          {rowText(m.label)}
+          {rowText(m.label, checked)}
           {m.id === lowestFeeId && (
             <span className="shrink-0 text-[12px] font-semibold" style={{ color: TRUST_BLUE }}>
               Lowest Fee
@@ -839,7 +844,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     <div className={rowClass(cryptoChecked)} style={rowStyle(cryptoChecked)}>
       <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
         {radio(cryptoChecked)}
-        {rowText('Crypto')}
+        {rowText('Crypto', cryptoChecked)}
         <span className="flex shrink-0 gap-1.5">
           {COINS.map((c) =>
             logoTile(<Image src={c.icon} alt="" width={17} height={17} unoptimized />, c.value)
