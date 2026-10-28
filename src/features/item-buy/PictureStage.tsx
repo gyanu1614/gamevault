@@ -9,19 +9,14 @@ import { TraitMarks } from './TraitMarks'
 /** Never blow the art up beyond this many times its own pixels (it blurs). */
 const MAX_UPSCALE = 1.5
 
-/** One slow breath for the pet and its shadow. */
-const FLOAT = { duration: 6, repeat: Infinity, ease: 'easeInOut' } as const
-
 /**
- * The pet on a light studio stage, with the trust strip fixed to its foot
- * (owner, 2026-10-27: the dark stage was "dark and gloomy"; StockX's white
- * image card on a dark page, and the game's own light inventory tiles). The pet
- * floats slowly over a contact shadow (still for reduced motion) and is
- * capped near its real resolution once loaded, so small catalogue art stays
- * sharp. The picked trait's badges sit bottom-right, where the game puts
- * them on an inventory tile. The promises are the site's own (TrustBand
- * copy), each in a blue tile; `trustpilot` is the server-rendered row, shown
- * only with 10+ reviews.
+ * The pet in a plain card, the trust strip fixed to its foot (owner,
+ * 2026-10-27: "a normal image within a card, like Eldorado"; design lab
+ * version 1). No stage lighting or float: the picture at its own size,
+ * capped near its real resolution once loaded so small catalogue art stays
+ * sharp. The picked trait's badges sit top-right and pop in on a change. The
+ * promises are the site's own (TrustBand copy), each in a blue tile;
+ * `trustpilot` is the server-rendered row, shown only with 10+ reviews.
  */
 export function PictureStage({
   imageUrl,
@@ -39,36 +34,24 @@ export function PictureStage({
   const reduce = useReducedMotion()
 
   return (
-    <div className="overflow-hidden rounded-lg bg-[#17181C] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_40px_80px_-48px_rgba(0,0,0,0.95)]">
-      <div className="relative isolate grid aspect-[16/11] place-items-center bg-[linear-gradient(180deg,#F4F5F8_0%,#E1E4EA_100%)] sm:aspect-[4/3] lg:aspect-[16/10]">
-        <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_0%,rgba(255,255,255,0.9),transparent_70%)]" />
-
+    <div className="overflow-hidden rounded-lg bg-[#18191D]">
+      <div className="relative grid aspect-[16/11] place-items-center bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] sm:aspect-[4/3] lg:aspect-[16/10]">
         {imageUrl ? (
-          <div className="relative flex h-[62%] w-full items-end justify-center">
-            <motion.span
-              aria-hidden
-              className="absolute bottom-[-7%] h-[9%] w-[36%] rounded-[50%] bg-black/25 blur-[10px]"
-              animate={reduce ? undefined : { scaleX: [1, 0.86, 1], opacity: [1, 0.7, 1] }}
-              transition={FLOAT}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art from storage, same as the value pages */}
-            <motion.img
-              src={imageUrl}
-              alt={name}
-              width={512}
-              height={512}
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-              onLoad={(e) => setCap(e.currentTarget.naturalWidth * MAX_UPSCALE)}
-              style={cap ? { maxWidth: cap, maxHeight: cap } : undefined}
-              animate={reduce ? undefined : { y: [0, -7, 0] }}
-              transition={FLOAT}
-              className="relative h-full w-auto object-contain"
-            />
-          </div>
+          /* eslint-disable-next-line @next/next/no-img-element -- catalogue art from storage, same as the value pages */
+          <img
+            src={imageUrl}
+            alt={name}
+            width={512}
+            height={512}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            onLoad={(e) => setCap(e.currentTarget.naturalWidth * MAX_UPSCALE)}
+            style={cap ? { maxWidth: cap, maxHeight: cap } : undefined}
+            className="h-[60%] w-auto object-contain"
+          />
         ) : (
-          <span className="font-medium uppercase tracking-[0.14em] text-[#8A8F9A]" style={{ fontSize: 'var(--fs-micro)' }}>
+          <span className="font-medium uppercase tracking-[0.14em] text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
             Picture Coming Soon
           </span>
         )}
@@ -77,19 +60,19 @@ export function PictureStage({
           {traitCode ? (
             <motion.div
               key={traitCode}
-              className="absolute bottom-4 right-4 drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] sm:bottom-5 sm:right-5"
-              initial={reduce ? false : { opacity: 0, scale: 0.8, y: 6 }}
+              className="absolute right-4 top-4 sm:right-5 sm:top-5"
+              initial={reduce ? false : { opacity: 0, scale: 0.8, y: -6 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={reduce ? undefined : { opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}
               transition={{ type: 'spring', stiffness: 420, damping: 26 }}
             >
-              <TraitMarks code={traitCode} size={30} />
+              <TraitMarks code={traitCode} size={28} />
             </motion.div>
           ) : null}
         </AnimatePresence>
       </div>
 
-      <ul className="relative grid grid-cols-3 bg-[linear-gradient(180deg,#1D1E23_0%,#18191D_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <ul className="relative grid grid-cols-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
         <TrustItem icon={IconShieldCheck} label="Money-Back Guarantee" short="Money-Back" />
         <TrustItem icon={IconBolt} label="Quick Delivery" divider />
         <TrustItem icon={IconHeadset} label="24/7 Support" divider />

@@ -1,21 +1,33 @@
 'use client'
 
 import { useId } from 'react'
-import { Switch } from '@/components/ui/switch'
+import { IconCheck, IconPaw } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { TraitMarks } from './TraitMarks'
 import { TraitName } from './TraitName'
-import { amTrait, withPotion, withTier } from './model/am-traits'
+import { amTrait, withPotion, withTier, type AmTier } from './model/am-traits'
 import type { TraitOption } from './model/offers'
 
+/** The badges' own colours (TraitMarks); Normal is neutral. */
+const COLOR = { normal: '#C9CCD3', neon: '#8DC54A', mega: '#A970FF', fly: '#3298CB', ride: '#EA2E77' } as const
+
+interface Tile {
+  key: string
+  label: string
+  code: string | null
+  color: string
+  on: boolean
+  tap: () => void
+}
+
 /**
- * Adopt Me's trait picker as on/off filters (owner, 2026-10-27: "traits
- * should be like filter, on or off"; no prices before a pick). Two small
- * groups the way players think of a pet — Neon / Mega Neon, then the Fly and
- * Ride potions — each row the game's badge, its name and the house Switch in
- * the badge's colour. The picked form's name sits on the label row; the price
- * is the buy box's job. Neon and Mega exclude each other, and on those tiers
- * Fly and Ride switch together (model/am-traits).
+ * Adopt Me's trait picker (owner, 2026-10-27, design lab version 1): three
+ * type tiles (Normal / Neon / Mega) and two potion tiles (Fly / Ride). The
+ * pick is an outline in the trait's own colour, never a full fill; the badge
+ * goes from grey to colour and a potion gets a tick. No prices before a pick:
+ * the price is the buy box's job, the picked form's name sits on the label
+ * row. Neon and Mega exclude each other, and on those tiers Fly and Ride
+ * switch together (model/am-traits), so every tap lands on a listed form.
  */
 export function TraitSwitches({
   noun,
@@ -32,16 +44,21 @@ export function TraitSwitches({
   const t = amTrait(value)
   const current = options.find((o) => o.variant === value) ?? null
 
-  const groups = [
+  const tiers: Tile[] = (
     [
-      { code: 'N', label: 'Neon', on: t?.tier === 'neon', set: (on: boolean) => onChange(withTier(value, on ? 'neon' : 'normal')), track: 'data-[state=checked]:bg-[#8DC54A]' },
-      { code: 'M', label: 'Mega Neon', on: t?.tier === 'mega', set: (on: boolean) => onChange(withTier(value, on ? 'mega' : 'normal')), track: 'data-[state=checked]:bg-[#8B3CF6]' },
-    ],
-    [
-      { code: 'F', label: 'Fly', on: !!t?.fly, set: () => onChange(withPotion(value, 'fly')), track: 'data-[state=checked]:bg-[#3298CB]' },
-      { code: 'R', label: 'Ride', on: !!t?.ride, set: () => onChange(withPotion(value, 'ride')), track: 'data-[state=checked]:bg-[#EA2E77]' },
-    ],
-  ]
+      { k: 'normal', label: 'Normal', code: null },
+      { k: 'neon', label: 'Neon', code: 'N' },
+      { k: 'mega', label: 'Mega', code: 'M' },
+    ] as Array<{ k: AmTier; label: string; code: string | null }>
+  ).map((x) => ({ key: x.k, label: x.label, code: x.code, color: COLOR[x.k], on: (t?.tier ?? 'normal') === x.k, tap: () => onChange(withTier(value, x.k)) }))
+  const potions: Tile[] = (['fly', 'ride'] as const).map((p) => ({
+    key: p,
+    label: p === 'fly' ? 'Fly' : 'Ride',
+    code: p === 'fly' ? 'F' : 'R',
+    color: COLOR[p],
+    on: !!t?.[p],
+    tap: () => onChange(withPotion(value, p)),
+  }))
 
   return (
     <div role="group" aria-labelledby={`${id}-label`}>
@@ -56,26 +73,50 @@ export function TraitSwitches({
         ) : null}
       </div>
 
-      <div className="mt-3 space-y-2">
-        {groups.map((rows, g) => (
-          <ul key={g} className="overflow-hidden rounded-lg bg-[#1F2025] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-            {rows.map((r, i) => {
-              const rowId = `${id}-${r.code}`
-              return (
-                <li key={r.code} className={cn(i > 0 && 'shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]')}>
-                  <label htmlFor={rowId} className="flex h-12 cursor-pointer items-center gap-3 px-4 transition-colors hover:bg-white/[0.025]">
-                    <TraitMarks code={r.code} size={22} className={cn('transition-[filter,opacity]', !r.on && 'opacity-60 grayscale')} />
-                    <span className={cn('flex-1 font-semibold transition-colors', r.on ? 'text-text-primary' : 'text-text-secondary')} style={{ fontSize: 'var(--fs-body)' }}>
-                      {r.label}
-                    </span>
-                    <Switch id={rowId} checked={r.on} onCheckedChange={r.set} className={cn('data-[state=unchecked]:bg-[#35363D]', r.track)} />
-                  </label>
-                </li>
-              )
-            })}
-          </ul>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {tiers.map((tile) => (
+          <TileButton key={tile.key} tile={tile} />
+        ))}
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {potions.map((tile) => (
+          <TileButton key={tile.key} tile={tile} potion />
         ))}
       </div>
     </div>
+  )
+}
+
+function TileButton({ tile, potion = false }: { tile: Tile; potion?: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={tile.on}
+      onClick={tile.tap}
+      className={cn(
+        'flex h-12 items-center gap-2.5 rounded-md bg-[#1F2025] px-3 font-semibold transition-colors hover:bg-[#25262C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+        !potion && 'justify-center',
+        tile.on ? 'text-text-primary' : 'text-text-secondary shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]',
+      )}
+      style={{ fontSize: 'var(--fs-body)', ...(tile.on ? { boxShadow: `inset 0 0 0 1.5px ${tile.color}` } : {}) }}
+    >
+      {tile.code ? (
+        <TraitMarks code={tile.code} size={20} className={cn('shrink-0 transition-[filter,opacity]', !tile.on && 'opacity-55 grayscale')} />
+      ) : (
+        <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/[0.08] text-text-secondary">
+          <IconPaw size={12} stroke={2} />
+        </span>
+      )}
+      <span className={cn(potion && 'flex-1 text-left')}>{tile.label}</span>
+      {potion ? (
+        <span
+          aria-hidden
+          className="grid h-5 w-5 place-items-center rounded-full transition-colors"
+          style={tile.on ? { background: tile.color } : { boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.18)' }}
+        >
+          {tile.on ? <IconCheck size={13} stroke={3} className="text-[#141519]" /> : null}
+        </span>
+      ) : null}
+    </button>
   )
 }
