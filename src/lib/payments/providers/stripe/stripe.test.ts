@@ -122,6 +122,9 @@ describe('stripe: createCharge (hosted Checkout)', () => {
     // DropMarket is the merchant: Stripe's Managed Payments (on by default on
     // new accounts, and it refuses allowed_payment_method_types) stays off.
     expect(params.managed_payments).toEqual({ enabled: false })
+    // 3D Secure on every card payment (owner 2026-10-27): stolen-card
+    // disputes then sit with the card issuer, not with DropMarket.
+    expect(params.payment_method_options).toEqual({ card: { request_three_d_secure: 'any' } })
     expect(params.client_reference_id).toBe(ORDER)
     expect(params.metadata).toMatchObject({ order_id: ORDER, amount_minor: '1234', currency: 'USD', order_number: 'DM-ABCD-EFGH' })
     expect(params.payment_intent_data.metadata).toMatchObject({ order_id: ORDER })

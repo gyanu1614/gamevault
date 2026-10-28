@@ -121,6 +121,9 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
           // (Stripe as merchant of record) is on by default on new accounts
           // and refuses allowed_payment_method_types — off for every session.
           managed_payments: { enabled: false },
+          // 3D Secure on every card payment (owner 2026-10-27): a stolen-card
+          // dispute then sits with the issuer. Accepts a small drop-off.
+          payment_method_options: { card: { request_three_d_secure: 'any' } },
           submit_type: 'pay',
           line_items: [
             {
