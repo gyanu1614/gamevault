@@ -43,7 +43,6 @@ import {
   X,
 } from 'lucide-react'
 
-import GppGoodRoundedIcon from '@mui/icons-material/GppGoodRounded'
 import { createCheckout, quoteCheckoutMethods } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
 import { orderMethodsForRegion, regionForCountry } from '@/lib/payments/regions'
@@ -1230,7 +1229,6 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <GppGoodRoundedIcon className="shrink-0" style={{ fontSize: 24, color: TRUST_BLUE }} />
           <h1 className="whitespace-nowrap text-[20px] font-bold sm:text-[24px]" style={{ color: T.ink }}>
             Secure Checkout
           </h1>

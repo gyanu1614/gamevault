@@ -38,7 +38,6 @@ export default function CheckoutLoading() {
         {/* Header row */}
         <div className="flex items-center gap-3">
           <Block className="h-9 w-9" />
-          <Block className="h-6 w-6 rounded-full" />
           <Block className="h-7 w-48" />
         </div>
 
