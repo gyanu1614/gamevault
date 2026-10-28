@@ -49,6 +49,23 @@ export type CanonicalEvent =
       amount: Money
       detail: string | null
     }
+  /** Stripe (2026-10-28): a FULL card refund made outside DropMarket, or a
+   *  card dispute opened / closed. Booked by the card_* SQL seams (card_cases,
+   *  migration 20261028143542): no store credit on top of a card refund, the
+   *  order held while a dispute runs, the loss settled on Stripe's verdict. */
+  | {
+      type: 'CARD_CASE'
+      kind: 'refund_external' | 'dispute_opened' | 'dispute_closed'
+      orderId: string
+      /** `<charge id>:refund` for a refund, the dispute id (dp_…) for a dispute. */
+      providerRef: string
+      amount: Money
+      /** dispute_opened: the bank's reason and the evidence deadline (ISO). */
+      reason?: string | null
+      dueBy?: string | null
+      /** dispute_closed only. */
+      outcome?: 'won' | 'lost'
+    }
 
 export type CanonicalEventType = CanonicalEvent['type']
 

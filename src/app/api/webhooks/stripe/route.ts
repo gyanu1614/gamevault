@@ -11,7 +11,8 @@
  * Events the endpoint subscribes to (dashboard / `stripe listen`):
  *   checkout.session.completed, checkout.session.async_payment_succeeded,
  *   checkout.session.async_payment_failed, checkout.session.expired,
- *   charge.refunded, charge.dispute.created
+ *   charge.refunded, charge.dispute.created, charge.dispute.closed
+ *   (refunds and disputes → card_cases, lib/payments/card-cases.ts)
  *
  * Runs on the Node runtime (needs node:crypto + the service-role client).
  */

@@ -30,16 +30,20 @@ import { displayOrderRef } from '@/lib/orders/order-number'
 import { stripeClient } from './client'
 import { assertStripeConfigured, isProductionDeploy, stripeWebhookSecret } from './env'
 import {
-  stripeDisputeNotice,
-  stripeRefundNotice,
   stripeSessionEventId,
   stripeSessionOrderId,
   stripeSessionState,
   stripeSessionToCanonical,
-  type StripeChargeView,
-  type StripeDisputeView,
   type StripeSessionView,
 } from './status-map'
+import {
+  DM_REFUND_KEY,
+  stripeDisputeClosed,
+  stripeDisputeOpened,
+  stripeRefundEvents,
+  type StripeChargeView,
+  type StripeDisputeView,
+} from './card-case-map'
 
 /** The slice of the Stripe client the adapter uses (tests pass a fake). */
 export type StripeApi = Pick<Stripe, 'checkout' | 'charges' | 'disputes' | 'refunds'>
@@ -205,13 +209,13 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
       }
       if (event.type === 'charge.refunded') {
         if (!objectId) throw new Error('stripe: charge.refunded without a charge id')
-        const charge = await api().charges.retrieve(objectId, { expand: ['payment_intent'] })
-        return stripeRefundNotice(charge as unknown as StripeChargeView)
+        const charge = await api().charges.retrieve(objectId, { expand: ['payment_intent', 'refunds'] })
+        return stripeRefundEvents(charge as unknown as StripeChargeView)
       }
-      if (event.type === 'charge.dispute.created') {
-        if (!objectId) throw new Error('stripe: charge.dispute.created without a dispute id')
-        const dispute = await api().disputes.retrieve(objectId, { expand: ['payment_intent'] })
-        return stripeDisputeNotice(dispute as unknown as StripeDisputeView)
+      if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {
+        if (!objectId) throw new Error(`stripe: ${event.type} without a dispute id`)
+        const dispute = (await api().disputes.retrieve(objectId, { expand: ['payment_intent'] })) as unknown as StripeDisputeView
+        return event.type === 'charge.dispute.created' ? stripeDisputeOpened(dispute) : stripeDisputeClosed(dispute)
       }
       // Verified but not an event we act on: record it, change nothing.
       return { providerEventId: `${event.id}:ignored`, events: [] }
@@ -227,7 +231,7 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
         throw new Error(`stripe: refund currency ${amount.currency} does not match the charge (${s.currency})`)
       }
       const refund = await api().refunds.create(
-        { payment_intent: pi, amount: Number(amount.amountMinor), metadata: { order_id: stripeSessionOrderId(s) } },
+        { payment_intent: pi, amount: Number(amount.amountMinor), metadata: { order_id: stripeSessionOrderId(s), [DM_REFUND_KEY]: idempotencyKey } },
         { idempotencyKey: `dm-refund:${idempotencyKey}` }
       )
       return { refundId: refund.id }

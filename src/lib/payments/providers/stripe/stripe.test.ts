@@ -53,9 +53,11 @@ function fakeApi(over: { session?: Record<string, unknown> } = {}) {
     charges: {
       retrieve: vi.fn(async () => ({
         id: 'ch_1',
+        amount: 1234,
         amount_refunded: 500,
         currency: 'usd',
         payment_intent: { id: 'pi_1', metadata: { order_id: ORDER } },
+        refunds: { data: [{ id: 're_9', amount: 500, status: 'succeeded', metadata: {} }], has_more: false },
       })),
     },
     disputes: {
@@ -64,6 +66,7 @@ function fakeApi(over: { session?: Record<string, unknown> } = {}) {
         amount: 1234,
         currency: 'usd',
         reason: 'fraudulent',
+        status: 'lost',
         charge: 'ch_1',
         evidence_details: { due_by: null },
         payment_intent: { id: 'pi_1', metadata: { order_id: ORDER } },
@@ -232,21 +235,25 @@ describe('stripe: parseWebhook — authoritative re-fetch', () => {
     expect(parsed.events[0]).toMatchObject({ type: 'CHARGE_FAILED', reason: 'expired' })
   })
 
-  it('charge.refunded re-fetches the charge and records a notice', async () => {
+  it('charge.refunded re-fetches the charge with its refunds; a partial outside refund is a notice', async () => {
     const api = fakeApi()
     const { headers, rawBody } = signed(eventOf('charge.refunded', { id: 'ch_1', amount_refunded: 99999 }))
     const parsed = await provider(api).parseWebhook(headers, rawBody)
-    expect(api.charges.retrieve).toHaveBeenCalledWith('ch_1', { expand: ['payment_intent'] })
+    expect(api.charges.retrieve).toHaveBeenCalledWith('ch_1', { expand: ['payment_intent', 'refunds'] })
     expect(parsed.providerEventId).toBe('ch_1:refunded:500')
     expect(parsed.events[0]).toMatchObject({ type: 'PAYMENT_NOTICE', kind: 'refund', orderId: ORDER, amount: money(500n, 'USD') })
   })
 
-  it('charge.dispute.created re-fetches the dispute and records a notice', async () => {
+  it('charge.dispute.created / .closed re-fetch the dispute and open / close a card case', async () => {
     const api = fakeApi()
-    const { headers, rawBody } = signed(eventOf('charge.dispute.created', { id: 'dp_1' }))
-    const parsed = await provider(api).parseWebhook(headers, rawBody)
+    const opened = signed(eventOf('charge.dispute.created', { id: 'dp_1' }))
+    const parsed = await provider(api).parseWebhook(opened.headers, opened.rawBody)
     expect(api.disputes.retrieve).toHaveBeenCalledWith('dp_1', { expand: ['payment_intent'] })
-    expect(parsed.events[0]).toMatchObject({ type: 'PAYMENT_NOTICE', kind: 'dispute', orderId: ORDER })
+    expect(parsed.events[0]).toMatchObject({ type: 'CARD_CASE', kind: 'dispute_opened', orderId: ORDER, providerRef: 'dp_1' })
+    const closed = signed(eventOf('charge.dispute.closed', { id: 'dp_1' }))
+    const after = await provider(api).parseWebhook(closed.headers, closed.rawBody)
+    expect(after.providerEventId).toBe('dp_1:closed:lost')
+    expect(after.events[0]).toMatchObject({ type: 'CARD_CASE', kind: 'dispute_closed', outcome: 'lost' })
   })
 
   it('an event type we do not handle is accepted and recorded with no events', async () => {
@@ -294,7 +301,8 @@ describe('stripe: refund (Refund To Card outbox)', () => {
     const res = await provider(api).refund!('cs_test_1', money(500n, 'USD'), 'outbox-row-1')
     expect(res).toEqual({ refundId: 're_1' })
     expect(api.refunds.create).toHaveBeenCalledWith(
-      { payment_intent: 'pi_1', amount: 500, metadata: { order_id: ORDER } },
+      // dm_refund marks it as ours: its charge.refunded webhook books nothing.
+      { payment_intent: 'pi_1', amount: 500, metadata: { order_id: ORDER, dm_refund: 'outbox-row-1' } },
       { idempotencyKey: 'dm-refund:outbox-row-1' }
     )
   })
