@@ -10,6 +10,8 @@ import { Scales } from '@phosphor-icons/react/dist/ssr/Scales'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { AdminOrderActions } from './_AdminOrderActions'
+import { CardCasePanel } from './_CardCasePanel'
+import { loadOrderCardCases } from '@/lib/admin/card-cases'
 import { AdminPanel, StatusBadge } from '../../components/kit'
 import { GameTile } from '../../components/GameTile'
 import { PAYOUT_LABEL, PAYOUT_TONE } from '../payout'
@@ -64,7 +66,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   // order and none consumes another, so they run as one fan-out instead of
   // four serial round-trips. The two conditional reads resolve to null when
   // the listing carries no game/category.
-  const [{ data: buyer }, { data: seller }, gameRes, categoryRes, { data: openDispute }] = await Promise.all([
+  const [{ data: buyer }, { data: seller }, gameRes, categoryRes, { data: openDispute }, cardCases] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, username, email, avatar_url')
@@ -96,7 +98,11 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       .eq('transaction_id', orderId)
       .not('status', 'in', '("resolved_buyer_favor","resolved_seller_favor","resolved_partial","closed")')
       .maybeSingle() as any,
+    // Card refunds / disputes (service role: card_cases has no RLS policies).
+    loadOrderCardCases(orderId, order.buyer_id ?? null),
   ])
+  // While a card case holds the order, only its own controls may settle it.
+  const cardCaseActive = cardCases.cases.some((c) => c.status === 'open' || c.status === 'awaiting_decision')
 
   const money = adminOrderMoney(order)
 
@@ -237,14 +243,18 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             </AdminPanel>
           )}
 
+          <CardCasePanel orderId={order.id} buyerId={order.buyer_id ?? null} cases={cardCases.cases} buyerBlock={cardCases.buyerBlock} />
+
           {/* PR 7 — Money controls: mark disputed / resolve */}
-          <AdminOrderActions
-            orderId={order.id}
-            status={order.status}
-            totalAmount={Number(order.total_amount ?? 0)}
-            sellerPayout={Number(order.seller_payout ?? 0)}
-            openDisputeId={(openDispute as any)?.id ?? null}
-          />
+          {!cardCaseActive && (
+            <AdminOrderActions
+              orderId={order.id}
+              status={order.status}
+              totalAmount={Number(order.total_amount ?? 0)}
+              sellerPayout={Number(order.seller_payout ?? 0)}
+              openDisputeId={(openDispute as any)?.id ?? null}
+            />
+          )}
 
           {/* orders has no dispute_id column: the open dispute is read above by transaction_id. */}
           {(openDispute as any)?.id && (

@@ -136,7 +136,7 @@ const governingLawSection = (h: string, what: string): LegalSection => ({
 const sentence = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1)
 /** The personal data each payment provider receives (Privacy Policy recipients table). */
 const PROCESSOR_DATA: Record<string, string> = {
-  Stripe: 'Order reference, amount, and the card details and email address you enter on Stripe’s payment page',
+  Stripe: 'Order reference, amount, and the card details and email address you enter on Stripe’s payment page; if you dispute a card payment, the Order’s delivery record and Order chat, sent as evidence to your card issuer',
   Payssion: 'Order reference, amount, payment method, and the details you enter on Payssion’s payment page',
   'BTCPay Server': 'Order reference, amount, payment address and transaction ID',
   Payoneer: 'Payoneer account email and payout amount',

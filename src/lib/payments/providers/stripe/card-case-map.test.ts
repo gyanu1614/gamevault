@@ -4,7 +4,14 @@
  */
 import { describe, it, expect } from 'vitest'
 
-import { stripeRefundEvents, stripeDisputeOpened, stripeDisputeClosed, type StripeChargeView, type StripeDisputeView } from './card-case-map'
+import {
+  stripeRefundEvents,
+  stripeDisputeOpened,
+  stripeDisputeClosed,
+  type StripeChargeView,
+  type StripeDisputeView,
+  type StripeRefundView,
+} from './card-case-map'
 
 const ORDER = '11111111-2222-3333-4444-555555555555'
 const PI = { id: 'pi_1', metadata: { order_id: ORDER } }
@@ -13,7 +20,7 @@ function charge(refunds: StripeChargeView['refunds'], over: Partial<StripeCharge
   const refunded = (refunds?.data ?? []).reduce((s, r) => s + r.amount, 0)
   return { id: 'ch_1', amount: 1000, amount_refunded: refunded, currency: 'usd', payment_intent: PI, refunds, ...over }
 }
-const refund = (amount: number, ours = false, status = 'succeeded') => ({
+const refund = (amount: number, ours = false, status = 'succeeded'): StripeRefundView => ({
   id: `re_${amount}_${ours ? 'dm' : 'x'}`,
   amount,
   status,

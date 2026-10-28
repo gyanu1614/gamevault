@@ -17,6 +17,13 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture, activateFixtureListing } from './throwaway'
 
+let sessionClient: any = null
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => {
+    if (!sessionClient) throw new Error('test: session client not set')
+    return sessionClient
+  },
+}))
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/email', async (importOriginal) => {
@@ -254,6 +261,29 @@ describe.skipIf(!hasEnv)('card safeguards: external refunds, chargebacks, buyer 
     await rpc('safedrop_transition', { p_order_id: id, p_event: 'REFUNDED', p_dedupe_key: 'guard', p_release_method: null, p_refund_minor: null })
     expect(await disputeOpen(id)).toMatchObject({ opened: false, status: 'review' })
     expect(await order(id)).toMatchObject({ status: 'refunded' })
+  })
+
+  it('a blocked buyer cannot check out or retry a payment; unblocking lets them back', async () => {
+    process.env.NEXT_PUBLIC_PURCHASES_ENABLED = 'true'
+    vi.resetModules()
+    const { createCheckout, retryOrderPayment } = await import('@/lib/actions/checkout')
+    const { BUYER_BLOCKED_MESSAGE } = await import('@/lib/checkout/buyer-block')
+    await fx!.svc.from('buyer_blocks').upsert({ user_id: fx!.buyer.id, reason: 'card_dispute', source_ref: 'dp_guard' })
+    sessionClient = fx!.buyer.client
+    expect(await createCheckout({ listingId: fx!.listingId, quantity: 1 })).toMatchObject({ success: false, error: BUYER_BLOCKED_MESSAGE })
+    expect(await retryOrderPayment(fx!.pendingOrderId)).toMatchObject({ success: false, error: BUYER_BLOCKED_MESSAGE })
+    expect(await rpc('buyer_unblock', { p_user_id: fx!.buyer.id })).toBe(true)
+    expect(await blocked()).toBe(false)
+    expect(await rpc('buyer_unblock', { p_user_id: fx!.buyer.id })).toBe(false)
+    delete process.env.NEXT_PUBLIC_PURCHASES_ENABLED
+  })
+
+  it('signed-in users can neither read the case tables nor call the card functions', async () => {
+    const client = fx!.buyer.client
+    expect((await client.from('card_cases').select('id').limit(1)).data ?? []).toEqual([])
+    expect((await client.from('buyer_blocks').select('user_id').limit(1)).data ?? []).toEqual([])
+    const r = await (client.rpc as any)('buyer_unblock', { p_user_id: fx!.buyer.id })
+    expect(r.error?.message).toMatch(/permission denied/i)
   })
 
   it.skipIf(!TARGET_IS_LOCAL)('a fault inside a step rolls the whole step back', async () => {

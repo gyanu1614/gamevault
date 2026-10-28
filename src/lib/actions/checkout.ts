@@ -50,6 +50,7 @@ import { validatePromoCode } from '@/lib/actions/promo'
 import { promoRefusalMessage, resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
 import { PROVIDER_UNAVAILABLE_MESSAGE, chargeFailureMessage } from '@/lib/actions/checkout-errors'
+import { BUYER_BLOCKED_MESSAGE, isBuyerBlocked } from '@/lib/checkout/buyer-block'
 
 // Order currency is the ledger base. USD end-to-end (decided 2026-09-04):
 // listings, checkout totals, orders, wallet ledger and provider invoices all
@@ -123,6 +124,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { success: false, error: 'Authentication required' }
+    // A buyer who disputed a card payment cannot buy until an admin unblocks them.
+    if (await isBuyerBlocked(user.id)) return { success: false, error: BUYER_BLOCKED_MESSAGE }
 
     // PAY-007: the live UI calls this action directly (never /api/checkout),
     // so the budget must be charged HERE. Per buyer, not per IP: one account
@@ -658,6 +661,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
+    if (await isBuyerBlocked(user.id)) return { success: false, error: BUYER_BLOCKED_MESSAGE }
 
     const { data: order } = (await supabase
       .from('orders')
