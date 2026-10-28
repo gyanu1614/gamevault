@@ -689,17 +689,19 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               role="radio"
               aria-checked={selected}
               onClick={() => setCoin(c.value)}
-              className="flex items-center gap-2.5 rounded-md px-3.5 py-3 text-left transition-[box-shadow,transform] active:scale-[0.98]"
-              style={{
-                boxShadow: `inset 0 0 0 1.5px ${selected ? T.accentText : 'rgba(255,255,255,0.10)'}`,
-                background: selected ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
-              }}
+              // Same states as the payment rows (owner 2026-10-27): grey,
+              // lighter on hover, darker when picked; no ring, no green.
+              className={cn(
+                'flex min-h-[44px] items-center gap-2.5 rounded-md px-3.5 py-2 text-left transition-[background-color,box-shadow]',
+                selected ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS
+              )}
+              style={rowStyle(selected)}
             >
-              <Image src={c.icon} alt="" width={22} height={22} unoptimized />
-              <span className="text-[14px] font-semibold" style={{ color: T.ink }}>
+              <Image src={c.icon} alt="" width={20} height={20} unoptimized />
+              <span className="text-[14px] font-medium" style={{ color: T.ink }}>
                 {c.label}
               </span>
-              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.accentText }} />}
+              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.ink }} />}
             </button>
           )
         })}
@@ -764,16 +766,16 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const radio = (checked: boolean) => (
     <span
       aria-hidden
-      className="grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors"
-      style={{ boxShadow: `inset 0 0 0 2px ${checked ? T.accentText : 'rgba(255,255,255,0.32)'}` }}
+      className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full transition-colors"
+      style={{ boxShadow: `inset 0 0 0 2px ${checked ? 'rgba(233,237,242,0.92)' : 'rgba(255,255,255,0.28)'}` }}
     >
-      {checked && <span className="h-2.5 w-2.5 rounded-full" style={{ background: T.accentText }} />}
+      {checked && <span className="h-2 w-2 rounded-full" style={{ background: T.ink }} />}
     </span>
   )
 
   /** Row (owner 2026-10-21, Eldorado shape): radio, name and one line, the
-   *  brand logo in a tile at the right. A filled glossy box with no outline
-   *  (owner 2026-10-27); the pick takes a green-tinted fill. */
+   *  brand logo in a tile at the right. A slim filled box with no outline
+   *  (owner 2026-10-27): hover lighter grey, the pick a darker grey. */
   const rowClass = (checked: boolean) => cn(ROW_CLASS, checked ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS)
 
   /** The brand mark in a tile at the right of the row (the row's icon when a
@@ -804,11 +806,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     )
   }
 
-  const rowButton = 'flex min-h-[56px] w-full items-center gap-3.5 rounded-md px-4 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+  const rowButton = 'flex min-h-[48px] w-full items-center gap-3 rounded-md px-3.5 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
   // Name only (owner 2026-10-21): the logo and the provider page say the rest.
   const rowText = (label: string) => (
-    <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+    <span className="min-w-0 flex-1 truncate text-[14px] font-medium tracking-[-0.005em]" style={{ color: T.ink }}>
       {label}
     </span>
   )
@@ -840,7 +842,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         {rowText('Crypto')}
         <span className="flex shrink-0 gap-1.5">
           {COINS.map((c) =>
-            logoTile(<Image src={c.icon} alt="" width={22} height={22} unoptimized />, c.value)
+            logoTile(<Image src={c.icon} alt="" width={17} height={17} unoptimized />, c.value)
           )}
         </span>
       </button>

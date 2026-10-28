@@ -135,8 +135,8 @@ export function methodIdForRow(rowId: string): string {
 /** The mark slot on a payment row. */
 export const MARK_SLOT = { width: 76, height: 30 } as const
 
-/** The mark area inside the logo tile at the right of a payment row (owner 2026-10-21, Eldorado-style rows). */
-export const TILE_SLOT = { width: 46, height: 22 } as const
+/** The mark area inside the logo tile at the right of a payment row (owner 2026-10-21, Eldorado-style rows; slimmer 2026-10-27). */
+export const TILE_SLOT = { width: 38, height: 16 } as const
 
 /**
  * One optical size for every brand mark in the row's slot: a square tile

@@ -17,46 +17,42 @@ const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E\")"
 
 /** Order summary, trust cards, How Your Order Works: near-opaque so the art
- *  behind never greys them out, with the brand-green sheen top-left. */
+ *  behind never greys them out. Neutral only (owner 2026-10-27: no green
+ *  glow): a soft white light from the top-right corner, a top highlight,
+ *  a fine grain. */
 export const PANEL_STYLE: CSSProperties = {
   backgroundImage: [
     GRAIN,
-    'radial-gradient(120% 70% at 0% 0%, rgba(57,227,122,0.085) 0%, rgba(57,227,122,0) 58%)',
-    'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 34%)',
-    'linear-gradient(180deg, rgba(34,35,41,0.95) 0%, rgba(23,24,28,0.97) 100%)',
+    'radial-gradient(90% 60% at 100% 0%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 60%)',
+    'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 28%)',
+    'linear-gradient(180deg, rgba(32,33,38,0.96) 0%, rgba(22,23,27,0.98) 100%)',
   ].join(', '),
-  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.09), 0 22px 50px -22px rgba(0,0,0,0.8)',
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 18px 40px -24px rgba(0,0,0,0.85)',
 }
 
 /** Rounded + blur for a panel; pair with PANEL_STYLE. */
 export const PANEL_CLASS = 'rounded-lg backdrop-blur-xl'
 
-/** A payment row: a glossy, see-through box (gloss band on top, grain), no
- *  outline. The picked row takes a green-tinted fill instead of a ring. */
+/** A payment row: a slim, glossy grey box, no outline. Owner 2026-10-27,
+ *  the standard way: hover lifts it one step lighter, the picked row sinks
+ *  to a darker grey (pressed), never green. */
 export function rowStyle(checked: boolean): CSSProperties {
   return checked
     ? {
-        backgroundImage: [
-          GRAIN,
-          'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 45%)',
-          'linear-gradient(180deg, rgba(86,184,127,0.24) 0%, rgba(86,184,127,0.10) 100%)',
-        ].join(', '),
-        boxShadow: 'inset 0 1px 0 rgba(160,240,190,0.28), 0 14px 32px -18px rgba(20,90,50,0.75)',
+        backgroundImage: [GRAIN, 'linear-gradient(180deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.10) 100%)'].join(', '),
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.04)',
       }
     : {
-        backgroundImage: [
-          GRAIN,
-          'linear-gradient(180deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.02) 100%)',
-        ].join(', '),
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10), 0 12px 28px -18px rgba(0,0,0,0.8)',
+        backgroundImage: [GRAIN, 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 100%)'].join(', '),
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)',
       }
 }
 
-/** Row base under the layers; hover lifts the fill one step in place. */
-export const ROW_CLASS =
-  'rounded-md backdrop-blur-md transition-[background-color,box-shadow] duration-150'
-export const ROW_IDLE_CLASS = 'bg-[#1D1E23]/55 hover:bg-[#24252B]/70'
-export const ROW_CHECKED_CLASS = 'bg-[#1D1E23]/60'
+/** Row base under the layers: idle grey, hover one step lighter, picked darker. */
+export const ROW_CLASS = 'rounded-md backdrop-blur-md transition-[background-color,box-shadow] duration-150'
+export const ROW_IDLE_CLASS = 'bg-[#202127]/75 hover:bg-[#2B2C33]/85'
+export const ROW_CHECKED_CLASS = 'bg-[#141519]/90'
 
-/** The logo tile at the right of a row: a filled chip, no ring. */
-export const TILE_CLASS = 'grid h-9 w-[60px] shrink-0 place-items-center rounded-md bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+/** The logo tile at the right of a row: a slim filled chip, no ring. */
+export const TILE_CLASS =
+  'grid h-7 w-[48px] shrink-0 place-items-center rounded-[5px] bg-white/[0.07] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'

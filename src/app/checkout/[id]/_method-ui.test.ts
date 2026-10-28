@@ -89,6 +89,6 @@ describe('checkout method rows', () => {
       expect(s.width).toBeLessThanOrEqual(TILE_SLOT.width)
       expect(s.height).toBeLessThanOrEqual(TILE_SLOT.height)
     }
-    expect(markSize(1, TILE_SLOT)).toEqual({ width: 22, height: 22 })
+    expect(markSize(1, TILE_SLOT)).toEqual({ width: 16, height: 16 })
   })
 })
