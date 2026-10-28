@@ -68,7 +68,7 @@ export default function CheckoutLoading() {
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="flex min-h-[48px] items-center gap-3 rounded-md bg-[#202127]/75 px-3.5 py-1.5"
+                  className="flex min-h-[48px] items-center gap-3 rounded-lg bg-[#1C1D22] px-3.5 py-1.5"
                   style={rowStyle(false)}
                 >
                   <Block className="h-[18px] w-[18px] rounded-full" />

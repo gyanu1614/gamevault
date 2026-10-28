@@ -25,10 +25,10 @@ import { StarHalf } from '@phosphor-icons/react/dist/ssr/StarHalf'
 
 import type { SiteRating } from '@/lib/reviews/site-rating'
 import { cn } from '@/lib/utils'
-import { PANEL_CLASS, PANEL_STYLE } from './_surfaces'
+import { PANEL_CLASS, PANEL_STYLE, TRUST_BLUE } from './_surfaces'
 
 /** Trust blue: the security signals only; brand green stays on Pay. */
-export const TRUST_BLUE = '#6AA8FF'
+export { TRUST_BLUE }
 const STAR = '#F5B83D'
 
 const SEALS: Array<{ Icon: PhosphorIcon; title: string; sub: string }> = [

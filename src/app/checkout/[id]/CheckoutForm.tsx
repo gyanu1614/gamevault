@@ -689,9 +689,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               role="radio"
               aria-checked={selected}
               onClick={() => setCoin(c.value)}
-              // Same states as the payment rows (owner 2026-10-27): grey,
-              // lighter on hover, lightest and raised when picked; no ring,
-              // no green.
+              // Same states as the payment rows (owner 2026-10-27): flat,
+              // a step lighter on hover, a trust-blue edge when picked.
               className={cn(
                 'flex min-h-[44px] items-center gap-2.5 rounded-md px-3.5 py-2 text-left transition-[background-color,box-shadow]',
                 selected ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS
@@ -702,7 +701,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               <span className="text-[14px] font-medium" style={{ color: T.ink }}>
                 {c.label}
               </span>
-              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.ink }} />}
+              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: TRUST_BLUE }} />}
             </button>
           )
         })}
@@ -768,16 +767,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     <span
       aria-hidden
       className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full transition-colors"
-      style={{ boxShadow: `inset 0 0 0 2px ${checked ? 'rgba(233,237,242,0.92)' : 'rgba(255,255,255,0.28)'}` }}
+      style={{ boxShadow: `inset 0 0 0 2px ${checked ? TRUST_BLUE : 'rgba(233,237,242,0.85)'}` }}
     >
-      {checked && <span className="h-2 w-2 rounded-full" style={{ background: T.ink }} />}
+      {checked && <span className="h-2 w-2 rounded-full" style={{ background: TRUST_BLUE }} />}
     </span>
   )
 
   /** Row (owner 2026-10-21, Eldorado shape): radio, name and one line, the
-   *  brand logo in a tile at the right. A slim filled box with no outline
-   *  (owner 2026-10-27): hover lighter grey, the pick the lightest, raised,
-   *  with a bolder label. */
+   *  brand logo in a tile at the right. Flat and clean (owner 2026-10-27):
+   *  hover a step lighter, the pick a trust-blue edge and a blue radio. */
   const rowClass = (checked: boolean) => cn(ROW_CLASS, checked ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS)
 
   /** The brand mark in a tile at the right of the row (the row's icon when a
@@ -808,13 +806,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     )
   }
 
-  const rowButton = 'flex min-h-[48px] w-full items-center gap-3 rounded-md px-3.5 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+  const rowButton = 'flex min-h-[48px] w-full items-center gap-3 rounded-lg px-3.5 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
   // Name only (owner 2026-10-21): the logo and the provider page say the rest.
   const rowText = (label: string, checked = false) => (
     <span
-      className={cn('min-w-0 flex-1 truncate text-[14px] tracking-[-0.005em]', checked ? 'font-semibold' : 'font-medium')}
-      style={{ color: checked ? '#FFFFFF' : '#D3D9E0' }}
+      className="min-w-0 flex-1 truncate text-[14px] font-medium tracking-[-0.005em]"
+      style={{ color: checked ? '#FFFFFF' : T.ink }}
     >
       {label}
     </span>

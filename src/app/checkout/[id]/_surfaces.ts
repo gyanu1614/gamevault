@@ -33,28 +33,23 @@ export const PANEL_STYLE: CSSProperties = {
 /** Rounded + blur for a panel; pair with PANEL_STYLE. */
 export const PANEL_CLASS = 'rounded-lg backdrop-blur-xl'
 
-/** A payment row: a slim, glossy grey box, no outline and no green (owner
- *  2026-10-27). States climb in brightness, never sink: idle grey, hover one
- *  step lighter, picked clearly the lightest and raised (brighter top edge,
- *  soft drop shadow). Stripe's checkout guidance says the same: the active
- *  method must be the most noticeable, never equally weighted. */
+/** The checkout's trust blue (the shield, the trust icons, the picked
+ *  payment row). One blue for the whole page. */
+export const TRUST_BLUE = '#6AA8FF'
+
+/** A payment row (owner 2026-10-27, "cleaner, like this"): a flat dark box
+ *  with a faint hairline edge; hover lifts the fill one step; the picked row
+ *  takes a trust-blue edge and a blue radio. No gloss, no grain, no green. */
 export function rowStyle(checked: boolean): CSSProperties {
   return checked
-    ? {
-        backgroundImage: [GRAIN, 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)'].join(', '),
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.16), 0 10px 24px -14px rgba(0,0,0,0.9)',
-      }
-    : {
-        backgroundImage: [GRAIN, 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 100%)'].join(', '),
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)',
-      }
+    ? { boxShadow: `inset 0 0 0 1.5px ${TRUST_BLUE}` }
+    : { boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.07)' }
 }
 
-/** Row base under the layers: idle grey, hover lighter, picked lightest. */
-export const ROW_CLASS = 'rounded-md backdrop-blur-md transition-[background-color,box-shadow] duration-150'
-export const ROW_IDLE_CLASS = 'bg-[#1F2025]/75 hover:bg-[#28292F]/85'
-export const ROW_CHECKED_CLASS = 'bg-[#33343B]/95'
+/** Row fills: idle, hover one step lighter, picked with a faint blue tint. */
+export const ROW_CLASS = 'rounded-lg transition-[background-color,box-shadow] duration-150'
+export const ROW_IDLE_CLASS = 'bg-[#1C1D22] hover:bg-[#232429]'
+export const ROW_CHECKED_CLASS = 'bg-[#1D2129]'
 
-/** The logo tile at the right of a row: a slim filled chip, no ring. */
-export const TILE_CLASS =
-  'grid h-7 w-[48px] shrink-0 place-items-center rounded-[5px] bg-white/[0.07] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+/** The logo tile at the right of a row: a slim flat chip. */
+export const TILE_CLASS = 'grid h-7 w-[48px] shrink-0 place-items-center rounded-[6px] bg-[#2A2B32]'
