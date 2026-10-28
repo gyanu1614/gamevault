@@ -6,7 +6,7 @@ import type { ValueListRow } from '@/app/(marketplace)/[gameSlug]/values/_generi
 import { getValueStock } from '@/lib/value-listings/stock-server'
 import { getValuesFreshness } from '@/lib/values/data'
 import { amVariantCode, variantLabel } from '@/lib/value-listings/catalogs'
-import type { FeedItem, ValuesFeed } from './types'
+import type { FeedItem, FormStock, ValuesFeed } from './types'
 
 export type { FeedItem, ValuesFeed } from './types'
 import { fromAdoptMe, fromGeneric, fromSab } from './map'
@@ -42,15 +42,22 @@ export async function getValuesFeed(gameSlug: string): Promise<ValuesFeed | null
     const buyHref: Record<string, string> = {}
     const minPrice: Record<string, number> = {}
     const forms: Record<string, string[]> = {}
+    const formStock: Record<string, FormStock[]> = {}
     for (const [slug, s] of Object.entries(stock?.byItem ?? {})) {
       if (s.total <= 0) continue
       counts[slug] = s.total
       if (stock) buyHref[slug] = `/${gameSlug}/${stock.pair.categorySlug}/item/${slug}`
       if (s.minPriceUsd != null) minPrice[slug] = s.minPriceUsd
+      const label = (key: string) => (gameSlug === 'adopt-me' ? amVariantCode(key) : variantLabel(gameSlug, key))
       const labels = Object.keys(s.byVariant)
-        .map((key) => (gameSlug === 'adopt-me' ? amVariantCode(key) : variantLabel(gameSlug, key)))
+        .map(label)
         .filter((l): l is string => !!l)
       if (labels.length > 0) forms[slug] = labels
+      // Adopt Me's plain form has no badge but is still a form a buyer can search for.
+      const known = Object.entries(s.byVariant)
+        .map(([key, v]) => ({ variant: key, label: label(key) ?? (key === 'normal' ? 'Normal' : null), count: v.count, minPrice: v.minPriceUsd }))
+        .filter((f): f is FormStock => !!f.label)
+      if (known.length > 0) formStock[slug] = known.sort((a, b) => a.minPrice - b.minPrice)
     }
 
     return {
@@ -59,6 +66,7 @@ export async function getValuesFeed(gameSlug: string): Promise<ValuesFeed | null
       buyHref,
       minPrice,
       forms,
+      formStock,
       categorySlug: stock?.pair.categorySlug ?? null,
       updatedAt: freshness?.lastChangedAt ?? null,
     }

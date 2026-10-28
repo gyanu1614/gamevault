@@ -9,7 +9,18 @@
 import { rarityMeta, rarityRank } from '@/lib/values/rarity'
 import type { ValuesFeed } from '@/lib/value-listings/feed/types'
 
+/** One form of an item in stock, with its own page. */
+export interface GridForm {
+  variant: string
+  label: string
+  count: number
+  minPrice: number
+  href: string
+}
+
 export interface GridItem {
+  /** React key: the slug, or `slug:variant` for a one-trait card. */
+  key: string
   slug: string
   name: string
   imageUrl: string | null
@@ -28,6 +39,8 @@ export interface GridItem {
   forms: string[]
   /** The item page: every offer for it, best first. */
   href: string
+  /** Each form in stock, cheapest first (search and the trait filter split the card by these). */
+  formsInStock: GridForm[]
 }
 
 export type GridSort = 'recommended' | 'cheapest' | 'priciest'
@@ -43,11 +56,14 @@ export interface GridFilters {
 
 export const EMPTY_FILTERS: GridFilters = { rarities: [], types: [], forms: [], minPrice: null, maxPrice: null, search: '' }
 
+const inPriceRange = (p: number, f: GridFilters) => (f.minPrice == null || p >= f.minPrice) && (f.maxPrice == null || p <= f.maxPrice)
+
 export function toGridItems(gameSlug: string, feed: ValuesFeed, categorySlug: string | null = feed.categorySlug): GridItem[] {
   const base = `/${gameSlug}/${categorySlug ?? 'buy-items'}/item/`
   return feed.items.map((i) => {
     const r = i.rarityKey ? rarityMeta(gameSlug, i.rarityKey) : null
     return {
+      key: i.slug,
       slug: i.slug,
       name: i.name,
       imageUrl: i.imageUrl,
@@ -61,7 +77,25 @@ export function toGridItems(gameSlug: string, feed: ValuesFeed, categorySlug: st
       minPrice: feed.minPrice[i.slug] ?? null,
       forms: feed.forms[i.slug] ?? [],
       href: `${base}${i.slug}`,
+      formsInStock: (feed.formStock?.[i.slug] ?? []).map((f) => ({ ...f, href: `${base}${i.slug}/${f.variant}` })),
     }
+  })
+}
+
+/**
+ * Search or a trait filter (owner, 2026-10-27): one card per trait in stock,
+ * each with that trait's own price and offer count and a link to its trait
+ * page, so "parrot" lists Parrot, FR Parrot and NFR Parrot side by side. The
+ * trait filter keeps only the picked traits; the price filter reads each
+ * trait's price. Items with no form in stock stay one card.
+ */
+export function splitByForm(items: readonly GridItem[], f: GridFilters): GridItem[] {
+  if (!f.search.trim() && f.forms.length === 0) return [...items]
+  return items.flatMap((i) => {
+    if (i.formsInStock.length === 0) return [i]
+    return i.formsInStock
+      .filter((x) => (f.forms.length === 0 || f.forms.includes(x.label)) && inPriceRange(x.minPrice, f))
+      .map((x) => ({ ...i, key: `${i.slug}:${x.variant}`, offers: x.count, minPrice: x.minPrice, forms: [x.label], href: x.href, formsInStock: [] }))
   })
 }
 
@@ -83,11 +117,15 @@ export function sortGrid(items: readonly GridItem[], sort: GridSort): GridItem[]
 export function filterGrid(items: readonly GridItem[], f: GridFilters): GridItem[] {
   const q = f.search.trim().toLowerCase()
   const priced = f.minPrice != null || f.maxPrice != null
+  // Split into trait cards (splitByForm): the price filter reads each trait's own price.
+  const split = q !== '' || f.forms.length > 0
   return items.filter((i) => {
     if (f.rarities.length > 0 && !f.rarities.includes(i.rarityKey ?? '')) return false
     if (f.types.length > 0 && !f.types.includes(i.itemType ?? '')) return false
     if (f.forms.length > 0 && !i.forms.some((x) => f.forms.includes(x))) return false
-    if (priced) {
+    if (priced && split && i.formsInStock.length > 0) {
+      if (!i.formsInStock.some((x) => inPriceRange(x.minPrice, f))) return false
+    } else if (priced) {
       if (i.minPrice == null) return false
       if (f.minPrice != null && i.minPrice < f.minPrice) return false
       if (f.maxPrice != null && i.minPrice > f.maxPrice) return false

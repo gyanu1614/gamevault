@@ -26,6 +26,16 @@ export interface FeedItem {
   valueUsd: number | null
 }
 
+/** One form (trait / mutation) of an item that we have in stock. */
+export interface FormStock {
+  /** The variant key in URLs ("neon-fly-ride"). */
+  variant: string
+  /** Its short label ("NFR"). */
+  label: string
+  count: number
+  minPrice: number
+}
+
 /** A values game's feed: its items + OUR live stock per item. */
 export interface ValuesFeed {
   items: FeedItem[]
@@ -37,6 +47,8 @@ export interface ValuesFeed {
   minPrice: Record<string, number>
   /** Short labels of the forms in stock per item slug ("FR", "NFR"; a mutation name elsewhere). */
   forms: Record<string, string[]>
+  /** Per form in stock, cheapest first: the items grid's one-card-per-trait search. Absent on older fixtures. */
+  formStock?: Record<string, FormStock[]>
   /** The items category slug the item pages live under ("buy-items"), or null when the game has none. */
   categorySlug: string | null
   /** When prices last changed, if the game's list reports it. */

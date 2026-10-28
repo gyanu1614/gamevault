@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/use-auth'
 import ItemCard from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard'
 import { MultiSelectFilter, PriceRangeFilter, SingleSelectFilter, iconForFilter } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemFilters'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
-import { filterGrid, sortGrid, type FilterOption, type GridItem, type GridSort } from './model/grid'
+import { filterGrid, sortGrid, splitByForm, type FilterOption, type GridItem, type GridSort } from './model/grid'
 import { GridCard } from './GridCard'
 import { StockAlertsProvider } from './stock-alerts-context'
 
@@ -69,7 +69,10 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, cate
   }, [items])
 
   const sorted = useMemo(
-    () => sortGrid(filterGrid(items, { rarities, types, forms, minPrice: price?.[0] ?? null, maxPrice: price?.[1] ?? null, search: q }), sort),
+    () => {
+      const f = { rarities, types, forms, minPrice: price?.[0] ?? null, maxPrice: price?.[1] ?? null, search: q }
+      return sortGrid(splitByForm(filterGrid(items, f), f), sort)
+    },
     [items, rarities, types, forms, price, q, sort],
   )
   const filterKey = [rarities.join(','), types.join(','), forms.join(','), price?.join('-') ?? '', q.trim(), sort].join('|')
@@ -151,7 +154,7 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, cate
             <>
               <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>
                 {paged.visible.map((item) => (
-                  <li key={item.slug}>
+                  <li key={item.key}>
                     <GridCard item={item} gameSlug={gameSlug} />
                   </li>
                 ))}
