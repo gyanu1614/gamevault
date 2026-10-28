@@ -39,8 +39,8 @@ describe('buildItemPage', () => {
     expect(m.results.map((r) => r.id)).toEqual(['b', 'c', 'a'])
     expect(m.itemRows.map((r) => r.id)).toEqual(['b', 'c', 'a'])
     expect(m.similar).toEqual([])
-    // 3 live listings: the page renders, but stays out of the index (owner, 2026-10-10)
-    expect(m.indexable).toBe(false)
+    // live listings: indexable (owner, 2026-10-27: from the first offer)
+    expect(m.indexable).toBe(true)
     expect(m.canonicalPath).toBe('/steal-a-brainrot/buy-items/item/dragon-cannelloni')
     expect(m.fullName).toBe('Dragon Cannelloni')
   })
@@ -61,17 +61,23 @@ describe('buildItemPage', () => {
     expect(m.similar).toEqual([])
   })
 
-  it('indexable only from ITEM_PAGE_MIN_LISTINGS live listings of the item (all variants)', () => {
-    expect(ITEM_PAGE_MIN_LISTINGS).toBe(5)
-    const five = [...rows, row('g', 'dragon-cannelloni', 'diamond', 6), row('h', 'dragon-cannelloni', 'default', 3)]
-    const item = buildItemPage({ ...base, rows: five, itemSlug: 'dragon-cannelloni', variant: null })!
-    expect(item.results).toHaveLength(5)
+  it('indexable from the first live listing of the item (all variants)', () => {
+    expect(ITEM_PAGE_MIN_LISTINGS).toBe(1)
+    const one = [row('g', 'dragon-cannelloni', 'gold', 6)]
+    const item = buildItemPage({ ...base, rows: one, itemSlug: 'dragon-cannelloni', variant: null })!
+    expect(item.results).toHaveLength(1)
     expect(item.indexable).toBe(true)
     // a variant page with stock follows its item (it canonicals there anyway)
-    expect(buildItemPage({ ...base, rows: five, itemSlug: 'dragon-cannelloni', variant: 'gold' })!.indexable).toBe(true)
-    // one short of the bar → noindex
-    const four = buildItemPage({ ...base, rows: five.slice(0, -1), itemSlug: 'dragon-cannelloni', variant: null })!
-    expect(four.indexable).toBe(false)
+    expect(buildItemPage({ ...base, rows: one, itemSlug: 'dragon-cannelloni', variant: 'gold' })!.indexable).toBe(true)
+    // no listing of the item → noindex
+    expect(buildItemPage({ ...base, rows: [], itemSlug: 'dragon-cannelloni', variant: null })!.indexable).toBe(false)
+  })
+
+  it('with stock → related items with stock for the pet-to-pet links, same rarity first', () => {
+    const m = buildItemPage({ ...base, itemSlug: 'dragon-cannelloni', variant: null })!
+    expect(m.similar).toEqual([])
+    expect(m.related.map((s) => s.slug)).toEqual(['garama', 'la-vacca', 'tralalero'])
+    expect(m.related[0]).toMatchObject({ count: 1, minPriceUsd: 9, href: '/steal-a-brainrot/buy-items/item/garama' })
   })
 
   it('no stock for the item at all → similar items with stock (same rarity, then closest value), noindex', () => {
@@ -81,5 +87,6 @@ describe('buildItemPage', () => {
     // Same rarity (Secret) first by closest value (12: Dragon Cannelloni, then 15: Garama), then the rest.
     expect(m.similar.map((s) => s.slug)).toEqual(['dragon-cannelloni', 'garama', 'la-vacca', 'tralalero'])
     expect(m.similar[1]).toMatchObject({ count: 1, minPriceUsd: 9, href: '/steal-a-brainrot/buy-items/item/garama' })
+    expect(m.related).toEqual([])
   })
 })

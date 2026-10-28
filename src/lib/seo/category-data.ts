@@ -31,7 +31,7 @@ export async function loadCoreRows(db: Db): Promise<CoreSitemapRows> {
       db
         .from('listings')
         // SEO hygiene: a test/demo seller's listings never count.
-        .select('slug, updated_at, game_id, game_category_id, seller_id, price, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
+        .select('slug, updated_at, game_id, game_category_id, seller_id, price, value_item_slug, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
         .eq('status', 'active')
         .eq('seller.is_test', false)
         .order('id')

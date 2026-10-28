@@ -25,6 +25,8 @@ const FIRST = 8
  * Latest Sales · Variants tabs as the reference): every offer of the pet in
  * one table, and every trait with its cheapest price in another. Plain rows
  * with hairline separators, not cards. Choosing a row shows it in the buy box.
+ * Both panels are always mounted (the hidden one is display:none) so the
+ * first HTML carries the trait price table for search engines.
  */
 export function OfferTabs({
   noun,
@@ -65,12 +67,12 @@ export function OfferTabs({
       </Tabs.List>
 
       {hasOffers ? (
-        <Tabs.Content value="offers" className="pt-2 focus-visible:outline-none">
+        <Tabs.Content value="offers" forceMount className="pt-2 focus-visible:outline-none data-[state=inactive]:hidden">
           <OffersTable offers={offers} variantOf={(o) => def(offerVariants[o.id] ?? null)} selectedId={selectedId} onSelect={onSelectOffer} noun={noun} />
         </Tabs.Content>
       ) : null}
       {hasTraits ? (
-        <Tabs.Content value="traits" className="pt-2 focus-visible:outline-none">
+        <Tabs.Content value="traits" forceMount className="pt-2 focus-visible:outline-none data-[state=inactive]:hidden">
           <TraitsTable traits={traits} onSelect={onSelectTrait} noun={noun} />
         </Tabs.Content>
       ) : null}

@@ -15,6 +15,7 @@ import { isEventIndexable } from '@/lib/values/events-model'
 import { freeGuideLastmod } from '@/lib/values/free-guide'
 import { allBoxes, boxesCheckedAt } from '@/lib/values/boxes'
 import { computeCategoryPages } from '@/lib/seo/category-index'
+import { computeItemPages } from '@/lib/seo/item-pages'
 import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
 
 /**
@@ -58,6 +59,8 @@ export interface SitemapInput {
     game_category_id: string
     seller_id: string
     price: number | string | null
+    /** The catalogue item it sells (pet pages); null for non-item listings. */
+    value_item_slug?: string | null
   }[]
   pausedSellerIds: ReadonlySet<string>
   /** newIndexable: a new item with facts (isNewIndexable) ranks before it is priced. */
@@ -344,14 +347,15 @@ export function buildSitemapSections(input: SitemapInput): Map<SitemapSection, M
       priority: 0.7,
     }))
 
-  // ── category and listing pages ────────────────────────────────────────────
-  const categoryPages: Entry[] = computeCategoryPages({
+  // ── category, item and listing pages ──────────────────────────────────────
+  const categoryRows = computeCategoryPages({
     games: input.games,
     categories: input.categories,
     currencyConfigs: input.currencyConfigs,
     listings: input.listings,
     pausedSellerIds: input.pausedSellerIds,
   })
+  const categoryPages: Entry[] = categoryRows
     .filter((r) => r.verdict === 'index')
     .map((r) => ({
       url: at(`/${r.gameSlug}/${r.categorySlug}`),
@@ -359,13 +363,20 @@ export function buildSitemapSections(input: SitemapInput): Map<SitemapSection, M
       changeFrequency: 'daily' as const,
       priority: 0.7,
     }))
+  // Pet pages: indexable from their first offer (owner, 2026-10-27).
+  const itemPages: Entry[] = computeItemPages(input, categoryRows).map((r) => ({
+    url: at(`/${r.gameSlug}/${r.categorySlug}/item/${r.itemSlug}`),
+    ...dated(r.lastmod),
+    changeFrequency: 'daily' as const,
+    priority: 0.6,
+  }))
 
   // Listing pages are noindex (2026-10-06) and never listed here: the category
-  // pages above carry the listings.
+  // and item pages above carry the listings.
   const sections: [SitemapSection, Entry[]][] = [
     ['static', [...staticPages, ...legalPages]],
     ['blog', [...blogPages, ...gameBlogIndexPages, ...gameBlogPages]],
-    ['buy', [...landingPages, ...categoryPages]],
+    ['buy', [...landingPages, ...categoryPages, ...itemPages]],
     ['hubs', [...hubPages, ...gamePages]],
     ['sell', sellPages],
     ...[...valueItemPages].map(([game, entries]) => [`values-${game}` as SitemapSection, entries] as [SitemapSection, Entry[]]),

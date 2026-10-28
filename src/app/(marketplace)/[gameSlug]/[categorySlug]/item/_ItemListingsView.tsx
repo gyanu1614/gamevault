@@ -5,9 +5,9 @@ import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
 import { TrustpilotRow } from '@/features/item-buy/TrustpilotRow'
 import { traitNoun } from '@/features/item-buy/model/offers'
 import { traitDefs } from '@/features/item-buy/model/traits'
+import { ItemDetails, ItemFaq, StockedItemLinks } from '@/features/item-buy/ItemAbout'
+import type { ItemAbout } from '@/features/item-buy/model/about'
 import { formatUsd } from '@/lib/value-listings/format'
-import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
-import { cn } from '@/lib/utils'
 import type { loadItemListingsPage } from '../_valueItemOffers'
 
 type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
@@ -19,9 +19,10 @@ type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
  * Notify Me, trust promises) and a small seller card.
  * Filtered on the server, so the first HTML holds this pet's offers only. A
  * pet nobody sells still renders: Notify Me, then similar pets that have
- * offers, then a way to sell one.
+ * offers, then a way to sell one. Under it, for every pet: its details, the
+ * badge guide, buyer questions and links to related pets (all server HTML).
  */
-export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: Data }) {
+export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; data: Data; about: ItemAbout }) {
   const { pair, catalog, model, offers, offerVariants } = data
   const { item } = model
   const traits = traitDefs(gameSlug, catalog)
@@ -71,33 +72,7 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
       {offers.length === 0 ? (
         <>
           <TrackOnMount event={{ event: 'fallback_shown', surface: 'item_buy', game: gameSlug, item: item.slug, variant: model.variant }} />
-          {model.similar.length > 0 ? (
-            <section aria-labelledby="similar-items" className="mt-12 sm:mt-14">
-              <h2 id="similar-items" className="mb-5 text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]">
-                Similar Items For Sale
-              </h2>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 'var(--gap-grid)' }}>
-                {model.similar.map((s) => (
-                  <li key={s.slug}>
-                    <Link href={s.href} className={cn('flex h-full items-center gap-3 rounded-lg p-3', MARKET_CARD, MARKET_CARD_HOVER)}>
-                      {s.imageUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element -- catalogue art */
-                        <img src={s.imageUrl} alt="" aria-hidden width={48} height={48} loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-contain" />
-                      ) : null}
-                      <span className="min-w-0">
-                        <span className="block truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-body)' }}>
-                          {s.name}
-                        </span>
-                        <span className="block tabular-nums text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>
-                          {s.count} {s.count === 1 ? 'Offer' : 'Offers'} from {formatUsd(s.minPriceUsd)}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+          <StockedItemLinks id="similar-items" heading="Similar Items For Sale" items={model.similar} />
           <p className="mt-10 text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
             Have a {item.name}?{' '}
             <Link href={`/${gameSlug}/sell?src=item-buy-page`} className="font-semibold text-lime-text hover:underline">
@@ -110,6 +85,10 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
           </p>
         </>
       ) : null}
+
+      <ItemDetails about={about} />
+      <ItemFaq title={`Questions About Buying ${item.name}`} about={about} />
+      <StockedItemLinks id="related-items" heading={about.relatedHeading} items={model.related} />
     </main>
   )
 }
