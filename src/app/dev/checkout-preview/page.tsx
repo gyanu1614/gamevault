@@ -101,7 +101,6 @@ export default async function CheckoutPreviewPage({ searchParams }: { searchPara
       <CheckoutForm
         listing={MOCK_LISTING}
         user={MOCK_USER}
-        buyerProfile={{ username: 'gyan_dev', avatar_url: null }}
         sellerReviews={MOCK_REVIEWS}
         initialQty={2}
         bundleSummary={null}

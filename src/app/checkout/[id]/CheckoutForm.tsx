@@ -31,7 +31,6 @@ import * as Dropdown from '@radix-ui/react-dropdown-menu'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
-  BadgeCheck,
   Check,
   ChevronDown,
   Info,
@@ -43,30 +42,30 @@ import {
   X,
 } from 'lucide-react'
 
-import GppGoodRoundedIcon from '@mui/icons-material/GppGoodRounded'
 import { createCheckout, quoteCheckoutMethods } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
 import { orderMethodsForRegion, regionForCountry } from '@/lib/payments/regions'
 import { countryName, flagEmoji } from '@/lib/geo/countries'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { clampCheckoutQty } from './qty'
-import { TILE_SLOT, markSize, toRow, type LocalMethodRow, type MethodIcon } from './_method-ui'
-import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustList, TrustSeals } from './_trust'
+import { TILE_SLOT, markSize, methodIdForRow, sealMarks, toRow, walletRows, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { useWalletAvailability } from './_wallets'
+import { BAND_CLASS, CARD_CLASS, PANEL_CLASS, PANEL_STYLE, ROW_CHECKED_CLASS, ROW_CLASS, ROW_IDLE_CLASS, TILE_CLASS, rowStyle } from './_surfaces'
+import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustSeals } from './_trust'
+import { ItemCard } from './_item-card'
+import { HowItWorks } from './_how-it-works'
 import type { SiteRating } from '@/lib/reviews/site-rating'
 import { lowestFeeMethodId } from '@/lib/payments/lowest-fee'
-import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { cn } from '@/lib/utils'
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { SERVICE_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { SilverIcon } from '@/components/ui/silver-icon'
 import { CheckoutNavbar } from '../_components/CheckoutNavbar'
-import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
-import { sellerStatText } from '@/lib/seller/stat-line'
+import { sellerPills } from '@/lib/seller/stat-line'
+import { Headset } from '@phosphor-icons/react/dist/ssr/Headset'
 import { track } from '@/lib/analytics/client'
-import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
 import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
@@ -339,7 +338,6 @@ type PayMethodId = 'crypto' | (string & {})
 interface CheckoutFormProps {
   listing: any
   user: any
-  buyerProfile?: { username: string | null; avatar_url: string | null } | null
   sellerReviews?: any[]
   initialQty?: number
   bundleSummary?: { name: string; iconUrl: string | null } | null
@@ -356,9 +354,11 @@ interface CheckoutFormProps {
   unfinishedPayment?: boolean
   /** Real average of visible buyer reviews; null hides the rating card. */
   siteRating?: SiteRating | null
+  /** The seller's heartbeat is fresh (src/lib/presence/online.ts): the item card's Online dot. */
+  sellerOnline?: boolean
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false, siteRating = null }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false, siteRating = null, sellerOnline = false }: CheckoutFormProps) {
   const router = useRouter()
 
   // Flat selector (checkout regions, 2026-09-26): the buyer's own-country
@@ -371,6 +371,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // re-quoted by quoteCheckoutMethods when the promo, the store-credit
   // toggle or the quantity changes — the SQL quote is the only fee math.
   const [quotedMethods, setQuotedMethods] = useState<ClientMethod[]>(methods)
+  // The Stripe card row: worldwide, first for every buyer (owner 2026-10-27),
+  // with this device's wallet (Apple Pay or Google Pay) above it once mounted.
+  const cardRows = quotedMethods.filter((m) => m.kind === 'card').map(toRow)
+  const wallets = useWalletAvailability()
+  const walletRowList = wallets ? walletRows(cardRows[0] ?? null, wallets) : []
+  const stripeRows = [...walletRowList, ...cardRows]
   const allLocalRows = quotedMethods.filter((m) => m.kind === 'local').map(toRow)
   // The crypto row for the env-active provider; absent = crypto is not
   // payable for this order (no fee row / hidden) and its row is not shown.
@@ -380,7 +386,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const geo = /^[A-Z]{2}$/.test(geoCc) ? geoCc : null
   const [country, setCountry] = useState<string | null>(geo)
   const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, regionForCountry(country), country)
-  const orderedRows = [...localRows, ...regionalRows]
+  const orderedRows = [...stripeRows, ...localRows, ...regionalRows]
   // "Lowest Fee" tag: the cheapest of the buyer's OWN-country methods for
   // this order — never a regional rail they can't use (a Vietnamese buyer is
   // not pointed at Indonesia's QRIS) and never crypto. Re-derived from the
@@ -414,7 +420,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     const cc = v === OTHER_COUNTRY ? null : v
     setCountry(cc)
     const next = orderMethodsForRegion(allLocalRows, regionForCountry(cc), cc)
-    const rows = [...next.local, ...next.regional]
+    const rows = [...stripeRows, ...next.local, ...next.regional]
     if (payMethod && payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(null)
   }
   // Coin + network selection (within the crypto card).
@@ -445,7 +451,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // order and that quote applies — exactly the routing createCheckout
   // performs, so page and snapshot agree to the cent.
   const methodQuote =
-    payMethod == null ? null : payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
+    payMethod == null
+      ? null
+      : payMethod === 'crypto'
+        ? cryptoMethod?.quote ?? null
+        : [...stripeRows, ...allLocalRows].find((r) => r.id === payMethod)?.quote ?? null
   const walletBalanceCents = Math.round(walletBalance * 100)
   const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= walletQuote.totalMinor
   const activeQuote = walletCoversAll ? walletQuote : methodQuote
@@ -567,8 +577,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         // AUTH-003 — send the CODE; the server derives the discount.
         promoCode: promoResult?.valid ? promoResult.code : undefined,
         walletAmount,
-        // Local methods route the charge to Payssion; crypto stays default.
-        paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,
+        // Local methods route the charge to Payssion, the card row to
+        // Stripe; crypto stays default.
+        paymentMethodId: payMethod === 'crypto' ? undefined : methodIdForRow(payMethod),
       })
       if (!result.success) {
         // Paid on the provider page, Back, then Pay again before the webhook
@@ -596,7 +607,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       }
       if (result.checkoutUrl) {
         if (payMethod !== 'crypto') {
-          // The provider's page (Payssion) in THIS tab; its return comes back
+          // The provider's page (Payssion, Stripe) in THIS tab; its return comes back
           // through /checkout/return → Order Paid.
           leaveFor(result.orderId, result.checkoutUrl)
           return
@@ -620,7 +631,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const isBundle = !!bundleSummary
   const title = bundleSummary?.name || listing.title
   const imageSrc =
-    bundleSummary?.iconUrl || listing.images?.[0] || listing.game?.image_url || '/placeholder-game.jpg'
+    bundleSummary?.iconUrl || listing.images?.[0] || listing.game?.image_url || '/placeholder/game-fallback.svg'
 
   const seller = listing.seller ?? {}
   const sellerName = seller.shop_name || seller.username || 'Seller'
@@ -676,17 +687,19 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               role="radio"
               aria-checked={selected}
               onClick={() => setCoin(c.value)}
-              className="flex items-center gap-2.5 rounded-md px-3.5 py-3 text-left transition-[box-shadow,transform] active:scale-[0.98]"
-              style={{
-                boxShadow: `inset 0 0 0 1.5px ${selected ? T.accentText : 'rgba(255,255,255,0.10)'}`,
-                background: selected ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
-              }}
+              // Same states as the payment rows (owner 2026-10-27): flat,
+              // a step lighter on hover, a trust-blue edge when picked.
+              className={cn(
+                'flex min-h-[44px] items-center gap-2.5 rounded-md px-3.5 py-2 text-left transition-[background-color,box-shadow]',
+                selected ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS
+              )}
+              style={rowStyle(selected)}
             >
-              <Image src={c.icon} alt="" width={22} height={22} unoptimized />
-              <span className="text-[14px] font-semibold" style={{ color: T.ink }}>
+              <Image src={c.icon} alt="" width={20} height={20} unoptimized />
+              <span className="text-[14px] font-medium" style={{ color: T.ink }}>
                 {c.label}
               </span>
-              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.accentText }} />}
+              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: TRUST_BLUE }} />}
             </button>
           )
         })}
@@ -751,28 +764,22 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const radio = (checked: boolean) => (
     <span
       aria-hidden
-      className="grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors"
-      style={{ boxShadow: `inset 0 0 0 2px ${checked ? T.accentText : 'rgba(255,255,255,0.32)'}` }}
+      className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full transition-colors"
+      style={{ boxShadow: `inset 0 0 0 2px ${checked ? TRUST_BLUE : 'rgba(233,237,242,0.85)'}` }}
     >
-      {checked && <span className="h-2.5 w-2.5 rounded-full" style={{ background: T.accentText }} />}
+      {checked && <span className="h-2 w-2 rounded-full" style={{ background: TRUST_BLUE }} />}
     </span>
   )
 
   /** Row (owner 2026-10-21, Eldorado shape): radio, name and one line, the
-   *  brand logo in a tile at the right. Flat on the neutral page; the pick
-   *  takes the green ring. */
-  const rowClass = (checked: boolean) =>
-    cn(
-      'rounded-md transition-[background-color,box-shadow] duration-150',
-      checked ? 'bg-[rgba(86,184,127,0.06)]' : 'bg-white/[0.03] hover:bg-white/[0.05]'
-    )
-  const rowSurface = (checked: boolean) =>
-    checked ? `inset 0 0 0 1.5px ${T.accentText}` : 'inset 0 0 0 1px rgba(255,255,255,0.09)'
+   *  brand logo in a tile at the right. Flat and clean (owner 2026-10-27):
+   *  hover a step lighter, the pick a trust-blue edge and a blue radio. */
+  const rowClass = (checked: boolean) => cn(ROW_CLASS, checked ? ROW_CHECKED_CLASS : ROW_IDLE_CLASS)
 
   /** The brand mark in a tile at the right of the row (the row's icon when a
    *  method has no mark); every mark at one optical size inside the tile. */
   const logoTile = (children: React.ReactNode, key?: string) => (
-    <span key={key} className="grid h-9 w-[60px] shrink-0 place-items-center rounded-md bg-white/[0.07] ring-1 ring-inset ring-white/[0.06]">
+    <span key={key} className={TILE_CLASS}>
       {children}
     </span>
   )
@@ -797,11 +804,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     )
   }
 
-  const rowButton = 'flex min-h-[56px] w-full items-center gap-3.5 rounded-md px-4 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+  const rowButton = 'flex min-h-[48px] w-full items-center gap-3 rounded-lg px-3.5 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
   // Name only (owner 2026-10-21): the logo and the provider page say the rest.
-  const rowText = (label: string) => (
-    <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+  const rowText = (label: string, checked = false) => (
+    <span
+      className="min-w-0 flex-1 truncate text-[14px] font-medium tracking-[-0.005em]"
+      style={{ color: checked ? '#FFFFFF' : T.ink }}
+    >
       {label}
     </span>
   )
@@ -809,10 +819,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
     return (
-      <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
+      <div className={rowClass(checked)} style={rowStyle(checked)}>
         <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
           {radio(checked)}
-          {rowText(m.label)}
+          {rowText(m.label, checked)}
           {m.id === lowestFeeId && (
             <span className="shrink-0 text-[12px] font-semibold" style={{ color: TRUST_BLUE }}>
               Lowest Fee
@@ -827,18 +837,18 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // Crypto: always the last row; opens the coin picker when picked.
   const cryptoChecked = payMethod === 'crypto'
   const cryptoRow = cryptoMethod && (
-    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
+    <div className={rowClass(cryptoChecked)} style={rowStyle(cryptoChecked)}>
       <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
         {radio(cryptoChecked)}
-        {rowText('Crypto')}
+        {rowText('Crypto', cryptoChecked)}
         <span className="flex shrink-0 gap-1.5">
           {COINS.map((c) =>
-            logoTile(<Image src={c.icon} alt="" width={22} height={22} unoptimized />, c.value)
+            logoTile(<Image src={c.icon} alt="" width={17} height={17} unoptimized />, c.value)
           )}
         </span>
       </button>
       {cryptoChecked && (
-        <div className="border-t px-4 pb-4 pt-3.5" style={{ borderColor: T.line }}>
+        <div className="border-t border-white/[0.08] px-4 pb-4 pt-3.5">
           {cryptoPicker}
         </div>
       )}
@@ -891,7 +901,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         <Callout variant="warning">Your last payment wasn’t finished. Pick a method to try again.</Callout>
       )}
       {orderedRows.length === 0 && !cryptoMethod ? (
-        <div className="rounded-lg px-5 py-6 text-center" style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}>
+        <div className={cn(PANEL_CLASS, 'px-5 py-6 text-center')} style={PANEL_STYLE}>
           <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
             No Payment Methods Available
           </p>
@@ -900,8 +910,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Payment Method">
+        <div className="flex flex-col gap-2.5" role="radiogroup" aria-label="Payment Method">
           <AnimatePresence initial={false} mode="popLayout">
+            {stripeRows.map((m) => (
+              <motion.div key={m.id} {...rowMotion}>
+                {renderMethodRow(m)}
+              </motion.div>
+            ))}
             {localRows.map((m) => (
               <motion.div key={m.id} {...rowMotion}>
                 {renderMethodRow(m)}
@@ -931,47 +946,41 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
-  // ── Phones: one compact strip — thumbnail, title, game · category · qty,
-  //    the seller's name, the price. Everything else lives under the list.
-  const orderStrip = (
-    <div className="rounded-lg border p-3.5 backdrop-blur-md" style={{ borderColor: T.lineSubtle, background: T.glass }}>
-      <p className="mb-2.5 text-[15px] font-semibold" style={{ color: T.ink }}>
-        Your Order
-      </p>
-      <div className="flex items-start gap-3">
-        <Image
-          src={imageSrc}
-          alt={title}
-          width={52}
-          height={52}
-          unoptimized
-          className="h-[52px] w-[52px] shrink-0 rounded-md object-cover"
-          style={{ background: T.ivory2 }}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-[14px] font-semibold leading-snug" style={{ color: T.ink }}>
-            {title}
-          </p>
-          <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
-            {[listing.game?.name, listing.category?.name].filter(Boolean).join(' · ')}
-            {(listing.game?.name || listing.category?.name) && ' · '}Quantity: x{quantity.toLocaleString()}
-          </p>
-          <p className="mt-0.5 flex items-center gap-1 truncate text-[12px]" style={{ color: T.ink2 }}>
-            Seller <span className="font-semibold" style={{ color: T.ink }}>{sellerName}</span>
-            {isVerifiedSeller && <BadgeCheck aria-label="Verified Seller" className="h-[14px] w-[14px] shrink-0" style={{ fill: '#1D9BF0', color: '#FFFFFF' }} />}
-          </p>
-        </div>
-        <span className="shrink-0 text-[16px] font-bold tabular-nums" style={{ color: T.ink }}>
-          ${subtotal.toFixed(2)}
-        </span>
-      </div>
-    </div>
+  // ── The item card (owner 2026-10-27, Eldorado-style): the item and its
+  //    details, then the seller with real-data pills. Top of the summary
+  //    column on desktop, first on phones.
+  const sealData = sealMarks({
+    cardRail: cardRows.length > 0,
+    rows: [...cardRows, ...localRows, ...regionalRows],
+    extra: cryptoMethod ? COINS.filter((c) => !c.soon).map((c) => ({ logo: c.icon, aspect: 1 })) : [],
+  })
+
+  const itemCard = (
+    <ItemCard
+      title={title}
+      imageSrc={imageSrc}
+      subtitle={[listing.game?.name, listing.category?.name].filter(Boolean).join(' · ')}
+      details={[`Delivery Time: ${fmtDelivery(deliveryTime)}`, `Quantity: ${quantity.toLocaleString()}`]}
+      deliveryMethod={deliveryMethod}
+      seller={{
+        name: sellerName,
+        verified: isVerifiedSeller,
+        online: sellerOnline,
+        pills: sellerPills({
+          ratingPercent: positivePct != null ? Math.round(positivePct) : null,
+          reviews: reviewCount,
+          sales: Number(seller.total_sales ?? 0),
+          verified: isVerifiedSeller,
+          memberSince: seller.created_at ?? null,
+        }),
+      }}
+    />
   )
 
   // ── Shared with the phone layout: the discount toggle and the money rows
   //    render inside the desktop card AND under the payment list on phones.
   const promoSection = (
-        <div className="mt-4">
+        <div>
           {!promoResult?.valid && (
             <button
               type="button"
@@ -1036,8 +1045,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         </div>
   )
 
-  const moneySummary = (
-      <div className="mt-4 flex flex-col gap-2 border-t pt-3.5 text-[14px]" style={{ borderColor: T.line }}>
+  // The line items, then the total on its own (block style: the total sits
+  // in the card's lower band with Pay, no divider lines).
+  const lineItems = (
+      <div className="mt-4 flex flex-col gap-2 text-[14px]">
         <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
         <Row
           label={SERVICE_FEE_LABEL}
@@ -1068,108 +1079,57 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             </span>
           </div>
         )}
-        <div
-          className="mt-1 flex items-center justify-between gap-3 border-t pt-3"
-          style={{ borderColor: T.line }}
-        >
-          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
-            Total
-          </span>
-          <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
-            ${total.toFixed(2)}
-          </span>
-        </div>
       </div>
   )
 
-  const summaryCard = (compact = false) => (
-    <div className="rounded-lg border border-white/[0.08] bg-white/[0.035] p-5">
-      {/* Item */}
-      <div className="flex items-center gap-3.5">
-        <Image
-          src={imageSrc}
-          alt={title}
-          width={56}
-          height={56}
-          unoptimized
-          className="h-14 w-14 shrink-0 rounded-lg object-cover"
-          style={{ background: T.ivory2 }}
-        />
-        <div className="min-w-0">
-          <p className="line-clamp-2 text-[15px] font-semibold leading-snug" style={{ color: T.ink }}>
-            {title}
-          </p>
-          {(listing.game?.name || listing.category?.name) && (
-            <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
-              {listing.game?.name}
-              {listing.game?.name && listing.category?.name && ' · '}
-              {listing.category?.name}
-            </p>
-          )}
-        </div>
+  const totalRow = (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+        Total
+      </span>
+      <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
+        ${total.toFixed(2)}
+      </span>
+    </div>
+  )
+
+  const needHelp = (
+    <Link
+      href="/support"
+      target="_blank"
+      rel="noopener"
+      className="mt-3 flex items-center justify-center gap-1.5 text-[12.5px] transition-colors hover:text-[#E9EDF2]"
+      style={{ color: T.ink2 }}
+    >
+      <Headset aria-hidden size={15} weight="fill" color={TRUST_BLUE} />
+      Need Help?
+      <span className="font-semibold" style={{ color: T.ink }}>
+        24/7 Human Support
+      </span>
+    </Link>
+  )
+
+  // ── The buy box under the item card (desktop): discount, the money rows,
+  //    Pay and the terms. Phones get the same rows under the list and Pay in
+  //    the sticky bar.
+  // The box is its own panel, so it carries its own title: left-aligned, the
+  // item card's title size (owner 2026-10-27: centered "looks bad").
+  const summaryTitle = (
+    <h2 className="mb-3.5 text-[16px] font-semibold tracking-[-0.01em]" style={{ color: T.ink }}>
+      Order Summary
+    </h2>
+  )
+
+  const buyBox = (
+    <div className={CARD_CLASS}>
+      <div className="px-5 pb-4 pt-4">
+        {summaryTitle}
+        {promoSection}
+        {lineItems}
       </div>
-
-      {/* At a glance (owner 2026-10-21): one hairline-divided strip, no
-          boxes inside the card. */}
-      <dl className="mt-3.5 grid grid-cols-3 divide-x divide-white/[0.08] rounded-md bg-white/[0.03] py-1.5">
-        {[
-          { k: 'Delivery', v: fmtDelivery(deliveryTime) },
-          { k: 'Quantity', v: quantity.toLocaleString() },
-          { k: 'Protection', v: 'Included' },
-        ].map((x) => (
-          <div key={x.k} className="min-w-0 px-3 text-center">
-            <dt className="text-[11px] leading-tight" style={{ color: T.ink2 }}>{x.k}</dt>
-            <dd className="truncate text-[12.5px] font-semibold leading-snug" style={{ color: T.ink }}>{x.v}</dd>
-          </div>
-        ))}
-      </dl>
-      {deliveryMethod && (
-        <div className="mt-3 flex items-center justify-between gap-4 text-[12.5px]">
-          <span style={{ color: T.ink2 }}>Delivery Method</span>
-          <span className="inline-flex items-center gap-1 font-medium" style={{ color: T.ink }}>
-            {deliveryMethod.label}
-            <DeliveryMethodInfo label={deliveryMethod.label} description={deliveryMethod.description} />
-          </span>
-        </div>
-      )}
-
-      {/* Seller */}
-      <div className="mt-4 flex items-center gap-3 border-t pt-4" style={{ borderColor: T.line }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={getAvatarUrl(seller.avatar_url, sellerName)}
-          alt={sellerName}
-          className="h-10 w-10 shrink-0 rounded-full object-cover"
-          style={{ background: T.ivory2 }}
-        />
-        <div className="min-w-0">
-          <span className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: T.ink }}>
-            <span className="truncate">{sellerName}</span>
-            {isVerifiedSeller && <VerifiedBadge size={17} />}
-          </span>
-          {/* Shared seller rule: "100% Positive · 12 Reviews · 34 Sold · Gold",
-              or "Verified Seller" before the first sale. */}
-          <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
-            {sellerStatText({
-              ratingPercent: positivePct != null ? Math.round(positivePct) : null,
-              reviews: reviewCount,
-              sales: Number(seller.total_sales ?? 0),
-              tier: seller.seller_tier,
-            })}
-          </p>
-        </div>
-      </div>
-
-      {/* Discount code — collapsed behind a toggle */}
-      {!compact && promoSection}
-
-      {/* Money summary */}
-      {moneySummary}
-
-      {/* Desktop: the commitment lives with the numbers. Phones keep the
-          sticky pay bar at the bottom of the screen. */}
-      <div className="mt-4 hidden lg:block">
-        {payButton()}
+      <div className={cn(BAND_CLASS, 'px-5 pb-4 pt-3.5')}>
+        {totalRow}
+        <div className="mt-3.5">{payButton()}</div>
         {payErrorNote && <div className="mt-2.5">{payErrorNote}</div>}
         <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: T.dis }}>
           By paying you agree to our{' '}
@@ -1189,17 +1149,20 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             Refund Policy
           </Link>
         </p>
+        {needHelp}
       </div>
     </div>
   )
 
   return (
-    // Neutral ground (owner 2026-10-21): no hero art, no game art behind the
-    // form; a flat grey page so the payment is the only thing on it.
-    <div className="relative min-h-screen bg-[#16171B]">
-      <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
+    // The faded homepage art sits behind the top (page.tsx wraps this in
+    // HeroBackdrop, owner 2026-10-27), so the page itself paints nothing.
+    <div className="relative flex min-h-screen flex-col">
+      <CheckoutNavbar />
 
-      <div className="relative mx-auto w-full max-w-[1040px] px-4 pb-10 pt-7 sm:px-6 lg:pb-14">
+      {/* Same width and gutters as the item page (max-w-7xl), so the two
+          pages line up; the order panel is wider than the item page's rail. */}
+      <div className="relative mx-auto w-full max-w-7xl flex-1 px-3 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pb-14">
         {/* Header row */}
         <div className="flex items-center gap-3">
           <button
@@ -1211,16 +1174,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <GppGoodRoundedIcon className="shrink-0" style={{ fontSize: 24, color: TRUST_BLUE }} />
           <h1 className="whitespace-nowrap text-[20px] font-bold sm:text-[24px]" style={{ color: T.ink }}>
             Secure Checkout
           </h1>
         </div>
 
         {/* Two columns (desktop) / stacked with the order first (mobile) */}
-        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_392px] lg:gap-8">
-          {/* Phones: the compact order strip first */}
-          <div className="lg:hidden">{orderStrip}</div>
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_460px] xl:gap-10">
+          {/* Phones: the item first */}
+          <div className="lg:hidden">{itemCard}</div>
 
           <div>
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -1232,65 +1194,33 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             {paymentList}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
-            <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.035] px-4 pb-4 pt-1 lg:hidden">
-              {promoSection}
-              {moneySummary}
+            <div className={cn(CARD_CLASS, 'mt-5 lg:hidden')}>
+              <div className="px-4 pb-4 pt-4">
+                {summaryTitle}
+                {promoSection}
+                {lineItems}
+              </div>
+              <div className={cn(BAND_CLASS, 'px-4 pb-4 pt-3.5')}>
+                {totalRow}
+                {needHelp}
+              </div>
             </div>
-            {/* Security seals at the moment of commitment. */}
-            <div className="mt-6">
-              <TrustSeals />
+            {/* Why it's safe, at the moment of commitment, then the steps. */}
+            <div className="mt-8">
+              <TrustSeals marks={sealData.shown} more={sealData.more} />
+            </div>
+            <div className="mt-8">
+              <HowItWorks />
             </div>
           </div>
 
-          {/* Summary column: the order and Pay, then the rating and the
-              reasons to trust it. Phones get the last two under the seals. */}
-          <div className="flex flex-col gap-3.5">
-            <div className="hidden lg:block">{summaryCard()}</div>
+          {/* Summary column: the item, then the buy box, pinned while the
+              left column scrolls (5 methods + the steps run longer). */}
+          <div className="flex flex-col gap-3.5 lg:sticky lg:top-6">
+            <div className="hidden lg:block">{itemCard}</div>
+            <div className="hidden lg:block">{buyBox}</div>
             <BuyerRating rating={siteRating} />
-            <TrustList />
           </div>
-        </div>
-
-        <h2 className="mb-5 mt-16 text-center text-heading" style={{ color: T.ink }}>
-          How Your Order Works
-        </h2>
-        <div className="rounded-lg border border-white/[0.08] bg-white/[0.035] px-5 py-5 sm:px-8 sm:py-6">
-          <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
-            {[
-              {
-                icon: '/icons/set/card.svg',
-                title: 'Choose Payment Method',
-                sub: 'Every payment is encryption-protected.',
-              },
-              {
-                icon: '/icons/set/package.svg',
-                title: 'Wait for Delivery',
-                sub: 'Your seller preps the order. Chat live anytime.',
-              },
-              {
-                icon: '/icons/set/verified.svg',
-                title: 'Order Delivered',
-                sub: 'Check your items and confirm delivery.',
-              },
-              {
-                icon: '/icons/set/refund.svg',
-                title: 'Item Not Received?',
-                sub: '100% refund, guaranteed.',
-              },
-            ].map((step) => (
-              <li key={step.title} className="flex items-start gap-3.5">
-                <SilverIcon src={step.icon} alt="" className="h-10 w-10" />
-                <div>
-                  <p className="text-[14px] font-bold leading-snug" style={{ color: T.ink }}>
-                    {step.title}
-                  </p>
-                  <p className="mt-1 text-[12.5px] leading-snug" style={{ color: '#B4BEC9' }}>
-                    {step.sub}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
         </div>
       </div>
 

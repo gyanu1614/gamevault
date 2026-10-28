@@ -27,6 +27,10 @@ describe('dispatch: canonical event -> SafeDrop OrderEvent mapping', () => {
   it('CHARGE_PENDING is a no-op (no order transition)', () => {
     expect(orderEventFor({ type: 'CHARGE_PENDING', orderId: 'o1', providerChargeId: 'c1' })).toBeNull()
   })
+  it('PAYMENT_NOTICE (Stripe refund / dispute) never drives an order transition', () => {
+    expect(orderEventFor({ type: 'PAYMENT_NOTICE', kind: 'refund', orderId: 'o1', providerChargeId: 'ch_1', amount: EUR(100n), detail: null })).toBeNull()
+    expect(orderEventFor({ type: 'PAYMENT_NOTICE', kind: 'dispute', orderId: 'o1', providerChargeId: 'ch_1', amount: EUR(100n), detail: null })).toBeNull()
+  })
   it('payout + chargeback-resolved events do not drive order transitions', () => {
     expect(orderEventFor({ type: 'PAYOUT_COMPLETED', payoutId: 'p1', amount: EUR(100n) })).toBeNull()
     expect(orderEventFor({ type: 'PAYOUT_FAILED', payoutId: 'p1', reason: 'x' })).toBeNull()

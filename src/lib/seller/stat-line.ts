@@ -71,3 +71,32 @@ export function sellerStatText(s: SellerStatInput): string {
     .filter(Boolean)
     .join(' · ')
 }
+
+export type SellerPill = { kind: 'positive' | 'reviews' | 'sold' | 'new' | 'verified' | 'since'; label: string }
+
+/**
+ * The checkout item card's seller pills (owner 2026-10-27, Eldorado-style
+ * "99.6% positive · 84237 reviews · Verified since 2021"): the same rule as
+ * the stat line, as chips. The tier stays on the stat line. "Member Since"
+ * is the account year: we have no verification date, so an unverified
+ * seller never gets a "Verified" claim.
+ */
+export function sellerPills(s: SellerStatInput & { memberSince?: string | null }): SellerPill[] {
+  const line = sellerStatLine(s)
+  const pills: SellerPill[] = []
+  if (line.kind === 'new') pills.push({ kind: 'new', label: 'New Seller' })
+  if (line.kind === 'stats' && line.rating) {
+    const r = line.rating.reviews
+    pills.push({ kind: 'positive', label: `${line.rating.percent}% Positive` })
+    pills.push({ kind: 'reviews', label: `${r.toLocaleString('en-US')} ${r === 1 ? 'Review' : 'Reviews'}` })
+  } else if (line.kind === 'stats' && line.sales > 0) {
+    pills.push({ kind: 'sold', label: `${line.sales.toLocaleString('en-US')} Sold` })
+  }
+  if (s.verified !== false) {
+    pills.push({ kind: 'verified', label: 'Verified Seller' })
+  } else {
+    const year = s.memberSince ? new Date(s.memberSince).getUTCFullYear() : NaN
+    if (Number.isFinite(year)) pills.push({ kind: 'since', label: `Member Since ${year}` })
+  }
+  return pills
+}
