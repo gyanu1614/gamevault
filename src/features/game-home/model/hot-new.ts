@@ -27,7 +27,6 @@ export function pickHotNew(feed: ValuesFeed, now: number, limit = 8): HotNewCard
       slug: i.slug,
       name: i.name,
       imageUrl: i.imageUrl,
-      valueHref: i.href,
       offers,
       buyHref: offers > 0 ? feed.buyHref[i.slug] ?? null : null,
       fromPrice: offers > 0 ? feed.minPrice[i.slug] ?? null : null,

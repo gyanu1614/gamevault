@@ -35,7 +35,7 @@ describe('pickHotNew', () => {
 
   it('links an item in stock to our listings with its price, and one without to nothing', () => {
     const [inStock, none] = pickHotNew(feed([item('a'), item('b')], { a: 2 }, { a: 24.99 }), now)
-    expect(inStock).toMatchObject({ slug: 'a', offers: 2, buyHref: '/x/buy-items/item/a', fromPrice: 24.99, valueHref: '/x/values/a' })
+    expect(inStock).toMatchObject({ slug: 'a', offers: 2, buyHref: '/x/buy-items/item/a', fromPrice: 24.99 })
     expect(none).toMatchObject({ slug: 'b', offers: 0, buyHref: null, fromPrice: null })
   })
 

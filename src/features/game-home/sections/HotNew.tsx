@@ -4,6 +4,7 @@ import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
+import { NotifyMeButton } from '@/features/items-grid/NotifyMeButton'
 import type { HotNewCard, HotNewModel } from '../types'
 import { SectionHeading } from './SectionHeading'
 
@@ -12,9 +13,11 @@ import { SectionHeading } from './SectionHeading'
  * (model/hot-new.ts). Built on the listing card's system (ItemCard): the
  * marketplace fill, 10px corners, a footer band one step lighter, hover
  * lightens in place and nothing moves, fill only. An item we stock sells from
- * the card with the house buy button; one nobody lists asks sellers first.
+ * the card with the house buy button; one nobody lists gets Notify Me, with a
+ * Sell Yours link under it. Never a link to the value page (owner, 2026-10-24:
+ * links go values → market, not back).
  */
-function Card({ card, sellHref }: { card: HotNewCard; sellHref: string }) {
+function Card({ card, gameSlug, sellHref }: { card: HotNewCard; gameSlug: string; sellHref: string }) {
   const inStock = card.buyHref != null
   return (
     <li>
@@ -51,17 +54,12 @@ function Card({ card, sellHref }: { card: HotNewCard; sellHref: string }) {
               </BuyButtonFace>
             </Link>
           ) : (
-            <Link
-              href={sellHref}
-              className="inline-flex h-9 w-full items-center justify-center rounded-md bg-amber-400/10 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-400/[0.16]"
-            >
-              Sell Yours First
-            </Link>
-          )}
-          {card.valueHref && (
-            <Link href={card.valueHref} className="text-center font-semibold text-text-secondary transition-colors hover:text-text-primary" style={{ fontSize: 'var(--fs-meta)' }}>
-              How To Get
-            </Link>
+            <>
+              <NotifyMeButton gameSlug={gameSlug} itemSlug={card.slug} itemName={card.name} className="w-full justify-center" />
+              <Link href={sellHref} className="text-center font-semibold text-text-secondary transition-colors hover:text-text-primary" style={{ fontSize: 'var(--fs-meta)' }}>
+                Sell Yours
+              </Link>
+            </>
           )}
         </div>
       </article>
@@ -69,13 +67,13 @@ function Card({ card, sellHref }: { card: HotNewCard; sellHref: string }) {
   )
 }
 
-export function HotNew({ model, gameName }: { model: HotNewModel; gameName: string }) {
+export function HotNew({ model, gameSlug, gameName }: { model: HotNewModel; gameSlug: string; gameName: string }) {
   return (
     <section aria-labelledby="hot-new">
       <SectionHeading id="hot-new" title={model.title} sub={`Just added to ${gameName}. Updated daily.`} action={{ href: model.allHref, label: 'All New' }} />
       <ul className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {model.cards.map((card) => (
-          <Card key={card.slug} card={card} sellHref={model.sellHref} />
+          <Card key={card.slug} card={card} gameSlug={gameSlug} sellHref={model.sellHref} />
         ))}
       </ul>
     </section>

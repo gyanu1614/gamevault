@@ -62,7 +62,7 @@ export function GameHome({ model }: { model: GameHomeModel }) {
 
         {model.hotNew && (
           <div className={PAGE}>
-            <HotNew model={model.hotNew} gameName={gameName} />
+            <HotNew model={model.hotNew} gameSlug={gameSlug} gameName={gameName} />
           </div>
         )}
 

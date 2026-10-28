@@ -29,8 +29,6 @@ export interface HotNewCard {
   slug: string
   name: string
   imageUrl: string | null
-  /** How To Get / value page, or null. */
-  valueHref: string | null
   /** Our live offers for it. */
   offers: number
   /** Our listings of it when in stock, else null (then the CTA is Sell Yours First). */
