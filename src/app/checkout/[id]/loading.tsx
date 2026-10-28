@@ -6,7 +6,7 @@
  * left; the order card, the rating card and the trust list on the right.
  */
 
-import { PANEL_CLASS, PANEL_STYLE, rowStyle } from './_surfaces'
+import { FLAT_BOX_CLASS, PANEL_CLASS, PANEL_STYLE, rowStyle } from './_surfaces'
 
 const GROUND = '#16171B'
 
@@ -91,14 +91,14 @@ export default function CheckoutLoading() {
               </div>
             </Card>
 
-            {/* Seal strip */}
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+            {/* Seal box: one flat box, three cells (stacked on phones) */}
+            <div className={`mt-6 grid grid-cols-1 overflow-hidden sm:grid-cols-3 ${FLAT_BOX_CLASS}`}>
               {[0, 1, 2].map((i) => (
-                <div key={i} className="flex items-start gap-2 sm:justify-center">
-                  <Block className="h-[18px] w-[18px]" />
-                  <div>
+                <div key={i} className={`flex items-center gap-3 px-4 py-3.5 ${i > 0 ? 'border-t border-white/[0.06] sm:border-l sm:border-t-0' : ''}`}>
+                  <Block className="h-8 w-8" />
+                  <div className="space-y-1.5">
                     <Block className="h-3 w-28" />
-                    <Block className="mt-1.5 h-2.5 w-32" />
+                    <Block className="h-2.5 w-36" />
                   </div>
                 </div>
               ))}

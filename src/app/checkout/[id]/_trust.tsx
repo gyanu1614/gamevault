@@ -14,9 +14,6 @@
 
 import Link from '@/components/navigation/AppLink'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
-import { ShieldCheck } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
-import { LockKey } from '@phosphor-icons/react/dist/ssr/LockKey'
-import { Bank } from '@phosphor-icons/react/dist/ssr/Bank'
 import { ChatsCircle } from '@phosphor-icons/react/dist/ssr/ChatsCircle'
 import { Lightning } from '@phosphor-icons/react/dist/ssr/Lightning'
 import { Headset } from '@phosphor-icons/react/dist/ssr/Headset'
@@ -25,29 +22,34 @@ import { StarHalf } from '@phosphor-icons/react/dist/ssr/StarHalf'
 
 import type { SiteRating } from '@/lib/reviews/site-rating'
 import { cn } from '@/lib/utils'
-import { PANEL_CLASS, PANEL_STYLE, TRUST_BLUE } from './_surfaces'
+import { SilverIcon } from '@/components/ui/silver-icon'
+import { FLAT_BOX_CLASS, PANEL_CLASS, PANEL_STYLE, TRUST_BLUE } from './_surfaces'
 
 /** Trust blue: the security signals only; brand green stays on Pay. */
 export { TRUST_BLUE }
 const STAR = '#F5B83D'
 
-const SEALS: Array<{ Icon: PhosphorIcon; title: string; sub: string }> = [
-  { Icon: ShieldCheck, title: 'SafeDrop Protection', sub: 'Money back if not delivered' },
-  { Icon: LockKey, title: 'SSL Encrypted', sub: '256-bit secure checkout' },
-  { Icon: Bank, title: 'Trusted Payments', sub: 'Bank, wallet and crypto' },
+const SEALS: Array<{ icon: string; title: string; sub: string }> = [
+  { icon: '/icons/set/shield-check.svg', title: 'SafeDrop Protection', sub: 'Money back if not delivered' },
+  { icon: '/icons/set/key.svg', title: 'SSL Encrypted', sub: '256-bit secure checkout' },
+  { icon: '/icons/set/wallet.svg', title: 'Trusted Payments', sub: 'Bank, wallet and crypto' },
 ]
 
-/** Three quiet seals in one row (a list on phones): a small duotone icon
- *  and two short lines each, no boxes, no circles. */
+/** The three seals under the payment list (owner 2026-10-27): one flat box
+ *  like the payment rows above it, three cells split by hairlines (stacked
+ *  on phones), each with the site's silver 3D icon. */
 export function TrustSeals() {
   return (
-    <ul aria-label="Payment security" className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-      {SEALS.map(({ Icon, title, sub }) => (
-        <li key={title} className="flex items-start gap-2 sm:justify-center">
-          <Icon aria-hidden size={18} weight="duotone" color={TRUST_BLUE} className="mt-[1px] shrink-0" />
+    <ul aria-label="Payment security" className={cn(FLAT_BOX_CLASS, 'grid grid-cols-1 overflow-hidden sm:grid-cols-3')}>
+      {SEALS.map(({ icon, title, sub }, i) => (
+        <li
+          key={title}
+          className={cn('flex items-center gap-3 px-4 py-3.5', i > 0 && 'border-t border-white/[0.06] sm:border-l sm:border-t-0')}
+        >
+          <SilverIcon src={icon} alt="" className="h-8 w-8" />
           <span className="min-w-0">
-            <span className="block text-[12.5px] font-semibold leading-snug text-[#C9D1DA]">{title}</span>
-            <span className="block text-[11.5px] leading-snug text-[#7D8794]">{sub}</span>
+            <span className="block text-[13px] font-semibold leading-snug text-[#E9EDF2]">{title}</span>
+            <span className="block text-[12px] leading-snug text-[#9AA6B3]">{sub}</span>
           </span>
         </li>
       ))}

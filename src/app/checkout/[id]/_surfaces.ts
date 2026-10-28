@@ -51,5 +51,8 @@ export const ROW_CLASS = 'rounded-lg transition-[background-color,box-shadow] du
 export const ROW_IDLE_CLASS = 'bg-[#1C1D22] hover:bg-[#232429]'
 export const ROW_CHECKED_CLASS = 'bg-[#1D2129]'
 
+/** A static box in the payment rows' style (the seals under the list). */
+export const FLAT_BOX_CLASS = 'rounded-lg bg-[#1C1D22] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]'
+
 /** The logo tile at the right of a row: a slim flat chip. */
 export const TILE_CLASS = 'grid h-7 w-[48px] shrink-0 place-items-center rounded-[6px] bg-[#2A2B32]'
