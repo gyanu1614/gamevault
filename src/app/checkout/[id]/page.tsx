@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { isUuid } from '@/lib/ids'
-import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
+import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import { CheckoutForm } from './CheckoutForm'
 import { getSiteRating } from '@/lib/reviews/site-rating'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
@@ -213,18 +213,16 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     />
   )
 
-  // The game's hero art behind the top, like the item page (owner
-  // 2026-10-27; replaces the plain page of 2026-10-21).
-  const gameSlug = listing.game?.slug as string | undefined
+  // The homepage art behind the top, heavily faded (owner 2026-10-27: "a
+  // subtle touch, a minimal bare background") with the deep dim the Order
+  // Paid page uses, so the form stays the loudest thing on the page. The
+  // checkout draws its own navbar, so the art starts at the page top.
   return (
     <main className="w-full">
-      {gameSlug ? (
-        <GameHeroBackdrop gameSlug={gameSlug} size="market">
-          {form}
-        </GameHeroBackdrop>
-      ) : (
-        form
-      )}
+      <HeroBackdropPreload name="home" />
+      <HeroBackdrop name="home" navbarOffset={0} className="hero-dim-deep">
+        {form}
+      </HeroBackdrop>
     </main>
   )
 }

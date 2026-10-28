@@ -1211,8 +1211,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   return (
-    // The game's hero art sits behind the top (page.tsx wraps this in
-    // GameHeroBackdrop, owner 2026-10-27), so the page itself paints nothing.
+    // The faded homepage art sits behind the top (page.tsx wraps this in
+    // HeroBackdrop, owner 2026-10-27), so the page itself paints nothing.
     <div className="relative min-h-screen">
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
