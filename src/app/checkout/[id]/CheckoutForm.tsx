@@ -31,7 +31,6 @@ import * as Dropdown from '@radix-ui/react-dropdown-menu'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
-  BadgeCheck,
   Check,
   ChevronDown,
   Info,
@@ -49,25 +48,24 @@ import { orderMethodsForRegion, regionForCountry } from '@/lib/payments/regions'
 import { countryName, flagEmoji } from '@/lib/geo/countries'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { clampCheckoutQty } from './qty'
-import { TILE_SLOT, markSize, methodIdForRow, toRow, walletRows, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { TILE_SLOT, markSize, methodIdForRow, sealMarks, toRow, walletRows, type LocalMethodRow, type MethodIcon } from './_method-ui'
 import { useWalletAvailability } from './_wallets'
 import { PANEL_CLASS, PANEL_STYLE, ROW_CHECKED_CLASS, ROW_CLASS, ROW_IDLE_CLASS, TILE_CLASS, rowStyle } from './_surfaces'
-import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustList, TrustSeals } from './_trust'
+import { BuyerRating, CheckoutFooter, TRUST_BLUE, TrustSeals } from './_trust'
+import { ItemCard } from './_item-card'
+import { HowItWorks } from './_how-it-works'
 import type { SiteRating } from '@/lib/reviews/site-rating'
 import { lowestFeeMethodId } from '@/lib/payments/lowest-fee'
-import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { cn } from '@/lib/utils'
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { SERVICE_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { SilverIcon } from '@/components/ui/silver-icon'
 import { CheckoutNavbar } from '../_components/CheckoutNavbar'
-import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
-import { sellerStatText } from '@/lib/seller/stat-line'
+import { sellerPills } from '@/lib/seller/stat-line'
+import { Headset } from '@phosphor-icons/react/dist/ssr/Headset'
 import { track } from '@/lib/analytics/client'
-import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
 import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
@@ -357,9 +355,11 @@ interface CheckoutFormProps {
   unfinishedPayment?: boolean
   /** Real average of visible buyer reviews; null hides the rating card. */
   siteRating?: SiteRating | null
+  /** The seller's heartbeat is fresh (src/lib/presence/online.ts): the item card's Online dot. */
+  sellerOnline?: boolean
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false, siteRating = null }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null, unfinishedPayment = false, siteRating = null, sellerOnline = false }: CheckoutFormProps) {
   const router = useRouter()
 
   // Flat selector (checkout regions, 2026-09-26): the buyer's own-country
@@ -632,7 +632,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const isBundle = !!bundleSummary
   const title = bundleSummary?.name || listing.title
   const imageSrc =
-    bundleSummary?.iconUrl || listing.images?.[0] || listing.game?.image_url || '/placeholder-game.jpg'
+    bundleSummary?.iconUrl || listing.images?.[0] || listing.game?.image_url || '/placeholder/game-fallback.svg'
 
   const seller = listing.seller ?? {}
   const sellerName = seller.shop_name || seller.username || 'Seller'
@@ -947,47 +947,44 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
-  // ── Phones: one compact strip — thumbnail, title, game · category · qty,
-  //    the seller's name, the price. Everything else lives under the list.
-  const orderStrip = (
-    <div className={cn(PANEL_CLASS, 'p-3.5')} style={PANEL_STYLE}>
-      <p className="mb-2.5 text-[15px] font-semibold" style={{ color: T.ink }}>
-        Your Order
-      </p>
-      <div className="flex items-start gap-3">
-        <Image
-          src={imageSrc}
-          alt={title}
-          width={52}
-          height={52}
-          unoptimized
-          className="h-[52px] w-[52px] shrink-0 rounded-md object-cover"
-          style={{ background: T.ivory2 }}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-[14px] font-semibold leading-snug" style={{ color: T.ink }}>
-            {title}
-          </p>
-          <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
-            {[listing.game?.name, listing.category?.name].filter(Boolean).join(' · ')}
-            {(listing.game?.name || listing.category?.name) && ' · '}Quantity: x{quantity.toLocaleString()}
-          </p>
-          <p className="mt-0.5 flex items-center gap-1 truncate text-[12px]" style={{ color: T.ink2 }}>
-            Seller <span className="font-semibold" style={{ color: T.ink }}>{sellerName}</span>
-            {isVerifiedSeller && <BadgeCheck aria-label="Verified Seller" className="h-[14px] w-[14px] shrink-0" style={{ fill: '#1D9BF0', color: '#FFFFFF' }} />}
-          </p>
-        </div>
-        <span className="shrink-0 text-[16px] font-bold tabular-nums" style={{ color: T.ink }}>
-          ${subtotal.toFixed(2)}
-        </span>
-      </div>
-    </div>
+  // ── The item card (owner 2026-10-27, Eldorado-style): the item and its
+  //    details, then the seller with real-data pills. Top of the summary
+  //    column on desktop, first on phones.
+  const sealData = sealMarks({
+    cardRail: cardRows.length > 0,
+    rows: [...cardRows, ...localRows, ...regionalRows],
+    extra: cryptoMethod ? COINS.filter((c) => !c.soon).map((c) => ({ logo: c.icon, aspect: 1 })) : [],
+  })
+
+  const itemCard = (
+    <ItemCard
+      title={title}
+      imageSrc={imageSrc}
+      details={[
+        [listing.game?.name, listing.category?.name].filter(Boolean).join(' · '),
+        `Delivery Time: ${fmtDelivery(deliveryTime)}`,
+        `Quantity: ${quantity.toLocaleString()}`,
+      ].filter(Boolean)}
+      deliveryMethod={deliveryMethod}
+      seller={{
+        name: sellerName,
+        verified: isVerifiedSeller,
+        online: sellerOnline,
+        pills: sellerPills({
+          ratingPercent: positivePct != null ? Math.round(positivePct) : null,
+          reviews: reviewCount,
+          sales: Number(seller.total_sales ?? 0),
+          verified: isVerifiedSeller,
+          memberSince: seller.created_at ?? null,
+        }),
+      }}
+    />
   )
 
   // ── Shared with the phone layout: the discount toggle and the money rows
   //    render inside the desktop card AND under the payment list on phones.
   const promoSection = (
-        <div className="mt-4">
+        <div>
           {!promoResult?.valid && (
             <button
               type="button"
@@ -1098,93 +1095,30 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       </div>
   )
 
-  const summaryCard = (compact = false) => (
+  const needHelp = (
+    <Link
+      href="/support"
+      target="_blank"
+      rel="noopener"
+      className="mt-3 flex items-center justify-center gap-1.5 text-[12.5px] transition-colors hover:text-[#E9EDF2]"
+      style={{ color: T.ink2 }}
+    >
+      <Headset aria-hidden size={15} weight="fill" color={TRUST_BLUE} />
+      Need Help?
+      <span className="font-semibold" style={{ color: T.ink }}>
+        24/7 Human Support
+      </span>
+    </Link>
+  )
+
+  // ── The buy box under the item card (desktop): discount, the money rows,
+  //    Pay and the terms. Phones get the same rows under the list and Pay in
+  //    the sticky bar.
+  const buyBox = (
     <div className={cn(PANEL_CLASS, 'p-5 xl:p-6')} style={PANEL_STYLE}>
-      {/* Item */}
-      <div className="flex items-center gap-3.5">
-        <Image
-          src={imageSrc}
-          alt={title}
-          width={56}
-          height={56}
-          unoptimized
-          className="h-14 w-14 shrink-0 rounded-lg object-cover"
-          style={{ background: T.ivory2 }}
-        />
-        <div className="min-w-0">
-          <p className="line-clamp-2 text-[15px] font-semibold leading-snug" style={{ color: T.ink }}>
-            {title}
-          </p>
-          {(listing.game?.name || listing.category?.name) && (
-            <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
-              {listing.game?.name}
-              {listing.game?.name && listing.category?.name && ' · '}
-              {listing.category?.name}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* At a glance (owner 2026-10-21): one hairline-divided strip, no
-          boxes inside the card. */}
-      <dl className="mt-3.5 grid grid-cols-3 divide-x divide-white/[0.08] rounded-md bg-white/[0.03] py-1.5">
-        {[
-          { k: 'Delivery', v: fmtDelivery(deliveryTime) },
-          { k: 'Quantity', v: quantity.toLocaleString() },
-          { k: 'Protection', v: 'Included' },
-        ].map((x) => (
-          <div key={x.k} className="min-w-0 px-3 text-center">
-            <dt className="text-[11px] leading-tight" style={{ color: T.ink2 }}>{x.k}</dt>
-            <dd className="truncate text-[12.5px] font-semibold leading-snug" style={{ color: T.ink }}>{x.v}</dd>
-          </div>
-        ))}
-      </dl>
-      {deliveryMethod && (
-        <div className="mt-3 flex items-center justify-between gap-4 text-[12.5px]">
-          <span style={{ color: T.ink2 }}>Delivery Method</span>
-          <span className="inline-flex items-center gap-1 font-medium" style={{ color: T.ink }}>
-            {deliveryMethod.label}
-            <DeliveryMethodInfo label={deliveryMethod.label} description={deliveryMethod.description} />
-          </span>
-        </div>
-      )}
-
-      {/* Seller */}
-      <div className="mt-4 flex items-center gap-3 border-t pt-4" style={{ borderColor: T.line }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={getAvatarUrl(seller.avatar_url, sellerName)}
-          alt={sellerName}
-          className="h-10 w-10 shrink-0 rounded-full object-cover"
-          style={{ background: T.ivory2 }}
-        />
-        <div className="min-w-0">
-          <span className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: T.ink }}>
-            <span className="truncate">{sellerName}</span>
-            {isVerifiedSeller && <VerifiedBadge size={17} />}
-          </span>
-          {/* Shared seller rule: "100% Positive · 12 Reviews · 34 Sold · Gold",
-              or "Verified Seller" before the first sale. */}
-          <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
-            {sellerStatText({
-              ratingPercent: positivePct != null ? Math.round(positivePct) : null,
-              reviews: reviewCount,
-              sales: Number(seller.total_sales ?? 0),
-              tier: seller.seller_tier,
-            })}
-          </p>
-        </div>
-      </div>
-
-      {/* Discount code — collapsed behind a toggle */}
-      {!compact && promoSection}
-
-      {/* Money summary */}
+      {promoSection}
       {moneySummary}
-
-      {/* Desktop: the commitment lives with the numbers. Phones keep the
-          sticky pay bar at the bottom of the screen. */}
-      <div className="mt-4 hidden lg:block">
+      <div className="mt-4">
         {payButton()}
         {payErrorNote && <div className="mt-2.5">{payErrorNote}</div>}
         <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: T.dis }}>
@@ -1205,6 +1139,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             Refund Policy
           </Link>
         </p>
+        {needHelp}
       </div>
     </div>
   )
@@ -1236,8 +1171,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
         {/* Two columns (desktop) / stacked with the order first (mobile) */}
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_460px] xl:gap-10">
-          {/* Phones: the compact order strip first */}
-          <div className="lg:hidden">{orderStrip}</div>
+          {/* Phones: the item first */}
+          <div className="lg:hidden">{itemCard}</div>
 
           <div>
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -1249,65 +1184,27 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             {paymentList}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
-            <div className={cn(PANEL_CLASS, 'mt-4 px-4 pb-4 pt-1 lg:hidden')} style={PANEL_STYLE}>
+            <div className={cn(PANEL_CLASS, 'mt-4 px-4 pb-4 pt-4 lg:hidden')} style={PANEL_STYLE}>
               {promoSection}
               {moneySummary}
+              {needHelp}
             </div>
-            {/* Security seals at the moment of commitment. */}
+            {/* Why it's safe, at the moment of commitment, then the steps. */}
             <div className="mt-6">
-              <TrustSeals />
+              <TrustSeals marks={sealData.shown} more={sealData.more} />
+            </div>
+            <div className="mt-6">
+              <HowItWorks />
             </div>
           </div>
 
-          {/* Summary column: the order and Pay, then the rating and the
-              reasons to trust it. Phones get the last two under the seals. */}
-          <div className="flex flex-col gap-3.5">
-            <div className="hidden lg:block">{summaryCard()}</div>
+          {/* Summary column: the item, then the buy box, pinned while the
+              left column scrolls (5 methods + the steps run longer). */}
+          <div className="flex flex-col gap-3.5 lg:sticky lg:top-6">
+            <div className="hidden lg:block">{itemCard}</div>
+            <div className="hidden lg:block">{buyBox}</div>
             <BuyerRating rating={siteRating} />
-            <TrustList />
           </div>
-        </div>
-
-        <h2 className="mb-5 mt-16 text-center text-heading" style={{ color: T.ink }}>
-          How Your Order Works
-        </h2>
-        <div className={cn(PANEL_CLASS, 'px-5 py-5 sm:px-8 sm:py-6')} style={PANEL_STYLE}>
-          <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
-            {[
-              {
-                icon: '/icons/set/card.svg',
-                title: 'Choose Payment Method',
-                sub: 'Every payment is encryption-protected.',
-              },
-              {
-                icon: '/icons/set/package.svg',
-                title: 'Wait for Delivery',
-                sub: 'Your seller preps the order. Chat live anytime.',
-              },
-              {
-                icon: '/icons/set/verified.svg',
-                title: 'Order Delivered',
-                sub: 'Check your items and confirm delivery.',
-              },
-              {
-                icon: '/icons/set/refund.svg',
-                title: 'Item Not Received?',
-                sub: '100% refund, guaranteed.',
-              },
-            ].map((step) => (
-              <li key={step.title} className="flex items-start gap-3.5">
-                <SilverIcon src={step.icon} alt="" className="h-10 w-10" />
-                <div>
-                  <p className="text-[14px] font-bold leading-snug" style={{ color: T.ink }}>
-                    {step.title}
-                  </p>
-                  <p className="mt-1 text-[12.5px] leading-snug" style={{ color: '#B4BEC9' }}>
-                    {step.sub}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
         </div>
       </div>
 

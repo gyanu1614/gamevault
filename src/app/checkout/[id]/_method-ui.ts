@@ -132,6 +132,31 @@ export function methodIdForRow(rowId: string): string {
   return WALLET_ROWS.some((w) => w.id === rowId) ? 'stripe' : rowId
 }
 
+/**
+ * The Payment Methods seal under the list (owner 2026-10-27: "small grey
+ * logos of Apple Pay, Google Pay and +5 more"): the first few marks this
+ * buyer can pay with, then a count of the rest. Apple Pay and Google Pay lead
+ * whenever the card rail is open (Stripe's page offers whichever the device
+ * has), so the seal doesn't change once the device's wallet is detected. A
+ * mark two rails share counts once; a rail with no logo still counts.
+ */
+export const SEAL_MARK_LIMIT = 4
+
+export function sealMarks(
+  input: { cardRail: boolean; rows: LocalMethodRow[]; extra?: MethodMark[] },
+  limit: number = SEAL_MARK_LIMIT,
+): { shown: MethodMark[]; more: number } {
+  const marks = [
+    ...(input.cardRail ? [WALLET_MARKS.applepay, WALLET_MARKS.googlepay] : []),
+    ...input.rows.flatMap((r) => r.marks),
+    ...(input.extra ?? []),
+  ]
+  const seen = new Set<string>()
+  const unique = marks.filter((m) => !seen.has(m.logo) && !!seen.add(m.logo))
+  const unmarked = input.rows.filter((r) => r.marks.length === 0).length
+  return { shown: unique.slice(0, limit), more: Math.max(0, unique.length - limit) + unmarked }
+}
+
 /** The mark slot on a payment row. */
 export const MARK_SLOT = { width: 76, height: 30 } as const
 

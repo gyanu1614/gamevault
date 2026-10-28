@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, methodIdForRow, toRow, walletRows } from './_method-ui'
+import { MARK_SLOT, METHOD_UI_IDS, TILE_SLOT, markSize, methodIdForRow, sealMarks, toRow, walletRows } from './_method-ui'
 import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
-import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK } from '@/lib/payments/method-marks'
+import { PAYMENT_METHOD_LOGOS, PAYMENT_METHOD_MULTI_MARKS, PAYMENT_METHOD_ONDARK, WALLET_MARKS } from '@/lib/payments/method-marks'
 
 describe('checkout method rows', () => {
   it('every selectable registry method has its own icon + notes line (none falls back)', () => {
@@ -90,5 +90,32 @@ describe('checkout method rows', () => {
       expect(s.height).toBeLessThanOrEqual(TILE_SLOT.height)
     }
     expect(markSize(1, TILE_SLOT)).toEqual({ width: 16, height: 16 })
+  })
+})
+
+describe('Payment Methods seal (owner 2026-10-27: grey logos, then "+N More")', () => {
+  const quote = { serviceFeeMinor: 100 } as any
+  const row = (method: string) => toRow({ method, label: method, countries: ['BR'], coverage: 'Brazil', quote } as any)
+  const coins = [
+    { logo: '/crypto/usdt.svg', aspect: 1 },
+    { logo: '/crypto/btc.svg', aspect: 1 },
+  ]
+
+  it('card rail open → Apple Pay, Google Pay, Visa, Mastercard lead; the rest count as more', () => {
+    const seal = sealMarks({ cardRail: true, rows: [row('stripe')], extra: coins })
+    expect(seal.shown).toEqual([WALLET_MARKS.applepay, WALLET_MARKS.googlepay, ...PAYMENT_METHOD_MULTI_MARKS.stripe])
+    expect(seal.more).toBe(2)
+  })
+
+  it('a mark shared by two rails counts once; a rail with no logo still counts', () => {
+    const seal = sealMarks({ cardRail: true, rows: [row('stripe'), row('creditcard_br'), row('pix_br'), row('paynow_sg')], extra: coins })
+    // pix + paynow (no logo) + 2 coins; creditcard_br's Visa/Mastercard are already shown.
+    expect(seal.more).toBe(4)
+  })
+
+  it('no card rail → the local rails lead', () => {
+    const seal = sealMarks({ cardRail: false, rows: [row('pix_br')], extra: coins })
+    expect(seal.shown.map((m) => m.logo)).toEqual([PAYMENT_METHOD_ONDARK.pix_br.logo, '/crypto/usdt.svg', '/crypto/btc.svg'])
+    expect(seal.more).toBe(0)
   })
 })

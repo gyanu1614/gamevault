@@ -13,6 +13,7 @@ import { clampCheckoutQty } from './qty'
 import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
 import { PAID_LIFECYCLE } from '@/lib/payments/return-destination'
 import { loadPaidOrderSummary } from '../_components/paid-order'
+import { isSellerOnline } from '@/lib/presence/online'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -85,11 +86,11 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // is testable on localhost and debuggable anywhere (UI-only, harmless).
   const buyerCountry = countryOverride ?? (await headers()).get('x-vercel-ip-country')
 
-  // STATE-007 — the buyer profile, the bundle's category_config and the seller's
-  // reviews are mutually independent and each only needs data already loaded, so
-  // the three guarded reads are hoisted into one fan-out rather than three
-  // serial round-trips. A guard that does not apply resolves to { data: null }.
-  const [profileRes, configRes, reviewsRes] = await Promise.all([
+  // STATE-007 — the buyer profile, the bundle's category_config, the seller's
+  // reviews and presence are mutually independent and each only needs data
+  // already loaded, so the guarded reads are hoisted into one fan-out rather
+  // than serial round-trips. A guard that does not apply resolves to { data: null }.
+  const [profileRes, configRes, reviewsRes, presenceRes] = await Promise.all([
     user
       ? (supabase
           .from('profiles')
@@ -113,6 +114,14 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           .eq('seller_id', listing.seller.id)
           .order('created_at', { ascending: false })
           .limit(5) as any)
+      : Promise.resolve({ data: null }),
+    // The item card's "Online" dot. Its own read, so a miss only hides the dot.
+    listing.seller?.id
+      ? (supabase
+          .from('seller_presence')
+          .select('is_online, last_seen_at')
+          .eq('seller_id', listing.seller.id)
+          .maybeSingle() as any)
       : Promise.resolve({ data: null }),
   ])
 
@@ -210,6 +219,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       deliveryMethod={deliveryMethod}
       unfinishedPayment={unfinishedPayment}
       siteRating={siteRating}
+      sellerOnline={isSellerOnline((presenceRes as any).data)}
     />
   )
 

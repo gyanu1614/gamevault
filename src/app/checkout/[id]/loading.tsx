@@ -2,16 +2,42 @@
  * Checkout skeleton — the same frame as the live page (owner 2026-10-27):
  * the item page's max-w-7xl width, the Secure Checkout header, then the
  * 1fr / 420px (xl 460px) grid —
- * payment rows (radio, name + line, logo tile) and the seal strip on the
- * left; the order card, the rating card and the trust list on the right.
+ * payment rows (radio, name + line, logo tile), the three floating seals
+ * and the How Your Order Works panel on the left; the item card and the
+ * buy box on the right (the item card comes first on phones).
  */
 
-import { FLAT_BOX_CLASS, PANEL_CLASS, PANEL_STYLE, rowStyle } from './_surfaces'
+import { PANEL_CLASS, PANEL_STYLE, rowStyle } from './_surfaces'
 
 const GROUND = '#16171B'
 
 function Block({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
+}
+
+function ItemCardSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <Card className={`p-4 sm:p-5 ${className}`}>
+      <div className="flex items-start gap-4">
+        <Block className="h-16 w-16" />
+        <div className="min-w-0 flex-1">
+          <Block className="h-4 w-44" />
+          <Block className="mt-2 h-3.5 w-full max-w-[260px]" />
+        </div>
+      </div>
+      <div className="mt-4 border-t border-white/[0.08] pt-3.5">
+        <Block className="h-3 w-12" />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2.5">
+          <Block className="h-4 w-28" />
+          <div className="flex gap-2">
+            {[0, 1, 2].map((i) => (
+              <Block key={i} className="h-7 w-24" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -42,19 +68,8 @@ export default function CheckoutLoading() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_460px] xl:gap-10">
-          {/* Phones: compact order strip */}
-          <Card className="p-3.5 lg:hidden">
-            <Block className="h-4 w-20" />
-            <div className="mt-2.5 flex items-start gap-3">
-              <Block className="h-[52px] w-[52px]" />
-              <div className="min-w-0 flex-1">
-                <Block className="h-4 w-44" />
-                <Block className="mt-1.5 h-3 w-40" />
-                <Block className="mt-1.5 h-3 w-28" />
-              </div>
-              <Block className="h-5 w-14" />
-            </div>
-          </Card>
+          {/* Phones: the item card first */}
+          <ItemCardSkeleton className="lg:hidden" />
 
           {/* Left — payment column */}
           <div>
@@ -78,7 +93,7 @@ export default function CheckoutLoading() {
             </div>
 
             {/* Phones: discount + money rows under the list */}
-            <Card className="mt-4 px-4 pb-4 pt-3 lg:hidden">
+            <Card className="mt-4 px-4 pb-4 pt-4 lg:hidden">
               <Block className="h-3.5 w-40" />
               <div className="mt-3 space-y-2 border-t border-white/[0.08] pt-3.5">
                 {[0, 1].map((i) => (
@@ -90,38 +105,44 @@ export default function CheckoutLoading() {
               </div>
             </Card>
 
-            {/* Seal box: one flat box, three cells (stacked on phones) */}
-            <div className={`mt-6 grid grid-cols-1 overflow-hidden sm:grid-cols-3 ${FLAT_BOX_CLASS}`}>
+            {/* Seals: three floating items, no box (stacked on phones and lg) */}
+            <div className="mt-6 grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-[auto_auto_auto] md:justify-between lg:grid-cols-1 xl:grid-cols-[auto_auto_auto]">
               {[0, 1, 2].map((i) => (
-                <div key={i} className={`flex items-center gap-3 px-4 py-3.5 ${i > 0 ? 'border-t border-white/[0.06] sm:border-l sm:border-t-0' : ''}`}>
+                <div key={i} className="flex items-center gap-3">
                   <Block className="h-8 w-8" />
                   <div className="space-y-1.5">
                     <Block className="h-3 w-28" />
-                    <Block className="h-2.5 w-36" />
+                    <Block className="h-2.5 w-40" />
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* How Your Order Works: the tinted panel, open */}
+            <div className="mt-6 rounded-lg bg-[rgba(18,24,40,0.78)] shadow-[inset_0_0_0_1px_rgba(106,168,255,0.22)]">
+              <div className="flex items-center gap-3.5 px-4 py-3.5 sm:px-5">
+                <Block className="h-10 w-10 rounded-full" />
+                <Block className="h-4 w-44" />
+              </div>
+              <div className="mx-4 grid grid-cols-1 gap-x-8 gap-y-4 border-t border-white/[0.08] pb-5 pt-4 sm:mx-5 sm:grid-cols-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <Block className="h-[22px] w-[22px]" />
+                    <div>
+                      <Block className="h-3.5 w-36" />
+                      <Block className="mt-1.5 h-3 w-48" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Right — order card, rating, trust list */}
-          <div className="flex flex-col gap-3.5">
-            <Card className="hidden p-5 lg:block">
-              <div className="flex items-center gap-3.5">
-                <Block className="h-14 w-14 rounded-lg" />
-                <div className="min-w-0 flex-1">
-                  <Block className="h-4 w-40" />
-                  <Block className="mt-1.5 h-3.5 w-24" />
-                </div>
-              </div>
-              <Block className="mt-3.5 h-10 w-full" />
-              <div className="mt-4 flex items-center gap-3 border-t border-white/[0.08] pt-4">
-                <Block className="h-10 w-10 rounded-full" />
-                <div>
-                  <Block className="h-4 w-32" />
-                  <Block className="mt-1 h-3 w-24" />
-                </div>
-              </div>
+          {/* Right — the item card, then the buy box */}
+          <div className="hidden flex-col gap-3.5 lg:flex">
+            <ItemCardSkeleton />
+            <Card className="p-5">
+              <Block className="h-3.5 w-40" />
               <div className="mt-4 space-y-2 border-t border-white/[0.08] pt-3.5">
                 {[0, 1].map((i) => (
                   <div key={i} className="flex justify-between">
@@ -136,21 +157,7 @@ export default function CheckoutLoading() {
               </div>
               <Block className="mt-4 h-12 w-full" />
               <Block className="mx-auto mt-3 h-3 w-56" />
-            </Card>
-            <Card className="flex items-center gap-3 px-5 py-4">
-              <Block className="h-4 w-24" />
-              <Block className="ml-auto h-5 w-32" />
-            </Card>
-            <Card className="space-y-4 px-5 py-4">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <Block className="h-5 w-5" />
-                  <div>
-                    <Block className="h-3.5 w-36" />
-                    <Block className="mt-1.5 h-3 w-48" />
-                  </div>
-                </div>
-              ))}
+              <Block className="mx-auto mt-3 h-3 w-44" />
             </Card>
           </div>
         </div>
