@@ -12,15 +12,29 @@ import { DB_IS_LOCAL, runRolledBack } from './local-psql'
 const TAG = 'guardtest-recompute'
 
 describe.skipIf(!DB_IS_LOCAL)('sab_recompute_tradeable', () => {
+  // The first run settles the stack's own rows, so the counts after it are this row's alone.
   it('updates a brainrot whose tradeable flag is wrong, then nothing on a second run', () => {
     const lines = runRolledBack([
-      // No publishable correction and no popularity rank: should be false.
-      `insert into public.sab_brainrots (name, slug, is_tradeable) values ('${TAG}', '${TAG}', true)`,
+      `select public.sab_recompute_tradeable()`,
+      // No publishable correction, no popularity rank, past the 14-day new window: should be false.
+      `insert into public.sab_brainrots (name, slug, is_tradeable, created_at)
+       values ('${TAG}', '${TAG}', true, now() - interval '15 days')`,
       `select public.sab_recompute_tradeable()`,
       `select public.sab_recompute_tradeable()`,
       `select is_tradeable from public.sab_brainrots where slug = '${TAG}'`,
     ])
-    expect(lines).toEqual(['1', '0', 'f'])
+    expect(lines.slice(1)).toEqual(['1', '0', 'f'])
+  })
+
+  // 20261023031219: brainrots added in the last 14 days stay in the crawl.
+  it('keeps a brainrot added in the last 14 days tradeable, with nothing to write', () => {
+    const lines = runRolledBack([
+      `select public.sab_recompute_tradeable()`,
+      `insert into public.sab_brainrots (name, slug) values ('${TAG}', '${TAG}')`,
+      `select public.sab_recompute_tradeable()`,
+      `select is_tradeable from public.sab_brainrots where slug = '${TAG}'`,
+    ])
+    expect(lines.slice(1)).toEqual(['0', 't'])
   })
 })
 
