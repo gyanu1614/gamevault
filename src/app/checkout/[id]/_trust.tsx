@@ -17,36 +17,46 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { ChatsCircle } from '@phosphor-icons/react/dist/ssr/ChatsCircle'
 import { Lightning } from '@phosphor-icons/react/dist/ssr/Lightning'
 import { Headset } from '@phosphor-icons/react/dist/ssr/Headset'
+import { ShieldCheck } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
+import { LockKey } from '@phosphor-icons/react/dist/ssr/LockKey'
+import { CreditCard } from '@phosphor-icons/react/dist/ssr/CreditCard'
 import { Star } from '@phosphor-icons/react/dist/ssr/Star'
 import { StarHalf } from '@phosphor-icons/react/dist/ssr/StarHalf'
 
 import type { SiteRating } from '@/lib/reviews/site-rating'
 import { cn } from '@/lib/utils'
-import { SilverIcon } from '@/components/ui/silver-icon'
 import { FLAT_BOX_CLASS, PANEL_CLASS, PANEL_STYLE, TRUST_BLUE } from './_surfaces'
 
 /** Trust blue: the security signals only; brand green stays on Pay. */
 export { TRUST_BLUE }
 const STAR = '#F5B83D'
 
-const SEALS: Array<{ icon: string; title: string; sub: string }> = [
-  { icon: '/icons/set/shield-check.svg', title: 'SafeDrop Protection', sub: 'Money back if not delivered' },
-  { icon: '/icons/set/key.svg', title: 'SSL Encrypted', sub: '256-bit secure checkout' },
-  { icon: '/icons/set/wallet.svg', title: 'Trusted Payments', sub: 'Bank, wallet and crypto' },
+const SEALS: Array<{ Icon: PhosphorIcon; title: string; sub: string }> = [
+  { Icon: ShieldCheck, title: 'SafeDrop Protection', sub: 'Money back if not delivered' },
+  { Icon: LockKey, title: 'SSL Encrypted', sub: '256-bit secure checkout' },
+  { Icon: CreditCard, title: 'Trusted Payments', sub: 'Bank, wallet and crypto' },
 ]
 
 /** The three seals under the payment list (owner 2026-10-27): one flat box
  *  like the payment rows above it, three cells split by hairlines (stacked
- *  on phones), each with the site's silver 3D icon. */
+ *  on phones). Icons: crisp solid glyphs in a small trust-blue tile, the
+ *  way professional checkouts mark security (Baymard: a plain padlock and
+ *  short "secured" copy beat ornate seals); never 3D clip-art. */
 export function TrustSeals() {
   return (
     <ul aria-label="Payment security" className={cn(FLAT_BOX_CLASS, 'grid grid-cols-1 overflow-hidden sm:grid-cols-3')}>
-      {SEALS.map(({ icon, title, sub }, i) => (
+      {SEALS.map(({ Icon, title, sub }, i) => (
         <li
           key={title}
           className={cn('flex items-center gap-3 px-4 py-3.5', i > 0 && 'border-t border-white/[0.06] sm:border-l sm:border-t-0')}
         >
-          <SilverIcon src={icon} alt="" className="h-8 w-8" />
+          <span
+            aria-hidden
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
+            style={{ background: 'rgba(106,168,255,0.12)' }}
+          >
+            <Icon size={17} weight="fill" color={TRUST_BLUE} />
+          </span>
           <span className="min-w-0">
             <span className="block text-[13px] font-semibold leading-snug text-[#E9EDF2]">{title}</span>
             <span className="block text-[12px] leading-snug text-[#9AA6B3]">{sub}</span>
