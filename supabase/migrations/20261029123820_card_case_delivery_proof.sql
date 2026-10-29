@@ -21,8 +21,47 @@
 -- order_access_log is what the bank sees in a dispute: when, and from which
 -- IP and device, the buyer paid and opened the delivered order.
 -- Replaces guard_orders_card_case, card_case_review_reason,
--- card_case_settle_internal and card_dispute_close from 20261028143542 (only
--- the parts marked "changed" differ).
+-- card_case_settle_internal and card_dispute_close from 20261028143542, and
+-- order_mark_delivered_in_dispute from 20260927001408 (only the parts marked
+-- "changed" differ).
+
+-- ── 0. No delivery recorded while a card case holds the order (changed) ─────
+-- The seller cannot mark a held order delivered (and attach a photo) once the
+-- buyer's bank has the dispute.
+CREATE OR REPLACE FUNCTION public.order_mark_delivered_in_dispute(p_order_id uuid, p_seller_id uuid) RETURNS jsonb
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_order RECORD;
+  v_now   TIMESTAMPTZ := now();
+  v_ref   TEXT;
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  SELECT * INTO v_order FROM orders WHERE id = p_order_id FOR UPDATE;
+  IF NOT FOUND OR v_order.seller_id IS DISTINCT FROM p_seller_id THEN
+    RETURN jsonb_build_object('order_id', p_order_id, 'changed', false, 'reason', 'not_found');
+  END IF;
+  IF v_order.status <> 'disputed' THEN
+    RETURN jsonb_build_object('order_id', p_order_id, 'changed', false, 'reason', 'not_disputed', 'status', v_order.status);
+  END IF;
+  IF EXISTS (SELECT 1 FROM card_cases WHERE order_id = p_order_id AND status IN ('open', 'awaiting_decision')) THEN
+    RETURN jsonb_build_object('order_id', p_order_id, 'changed', false, 'reason', 'card_case');
+  END IF;
+  IF v_order.delivered_at IS NOT NULL THEN
+    RETURN jsonb_build_object('order_id', p_order_id, 'changed', false, 'reason', 'already_delivered', 'delivered_at', v_order.delivered_at);
+  END IF;
+
+  -- delivered_at only: no status change, no auto_release_at, no money.
+  UPDATE orders SET delivered_at = v_now WHERE id = p_order_id;
+
+  v_ref := COALESCE(v_order.order_number, LEFT(p_order_id::text, 8));
+  PERFORM notify_once(v_order.buyer_id, 'order_delivered', 'Order Delivered',
+    '#' || v_ref || ' — the seller marked your order as delivered. If you received it, confirm on the order page to close your dispute.',
+    '/account/orders/' || p_order_id::text, 'dispute_delivered:' || p_order_id::text);
+
+  RETURN jsonb_build_object('order_id', p_order_id, 'changed', true, 'delivered_at', v_now,
+                            'buyer_id', v_order.buyer_id, 'order_number', v_order.order_number);
+END;
+$$;
 
 -- ── 1. Access log ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.order_access_log (
@@ -360,12 +399,14 @@ END;
 $$;
 
 -- ── 5. Grants: service role only ────────────────────────────────────────────
+REVOKE ALL ON FUNCTION public.order_mark_delivered_in_dispute(uuid, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.order_access_record(uuid, uuid, text, text, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.card_case_delivery_proof(orders, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.card_case_review_reason(orders, text, bigint, text, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.guard_orders_card_case() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.card_case_settle_internal(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.card_dispute_close(text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.order_mark_delivered_in_dispute(uuid, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.order_access_record(uuid, uuid, text, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.card_case_delivery_proof(orders, timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.card_case_review_reason(orders, text, bigint, text, text) TO service_role;

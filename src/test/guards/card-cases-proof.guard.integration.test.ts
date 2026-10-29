@@ -127,14 +127,25 @@ describe.skipIf(!hasEnv)('card chargebacks: delivery proof decides who pays (int
   })
 
   it('proof added after the chargeback opened does not count: the seller pays', async () => {
-    const id = await paidOrder()
+    const id = await delivered()
     await disputeOpen(id)
-    // The seller delivers once the payout is on hold, adds a photo, the buyer looks.
-    await rpc('order_mark_delivered_in_dispute', { p_order_id: id, p_seller_id: fx!.seller.id })
+    // A photo added and the buyer looking — both after the case opened.
     await withPhoto(id)
     expect(await record(id, fx!.buyer.id, 'view')).toBe(true)
     expect(await disputeClose(id, 'lost')).toMatchObject({ settled: true, bearer: 'seller' })
     expect(await order(id)).toMatchObject({ status: 'refunded' })
+  })
+
+  it('a held order cannot be marked delivered (nor get a photo); an unlisted upload is not proof', async () => {
+    const id = await paidOrder()
+    await fx!.svc.from('orders').update({ instant_delivery_delivered_at: new Date(Date.now() - 60_000).toISOString() } as any).eq('id', id)
+    // A real file in the order's folder, uploaded before the chargeback but never put on the order.
+    await withPhoto(id)
+    await fx!.svc.from('orders').update({ delivery_evidence_urls: null } as any).eq('id', id)
+    await disputeOpen(id)
+    expect(await rpc('order_mark_delivered_in_dispute', { p_order_id: id, p_seller_id: fx!.seller.id }))
+      .toMatchObject({ changed: false, reason: 'card_case' })
+    expect(await disputeClose(id, 'lost')).toMatchObject({ settled: true, bearer: 'seller' })
   })
 
   it('never delivered: a photo alone is not proof, the seller pays', async () => {
