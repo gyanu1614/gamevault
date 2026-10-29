@@ -28,6 +28,7 @@ import { orderPaymentMethodLabel } from '@/lib/orders/payment-method-label'
 import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
 import { responseWindowMinutes } from '@/lib/orders/not-delivered'
 import { redactOrderFor } from '@/lib/orders/redact'
+import { recordOrderAccess } from '@/lib/orders/access-log'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
 import { OrderClient } from './_OrderClient'
@@ -122,6 +123,13 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // stale Live-Orders links from the old new_order-at-creation era resolve
   // here). Admins keep full visibility.
   if (order.status === 'pending' && userRole === 'seller') notFound()
+
+  // Card-dispute delivery proof: the buyer opening the delivered order (time,
+  // IP, device) is what the bank sees. Runs alongside the reads below.
+  const delivered = Boolean(
+    (order as any).delivered_at || (order as any).seller_marked_delivered_at || (order as any).instant_delivery_delivered_at
+  )
+  const accessLogged = userRole === 'buyer' && delivered ? recordOrderAccess(order.id, user.id, 'view') : null
 
   // Fetch game and category data separately (nested joins not supported without
   // explicit FK). STATE-007 — both key off the already-loaded order.listing and
@@ -514,6 +522,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
       }
     }
   }
+
+  await accessLogged
 
   return (
     <>

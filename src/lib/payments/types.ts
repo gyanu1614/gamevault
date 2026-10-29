@@ -95,6 +95,11 @@ export interface CreateChargeInput {
   orderNumber?: string | null
   amount: Money
   buyerRef?: string
+  /** What the buyer is paying for ("2,000 Robux"). Stripe shows it on its
+   *  page and gives it to the card bank (Order Insight, dispute evidence). */
+  itemTitle?: string
+  /** The buyer's account email, prefilled on the provider page. */
+  buyerEmail?: string | null
   /** Where the buyer lands on SUCCESS (e.g. the order page). */
   returnUrl: string
   /** Where the buyer lands on CANCEL/abandon (e.g. back to checkout to retry).

@@ -2,8 +2,9 @@
 
 /**
  * Card refunds and disputes on this order (card_cases, 2026-10-28):
- *   · Submit Evidence — one click: the order record, delivery and chat go to
- *     the bank through Stripe (once per dispute);
+ *   · Submit Evidence — one click: the order record, the buyer's visits,
+ *     the chat and the delivery photos the admin leaves ticked (untick any
+ *     showing login details) go to the bank through Stripe (once per dispute);
  *   · Seller Pays / DropMarket Pays — a card refund made in Stripe after the
  *     seller was paid; the seller share is on hold until you choose;
  *   · Unblock Buyer — a card dispute blocks the buyer from checking out.
@@ -16,6 +17,8 @@ import { toast } from 'sonner'
 import { CircleNotch } from '@phosphor-icons/react'
 import { adminSettleCardCase, adminSubmitCardDisputeEvidence, adminUnblockBuyer } from '@/lib/actions/admin-card-cases'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
 import type { CardCaseRow } from '@/lib/admin/card-cases'
 import { adminBtn, StatusBadge } from '../../components/kit'
 
@@ -32,6 +35,7 @@ const STATUS_LABEL: Record<CardCaseRow['status'], string> = {
   won: 'Won',
   settled: 'Settled',
 }
+const PHOTOS_MAX = 6
 const money = (minor: number, cur: string) => (cur === 'USD' ? `$${(minor / 100).toFixed(2)}` : `${(minor / 100).toFixed(2)} ${cur}`)
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -40,22 +44,39 @@ export function CardCasePanel({
   buyerId,
   cases,
   buyerBlock,
+  proofPhotos,
 }: {
   orderId: string
   buyerId: string | null
   cases: CardCaseRow[]
   buyerBlock: { reason: string; blocked_at: string } | null
+  /** The seller's delivery photos (10-minute links), offered with Submit Evidence. */
+  proofPhotos: Array<{ path: string; url: string }>
 }) {
   const router = useRouter()
   const [pending, setPending] = useState<Pending>(null)
+  const [chosen, setChosen] = useState<Set<string>>(new Set())
   const [busy, start] = useTransition()
   if (cases.length === 0 && !buyerBlock) return null
+
+  function openEvidence(c: CardCaseRow) {
+    setChosen(new Set(proofPhotos.slice(0, PHOTOS_MAX).map((p) => p.path)))
+    setPending({ kind: 'evidence', c })
+  }
+  function toggle(path: string, on: boolean) {
+    setChosen((prev) => {
+      const next = new Set(prev)
+      if (on && next.size < PHOTOS_MAX) next.add(path)
+      if (!on) next.delete(path)
+      return next
+    })
+  }
 
   function confirm() {
     if (!pending) return
     start(async () => {
       const r =
-        pending.kind === 'evidence' ? await adminSubmitCardDisputeEvidence(pending.c.id)
+        pending.kind === 'evidence' ? await adminSubmitCardDisputeEvidence(pending.c.id, proofPhotos.filter((p) => chosen.has(p.path)).map((p) => p.path))
         : pending.kind === 'settle' ? await adminSettleCardCase(pending.c.id, pending.bearer)
         : await adminUnblockBuyer(buyerId as string, orderId)
       if (!r.success) return void toast.error(r.error)
@@ -85,7 +106,7 @@ export function CardCasePanel({
               {c.provider_ref}
             </p>
             {c.kind === 'dispute' && c.status === 'open' && !c.evidence_submitted_at && (
-              <button type="button" className={`${adminBtn.primary} mt-3 w-full`} disabled={busy} onClick={() => setPending({ kind: 'evidence', c })}>
+              <button type="button" className={`${adminBtn.primary} mt-3 w-full`} disabled={busy} onClick={() => openEvidence(c)}>
                 Submit Evidence
               </button>
             )}
@@ -120,12 +141,35 @@ export function CardCasePanel({
                 : 'Unblock Buyer'}
             </DialogTitle>
             <DialogDescription>
-              {pending?.kind === 'evidence' && 'Sends the order timeline, delivery proof count and order chat to the bank through Stripe. You can submit only once.'}
-              {pending?.kind === 'settle' && pending.bearer === 'seller' && `The order is refunded and ${money(pending.c.card_minor, pending.c.currency)} comes out of the seller’s balance — it may go negative.`}
+              {pending?.kind === 'evidence' && 'Sends the order timeline, the buyer’s visits to the order, the order chat and the ticked delivery photos to the bank through Stripe. You can submit only once.'}
+              {pending?.kind === 'settle' && pending.bearer === 'seller' && `The order is refunded and the seller is not paid for it — if they already were, ${money(pending.c.card_minor, pending.c.currency)} comes out of their balance, which may go negative.`}
               {pending?.kind === 'settle' && pending.bearer === 'platform' && `The seller keeps the sale. DropMarket’s commission pays back ${money(pending.c.card_minor, pending.c.currency)}.`}
               {pending?.kind === 'unblock' && 'The buyer can check out again. Their open card dispute is not affected.'}
             </DialogDescription>
           </div>
+          {pending?.kind === 'evidence' && proofPhotos.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[12.5px] text-text-tertiary">Untick any photo that shows login details.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {proofPhotos.map((p, n) => {
+                  const on = chosen.has(p.path)
+                  return (
+                    <label key={p.path} className="relative block aspect-square cursor-pointer overflow-hidden rounded-md bg-white/[0.04]">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed link, admin only */}
+                      <img src={p.url} alt={`Delivery photo ${n + 1}`} className={cn('h-full w-full object-cover transition-opacity', !on && 'opacity-40')} />
+                      <Checkbox
+                        checked={on}
+                        disabled={busy || (!on && chosen.size >= PHOTOS_MAX)}
+                        onCheckedChange={(v) => toggle(p.path, v === true)}
+                        aria-label={`Include delivery photo ${n + 1}`}
+                        className="absolute left-1.5 top-1.5"
+                      />
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" className={adminBtn.secondary} onClick={() => setPending(null)} disabled={busy}>
               Cancel
