@@ -14,17 +14,29 @@
  * Usage:
  *   node scripts/collect-eldorado-sae.mjs --max-pages 8            (dry run)
  *   node scripts/collect-eldorado-sae.mjs --max-pages 40 --write
+ *
+ * Requests go through the shared Eldorado client (scripts/lib/eldorado-http.mjs,
+ * 2026-10-28/29): pacing, 5xx retries, Retry-After on a 429. A page that still
+ * fails ends the run as before; a block (EldoradoBlockedError, the second 429
+ * in a row) ends the walk with the feed saved and marked `stopped_early`, but
+ * nothing written — writeListings retires every listing this crawl did not
+ * see, so a partial walk would empty most of the game.
  */
 import { writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { walkDone } from './lib/offers.mjs'
+import { createEldoradoClient, isEldoradoBlocked } from './lib/eldorado-http.mjs'
 
 const BASE_URL = 'https://www.eldorado.gg'
 const GAME_ID = '452'
 const SOURCE = 'eldorado'
 const PAGE_SIZE = 50
-/** ~1 req/s measured safe against Eldorado; no rate limiting hit at 9 pages. */
-const PACING_MS = 1100
+/**
+ * One request every ≥1.5 s: the pace MM2 and Adopt Me sustain daily without a
+ * 429. Was 1.1 s ("no rate limiting hit at 9 pages"), before Eldorado
+ * tightened its limit (2026-10-28/29); 40 pages cost ~15 s more.
+ */
+const PACING_MS = 1500
 
 const args = process.argv.slice(2)
 const arg = (n, d = null) => {
@@ -53,29 +65,25 @@ function offersUrl(pageIndex) {
   return u.toString()
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-
-async function fetchPage(pageIndex) {
-  const res = await fetch(offersUrl(pageIndex), {
-    headers: {
-      accept: 'application/json',
-      'user-agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
-        '(KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-    },
-  })
-  if (!res.ok) throw new Error(`Eldorado page ${pageIndex}: HTTP ${res.status}`)
-  return res.json()
-}
-
 async function main() {
+  // One client for the run: it is the pace (no sleeps in the loop below).
+  const eldorado = createEldoradoClient({ minIntervalMs: PACING_MS, jitterMs: 250 })
   const collected = []
   let recordCount = null
   let totalPages = null
   let pageSize = 0
+  let stoppedEarly = null
 
   for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const data = await fetchPage(page)
+    let data
+    try {
+      data = await eldorado.getJson(offersUrl(page))
+    } catch (e) {
+      if (!isEldoradoBlocked(e)) throw new Error(`Eldorado page ${page}: ${e.message}`)
+      console.error(`  ✗ page ${page}: ${e.message}`)
+      stoppedEarly = { reason: 'eldorado_blocked', at_page: page, total_pages: totalPages, detail: e.message }
+      break
+    }
     if (!pageSize) pageSize = (data.results ?? []).length
     if (recordCount == null) {
       recordCount = data.recordCount
@@ -100,14 +108,22 @@ async function main() {
     }
     // Past page 1's page count, keep going while pages are full: the list grew during the walk.
     if (walkDone({ page, totalPages, resultsLength: (data.results ?? []).length, pageSize })) break
-    await sleep(PACING_MS)
   }
 
   await mkdir(path.dirname(OUT), { recursive: true })
   await writeFile(
     OUT,
     JSON.stringify(
-      { source: SOURCE, gameId: GAME_ID, recordCount, totalPages, collected_at: new Date().toISOString(), listings: collected },
+      {
+        source: SOURCE,
+        gameId: GAME_ID,
+        recordCount,
+        totalPages,
+        collected_at: new Date().toISOString(),
+        stopped_early: stoppedEarly,
+        eldorado_http: eldorado.stats(),
+        listings: collected,
+      },
       null,
       2,
     ),
@@ -118,6 +134,14 @@ async function main() {
   console.log(`collected ${collected.length} listings -> ${OUT}`)
   console.log(`  with a price        : ${withPrice}`)
   console.log(`  with seller reviews : ${withReviews} (the reputable model needs these)`)
+
+  if (stoppedEarly) {
+    console.log(
+      `::error::Eldorado throttled the Steal an Egg crawl at page ${stoppedEarly.at_page}/${totalPages ?? '?'}; ` +
+        'feed saved, nothing written',
+    )
+    throw new Error('crawl stopped early (throttled) — not writing a partial crawl, it would retire every unseen listing')
+  }
 
   if (WRITE) {
     console.log('\n--write given: upserting into values_raw_listings…')

@@ -5,12 +5,19 @@
  * src/lib/values/sources/eldorado-structured-games.ts).
  *
  * Walks the game's whole CustomItem category CHEAPEST-FIRST (price ascending),
- * 50 offers a page, 1.5 s between pages, deduplicating by offer id (a price
- * sort shifts while we walk, so the same offer can appear on two pages).
+ * 50 offers a page, one request every ≥1.5 s, deduplicating by offer id (a
+ * price sort shifts while we walk, so the same offer can appear on two pages).
  * Writes a source-shaped feed; parsing and matching happen in the importer.
  *
  * A feed is marked `complete` only when the walk reached the last page with no
  * failed page. The importer refuses to retire listings from an incomplete feed.
+ *
+ * Requests go through the shared Eldorado client (scripts/lib/eldorado-http.mjs,
+ * 2026-10-28/29): it paces, retries a 5xx twice, honours Retry-After on a 429,
+ * and throws EldoradoBlockedError on the second block in a row. A failed page
+ * is still skipped (→ incomplete); a block ends the walk at once with the feed
+ * saved and marked `stopped_early`. This used to retry a 429 four times per
+ * page (30-120 s apart) and then move on to the next page — into the block.
  *
  *   pnpm values:eldorado --game=murder-mystery-2                 # 3-page sample
  *   pnpm values:eldorado --game=murder-mystery-2 --crawl         # every page (~293, ~8 min)
@@ -25,11 +32,10 @@ import process from 'node:process'
 import { eldoradoStructuredConfig } from '../src/lib/values/sources/eldorado-structured-games.ts'
 import { extractEldoradoOffer } from '../src/lib/values/normalisers/eldorado-structured.ts'
 import { walkDone } from './lib/offers.mjs'
+import { createEldoradoClient, isEldoradoBlocked } from './lib/eldorado-http.mjs'
 
 const BASE_URL = 'https://www.eldorado.gg'
 const PAGE_SIZE = 50
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
 const argv = process.argv.slice(2)
 const val = (name, fallback = null) => {
@@ -43,10 +49,9 @@ const flag = (name) => argv.includes(`--${name}`)
 const GAME = val('game')
 const CRAWL = flag('crawl')
 const MAX_PAGES = Number(val('max-pages', CRAWL ? '1000' : '3'))
-const DELAY_MS = Number(val('delay-ms', '1500'))
+// Never faster than one request a second.
+const DELAY_MS = Math.max(1000, Number(val('delay-ms', '1500')) || 1500)
 const WRITE = flag('write')
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 export function offersUrl(config, pageIndex) {
   const u = new URL('/api/v1/item-management/offers', BASE_URL)
@@ -61,34 +66,14 @@ export function offersUrl(config, pageIndex) {
   return u.toString()
 }
 
-async function fetchPage(config, pageIndex) {
-  let lastError = null
-  for (let attempt = 1; attempt <= 4; attempt += 1) {
-    try {
-      const res = await fetch(offersUrl(config, pageIndex), {
-        headers: { accept: 'application/json', 'user-agent': UA },
-      })
-      if (res.status === 429) {
-        lastError = new Error('HTTP 429')
-        await sleep(30_000 * attempt)
-        continue
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return await res.json()
-    } catch (e) {
-      lastError = e
-      await sleep(5_000 * attempt)
-    }
-  }
-  throw new Error(`page ${pageIndex}: ${lastError?.message ?? 'failed'}`)
-}
-
 async function main() {
   if (!GAME) throw new Error('--game=<slug> is required')
   const config = eldoradoStructuredConfig(GAME)
   if (!config) throw new Error(`no eldorado-structured config for "${GAME}"`)
   const out = val('out', `data/values-feeds/${GAME}/eldorado-latest.json`)
 
+  // One client for the run: it is the pace (no sleeps in the loop below).
+  const eldorado = createEldoradoClient({ minIntervalMs: DELAY_MS, jitterMs: 250 })
   const byId = new Map()
   const failedPages = []
   let recordCount = null
@@ -97,16 +82,20 @@ async function main() {
   let reachedEnd = false
   let duplicates = 0
   let pageSize = 0
+  let stoppedEarly = null
   const started = new Date().toISOString()
 
   for (let page = 1; page <= MAX_PAGES; page += 1) {
     let data
     try {
-      data = await fetchPage(config, page)
+      data = await eldorado.getJson(offersUrl(config, page))
     } catch (e) {
-      console.error(`  ✗ ${e.message}`)
+      console.error(`  ✗ page ${page}: ${e.message}`)
+      if (isEldoradoBlocked(e)) {
+        stoppedEarly = { reason: 'eldorado_blocked', at_page: page, pages_walked: pagesWalked, total_pages: totalPages, detail: e.message }
+        break
+      }
       failedPages.push(page)
-      await sleep(DELAY_MS)
       continue
     }
     pagesWalked += 1
@@ -129,7 +118,6 @@ async function main() {
       reachedEnd = true
       break
     }
-    await sleep(DELAY_MS)
   }
 
   const complete =
@@ -149,6 +137,8 @@ async function main() {
     pagesWalked,
     failedPages,
     duplicatesSeen: duplicates,
+    stopped_early: stoppedEarly,
+    eldorado_http: eldorado.stats(),
     started_at: started,
     collected_at: new Date().toISOString(),
     listings: [...byId.values()],
@@ -157,6 +147,16 @@ async function main() {
   await writeFile(out, JSON.stringify(feed))
   console.log(`collected ${feed.listings.length} unique offers (${duplicates} repeats) -> ${out}`)
   console.log(`  complete: ${complete}${failedPages.length ? `  failed pages: ${failedPages.join(',')}` : ''}`)
+
+  if (stoppedEarly) {
+    // The walk is cheapest-first over the whole category, and a write retires
+    // every listing it did not see: a partial feed cannot be imported. The
+    // importer below refuses it; yesterday's listings stay as they are.
+    console.log(
+      `::error::Eldorado throttled the ${GAME} crawl at page ${stoppedEarly.at_page}/${totalPages ?? '?'}; ` +
+        'feed saved, nothing imported',
+    )
+  }
 
   if (WRITE) {
     const { importEldoradoFeed } = await import('./lib/values-import.mjs')

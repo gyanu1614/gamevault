@@ -112,7 +112,9 @@ describe('db-backup.yml — weekly, without the rebuildable bulk', () => {
 describe('DB-heavy schedules are hours apart', () => {
   /**
    * Worst-case length of each run: its timeout(s). Values pricing chains
-   * sab-g2g (60) → sab (150) → adopt-me (90); the other games run beside SAB.
+   * sab-g2g (60) → sab (150) → adopt-me (90); steal-an-egg → murder-mystery-2
+   * (15 + 45, ≤ sab-g2g's 60 — values-pricing-workflow.test.ts) run beside
+   * sab-g2g, so one Eldorado crawl runs at a time (2026-10-29).
    * Weekly jobs are treated as daily: the check is on clock time only.
    */
   const HEAVY: { file: string; cron?: string; minutes: number }[] = [

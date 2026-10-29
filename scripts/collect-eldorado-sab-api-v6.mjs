@@ -1,11 +1,17 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { hostname } from "node:os";
 import dotenv from "dotenv";
 import { runSabImporter } from "./lib/sab-importer.mjs";
+import {
+  DEFAULT_JITTER_MS,
+  DEFAULT_MIN_INTERVAL_MS,
+  createEldoradoClient,
+  isEldoradoBlocked,
+} from "./lib/eldorado-http.mjs";
 
 dotenv.config({ path: ".env.local", quiet: true });
 dotenv.config({ quiet: true });
@@ -43,6 +49,15 @@ function parseArgs(argv) {
     // block in collectOne for why we no longer early-stop on sample count.
     maxPagesPerBrainrot: Number(process.env.ELDORADO_MAX_PAGES ?? 25),
     delayMs: Number(process.env.ELDORADO_DELAY_MS ?? 2500),
+    // Minimum gap between ANY two Eldorado requests (scripts/lib/eldorado-http.mjs).
+    // --delay-ms only ever slept between brainrots, so one brainrot's mapping +
+    // candidates + offer pages went out as a ~12-request burst: what Eldorado's
+    // tightened limit answered with 429 on 2026-10-28/29.
+    requestIntervalMs: Number(process.env.ELDORADO_REQUEST_INTERVAL_MS ?? DEFAULT_MIN_INTERVAL_MS),
+    // Crawl-phase budget. Past it the run stops early and imports what it has,
+    // exactly like a throttle stop, so a slowed-down crawl never runs into the
+    // job's 150-minute timeout and loses the whole feed (it is written at the end).
+    maxCrawlMinutes: Number(process.env.ELDORADO_MAX_CRAWL_MINUTES ?? 100),
     outputPath: DEFAULT_OUTPUT,
     progressPath: DEFAULT_PROGRESS,
     brainrot: null,
@@ -69,6 +84,8 @@ function parseArgs(argv) {
       else if (argument === "--samples-per-variant") options.samplesPerVariant = Number(value);
       else if (argument === "--max-pages") options.maxPagesPerBrainrot = Number(value);
       else if (argument === "--delay-ms") options.delayMs = Number(value);
+      else if (argument === "--request-interval-ms") options.requestIntervalMs = Number(value);
+      else if (argument === "--max-crawl-minutes") options.maxCrawlMinutes = Number(value);
       else if (argument === "--output") options.outputPath = value;
       else if (argument === "--progress") options.progressPath = value;
       else if (argument === "--brainrot") options.brainrot = value.trim();
@@ -100,6 +117,20 @@ function parseArgs(argv) {
   }
   if (!Number.isInteger(options.delayMs) || options.delayMs < 1000 || options.delayMs > 60000) {
     throw new Error("--delay-ms must be from 1000 to 60000");
+  }
+  if (
+    !Number.isInteger(options.requestIntervalMs) ||
+    options.requestIntervalMs < 1000 ||
+    options.requestIntervalMs > 30000
+  ) {
+    throw new Error("--request-interval-ms must be an integer from 1000 to 30000");
+  }
+  if (
+    !Number.isFinite(options.maxCrawlMinutes) ||
+    options.maxCrawlMinutes < 1 ||
+    options.maxCrawlMinutes > 600
+  ) {
+    throw new Error("--max-crawl-minutes must be a number from 1 to 600");
   }
 
   options.outputPath = resolve(process.cwd(), options.outputPath);
@@ -1005,37 +1036,6 @@ function bodyTextOffers(bodyText, brainrot, mutations) {
   return rows;
 }
 
-async function fetchEldoradoJson(url, { optional = false } = {}) {
-  const response = await fetch(url, {
-    headers: {
-      accept: "application/json",
-      "accept-language": "en-US,en;q=0.9",
-      referer: `${BASE_URL}/`,
-      "user-agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
-        "AppleWebKit/537.36 (KHTML, like Gecko) " +
-        "Chrome/136.0.0.0 Safari/537.36",
-    },
-    signal: AbortSignal.timeout(60000),
-  });
-
-  if ([403, 429].includes(response.status)) {
-    throw new Error(
-      `Eldorado returned HTTP ${response.status}; stopped without bypassing the block.`,
-    );
-  }
-
-  if (optional && response.status === 404) return null;
-
-  if (!response.ok) {
-    throw new Error(
-      `Eldorado API returned HTTP ${response.status} for ${url}`,
-    );
-  }
-
-  return response.json();
-}
-
 function generatedTradeEnvironmentValue(value) {
   return compact(value)
     .normalize("NFKD")
@@ -1046,7 +1046,7 @@ function generatedTradeEnvironmentValue(value) {
     .replace(/_+/g, "_");
 }
 
-async function resolveEldoradoOfferQueries(brainrot) {
+async function resolveEldoradoOfferQueries(brainrot, client) {
   const candidates = [];
   const seen = new Set();
 
@@ -1073,7 +1073,7 @@ async function resolveEldoradoOfferQueries(brainrot) {
   mappingUrl.searchParams.set("gameId", CATEGORY_ID);
   mappingUrl.searchParams.set("locale", "en-US");
 
-  const mapping = await fetchEldoradoJson(
+  const mapping = await client.getJson(
     mappingUrl,
     { optional: true },
   );
@@ -1184,7 +1184,14 @@ function hasEnoughSamples(candidates, mutations, target) {
   return true;
 }
 
-async function collectOne({
+/**
+ * One brainrot, every request through `client` (scripts/lib/eldorado-http.mjs).
+ * A block (EldoradoBlockedError) is never swallowed into the attempt log: it
+ * propagates, so this brainrot contributes NOTHING to the feed — a half-read
+ * brainrot imported with a fresh fetched_at would let `pnpm sab:expire` end the
+ * listings on the pages it never read. Exported for the throttle tests.
+ */
+export async function collectOne({
   brainrot,
   mutations,
   expectedIncomeByVariant,
@@ -1192,9 +1199,10 @@ async function collectOne({
   maxPagesPerBrainrot = 8,
   observedAt,
   saveApi,
+  client,
 }) {
   const pageUrl = dedicatedPageUrl(brainrot);
-  const resolvedQueries = await resolveEldoradoOfferQueries(brainrot);
+  const resolvedQueries = await resolveEldoradoOfferQueries(brainrot, client);
   const queryAttempts = [];
 
   let selectedQuery = null;
@@ -1208,7 +1216,7 @@ async function collectOne({
     );
 
     try {
-      const candidatePayload = await fetchEldoradoJson(
+      const candidatePayload = await client.getJson(
         candidateApiUrl,
       );
       const candidateOffers = findOfferObjects(
@@ -1249,7 +1257,7 @@ async function collectOne({
         error: message,
       });
 
-      if (/HTTP (403|429)/.test(message)) throw error;
+      if (isEldoradoBlocked(error)) throw error;
     }
   }
 
@@ -1261,8 +1269,12 @@ async function collectOne({
   // (met by the pricier early-page listings) is exactly what made us publish an
   // inflated cheapest. So we page to totalPages, bounded by maxPagesPerBrainrot as
   // a hard safety cap. This is ~12 requests for a popular item — bounded, runs on
-  // GitHub Actions (not Vercel), read-only public API, 2.5s spacing. We do NOT
-  // early-break on samples anymore; only an empty page or the page cap stops us.
+  // GitHub Actions (not Vercel), read-only public API. We do NOT early-break on
+  // samples anymore; only an empty page or the page cap stops us.
+  //
+  // Spacing is the client's pacer, per REQUEST (2026-10-29). It used to be none:
+  // --delay-ms slept only between brainrots, so these pages went out as one
+  // burst, and that burst is what Eldorado's tightened limit answered with 429.
   let pagesFetched = 1;
   if (
     apiCandidates.length > 0 &&
@@ -1277,14 +1289,13 @@ async function collectOne({
         page,
       );
       try {
-        const pagePayload = await fetchEldoradoJson(pageApiUrl);
+        const pagePayload = await client.getJson(pageApiUrl);
         const pageOffers = findOfferObjects(pagePayload, brainrot.name);
         pagesFetched += 1;
         if (pageOffers.length === 0) break;
         apiCandidates = apiCandidates.concat(pageOffers);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (/HTTP (403|429)/.test(message)) throw error;
+        if (isEldoradoBlocked(error)) throw error;
         break;
       }
     }
@@ -1298,7 +1309,7 @@ async function collectOne({
     const candidateApiUrl = searchOffersApiUrl(brainrot.name);
 
     try {
-      const candidatePayload = await fetchEldoradoJson(
+      const candidatePayload = await client.getJson(
         candidateApiUrl,
       );
       const candidateOffers = findOfferObjects(
@@ -1343,7 +1354,7 @@ async function collectOne({
         error: message,
       });
 
-      if (/HTTP (403|429)/.test(message)) throw error;
+      if (isEldoradoBlocked(error)) throw error;
     }
   }
 
@@ -1848,8 +1859,62 @@ export function classifyEmptyRun({
   };
 }
 
-async function main() {
-  const options = parseArgs(process.argv.slice(2));
+/**
+ * One line for a crawl that stopped early: the GitHub annotation, the step
+ * output the alert job posts to Discord, and the log all say the same thing.
+ */
+function earlyStopHeadline(stoppedEarly) {
+  const at = `${stoppedEarly.targets_done}/${stoppedEarly.targets_total}`;
+  return stoppedEarly.reason === "eldorado_blocked"
+    ? `Eldorado throttled the SAB crawl at ${at}`
+    : `The SAB crawl hit its ${stoppedEarly.budget_minutes}-minute budget at ${at}`;
+}
+
+export function earlyStopNotice(stoppedEarly, { imported }) {
+  return `${earlyStopHeadline(stoppedEarly)}; ${
+    imported ? "imported what was collected" : "feed saved, nothing imported (dry run)"
+  }`;
+}
+
+/**
+ * The crawl. `deps` exists for the throttle tests (src/test/routes/
+ * sab-eldorado-throttle.test.ts); the script passes none.
+ *
+ * STOPPING EARLY (2026-10-28/29). A throttle used to throw straight out of
+ * this loop, before the feed was written: the ~60 brainrots already read were
+ * discarded, nothing was imported, and because the step failed, the expire,
+ * reprice and freshness steps never ran — SAB prices went stale two days
+ * running. Now a block (EldoradoBlockedError: the client's second 429/403 in a
+ * row) or the crawl budget ends the crawl cleanly instead: the feed is written
+ * with `stopped_early`, what was collected is imported as usual, a warning is
+ * annotated, and the step exits 0 so the rest of the job runs.
+ *
+ * Why the partial import is safe:
+ *  - the brainrot that was blocked mid-read contributes nothing (collectOne
+ *    throws), and
+ *  - `pnpm sab:expire` judges each (source, brainrot) group only against that
+ *    group's OWN newest fetched_at (src/lib/sab/expire-listings.ts): a
+ *    brainrot this run never reached keeps yesterday's newest crawl, so none
+ *    of its listings can look "missed" — and after 36 h without a crawl the
+ *    group is skipped altogether.
+ *  - the DB-driven rotation (--refresh-after-hours) dates each brainrot by its
+ *    newest matched listing, so tomorrow's queue starts with the ones this run
+ *    did not reach.
+ *
+ * A stop with NOTHING collected still fails: there is nothing to import, so
+ * the run would only look green while every price stayed where it was.
+ */
+export async function main({ argv = process.argv.slice(2), deps = {} } = {}) {
+  const {
+    buildQueue: loadQueue = buildQueue,
+    collect = collectOne,
+    importFeed = (path) => withImportLock(() => runSabImporter(path)),
+    client: injectedClient = null,
+    pause = sleep,
+    now = () => Date.now(),
+    env = process.env,
+  } = deps;
+  const options = parseArgs(argv);
   const observedAt = new Date().toISOString();
   const {
     queue,
@@ -1857,7 +1922,7 @@ async function main() {
     totalMutations,
     expectedIncomeByVariant,
     totals,
-  } = await buildQueue(options.brainrot, {
+  } = await loadQueue(options.brainrot, {
     // Panel refresh rotates EVERY tradeable item on staleness; only backfill
     // narrows to coverage gaps. See scopeQueue.
     rotateCovered: options.refreshAfterHours > 0,
@@ -1923,23 +1988,57 @@ async function main() {
         }).message
       }`,
     );
-    return;
+    return { listing_count: 0, stopped_early: null, imported: false };
   }
 
   console.log("Using Eldorado public JSON API directly (no browser)");
+  console.log(
+    `  pacing: one request every ≥${options.requestIntervalMs} ms (+0-${DEFAULT_JITTER_MS} ms jitter); ` +
+      `crawl budget ${options.maxCrawlMinutes} min`,
+  );
+  // ONE client for every Eldorado request of the run, so the pace holds across
+  // brainrots, candidates and pages alike (scripts/lib/eldorado-http.mjs).
+  const client =
+    injectedClient ??
+    createEldoradoClient({
+      minIntervalMs: options.requestIntervalMs,
+      jitterMs: DEFAULT_JITTER_MS,
+      log: (message) => console.log(message),
+    });
+  const crawlDeadline = now() + options.maxCrawlMinutes * 60 * 1000;
   const listingsById = new Map();
   const summaries = [];
+  let stoppedEarly = null;
 
   for (let index = 0; index < targets.length; index += 1) {
       const brainrot = targets[index];
-      if (index) await sleep(options.delayMs);
+      const stopAt = (reason, extra) => ({
+        reason,
+        at_index: index,
+        targets_done: index,
+        targets_total: targets.length,
+        brainrot_id: brainrot.id,
+        brainrot_name: brainrot.name,
+        ...extra,
+      });
+      if (now() >= crawlDeadline) {
+        stoppedEarly = stopAt("time_budget", { budget_minutes: options.maxCrawlMinutes });
+        console.log(
+          `\nCrawl budget of ${options.maxCrawlMinutes} min reached before ` +
+            `[${index + 1}/${targets.length}] ${brainrot.name}; stopping early.`,
+        );
+        break;
+      }
+      // Between brainrots. The per-request pace is the client's; a --delay-ms
+      // below --request-interval-ms is simply absorbed by it.
+      if (index) await pause(options.delayMs);
       console.log(
         `\n[${index + 1}/${targets.length}] ${brainrot.name} ` +
         `(${brainrot.rarity} · ${brainrot.covered_mutations}/${totalMutations} mutations priced · ` +
         `gap ${brainrot.mutation_gap} · score ${Math.round(brainrot.priority_score)})`,
       );
       try {
-        const result = await collectOne({
+        const result = await collect({
           brainrot,
           mutations,
           expectedIncomeByVariant,
@@ -1947,6 +2046,7 @@ async function main() {
           maxPagesPerBrainrot: options.maxPagesPerBrainrot,
           observedAt,
           saveApi: options.saveApi,
+          client,
         });
         for (const listing of result.listings) {
           listingsById.set(`${SOURCE_SLUG}:${listing.external_listing_id}`, listing);
@@ -1997,6 +2097,24 @@ async function main() {
         const message = error instanceof Error
           ? error.message
           : String(error);
+        if (isEldoradoBlocked(error)) {
+          // Stop: never keep crawling into a block. No progress attempt is
+          // recorded, so backfill mode retries this brainrot next run too.
+          summaries.push({
+            brainrot_id: brainrot.id,
+            brainrot_name: brainrot.name,
+            brainrot_slug: brainrot.slug,
+            prior_confidence: brainrot.current_confidence,
+            prior_sample_size: brainrot.current_sample_size,
+            status: "blocked",
+            listing_count: 0,
+            variants: {},
+            error: message,
+          });
+          stoppedEarly = stopAt("eldorado_blocked", { http_status: error.status ?? null, detail: message });
+          console.log(`  blocked: ${message}`);
+          break;
+        }
         progress.attempts[brainrot.id] = {
           brainrot_name: brainrot.name,
           status: "error",
@@ -2017,8 +2135,6 @@ async function main() {
         });
         await writeProgress(options.progressPath, progress);
         console.log(`  error: ${message}`);
-
-        if (/HTTP (403|429)/.test(message)) throw error;
       }
   }
 
@@ -2035,6 +2151,11 @@ async function main() {
     targets_requested: targets.length,
     targets_collected: summaries.filter((row) => row.status === "collected").length,
     listing_count: listings.length,
+    // null on a complete crawl; otherwise why and where it stopped.
+    stopped_early: stoppedEarly,
+    // Requests, throttles, retries and the pace the run ended on: tune
+    // --request-interval-ms from these, not from memory.
+    eldorado_http: typeof client.stats === "function" ? client.stats() : null,
     target_summaries: summaries,
     listings,
   };
@@ -2043,6 +2164,17 @@ async function main() {
   await writeFile(options.outputPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
   console.log(`\nSaved ${listings.length} listing(s) to ${options.outputPath}`);
   console.log(`Progress saved to ${options.progressPath}`);
+  if (output.eldorado_http) {
+    const http = output.eldorado_http;
+    console.log(
+      `Eldorado requests: ${http.requests} (${http.blocks} throttled, ` +
+        `${http.transient_retries} retried; ended at one every ${http.final_interval_ms} ms)`,
+    );
+  }
+
+  if (stoppedEarly && !listings.length) {
+    throw new Error(`${earlyStopHeadline(stoppedEarly)} before any listing was collected; nothing to import.`);
+  }
 
   if (!listings.length) {
     // ROUTE-017: exit 0 under --send too. There is nothing to import (the edge
@@ -2055,16 +2187,26 @@ async function main() {
       refreshAfterHours: options.refreshAfterHours,
     });
     console.log(`\n${empty.message}`);
-    return;
+    return { listing_count: 0, stopped_early: null, imported: false };
   }
   if (!options.send) {
+    if (stoppedEarly) console.log(`::warning::${earlyStopNotice(stoppedEarly, { imported: false })}`);
     console.log("\nDry run only. Review the JSON, then add --send to import it.");
-    return;
+    return { listing_count: listings.length, stopped_early: stoppedEarly, imported: false };
   }
-  if (!process.env.SAB_MARKET_IMPORT_SECRET) {
+  if (!env.SAB_MARKET_IMPORT_SECRET) {
     throw new Error("SAB_MARKET_IMPORT_SECRET is required with --send");
   }
-  await withImportLock(() => runSabImporter(options.outputPath));
+  // A failed import still fails the step, early stop or not.
+  await importFeed(options.outputPath);
+
+  if (stoppedEarly) {
+    const notice = earlyStopNotice(stoppedEarly, { imported: true });
+    console.log(`::warning::${notice}`);
+    // Read by the workflow's alert job, which posts it to Discord: the run is
+    // green, but the owner still hears that part of the queue waits a day.
+    if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `stopped_early=${notice}\n`, "utf8");
+  }
 
   // Nothing is triggered from here any more. Expire and reprice both run as
   // their own workflow steps straight after this script, on the runner
@@ -2073,6 +2215,7 @@ async function main() {
   // here is what let a five-day repricing outage hide in a log (2026-09-14) and
   // what turned an expire-route timeout into a dead collect step (2026-09-20).
   // A manual local `--send` should be followed by those two commands.
+  return { listing_count: listings.length, stopped_early: stoppedEarly, imported: true };
 }
 
 // ROUTE-012: only run when invoked as a script, so the queue-ordering helpers
