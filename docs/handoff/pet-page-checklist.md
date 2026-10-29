@@ -13,8 +13,8 @@ Rule: ✅ done · 🔨 code written, not yet checked · ⏳ waits for the owner 
 
 ## B. Pet pictures (owner: best option, no DB load, low complexity)
 - [x] B1 ✅ 2026-10-28 dry run: 519 of 808 sharp (391 upgrade + 128 re-framed, all wiki); 289 stay low-res, incl. Parrot, Bat/Frost/Shadow Dragon, Crow, Giraffe, Owl (no clean source); 44 flagged to check.
-- [ ] B2 Owner yes → live apply: files to Storage, one picture link per pet, one-time run. The rest stay as today.
-- [ ] B3 Revalidate the pet pages after the apply.
+- [x] B2 ✅ 2026-10-29 owner yes → LIVE: 513 pets on a 512 px wiki picture (385 sharper + 128 re-framed), 0 skipped by the guard. 6 of the 34 colour-flagged looked like another form or pet and stay as today: Jekyll Hydra, Shetland Pony White, Influencer Gibbon, Diamond Unicorn, Diamond Griffin, Koi Carp (scratchpad pet-images-2026-10-28/check-sheet.png). The other 289 low-res stay as today.
+- [x] B3 ✅ 2026-10-29 full Adopt Me values refresh (200); live search.json lists 513 wiki/hd pictures; giant-panda page + file serve.
 
 ## C. Step 3 — pet page SEO
 - [x] C1 🔨 Index from 1 offer (was 5); noindex only with 0 offers.
