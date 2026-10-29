@@ -57,6 +57,12 @@
 - Order cancel + wallet-hold return, order refund + wallet credit, withdrawal cancel/reject, inventory claim, promo usage: each is ONE service-role RPC (`order_cancel_return_wallet`, `order_refund_to_wallet`, `withdrawal_cancel`, `withdrawal_reject`, `inventory_claim_for_order`, `promo_usage_record`). Never re-compose these as two calls from TypeScript; call the RPC (TS seam: `src/lib/wallet/order-money.ts`).
 - `money_fault_hook(point)` exists ONLY for tests: it raises when the transaction-local GUC `app.money_fault` equals `point`. PostgREST callers cannot set that GUC, so it is inert in the app; the GREEN tests set it from a psql transaction (`src/test/guards/money-atomicity.guard.integration.test.ts`, `withFault`) to prove a failure inside an atomic function leaves no partial state. Keep every new money function's interior steps behind a `PERFORM money_fault_hook('<fn>:<point>')` so the same proof can be written for it.
 - A `failed` webhook event is re-claimed by `webhook_event_claim` on the provider's retry; there is no replay worker. A dispatch failure must throw (router → 500), never be swallowed.
+- **Card refunds and chargebacks (migration 20261028143542):**
+  - A full card refund made outside DropMarket, and every card dispute, goes through the `card_*` seams into `card_cases`. A card refund never adds store credit.
+  - While a case is open or awaiting a decision, `trg_orders_card_case_guard` stops its order leaving `disputed` by any other path.
+  - Our own refunds carry `dm_refund` metadata.
+  - Disputing buyers land in `buyer_blocks`, which checkout refuses.
+  - Admin controls are in `_CardCasePanel` on the order page.
 - Why: on 2026-09-11 the audit (DB-015/016/017) found every money seam composed two atomic RPCs with no compensation; reproduced on the local stack 2026-09-14: stranded wallet holds, lost refund credits, "Funds stay in your wallet" on a paid-out hold, one code sold to two buyers.
 
 ## Trend radar: external ids, metrics, review state (from migration 20260918185535, Step 2)

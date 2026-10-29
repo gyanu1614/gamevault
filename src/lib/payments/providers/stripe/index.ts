@@ -30,16 +30,20 @@ import { displayOrderRef } from '@/lib/orders/order-number'
 import { stripeClient } from './client'
 import { assertStripeConfigured, isProductionDeploy, stripeWebhookSecret } from './env'
 import {
-  stripeDisputeNotice,
-  stripeRefundNotice,
   stripeSessionEventId,
   stripeSessionOrderId,
   stripeSessionState,
   stripeSessionToCanonical,
-  type StripeChargeView,
-  type StripeDisputeView,
   type StripeSessionView,
 } from './status-map'
+import {
+  DM_REFUND_KEY,
+  stripeDisputeClosed,
+  stripeDisputeOpened,
+  stripeRefundEvents,
+  type StripeChargeView,
+  type StripeDisputeView,
+} from './card-case-map'
 
 /** The slice of the Stripe client the adapter uses (tests pass a fake). */
 export type StripeApi = Pick<Stripe, 'checkout' | 'charges' | 'disputes' | 'refunds'>
@@ -72,6 +76,13 @@ function intentId(pi: StripeSessionView['payment_intent']): string | null {
   return typeof pi === 'string' ? pi : pi.id
 }
 
+function refundChargeId(refund: { charge: unknown }): string {
+  const c = refund.charge
+  const id = typeof c === 'string' ? c : (c as { id?: string } | null)?.id
+  if (!id) throw new Error('stripe: refund without a charge')
+  return id
+}
+
 export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentProvider {
   // Lazy: the real client is built on the first call that needs it.
   const api = (): StripeApi => {
@@ -80,6 +91,15 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
       return deps.api()
     }
     return stripeClient()
+  }
+
+  /** The Checkout Session a PaymentIntent belongs to (cs_…), or null. A card
+   *  case is booked only when it is the session that paid the order. */
+  const sessionOfIntent = async (pi: { id: string } | string | null): Promise<string | null> => {
+    const id = typeof pi === 'string' ? pi : pi?.id
+    if (!id) return null
+    const list = await api().checkout.sessions.list({ payment_intent: id, limit: 1 })
+    return list.data[0]?.id ?? null
   }
 
   async function session(id: string): Promise<StripeSessionView> {
@@ -121,6 +141,9 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
           // (Stripe as merchant of record) is on by default on new accounts
           // and refuses allowed_payment_method_types — off for every session.
           managed_payments: { enabled: false },
+          // 3D Secure on every card payment (owner 2026-10-27): a stolen-card
+          // dispute then sits with the issuer. Accepts a small drop-off.
+          payment_method_options: { card: { request_three_d_secure: 'any' } },
           submit_type: 'pay',
           line_items: [
             {
@@ -200,15 +223,21 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
         const opts = { asyncFailed: event.type === 'checkout.session.async_payment_failed' }
         return { providerEventId: stripeSessionEventId(s, opts), events: stripeSessionToCanonical(s, opts) }
       }
-      if (event.type === 'charge.refunded') {
-        if (!objectId) throw new Error('stripe: charge.refunded without a charge id')
-        const charge = await api().charges.retrieve(objectId, { expand: ['payment_intent'] })
-        return stripeRefundNotice(charge as unknown as StripeChargeView)
+      if (event.type === 'charge.refunded' || event.type === 'charge.refund.updated') {
+        if (!objectId) throw new Error(`stripe: ${event.type} without an id`)
+        // charge.refund.updated carries the refund (a pending one settling):
+        // re-read its charge and judge all of its refunds again.
+        const chargeId =
+          event.type === 'charge.refunded' ? objectId : refundChargeId((await api().refunds.retrieve(objectId)) as { charge: unknown })
+        const charge = (await api().charges.retrieve(chargeId, { expand: ['payment_intent', 'refunds'] })) as unknown as StripeChargeView
+        return stripeRefundEvents(charge, await sessionOfIntent(charge.payment_intent))
       }
-      if (event.type === 'charge.dispute.created') {
-        if (!objectId) throw new Error('stripe: charge.dispute.created without a dispute id')
-        const dispute = await api().disputes.retrieve(objectId, { expand: ['payment_intent'] })
-        return stripeDisputeNotice(dispute as unknown as StripeDisputeView)
+      if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {
+        if (!objectId) throw new Error(`stripe: ${event.type} without a dispute id`)
+        const dispute = (await api().disputes.retrieve(objectId, { expand: ['payment_intent'] })) as unknown as StripeDisputeView
+        return event.type === 'charge.dispute.created'
+          ? stripeDisputeOpened(dispute, await sessionOfIntent(dispute.payment_intent))
+          : stripeDisputeClosed(dispute)
       }
       // Verified but not an event we act on: record it, change nothing.
       return { providerEventId: `${event.id}:ignored`, events: [] }
@@ -224,7 +253,7 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
         throw new Error(`stripe: refund currency ${amount.currency} does not match the charge (${s.currency})`)
       }
       const refund = await api().refunds.create(
-        { payment_intent: pi, amount: Number(amount.amountMinor), metadata: { order_id: stripeSessionOrderId(s) } },
+        { payment_intent: pi, amount: Number(amount.amountMinor), metadata: { order_id: stripeSessionOrderId(s), [DM_REFUND_KEY]: idempotencyKey } },
         { idempotencyKey: `dm-refund:${idempotencyKey}` }
       )
       return { refundId: refund.id }

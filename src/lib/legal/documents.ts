@@ -77,6 +77,10 @@ const UPDATED_2026_10_20 = { lastUpdated: '20 October 2026', version: 'v1.2' } a
  *  read live, plus a payment-security section. */
 const updated20261023 = (version: string) => ({ lastUpdated: '23 October 2026', version }) as const
 
+/** Card payments go live through Stripe: named as a processor (Terms 1.5,
+ *  Privacy recipients, AML, Fees & Charges) and card chargebacks spelled out. */
+const updated20261028 = (version: string) => ({ lastUpdated: '28 October 2026', version }) as const
+
 export type LegalBlock =
   | { t: 'p'; md: string }
   | { t: 'ul'; items: string[] }
@@ -132,6 +136,7 @@ const governingLawSection = (h: string, what: string): LegalSection => ({
 const sentence = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1)
 /** The personal data each payment provider receives (Privacy Policy recipients table). */
 const PROCESSOR_DATA: Record<string, string> = {
+  Stripe: 'Order reference, amount, and the card details and email address you enter on Stripe’s payment page; if you dispute a card payment, the Order’s delivery record and Order chat, sent as evidence to your card issuer',
   Payssion: 'Order reference, amount, payment method, and the details you enter on Payssion’s payment page',
   'BTCPay Server': 'Order reference, amount, payment address and transaction ID',
   Payoneer: 'Payoneer account email and payout amount',
@@ -209,7 +214,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Terms of Use',
     description:
       'The master terms governing use of the DropMarket platform: our venue role, SafeDrop Protection and payments, eligibility, accounts, consumer rights, liability, and governing law.',
-    ...updated20261023('v1.3'),
+    ...updated20261028('v1.4'),
     sections: [
       {
         h: '1. Introduction',
@@ -1243,13 +1248,14 @@ export const LEGAL_DOCS: LegalDoc[] = [
    * Payoneer, Trustpilot); CoinGate / Tazapay removed; retention table
    * (AML 5 years = AML / KYC Policy; tax records 6 years); rights + ICO.
    * No ICO registration number is claimed: none is on record.
+   * v1.4 (28 Oct 2026): Stripe added as the card processor (recipients table).
    */
   {
     slug: 'privacy',
     title: 'Privacy Policy',
     description:
       'How DropMarket Ltd collects, uses, shares and protects personal data under UK GDPR and the DPA 2018, including KYC data, the providers we use, how long we keep data, transfers and your rights.',
-    ...UPDATED_2026_10_10,
+    ...updated20261028('v1.4'),
     sections: [
       {
         h: 'Who we are',
@@ -1477,13 +1483,13 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'AML / KYC Policy',
     description:
       'Anti-money-laundering and know-your-customer arrangements: the payment providers’ role, DropMarket’s risk-based programme, record keeping and DropMarket’s regulatory position.',
-    ...UPDATED_2026_10_04,
+    ...updated20261028('v1.2'),
     sections: [
       {
         h: 'Payment providers',
         blocks: [
           p(
-            `Buyers pay through ${PAYMENT_PROCESSORS_PHRASE}. Payssion processes local payment methods and applies its own AML and sanctions checks to the payments it handles. Crypto payments are received through BTCPay Server, payment software DropMarket hosts itself, so DropMarket’s own programme below applies to them. Seller payouts through Payoneer are also subject to Payoneer’s own checks.`,
+            `Buyers pay through ${PAYMENT_PROCESSORS_PHRASE}. Stripe processes card payments and Payssion processes local payment methods; each applies its own AML and sanctions checks to the payments it handles. Crypto payments are received through BTCPay Server, payment software DropMarket hosts itself, so DropMarket’s own programme below applies to them. Seller payouts through Payoneer are also subject to Payoneer’s own checks.`,
           ),
         ],
       },
@@ -1541,7 +1547,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Fees & Charges',
     description:
       'DropMarket’s commission and service fees, all-inclusive buyer pricing, the payment processors we use, and payout timing.',
-    ...updated20261023('v1.2'),
+    ...updated20261028('v1.3'),
     sections: [
       {
         blocks: [
@@ -1622,12 +1628,13 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'chargebacks',
     title: 'Chargeback & Payment Policy',
     description:
-      'How crypto and local-method payments behave: irreversibility, chargeback and reversal rules, seller liability, and friendly-fraud.',
-    ...updated20261023('v1.2'),
+      'How card, crypto and local-method payments behave: irreversibility, chargeback and reversal rules, seller liability, and friendly-fraud.',
+    ...updated20261028('v1.3'),
     sections: [
       {
         blocks: [
           ul([
+            '**Cards (processed by Stripe):** a card payment can be disputed through the card issuer (a chargeback) under the card scheme’s rules. DropMarket answers the dispute with the Order’s delivery record. Where a chargeback results from a Seller’s failure to deliver, misdescription, breach or fraud, the Seller bears it through reserves and clawbacks under the Seller Agency Agreement.',
             '**Crypto (received through BTCPay Server):** payments are **irreversible; no chargebacks**. Refunds, if approved, are made under the Refund & Dispute Policy.',
             '**Local payment methods (processed by Payssion):** some methods let the payer dispute or reverse a payment through their bank or payment provider, under that method’s own rules. Where a reversal results from a Seller’s failure to deliver, misdescription, breach or fraud, the Seller bears it through reserves and clawbacks under the Seller Agency Agreement.',
             'Please use the SafeDrop dispute process before contacting your bank. A chargeback filed instead of a dispute on an Order that was delivered (“friendly fraud”) may lead to Account restrictions and recovery of amounts owed. This does not affect your rights with your bank or card issuer.',

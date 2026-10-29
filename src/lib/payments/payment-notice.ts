@@ -1,7 +1,7 @@
 /**
- * PAYMENT_NOTICE — a refund or card dispute seen at the provider (Stripe),
- * recorded for admins and NOTHING else. Owner rule (2026-10-27): money never
- * moves automatically on these.
+ * PAYMENT_NOTICE — a PARTIAL (or mixed) card refund seen at Stripe, recorded
+ * for admins and NOTHING else. A full refund made outside DropMarket and card
+ * disputes are CARD_CASE events instead (lib/payments/card-cases.ts).
  *
  *   refund   Refund To Card already debited the buyer's store credit before
  *            the provider refunded; a refund sent from the provider dashboard

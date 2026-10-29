@@ -8,16 +8,14 @@
  *     complete + unpaid (async method in flight)         → CHARGE_PENDING
  *     complete + unpaid after async_payment_failed       → CHARGE_FAILED
  *     expired                                            → CHARGE_FAILED
- *   Charge refunded / dispute created → PAYMENT_NOTICE (admins are told;
- *     nothing moves — owner rule, see types.ts)
+ *   Charge refunded / disputes → ./card-case-map.ts (CARD_CASE)
  *
  * The amount we asked for is stamped on the session's metadata at create
  * (amount_minor + currency). Metadata is written server-side only, so a
  * session that does not carry the stamp is not one we can confirm.
  *
  * Dedupe ids: `<session>:<outcome>` (the re-fetched outcome, so a replay of
- * any event that reaches the same outcome is a no-op), `<charge>:refunded:
- * <total refunded>` (each partial refund is its own notice), `<dispute>:created`.
+ * any event that reaches the same outcome is a no-op).
  */
 
 import type { CanonicalEvent } from '@/lib/payments/types'
@@ -101,84 +99,5 @@ export function stripeSessionToCanonical(s: StripeSessionView, opts?: SessionEve
       return [{ type: 'CHARGE_FAILED', orderId, providerChargeId, reason: 'async_payment_failed' }]
     default:
       return [{ type: 'CHARGE_PENDING', orderId, providerChargeId }]
-  }
-}
-
-// ─── Refunds and disputes: recorded for admin, never a money move ─────────
-
-/** The PaymentIntent as re-fetched with `expand: ['payment_intent']`. */
-interface IntentView {
-  id: string
-  metadata: Record<string, string> | null
-}
-
-export interface StripeChargeView {
-  id: string
-  amount_refunded: number
-  currency: string
-  payment_intent: IntentView | string | null
-}
-
-export interface StripeDisputeView {
-  id: string
-  amount: number
-  currency: string
-  reason: string | null
-  charge: string | { id: string } | null
-  evidence_details: { due_by: number | null } | null
-  payment_intent: IntentView | string | null
-}
-
-export interface StripeNotice {
-  providerEventId: string
-  events: CanonicalEvent[]
-}
-
-/** Our order id from the PaymentIntent metadata (payment_intent_data.metadata at create). */
-function intentOrderId(pi: IntentView | string | null): string | null {
-  if (!pi || typeof pi === 'string') return null
-  return pi.metadata?.order_id || null
-}
-
-export function stripeRefundNotice(charge: StripeChargeView): StripeNotice {
-  const providerEventId = `${charge.id}:refunded:${charge.amount_refunded}`
-  const orderId = intentOrderId(charge.payment_intent)
-  if (!orderId) return { providerEventId, events: [] }
-  return {
-    providerEventId,
-    events: [
-      {
-        type: 'PAYMENT_NOTICE',
-        kind: 'refund',
-        orderId,
-        providerChargeId: charge.id,
-        amount: money(BigInt(charge.amount_refunded), charge.currency.toUpperCase()),
-        detail: null,
-      },
-    ],
-  }
-}
-
-export function stripeDisputeNotice(dispute: StripeDisputeView): StripeNotice {
-  const providerEventId = `${dispute.id}:created`
-  const orderId = intentOrderId(dispute.payment_intent)
-  if (!orderId) return { providerEventId, events: [] }
-  const chargeId = typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id ?? dispute.id
-  const parts: string[] = []
-  if (dispute.reason) parts.push(`reason ${dispute.reason}`)
-  const due = dispute.evidence_details?.due_by
-  if (due) parts.push(`respond by ${new Date(due * 1000).toISOString().slice(0, 10)}`)
-  return {
-    providerEventId,
-    events: [
-      {
-        type: 'PAYMENT_NOTICE',
-        kind: 'dispute',
-        orderId,
-        providerChargeId: chargeId,
-        amount: money(BigInt(dispute.amount), dispute.currency.toUpperCase()),
-        detail: parts.length ? parts.join(', ') : null,
-      },
-    ],
   }
 }
