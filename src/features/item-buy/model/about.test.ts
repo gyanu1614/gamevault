@@ -12,15 +12,10 @@ const parrot = {
 }
 
 describe('itemAbout', () => {
-  it('Adopt Me pet: intro, facts from data, the badge guide and four questions', () => {
+  it('Adopt Me pet: one paragraph from data, the badge guide and four questions', () => {
     const a = itemAbout(parrot)
-    expect(a.heading).toBe('Adopt Me Parrot Details')
-    expect(a.intro).toBe('Parrot is a Legendary pet in Adopt Me, released in 2019.')
-    expect(a.facts).toEqual([
-      { label: 'Rarity', value: 'Legendary' },
-      { label: 'Released', value: '2019' },
-      { label: 'Came From', value: 'Jungle Egg' },
-    ])
+    expect(a.heading).toBe('About Adopt Me Parrot')
+    expect(a.intro).toBe('Parrot is a Legendary pet in Adopt Me, released in 2019. It came from the Jungle Egg.')
     expect(a.traitGuide).toBe(true)
     expect(a.faq.map((f) => f.q)).toEqual([
       'Is it safe to buy Parrot on DropMarket?',
@@ -37,7 +32,7 @@ describe('itemAbout', () => {
   })
 
   it('a full release date reads "released on"; "an" before a vowel', () => {
-    const a = itemAbout({ ...parrot, itemName: 'Owl', rarity: 'Ultra-Rare', facts: { ...parrot.facts, released: '27 October 2022' } })
+    const a = itemAbout({ ...parrot, itemName: 'Owl', rarity: 'Ultra-Rare', facts: { ...parrot.facts, released: '27 October 2022', origin: null } })
     expect(a.intro).toBe('Owl is an Ultra-Rare pet in Adopt Me, released on 27 October 2022.')
     expect(a.faq[3].q).toBe('What do F, R, N and M mean on an Owl?')
   })
@@ -45,8 +40,12 @@ describe('itemAbout', () => {
   it('missing facts are left out, never guessed', () => {
     const a = itemAbout({ ...parrot, rarity: null, facts: NO_FACTS })
     expect(a.intro).toBeNull()
-    expect(a.facts).toEqual([])
     expect(a.relatedHeading).toBe('More Adopt Me Pets')
+  })
+
+  it('no rarity but an origin: says what is known', () => {
+    const a = itemAbout({ ...parrot, rarity: null, facts: { ...NO_FACTS, origin: 'Admin Abuse events' } })
+    expect(a.intro).toBe('Parrot is a pet in Adopt Me. It came from Admin Abuse events.')
   })
 
   it('other games: no badge guide, their own noun', () => {

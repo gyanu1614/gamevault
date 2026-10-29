@@ -5,7 +5,6 @@ import { formatUsd } from '@/lib/value-listings/format'
 import type { StockedItem } from '@/lib/value-listings/item-page'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
-import { TraitMarks } from './TraitMarks'
 import type { ItemAbout } from './model/about'
 
 const H2 = 'mb-5 text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]'
@@ -19,54 +18,30 @@ const BADGES = [
 ]
 
 /**
- * The server-rendered half of the pet page (owner, 2026-10-27): details,
- * the badge guide, buyer questions. Plain cards on the page ground, nothing
- * nested; everything is in the first HTML for search.
+ * The server-rendered half of the pet page: About, buyer questions, more
+ * pets. About is plain text on the page ground like Eldorado's (owner,
+ * 2026-10-29: "simple title and text below it, small text"), no cards;
+ * everything is in the first HTML for search.
  */
 export function ItemDetails({ about }: { about: ItemAbout }) {
-  const hasFacts = about.intro != null || about.facts.length > 0
-  if (!hasFacts && !about.traitGuide) return null
+  if (about.intro == null && !about.traitGuide) return null
   return (
-    <section aria-labelledby="item-details" className="mt-12 sm:mt-14">
-      <h2 id="item-details" className={H2}>
+    <section aria-labelledby="item-about" className="mt-12 sm:mt-14">
+      <h2 id="item-about" className={cn(H2, 'mb-3')}>
         {about.heading}
       </h2>
-      <div className={cn('grid', hasFacts && about.traitGuide && 'lg:grid-cols-2')} style={{ gap: 'var(--gap-grid)' }}>
-        {hasFacts ? (
-          <div className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
-            {about.intro ? (
-              <p className="text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
-                {about.intro}
-              </p>
-            ) : null}
-            {about.facts.length > 0 ? (
-              <dl className={cn('grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3', about.intro && 'mt-5')}>
-                {about.facts.map((f) => (
-                  <div key={f.label} className="min-w-0">
-                    <dt className="font-semibold uppercase tracking-[0.12em] text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
-                      {f.label}
-                    </dt>
-                    <dd className="mt-1 font-semibold text-text-primary" style={{ fontSize: 'var(--fs-body)' }}>
-                      {f.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-          </div>
-        ) : null}
+      <div className="space-y-5 leading-relaxed text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
+        {about.intro ? <p>{about.intro}</p> : null}
         {about.traitGuide ? (
-          <div className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
-            <h3 className="font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
-              What The Badges Mean
-            </h3>
-            <ul className="mt-4 space-y-3.5">
+          <div>
+            <h3 className="font-semibold text-text-primary">What The Badges Mean</h3>
+            <ul className="mt-1.5 space-y-1">
               {BADGES.map((b) => (
-                <li key={b.code} className="flex items-start gap-3">
-                  <TraitMarks code={b.code} size={22} className="mt-px shrink-0" />
-                  <p className="text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
-                    <span className="font-semibold text-text-primary">{b.name}.</span> {b.line}
-                  </p>
+                <li key={b.code}>
+                  <span className="font-semibold text-text-primary">
+                    {b.name} ({b.code}).
+                  </span>{' '}
+                  {b.line}
                 </li>
               ))}
             </ul>

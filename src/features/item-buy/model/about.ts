@@ -1,14 +1,14 @@
 /**
- * The words under the pet page (owner, 2026-10-27): a small details block
- * (rarity, release, where it came from), what the trait letters mean, a few
- * real buyer questions and the heading of the pet-to-pet links. Built from
- * data only: a fact the database doesn't have is left out, never guessed.
- * Policy answers come from the help centre (HELP_FAQ) so the refund rules
- * live in one place.
+ * The words under the pet page (owner, 2026-10-27; plain About text like
+ * Eldorado's, 2026-10-29): one paragraph on the pet (rarity, release, where
+ * it came from), what the trait letters mean, a few real buyer questions and
+ * the heading of the pet-to-pet links. Built from data only: a fact the
+ * database doesn't have is left out, never guessed. Policy answers come from
+ * the help centre (HELP_FAQ) so the refund rules live in one place.
  */
 import { HELP_FAQ } from '@/lib/support/help-content'
 import { withArticle } from '@/lib/text/article'
-import type { ItemFacts } from '@/lib/values/item-facts'
+import { fromOrigin, type ItemFacts } from '@/lib/values/item-facts'
 import { itemNoun } from './item-kind'
 
 export interface AboutInput {
@@ -20,15 +20,10 @@ export interface AboutInput {
   facts: ItemFacts
 }
 
-export interface AboutFact {
-  label: string
-  value: string
-}
-
 export interface ItemAbout {
   heading: string
+  /** "Parrot is a Legendary pet in Adopt Me, released in 2019. It came from the Jungle Egg." */
   intro: string | null
-  facts: AboutFact[]
   /** Adopt Me: explain the F / R / N / M badges. */
   traitGuide: boolean
   faq: { q: string; a: string }[]
@@ -51,15 +46,13 @@ export function itemAbout(input: AboutInput): ItemAbout {
   const noun = itemNoun(gameSlug)
   const isAdoptMe = gameSlug === 'adopt-me'
 
-  const intro = rarity
-    ? `${itemName} is ${withArticle(rarity)} ${noun.one} in ${gameName}${facts.released ? `, ${releasedPhrase(facts.released)}` : ''}.`
+  const known = rarity != null || facts.released != null || facts.origin != null
+  const intro = known
+    ? [
+        `${itemName} is ${withArticle(rarity ? `${rarity} ${noun.one}` : noun.one)} in ${gameName}${facts.released ? `, ${releasedPhrase(facts.released)}` : ''}.`,
+        ...(facts.origin ? [`It came ${fromOrigin(facts.origin)}.`] : []),
+      ].join(' ')
     : null
-
-  const rows: AboutFact[] = [
-    ...(rarity ? [{ label: 'Rarity', value: rarity }] : []),
-    ...(facts.released ? [{ label: 'Released', value: facts.released }] : []),
-    ...(facts.origin ? [{ label: 'Came From', value: facts.origin }] : []),
-  ]
 
   const faq = [
     {
@@ -82,9 +75,8 @@ export function itemAbout(input: AboutInput): ItemAbout {
   ]
 
   return {
-    heading: `${gameName} ${itemName} Details`,
+    heading: `About ${gameName} ${itemName}`,
     intro,
-    facts: rows,
     traitGuide: isAdoptMe,
     faq,
     relatedHeading: rarity ? `More ${rarity} ${noun.many}` : `More ${gameName} ${noun.many}`,
