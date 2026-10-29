@@ -643,7 +643,12 @@ export async function adminOpenOrderDispute(orderId: string, reason: string) {
     p_title: null,
     p_description: description,
   })
-  if (error) return { success: false as const, error: error.message }
+  if (error) {
+    if (/already returned this card payment/.test(error.message)) {
+      return { success: false as const, error: 'The bank already returned this card payment, so the order cannot be disputed or refunded again.' }
+    }
+    return { success: false as const, error: error.message }
+  }
   if (!opened || opened.opened !== true) {
     const why = String(opened?.reason ?? '')
     if (why === 'already_open') return { success: false as const, error: 'A dispute is already open for this order.', disputeId: opened.dispute_id as string }

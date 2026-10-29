@@ -129,6 +129,10 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
         ...(input.metadata?.listing_id ? { listing_id: input.metadata.listing_id } : {}),
       }
       const expiresAt = Math.floor(Date.now() / 1000) + STRIPE_SESSION_MINUTES * 60
+      // The real item name (2026-10-29): the buyer and their bank recognise
+      // the charge, and Order Insight / dispute evidence carry it.
+      const item = input.itemTitle?.trim().replace(/\s+/g, ' ').slice(0, 120)
+      const description = item ? `${item} · DropMarket order ${ref}` : `DropMarket order ${ref}`
 
       const created = await stripe.checkout.sessions.create(
         {
@@ -151,14 +155,15 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
               price_data: {
                 currency: currency.toLowerCase(),
                 unit_amount: Number(amountMinor),
-                product_data: { name: `DropMarket order ${ref}` },
+                product_data: item ? { name: item, description: `DropMarket order ${ref}` } : { name: `DropMarket order ${ref}` },
               },
             },
           ],
           client_reference_id: input.orderId,
+          ...(input.buyerEmail ? { customer_email: input.buyerEmail } : {}),
           metadata: stamp,
           payment_intent_data: {
-            description: `DropMarket order ${ref}`,
+            description,
             metadata: { order_id: input.orderId, ...(input.orderNumber ? { order_number: input.orderNumber } : {}) },
           },
           success_url: input.returnUrl,

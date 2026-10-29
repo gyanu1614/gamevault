@@ -81,6 +81,11 @@ const updated20261023 = (version: string) => ({ lastUpdated: '23 October 2026', 
  *  Privacy recipients, AML, Fees & Charges) and card chargebacks spelled out. */
 const updated20261028 = (version: string) => ({ lastUpdated: '28 October 2026', version }) as const
 
+/** Card chargebacks: a Seller who delivered with proof is covered by DropMarket
+ *  (Chargebacks 1.4, Seller Agreement 4.1); delivery proof kept and sent to
+ *  the card issuer in a dispute (Privacy 1.5). */
+const updated20261029 = (version: string) => ({ lastUpdated: '29 October 2026', version }) as const
+
 export type LegalBlock =
   | { t: 'p'; md: string }
   | { t: 'ul'; items: string[] }
@@ -136,7 +141,7 @@ const governingLawSection = (h: string, what: string): LegalSection => ({
 const sentence = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1)
 /** The personal data each payment provider receives (Privacy Policy recipients table). */
 const PROCESSOR_DATA: Record<string, string> = {
-  Stripe: 'Order reference, amount, and the card details and email address you enter on Stripe’s payment page; if you dispute a card payment, the Order’s delivery record and Order chat, sent as evidence to your card issuer',
+  Stripe: 'Order reference, item name, amount, your account email, and the card details you enter on Stripe’s payment page; if you dispute a card payment, the Order’s delivery record (including the IP address and device you paid from and opened the delivered Order from, and the Seller’s delivery photos) and Order chat, sent as evidence to your card issuer',
   Payssion: 'Order reference, amount, payment method, and the details you enter on Payssion’s payment page',
   'BTCPay Server': 'Order reference, amount, payment address and transaction ID',
   Payoneer: 'Payoneer account email and payout amount',
@@ -659,7 +664,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
   {
     slug: 'seller-agreement',
     title: 'Seller Agency Agreement',
-    ...updated20261023('v1.3'),
+    ...updated20261029('v1.4'),
     description:
       'The commercial agency agreement between DropMarket Ltd and the Seller: the disclosed commercial-agent appointment, authority to conclude sales and collect payment, fees, payouts, reserves and clawbacks, delivery, KYC/AML and sanctions, tax and platform reporting, confidentiality, anti-circumvention, and termination — under the PSRs 2017 commercial-agent exclusion.',
     sections: [
@@ -728,7 +733,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '4. Reserves, clawbacks and set-off',
         blocks: [
           p(
-            '4.1. Chargeback, reversal and fraud losses arising from a Seller’s transactions are borne by the **Seller**. DropMarket may withhold, hold a **rolling reserve**, set off, or claw back amounts from the Seller Balance, from future payout entitlements, or by direct recovery, to cover refunds, chargebacks, reversals, fines, scheme fees, or losses arising from the Seller’s transactions, breach or fraud.',
+            '4.1. Chargeback, reversal and fraud losses arising from a Seller’s transactions are borne by the **Seller**, except a lost card chargeback that DropMarket covers under the Chargeback & Payment Policy (an Order the Seller delivered with proof). DropMarket may withhold, hold a **rolling reserve**, set off, or claw back amounts from the Seller Balance, from future payout entitlements, or by direct recovery, to cover refunds, chargebacks, reversals, fines, scheme fees, or losses arising from the Seller’s transactions, breach or fraud.',
           ),
           p(
             '4.2. Where a refund is due to a Buyer, DropMarket may process it as the Seller’s agent and recover the amount from the Seller under clause 4.1. If the Seller Balance is insufficient, the Seller shall pay the shortfall within 14 days of notice.',
@@ -1249,13 +1254,15 @@ export const LEGAL_DOCS: LegalDoc[] = [
    * (AML 5 years = AML / KYC Policy; tax records 6 years); rights + ICO.
    * No ICO registration number is claimed: none is on record.
    * v1.4 (28 Oct 2026): Stripe added as the card processor (recipients table).
+   * v1.5 (29 Oct 2026): order access records (IP + device at payment and on
+   * opening a delivered Order) kept as delivery proof; sent in a card dispute.
    */
   {
     slug: 'privacy',
     title: 'Privacy Policy',
     description:
       'How DropMarket Ltd collects, uses, shares and protects personal data under UK GDPR and the DPA 2018, including KYC data, the providers we use, how long we keep data, transfers and your rights.',
-    ...updated20261028('v1.4'),
+    ...updated20261029('v1.5'),
     sections: [
       {
         h: 'Who we are',
@@ -1269,7 +1276,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Categories of personal data',
         blocks: [
           p(
-            'Identity and contact data (name, username, email address, phone number where given); account credentials (passwords are stored only in hashed form by our sign-in provider); **KYC data** (ID documents; selfie/liveness/biometric verification via provider; sanctions and PEP screening results); tax-identification data Sellers give for platform reporting; transaction, order and payout data (payout details are stored encrypted); device, cookie and usage data; on-platform communications and chat; dispute records.',
+            'Identity and contact data (name, username, email address, phone number where given); account credentials (passwords are stored only in hashed form by our sign-in provider); **KYC data** (ID documents; selfie/liveness/biometric verification via provider; sanctions and PEP screening results); tax-identification data Sellers give for platform reporting; transaction, order and payout data (payout details are stored encrypted); **order access records** (the IP address and device you pay from, and each time you open an Order after it is delivered); device, cookie and usage data; on-platform communications and chat; dispute records.',
           ),
         ],
       },
@@ -1279,7 +1286,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
           ul([
             '**Performance of a contract** — operating your account and the marketplace, processing Orders.',
             '**Legal obligation** — AML/KYC checks, sanctions screening, tax and platform reporting to HMRC, statutory record-keeping.',
-            '**Legitimate interests** — fraud prevention, Platform security, service improvement, dispute handling (balanced against your rights).',
+            '**Legitimate interests** — fraud prevention, Platform security, service improvement, dispute handling, including proving delivery if a card payment is disputed (balanced against your rights).',
             '**Consent** — optional analytics cookies and session replay (only if you click Accept on the cookie bar; see the Cookie Policy) and any direct marketing (both withdrawable at any time).',
           ]),
         ],
@@ -1629,12 +1636,12 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Chargeback & Payment Policy',
     description:
       'How card, crypto and local-method payments behave: irreversibility, chargeback and reversal rules, seller liability, and friendly-fraud.',
-    ...updated20261028('v1.3'),
+    ...updated20261029('v1.4'),
     sections: [
       {
         blocks: [
           ul([
-            '**Cards (processed by Stripe):** a card payment can be disputed through the card issuer (a chargeback) under the card scheme’s rules. DropMarket answers the dispute with the Order’s delivery record. Where a chargeback results from a Seller’s failure to deliver, misdescription, breach or fraud, the Seller bears it through reserves and clawbacks under the Seller Agency Agreement.',
+            '**Cards (processed by Stripe):** a card payment can be disputed through the card issuer (a chargeback) under the card scheme’s rules. DropMarket answers the dispute with the Order’s delivery record. If the chargeback is lost on an Order the Seller delivered with proof (the Buyer confirmed receipt, the Buyer opened the delivered Order, or the Seller’s delivery photo), DropMarket bears the loss and the Seller keeps the sale; DropMarket may still recover it from the Seller where the chargeback results from misdescription, breach or fraud. Proof counts only if it was on the Order before the chargeback was raised. Where a chargeback results from a Seller’s failure to deliver, misdescription, breach or fraud, the Seller bears it through reserves and clawbacks under the Seller Agency Agreement.',
             '**Crypto (received through BTCPay Server):** payments are **irreversible; no chargebacks**. Refunds, if approved, are made under the Refund & Dispute Policy.',
             '**Local payment methods (processed by Payssion):** some methods let the payer dispute or reverse a payment through their bank or payment provider, under that method’s own rules. Where a reversal results from a Seller’s failure to deliver, misdescription, breach or fraud, the Seller bears it through reserves and clawbacks under the Seller Agency Agreement.',
             'Please use the SafeDrop dispute process before contacting your bank. A chargeback filed instead of a dispute on an Order that was delivered (“friendly fraud”) may lead to Account restrictions and recovery of amounts owed. This does not affect your rights with your bank or card issuer.',
