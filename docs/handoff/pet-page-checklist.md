@@ -38,9 +38,9 @@ Rule: ✅ done · 🔨 code written, not yet checked · ⏳ waits for the owner 
 - [ ] E4 ⏳ Owner decides — other game-page links to value pages, all in the approved game page design: Price Moves rows + "Full Value List", About "Open the Value List", Hot New "All New" (→ /values?view=new), the Tools row.
 
 ## F. Checks (heavy — when the PC is free)
-- [ ] F1 tsc, lint, tests (unit + guards).
-- [ ] F2 Real page: desktop + phone screenshots to the owner.
-- [ ] F3 Security review (user data, email).
+- [x] F1 ✅ 2026-10-28 after the main merge: full tsc clean; eslint clean on the changed files; unit + guards 5,092 / 5,093 (the one left is the known nested-worktree ESLint guard, og-fallback-lintable).
+- [x] F2 🔨 Real page shots (headless Chrome, desktop 1440 + phone 390): no page errors, no sideways scroll, F + R filter = 1 Fly Ride offer, Select glides to the top. Owner's own look still owed.
+- [x] F3 ✅ Server code on this branch = step 2's stock alerts (reviewed then, no findings). Rounds 1-2 are display only; seller text renders as plain text.
 
 ## G. Ship (owner's word only)
 - [x] G1 Commits (local): d8b778af step 3 · 2f47b806 step 4 · 5b387603 step 5 · 57fc4d4e merged origin/main (card + wallet logos; game home now uses the live PaymentsStrip and "rated sellers" wording, as main did for the old hub).
