@@ -2,7 +2,8 @@
  * Stripe charges and disputes → canonical events. Pure: the adapter hands in
  * objects it RE-FETCHED from Stripe with our secret key.
  *
- *   charge.refunded         only refunds DropMarket did NOT send count (ours
+ *   charge.refunded,        only refunds DropMarket did NOT send count (ours
+ *   charge.refund.updated
  *                           carry `dm_refund` metadata — the outbox books them):
  *                             all outside, succeeded, the whole payment → CARD_CASE refund_external
  *                             partial / mixed / pending / unlisted      → PAYMENT_NOTICE (admin only)
@@ -13,7 +14,7 @@
  * `sessionId` is the Checkout Session the charge belongs to (the adapter looks
  * it up by PaymentIntent); SQL books a case only against the paying session.
  *
- * Dedupe ids: `<charge>:refunded:<total refunded>`, `<dispute>:created`,
+ * Dedupe ids: `<charge>:refunded:<total refunded>:<succeeded total>`, `<dispute>:created`,
  * `<dispute>:closed:<status>`. The SQL seams are idempotent on the provider
  * ref as well.
  */
@@ -71,11 +72,14 @@ function intentOrderId(pi: IntentView | string | null): string | null {
 const DEAD_REFUND = new Set(['failed', 'canceled'])
 
 export function stripeRefundEvents(charge: StripeChargeView, sessionId: string | null): StripeMapped {
-  const providerEventId = `${charge.id}:refunded:${charge.amount_refunded}`
-  const orderId = intentOrderId(charge.payment_intent)
-  if (!orderId) return { providerEventId, events: [] }
   const live = (charge.refunds?.data ?? []).filter((r) => !DEAD_REFUND.has(r.status ?? ''))
   const outside = live.filter((r) => !r.metadata?.[DM_REFUND_KEY])
+  // The succeeded total is part of the id: a pending refund that later succeeds
+  // (charge.refund.updated) is a NEW event, not a replay of the pending one.
+  const succeededMinor = live.filter((r) => r.status === 'succeeded').reduce((sum, r) => sum + r.amount, 0)
+  const providerEventId = `${charge.id}:refunded:${charge.amount_refunded}:${succeededMinor}`
+  const orderId = intentOrderId(charge.payment_intent)
+  if (!orderId) return { providerEventId, events: [] }
   if (outside.length === 0 && !charge.refunds?.has_more) return { providerEventId, events: [] }
 
   const currency = charge.currency.toUpperCase()

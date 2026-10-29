@@ -262,6 +262,8 @@ describe.skipIf(!hasEnv)('card safeguards: external refunds, chargebacks, buyer 
     expect(await bal('seller', 'seller_available')).toBe(avail - 80)
     expect(await disputeClose(id, 'lost')).toMatchObject({ settled: true, bearer: 'platform' })
     expect(await order(id)).toMatchObject({ status: 'completed' })
+    // The seller kept the sale: the case's SafeDrop row closes neutral, not as a buyer win.
+    expect((await safedropDisputes(id)).map((d) => d.status)).toEqual(['closed'])
     expect(await bal('seller', 'seller_available')).toBe(avail)
     expect(await bal('platform', 'platform_commission')).toBe(commission - 100)
   })

@@ -76,6 +76,13 @@ function intentId(pi: StripeSessionView['payment_intent']): string | null {
   return typeof pi === 'string' ? pi : pi.id
 }
 
+function refundChargeId(refund: { charge: unknown }): string {
+  const c = refund.charge
+  const id = typeof c === 'string' ? c : (c as { id?: string } | null)?.id
+  if (!id) throw new Error('stripe: refund without a charge')
+  return id
+}
+
 export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentProvider {
   // Lazy: the real client is built on the first call that needs it.
   const api = (): StripeApi => {
@@ -216,9 +223,13 @@ export function makeStripeProvider(deps?: { api?: () => StripeApi }): PaymentPro
         const opts = { asyncFailed: event.type === 'checkout.session.async_payment_failed' }
         return { providerEventId: stripeSessionEventId(s, opts), events: stripeSessionToCanonical(s, opts) }
       }
-      if (event.type === 'charge.refunded') {
-        if (!objectId) throw new Error('stripe: charge.refunded without a charge id')
-        const charge = (await api().charges.retrieve(objectId, { expand: ['payment_intent', 'refunds'] })) as unknown as StripeChargeView
+      if (event.type === 'charge.refunded' || event.type === 'charge.refund.updated') {
+        if (!objectId) throw new Error(`stripe: ${event.type} without an id`)
+        // charge.refund.updated carries the refund (a pending one settling):
+        // re-read its charge and judge all of its refunds again.
+        const chargeId =
+          event.type === 'charge.refunded' ? objectId : refundChargeId((await api().refunds.retrieve(objectId)) as { charge: unknown })
+        const charge = (await api().charges.retrieve(chargeId, { expand: ['payment_intent', 'refunds'] })) as unknown as StripeChargeView
         return stripeRefundEvents(charge, await sessionOfIntent(charge.payment_intent))
       }
       if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {

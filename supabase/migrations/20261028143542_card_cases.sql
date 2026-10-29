@@ -167,21 +167,25 @@ END;
 $$;
 
 -- Close the order's open SafeDrop dispute rows as the case ends.
-CREATE OR REPLACE FUNCTION public.card_case_close_safedrop(p_case_id uuid, p_order_id uuid, p_buyer_favor boolean)
+-- p_outcome: buyer (refunded) · seller (released, case won) · neutral (the
+-- seller kept the sale and DropMarket paid the bank).
+CREATE OR REPLACE FUNCTION public.card_case_close_safedrop(p_case_id uuid, p_order_id uuid, p_outcome text)
   RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_d uuid;
 BEGIN
   FOR v_d IN
     UPDATE disputes
-       SET status = CASE WHEN p_buyer_favor THEN 'resolved_buyer_favor' ELSE 'resolved_seller_favor' END::dispute_status_enum
+       SET status = CASE p_outcome WHEN 'buyer' THEN 'resolved_buyer_favor'
+                                   WHEN 'seller' THEN 'resolved_seller_favor'
+                                   ELSE 'closed' END::dispute_status_enum
      WHERE transaction_id = p_order_id
        AND status NOT IN ('resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial', 'closed')
     RETURNING id
   LOOP
     INSERT INTO order_dispute_events (dispute_id, order_id, actor_id, actor_role, action, reason, post_completion)
     VALUES (v_d, p_order_id, NULL, 'system',
-            CASE WHEN p_buyer_favor THEN 'resolved_refund_full' ELSE 'resolved_release' END,
+            CASE WHEN p_outcome = 'buyer' THEN 'resolved_refund_full' ELSE 'resolved_release' END,
             'Closed by card case ' || p_case_id::text, false);
   END LOOP;
 END;
@@ -263,7 +267,7 @@ BEGIN
   PERFORM money_fault_hook('card_case_settle:after_journal');
 
   -- The buyer got the card payment back either way: their claim is settled.
-  PERFORM card_case_close_safedrop(v_case.id, v_o.id, true);
+  PERFORM card_case_close_safedrop(v_case.id, v_o.id, CASE WHEN p_bearer = 'seller' THEN 'buyer' ELSE 'neutral' END);
   UPDATE card_cases SET status = 'settled', bearer = p_bearer, decided_by = p_actor_id, closed_at = now()
    WHERE id = v_case.id;
   IF p_bearer = 'seller' AND v_o.seller_id IS NOT NULL THEN
@@ -306,7 +310,7 @@ DECLARE
 BEGIN
   SELECT * INTO v_o FROM orders WHERE id = p_order_id FOR UPDATE;
   IF NOT FOUND THEN
-    PERFORM admin_alert_once('payment_review', 'Card Refund For Unknown Order', 'Stripe refund ' || p_ref || ' names order ' || p_order_id::text || ', which does not exist.', '/admin/orders');
+    PERFORM admin_alert_once('payment_review', 'Card Refund For Unknown Order', 'Stripe refund ' || p_ref || ' names order ' || p_order_id::text || ', which does not exist.', '/admin/orders?ref=' || p_ref);
     RETURN jsonb_build_object('booked', false, 'reason', 'order_not_found');
   END IF;
   IF EXISTS (SELECT 1 FROM card_cases WHERE provider = 'stripe' AND provider_ref = p_ref) THEN
@@ -360,7 +364,7 @@ DECLARE
 BEGIN
   SELECT * INTO v_o FROM orders WHERE id = p_order_id FOR UPDATE;
   IF NOT FOUND THEN
-    PERFORM admin_alert_once('payment_review', 'Card Dispute For Unknown Order', 'Stripe dispute ' || p_ref || ' names order ' || p_order_id::text || ', which does not exist.', '/admin/orders');
+    PERFORM admin_alert_once('payment_review', 'Card Dispute For Unknown Order', 'Stripe dispute ' || p_ref || ' names order ' || p_order_id::text || ', which does not exist.', '/admin/orders?ref=' || p_ref);
     RETURN jsonb_build_object('opened', false, 'reason', 'order_not_found');
   END IF;
   IF EXISTS (SELECT 1 FROM card_cases WHERE provider = 'stripe' AND provider_ref = p_ref) THEN
@@ -446,7 +450,7 @@ BEGIN
     IF v_o.status = 'disputed' AND NOT v_others
        AND (v_o.completed_at IS NOT NULL OR v_o.delivered_at IS NOT NULL OR v_o.seller_marked_delivered_at IS NOT NULL) THEN
       PERFORM safedrop_transition(v_o.id, 'DISPUTE_RESOLVED_SELLER', 'card_case:' || v_case.id::text);
-      PERFORM card_case_close_safedrop(v_case.id, v_o.id, false);
+      PERFORM card_case_close_safedrop(v_case.id, v_o.id, 'seller');
       PERFORM money_fault_hook('card_dispute_close:after_release');
       PERFORM admin_alert_once('payment_review', 'Card Dispute Won · ' || v_amount,
         'The bank sided with us. The order is released to the seller. The buyer stays blocked until you unblock them.', v_link);
@@ -500,7 +504,7 @@ BEGIN
     'public.guard_orders_card_case()',
     'public.card_case_review_reason(orders, text, bigint, text, text)',
     'public.card_case_hold(uuid)',
-    'public.card_case_close_safedrop(uuid, uuid, boolean)',
+    'public.card_case_close_safedrop(uuid, uuid, text)',
     'public.card_case_settle_internal(uuid, text, uuid)',
     'public.card_case_settle(uuid, text, uuid)',
     'public.card_refund_external_book(uuid, text, text, bigint, text)',

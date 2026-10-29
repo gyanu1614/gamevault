@@ -75,6 +75,7 @@ function fakeApi(over: { session?: Record<string, unknown> } = {}) {
     },
     refunds: {
       create: vi.fn(async () => ({ id: 're_1', status: 'succeeded' })),
+      retrieve: vi.fn(async () => ({ id: 're_9', charge: 'ch_1', status: 'succeeded' })),
     },
   }
   return api
@@ -241,7 +242,7 @@ describe('stripe: parseWebhook — authoritative re-fetch', () => {
     const { headers, rawBody } = signed(eventOf('charge.refunded', { id: 'ch_1', amount_refunded: 99999 }))
     const parsed = await provider(api).parseWebhook(headers, rawBody)
     expect(api.charges.retrieve).toHaveBeenCalledWith('ch_1', { expand: ['payment_intent', 'refunds'] })
-    expect(parsed.providerEventId).toBe('ch_1:refunded:500')
+    expect(parsed.providerEventId).toBe('ch_1:refunded:500:500')
     expect(parsed.events[0]).toMatchObject({ type: 'PAYMENT_NOTICE', kind: 'refund', orderId: ORDER, amount: money(500n, 'USD') })
   })
 
@@ -255,6 +256,15 @@ describe('stripe: parseWebhook — authoritative re-fetch', () => {
     const after = await provider(api).parseWebhook(closed.headers, closed.rawBody)
     expect(after.providerEventId).toBe('dp_1:closed:lost')
     expect(after.events[0]).toMatchObject({ type: 'CARD_CASE', kind: 'dispute_closed', outcome: 'lost' })
+  })
+
+  it('charge.refund.updated re-reads the refund\'s charge and judges its refunds again', async () => {
+    const api = fakeApi()
+    const { headers, rawBody } = signed(eventOf('charge.refund.updated', { id: 're_9' }))
+    const parsed = await provider(api).parseWebhook(headers, rawBody)
+    expect(api.refunds.retrieve).toHaveBeenCalledWith('re_9')
+    expect(api.charges.retrieve).toHaveBeenCalledWith('ch_1', { expand: ['payment_intent', 'refunds'] })
+    expect(parsed.providerEventId).toBe('ch_1:refunded:500:500')
   })
 
   it('an event type we do not handle is accepted and recorded with no events', async () => {

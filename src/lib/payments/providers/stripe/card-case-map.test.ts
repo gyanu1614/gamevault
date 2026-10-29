@@ -36,7 +36,7 @@ function dispute(over: Partial<StripeDisputeView> = {}): StripeDisputeView {
 describe('stripeRefundEvents', () => {
   it('a full refund made outside DropMarket books a CARD_CASE on the charge', () => {
     const r = stripeRefundEvents(charge({ data: [refund(1000)], has_more: false }), 'cs_1')
-    expect(r.providerEventId).toBe('ch_1:refunded:1000')
+    expect(r.providerEventId).toBe('ch_1:refunded:1000:1000')
     expect(r.events).toEqual([
       { type: 'CARD_CASE', kind: 'refund_external', orderId: ORDER, providerRef: 'ch_1:refund', sessionRef: 'cs_1', amount: { amountMinor: 1000n, currency: 'USD' } },
     ])
@@ -61,6 +61,14 @@ describe('stripeRefundEvents', () => {
       const [e] = stripeRefundEvents(charge(refunds), 'cs_1').events
       expect(e).toMatchObject({ type: 'PAYMENT_NOTICE', kind: 'refund', orderId: ORDER, providerChargeId: 'ch_1' })
     }
+  })
+
+  it('a pending refund that later succeeds is a new event, then a card case', () => {
+    const pending = stripeRefundEvents(charge({ data: [refund(1000, false, 'pending')], has_more: false }), 'cs_1')
+    const done = stripeRefundEvents(charge({ data: [refund(1000)], has_more: false }), 'cs_1')
+    expect(pending.providerEventId).not.toBe(done.providerEventId)
+    expect(pending.events[0]).toMatchObject({ type: 'PAYMENT_NOTICE' })
+    expect(done.events[0]).toMatchObject({ type: 'CARD_CASE', kind: 'refund_external' })
   })
 
   it('failed or cancelled refunds do not count', () => {

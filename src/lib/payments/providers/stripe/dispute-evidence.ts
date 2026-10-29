@@ -44,7 +44,9 @@ const MESSAGES_KEPT = 60
 
 const clip = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, max - 1)}…`)
 
-const SECRET_HINT = /\b(pass(word|code)?|pwd|pin|2fa|otp|code|login|e-?mail|user ?name|recovery)\b\s*[:=-]/i
+// Any mention of login details drops the whole line; a bare "code" or "user"
+// only when it introduces a value (code: …), since those words are common.
+const SECRET_HINT = /\b(pass(word|code|wd)?|pwd|pw|2fa|otp|login|log ?in|e-?mail|recovery|security question)\b|\b(code|pin|user ?name|user)\b\s*(is\s*)?[:=-]/i
 /** A buyer chat line as the bank may see it. */
 export function redactChatLine(text: string): string {
   const flat = text.replace(/\s+/g, ' ').trim()
