@@ -12,7 +12,7 @@ Rule: ✅ done · 🔨 code written, not yet checked · ⏳ waits for the owner 
 - [x] A5 🔨 Round 2: trust badges under the Delivery Instructions; instructions show 4 lines then the house expand chevron; trait picker inside the buy box with a divider; "Buy Now For" removed (price + quantity + Buy); payment logos one floating row (Visa, Mastercard, Apple Pay, Google Pay, paysafecard, USDT, BTC, +N More); "Prices By Trait" tab replaced by an N / M / F / R filter on the offers (F + R = the Fly Ride offers).
 
 ## B. Pet pictures (owner: best option, no DB load, low complexity)
-- [ ] B1 Dry run → show the owner the count (last run: 519 of 808 sharper from the wiki).
+- [x] B1 ✅ 2026-10-28 dry run: 519 of 808 sharp (391 upgrade + 128 re-framed, all wiki); 289 stay low-res, incl. Parrot, Bat/Frost/Shadow Dragon, Crow, Giraffe, Owl (no clean source); 44 flagged to check.
 - [ ] B2 Owner yes → live apply: files to Storage, one picture link per pet, one-time run. The rest stay as today.
 - [ ] B3 Revalidate the pet pages after the apply.
 
