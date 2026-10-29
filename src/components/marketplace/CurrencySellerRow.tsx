@@ -47,9 +47,10 @@ export interface SellerIdentityData {
 }
 
 export interface RowMetric {
-  icon: MetricIcon
+  /** Omitted when the value draws its own mark (the pet page's trait badges). */
+  icon?: MetricIcon
   label: string
-  value: string
+  value: ReactNode
   /** Fixed desktop column width (px) so columns line up across rows. */
   width: number
 }
@@ -143,7 +144,15 @@ verified={seller.verified}
 
 const ACTION_BOX = 'inline-flex h-10 min-w-[84px] items-center justify-center rounded-md px-4 text-[13px] font-semibold'
 
-export function OfferRowAction({ isOwn, onSelect }: { isOwn: boolean; onSelect: () => void }) {
+/** The checkout's trust blue: the picked row's edge (house rule 9). */
+const PICKED_EDGE = 'inset 0 0 0 1.5px #6AA8FF'
+
+export function OfferRowAction({ isOwn, selected = false, onSelect }: { isOwn: boolean; selected?: boolean; onSelect: () => void }) {
+  if (selected) {
+    // The offer on show above (pet page): not a button, and no wider than
+    // Select so the price column stays aligned; the row's blue edge marks it.
+    return <span className={cn(ACTION_BOX, 'cursor-default select-none px-2 text-text-primary')}>Selected</span>
+  }
   if (isOwn) {
     // Not a button: you cannot buy your own offer. Same box as Select so the
     // price column stays aligned; quiet fill, no outline.
@@ -178,7 +187,7 @@ function MetricCol({ icon: Icon, label, value, width }: RowMetric) {
   return (
     <div className="shrink-0" style={{ width }}>
       <div className="flex items-center gap-1.5 text-[14px] font-bold tabular-nums text-text-primary sm:text-[15px]">
-        <Icon aria-hidden className="shrink-0 text-text-tertiary" style={{ fontSize: 15 }} />
+        {Icon ? <Icon aria-hidden className="shrink-0 text-text-tertiary" style={{ fontSize: 15 }} /> : null}
         <span className="truncate">{value}</span>
       </div>
       <div className="mt-0.5 text-[12px] text-text-tertiary">{label}</div>
@@ -189,7 +198,7 @@ function MetricCol({ icon: Icon, label, value, width }: RowMetric) {
 function MetricChip({ icon: Icon, label, value }: Omit<RowMetric, 'width'>) {
   return (
     <span className="inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
-      <Icon className="text-text-tertiary" aria-hidden style={{ fontSize: 13 }} />
+      {Icon ? <Icon className="text-text-tertiary" aria-hidden style={{ fontSize: 13 }} /> : null}
       <span className="font-semibold tabular-nums text-text-primary">{value}</span>
       <span className="text-text-tertiary">{label}</span>
     </span>
@@ -207,6 +216,8 @@ export interface CurrencySellerRowProps {
   /** Phone strip values; `value` of each may differ from the desktop one (units). */
   mobileMetrics?: Array<Omit<RowMetric, 'width'>>
   isOwn: boolean
+  /** The offer already on show (pet page): trust-blue edge and "Selected" in place of Select. */
+  selected?: boolean
   onSelect: () => void
   /** When given, the row toggles this panel open/closed. */
   details?: ReactNode
@@ -243,7 +254,7 @@ export function CurrencySellerRow(p: CurrencySellerRowProps) {
         </div>
 
         <div className="pointer-events-auto shrink-0">
-          <OfferRowAction isOwn={p.isOwn} onSelect={p.onSelect} />
+          <OfferRowAction isOwn={p.isOwn} selected={p.selected} onSelect={p.onSelect} />
         </div>
       </div>
 
@@ -262,7 +273,7 @@ export function CurrencySellerRow(p: CurrencySellerRowProps) {
 
   if (!expandable) {
     return (
-      <article className={cn(ROW_SURFACE, ROW_IDLE)}>
+      <article className={cn(ROW_SURFACE, ROW_IDLE)} style={p.selected ? { boxShadow: PICKED_EDGE } : undefined}>
         <div className="relative">{content}</div>
       </article>
     )

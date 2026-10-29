@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { StockAlertsProvider } from '@/features/items-grid/stock-alerts-context'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { BuyBox } from './BuyBox'
-import { OfferTabs } from './OfferTabs'
+import { DeliveryNotes } from './DeliveryNotes'
+import { ItemSpecs } from './ItemSpecs'
+import { OffersSection } from './OffersSection'
 import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
 import { defaultTrait, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
@@ -25,23 +27,32 @@ export interface ItemBuyClientProps {
   urlVariant: string | null
   /** The pet page without a trait: the URL base when the trait changes. */
   basePath: string
-  /** Trustpilot row (server-rendered, gated on the review count). */
-  trustpilot: ReactNode
+  /** Spec card facts that don't depend on the offer. */
+  itemType: string
+  rarity: { label: string; color: string } | null
+  deliveryMethod: string
+  /** Delivery card text when the seller wrote no instructions. */
+  deliveryFallback: string
+  /** The three promises + Trustpilot (server-rendered), under the delivery instructions. */
+  trust: ReactNode
 }
 
 /**
- * The pet page (owner, 2026-10-27; built from the research board: Skinport's
- * stage + tabs, StockX's trait field and buy box, GameBoost's trust strip).
+ * The pet page (owner, 2026-10-27; layout 2026-10-28, Eldorado's item page
+ * as the reference; StockX's trait field and buy box).
  *
- * Desktop: the picture stage with the trust strip on the left and the offer
- * tabs under it; the buy column sticky on the right. Phones: picture, buy
- * column, tabs — the name, trait, price and Buy fit the first screen, and a
- * Buy bar docks at the bottom once the box scrolls away.
+ * Desktop: the left two thirds hold the picture and the spec card side by
+ * side, the delivery instructions and the three promises under them; the buy
+ * column is on the right. Under that block, every offer as a full-width row
+ * with the trait filter. Tablets: picture + specs, then the buy column full
+ * width. Phones: picture, buy column, specs, instructions, promises, and a Buy
+ * bar docks at the bottom once the box scrolls away.
  *
  * The page opens on the URL's trait, else the cheapest offer's. Picking a
  * trait shows its cheapest offer; picking a row shows that offer and its
- * trait. The URL follows the trait (its page canonicals here). Personal state
- * (own listing, alerts) is client-side; the page stays static.
+ * trait and glides back up to the buy box. The URL follows the trait (its
+ * page canonicals here). Personal state (own listing, alerts) is client-side;
+ * the page stays static.
  */
 export function ItemBuyClient(p: ItemBuyClientProps) {
   const { offers, offerVariants, traits } = p
@@ -72,9 +83,11 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
       // A blocked history API only costs the shareable URL.
     }
   }
+  // Back to the top block after a pick: desktop shows it from the page top; a phone lands on the buy box.
   const toBuyBox = () => {
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    document.getElementById('buy-box')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+    const behavior: ScrollBehavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    if (window.matchMedia?.('(min-width: 1024px)').matches) window.scrollTo({ top: 0, behavior })
+    else document.getElementById('buy-box')?.scrollIntoView({ behavior, block: 'start' })
   }
 
   const onTrait = (next: string) => {
@@ -87,10 +100,6 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
     setTrait(v)
     setChosenId(o.id)
     setUrlTrait(v)
-    toBuyBox()
-  }
-  const onSelectTrait = (v: string) => {
-    onTrait(v)
     toBuyBox()
   }
   const onBuy = () => {
@@ -114,17 +123,16 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      <div className="grid grid-cols-1 gap-y-8 [grid-template-areas:'media'_'buy'_'tabs'] lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-12 lg:gap-y-10 lg:[grid-template-areas:'media_buy'_'tabs_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-16">
-        <div className="min-w-0 [grid-area:media]">
-          <PictureStage
-            imageUrl={p.imageUrl}
-            name={`${p.gameName} ${p.itemName}`}
-            traitCode={shown?.short ?? null}
-            trustpilot={p.trustpilot}
-          />
+      <div className="grid grid-cols-1 gap-4 [grid-template-areas:'pic'_'buy'_'specs'_'notes'] sm:grid-cols-2 sm:[grid-template-areas:'pic_specs'_'buy_buy'_'notes_notes'] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:[grid-template-areas:'pic_specs_buy'_'notes_notes_buy'] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_420px]">
+        <div className="min-w-0 [grid-area:pic]">
+          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
         </div>
 
-        <div className="min-w-0 [grid-area:buy] lg:sticky lg:top-[calc(var(--game-chrome-bottom)+24px)] lg:self-start">
+        <div className="min-w-0 [grid-area:specs]">
+          <ItemSpecs itemType={p.itemType} rarity={p.rarity} noun={p.noun} trait={shown} offer={offer} deliveryMethod={p.deliveryMethod} />
+        </div>
+
+        <div className="min-w-0 pt-2 [grid-area:buy] sm:pt-4 lg:pl-8 lg:pt-0">
           <BuyBox
             gameSlug={p.gameSlug}
             itemSlug={p.itemSlug}
@@ -144,18 +152,22 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
           />
         </div>
 
-        <div className="min-w-0 [grid-area:tabs]">
-          <OfferTabs
-            noun={p.noun}
-            offers={allOffers}
-            offerVariants={offerVariants}
-            traitDefs={traits}
-            traits={options}
-            selectedId={offer?.id ?? null}
-            onSelectOffer={onSelectOffer}
-            onSelectTrait={onSelectTrait}
-          />
+        <div className="min-w-0 [grid-area:notes] lg:self-start">
+          {offer ? <DeliveryNotes text={offer.description ?? null} fallback={p.deliveryFallback} resetKey={offer.id} /> : null}
+          {p.trust}
         </div>
+      </div>
+
+      <div className="mt-12 sm:mt-14">
+        <OffersSection
+          noun={p.noun}
+          offers={allOffers}
+          offerVariants={offerVariants}
+          traitDefs={traits}
+          selectedId={offer?.id ?? null}
+          viewerId={viewerId}
+          onSelectOffer={onSelectOffer}
+        />
       </div>
 
       <PhoneBuyBar

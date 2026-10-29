@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { amTrait, withPotion, withTier } from './am-traits'
+import { amTrait, formLetters, toggleFilterLetter, withPotion, withTier, type AmLetter } from './am-traits'
 
 describe('amTrait', () => {
   it('reads every Adopt Me form as tier + potions', () => {
@@ -50,5 +50,36 @@ describe('withTier', () => {
 
   it('no trait yet starts from Normal', () => {
     expect(withTier(null, 'mega')).toBe('mega-neon')
+  })
+})
+
+describe('toggleFilterLetter / formLetters (the offer filter)', () => {
+  const run = (...letters: AmLetter[]) => letters.reduce<string | null>((f, l) => toggleFilterLetter(f, l), null)
+
+  it('F then R is Fly Ride; one potion alone is that potion', () => {
+    expect(run('F')).toBe('fly')
+    expect(run('F', 'R')).toBe('fly-ride')
+    expect(run('R')).toBe('ride')
+  })
+
+  it('N and M exclude each other; a tier keeps the potions as Fly Ride', () => {
+    expect(run('N')).toBe('neon')
+    expect(run('N', 'M')).toBe('mega-neon')
+    expect(run('F', 'R', 'N')).toBe('neon-fly-ride')
+    expect(run('F', 'N')).toBe('neon-fly-ride')
+    expect(run('M', 'F')).toBe('mega-fly-ride')
+  })
+
+  it('switching the last letter off shows every offer again', () => {
+    expect(run('F', 'F')).toBeNull()
+    expect(run('N', 'N')).toBeNull()
+    expect(run('N', 'F', 'N')).toBe('fly-ride')
+  })
+
+  it('lights the letters of a form', () => {
+    expect(formLetters('neon-fly-ride')).toEqual(['N', 'F', 'R'])
+    expect(formLetters('mega-neon')).toEqual(['M'])
+    expect(formLetters('normal')).toEqual([])
+    expect(formLetters(null)).toEqual([])
   })
 })

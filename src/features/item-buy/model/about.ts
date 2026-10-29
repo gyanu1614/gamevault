@@ -9,6 +9,7 @@
 import { HELP_FAQ } from '@/lib/support/help-content'
 import { withArticle } from '@/lib/text/article'
 import type { ItemFacts } from '@/lib/values/item-facts'
+import { itemNoun } from './item-kind'
 
 export interface AboutInput {
   gameSlug: string
@@ -34,11 +35,6 @@ export interface ItemAbout {
   relatedHeading: string
 }
 
-const NOUN: Record<string, { one: string; many: string }> = {
-  'adopt-me': { one: 'pet', many: 'Pets' },
-  'steal-a-brainrot': { one: 'brainrot', many: 'Brainrots' },
-}
-
 function helpAnswer(id: string): string {
   const faq = HELP_FAQ.find((f) => f.id === id)
   if (!faq) throw new Error(`HELP_FAQ has no "${id}"`)
@@ -52,7 +48,7 @@ function releasedPhrase(released: string): string {
 
 export function itemAbout(input: AboutInput): ItemAbout {
   const { gameSlug, gameName, itemName, rarity, facts } = input
-  const noun = NOUN[gameSlug] ?? { one: 'item', many: 'Items' }
+  const noun = itemNoun(gameSlug)
   const isAdoptMe = gameSlug === 'adopt-me'
 
   const intro = rarity

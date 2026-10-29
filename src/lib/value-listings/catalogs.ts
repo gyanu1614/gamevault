@@ -45,7 +45,7 @@ export const amVariantCode = variantFromKey
 export function variantShortCode(gameSlug: string, key: string): string | null {
   if (gameSlug !== 'adopt-me') return null
   const code = amVariantCode(key)
-  return code ? (AM_VARIANT_NAMES[code].find((n) => /^[A-Z]{1,3}$/.test(n)) ?? null) : null
+  return code ? (VARIANT_ALIASES[code].find((n) => /^[A-Z]{1,3}$/.test(n)) ?? null) : null
 }
 
 /** Display label for a stored variant key, per game. */

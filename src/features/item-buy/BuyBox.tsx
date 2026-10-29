@@ -5,15 +5,13 @@ import NumberFlow from '@number-flow/react'
 import { IconChevronRight } from '@tabler/icons-react'
 import { SmartLink } from '@/components/global/SmartLink'
 import { BuyButton } from '@/components/marketplace/BuyButton'
-import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
-import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
-import { SellerStats } from '@/components/seller/SellerStats'
+import { SellerIdentity } from '@/components/marketplace/CurrencySellerRow'
 import { NumberField } from '@/components/ui/number-field'
 import { NotifyMeButton } from '@/features/items-grid/NotifyMeButton'
-import { SellerAvatar } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import { PaymentMarks } from './PaymentMarks'
 import { TraitField } from './TraitField'
@@ -44,11 +42,13 @@ export interface BuyBoxProps {
 }
 
 /**
- * The buy column (owner, 2026-10-27; StockX's buy box as the reference): the
- * pet's name, the trait picker (Adopt Me's on/off switches, else the dropdown), then ONE framed box with the price ("Buy Now
- * For", rolling when the trait changes), quantity, Buy and ways to pay — the
- * decision and its reassurance in one place. The seller is one line under it.
- * A trait nobody sells gets Notify Me in the box instead.
+ * The buy column (owner, 2026-10-27/28; StockX's buy box as the reference):
+ * the pet's name, then ONE framed box: the trait picker (Adopt Me's on/off
+ * tiles, else the dropdown), a clear divider, the price (rolling when the
+ * trait changes) with the quantity, Buy and ways to pay — the decision and its
+ * reassurance in one place. The seller is a small card under
+ * it. A trait nobody sells gets Notify Me in the box instead. The title is
+ * kept small (owner, 2026-10-28) so the box sits high on the first screen.
  */
 export function BuyBox(p: BuyBoxProps) {
   const { offer } = p
@@ -57,37 +57,33 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome">
-      <h1 id="item-title" className="text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(32px, 26px + 1.2vw, 42px)', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+      <h1 id="item-title" className="text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(24px, 21px + 0.5vw, 28px)', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
         {p.itemName}
       </h1>
 
-      {p.traits.length > 0 ? (
-        <div className="mt-6">
-          {traitPicker(p.traits) === 'toggles' ? (
-            <TraitSwitches noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
-          ) : (
-            <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
-          )}
-        </div>
-      ) : null}
+      <div className="mt-4 rounded-lg bg-[linear-gradient(180deg,#1F2025_0%,#191A1E_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_48px_-28px_rgba(0,0,0,0.9)]">
+        {p.traits.length > 0 ? (
+          <>
+            {traitPicker(p.traits) === 'toggles' ? (
+              <TraitSwitches noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
+            ) : (
+              <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
+            )}
+            <div aria-hidden className="my-5 h-px bg-white/[0.08]" />
+          </>
+        ) : null}
 
-      <div className="mt-3 rounded-lg bg-[linear-gradient(180deg,#1F2025_0%,#191A1E_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_48px_-28px_rgba(0,0,0,0.9)]">
         {offer ? (
           <>
-            <div className="flex items-end justify-between gap-4">
-              <div className="min-w-0">
-                <div className="font-semibold uppercase tracking-[0.12em] text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
-                  Buy Now For
-                </div>
-                <div className="mt-1.5 flex items-baseline gap-2.5">
-                  <NumberFlow
-                    value={offer.pricePerUnit * p.qty}
-                    format={USD}
-                    className="font-bold tabular-nums text-text-primary"
-                    style={{ fontSize: 'clamp(30px, 26px + 0.6vw, 34px)', letterSpacing: '-0.03em', lineHeight: 1 }}
-                  />
-                  {off > 0 ? <span className="rounded bg-lime-tint-bg px-1.5 py-0.5 text-[12px] font-bold text-lime-text">-{off}%</span> : null}
-                </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-baseline gap-2.5">
+                <NumberFlow
+                  value={offer.pricePerUnit * p.qty}
+                  format={USD}
+                  className="font-bold tabular-nums text-text-primary"
+                  style={{ fontSize: 'clamp(30px, 26px + 0.6vw, 34px)', letterSpacing: '-0.03em', lineHeight: 1 }}
+                />
+                {off > 0 ? <span className="rounded bg-lime-tint-bg px-1.5 py-0.5 text-[12px] font-bold text-lime-text">-{off}%</span> : null}
               </div>
               {max > 1 && !p.isOwn ? (
                 <NumberField
@@ -117,46 +113,42 @@ export function BuyBox(p: BuyBoxProps) {
             <NotifyMeButton gameSlug={p.gameSlug} itemSlug={p.itemSlug} itemName={p.wantedName} variant={p.trait} className="mt-4 h-12 w-full justify-center text-[15px]" />
           </div>
         )}
-        <div className="mt-4 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+        <div className="mt-5">
           <PaymentMarks />
         </div>
       </div>
 
-      {offer ? <SellerLine offer={offer} isOwn={p.isOwn} /> : null}
+      {offer ? <SellerCard offer={offer} isOwn={p.isOwn} /> : null}
     </section>
   )
 }
 
-/** Who sells it, in one quiet line (Skinport): avatar, name, badge, rating and sales; the line opens their shop. */
-function SellerLine({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
+/**
+ * Who sells it, in a small card of its own (owner, 2026-10-28: "inside a
+ * small modal, not floating"): the house seller identity (avatar, name,
+ * badge, rating and sales) and the way into their shop.
+ */
+function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
   const slug = sellerShopSlug(offer.seller)
+  const s = offer.seller
   const body = (
     <>
-      <span className="shrink-0 text-text-tertiary">Sold by</span>
-      <SellerAvatar seller={offer.seller} size={22} />
-      <span className="truncate font-semibold text-text-primary">{sellerDisplayName(offer.seller)}</span>
-      {offer.seller.verified ? <VerifiedBadge size={13} /> : <NewSellerBadge />}
-      {isOwn ? <span className="rounded bg-amber-400/10 px-1.5 py-0.5 text-[11px] font-semibold text-amber-300">Yours</span> : null}
-      <SellerStats
-        ratingPercent={offer.seller.ratingPercent}
-        reviews={offer.seller.reviewCount}
-        sales={offer.seller.sales}
-        tier={offer.seller.tier}
-        verified={offer.seller.verified}
-        hideTier
-        className="ml-auto shrink-0 text-[12.5px]"
-      />
-      {slug ? <IconChevronRight aria-hidden size={15} stroke={2} className="shrink-0 text-text-tertiary" /> : null}
+      <div className="min-w-0 flex-1">
+        <SellerIdentity
+          size={38}
+          seller={{ name: sellerDisplayName(s), avatarUrl: s.avatarUrl, verified: s.verified, rating: s.ratingPercent, reviews: s.reviewCount, sales: s.sales, tier: s.tier ?? null }}
+        />
+      </div>
+      {isOwn ? <span className="shrink-0 rounded bg-amber-400/10 px-1.5 py-0.5 text-[11px] font-semibold text-amber-300">Yours</span> : null}
+      {slug ? <IconChevronRight aria-hidden size={16} stroke={2} className="shrink-0 text-text-tertiary" /> : null}
     </>
   )
-  const cls = 'mt-3 flex min-w-0 items-center gap-2 rounded-lg px-3 py-2.5 transition-colors'
+  const cls = cn('mt-3 flex min-w-0 items-center gap-3 rounded-lg px-4 py-3', MARKET_CARD)
   return slug ? (
-    <SmartLink href={`/shop/${slug}`} className={cn(cls, 'hover:bg-white/[0.04]')} style={{ fontSize: 'var(--fs-meta)' }}>
+    <SmartLink href={`/shop/${slug}`} aria-label={`${sellerDisplayName(s)}'s shop`} className={cn(cls, MARKET_CARD_HOVER, 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}>
       {body}
     </SmartLink>
   ) : (
-    <div className={cls} style={{ fontSize: 'var(--fs-meta)' }}>
-      {body}
-    </div>
+    <div className={cls}>{body}</div>
   )
 }

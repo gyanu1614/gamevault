@@ -2,21 +2,23 @@ import Link from '@/components/navigation/AppLink'
 import { IconChevronRight } from '@tabler/icons-react'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
-import { TrustpilotRow } from '@/features/item-buy/TrustpilotRow'
+import { TrustRow } from '@/features/item-buy/TrustRow'
 import { traitNoun } from '@/features/item-buy/model/offers'
+import { defaultDeliveryNote, deliveryMethodLabel, itemTypeLabel } from '@/features/item-buy/model/item-kind'
+import { rarityMeta } from '@/lib/values/rarity'
 import { traitDefs } from '@/features/item-buy/model/traits'
 import { ItemDetails, ItemFaq, StockedItemLinks } from '@/features/item-buy/ItemAbout'
 import type { ItemAbout } from '@/features/item-buy/model/about'
-import { formatUsd } from '@/lib/value-listings/format'
 import type { loadItemListingsPage } from '../_valueItemOffers'
 
 type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
 
 /**
- * The pet page body (owner, 2026-10-26/27, GameBoost/Eldorado as the
- * reference): the picture with the pet's facts and the other offers on the
- * left; on the right the buy panel (name, price, trait box, quantity, Buy or
- * Notify Me, trust promises) and a small seller card.
+ * The pet page body (owner, 2026-10-26/27/28, Eldorado as the reference):
+ * the picture and its spec card with the delivery instructions under them on
+ * the left; on the right the buy panel (name, trait picker, price, quantity,
+ * Buy or Notify Me, ways to pay) and a small seller card. Then the three
+ * promises, every offer as a full-width row, the details and the FAQ.
  * Filtered on the server, so the first HTML holds this pet's offers only. A
  * pet nobody sells still renders: Notify Me, then similar pets that have
  * offers, then a way to sell one. Under it, for every pet: its details, the
@@ -27,6 +29,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
   const { item } = model
   const traits = traitDefs(gameSlug, catalog)
   const browseHref = `/${gameSlug}/${pair.categorySlug}`
+  const rarity = item.rarity ? rarityMeta(gameSlug, item.rarity) : null
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pt-0 lg:px-8">
@@ -66,7 +69,11 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
         offerVariants={offerVariants}
         urlVariant={model.variant}
         basePath={model.canonicalPath}
-        trustpilot={<TrustpilotRow />}
+        itemType={itemTypeLabel(gameSlug)}
+        rarity={rarity ? { label: rarity.label, color: rarity.color } : null}
+        deliveryMethod={deliveryMethodLabel(gameSlug)}
+        deliveryFallback={defaultDeliveryNote(gameSlug, pair.gameName)}
+        trust={<TrustRow />}
       />
 
       {offers.length === 0 ? (

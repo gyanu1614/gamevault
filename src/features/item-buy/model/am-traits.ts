@@ -49,3 +49,36 @@ export function withPotion(variant: string | null, potion: 'fly' | 'ride'): stri
 export function withTier(variant: string | null, tier: AmTier): string {
   return formKey({ ...(amTrait(variant) ?? NORMAL), tier })
 }
+
+export type AmLetter = 'N' | 'M' | 'F' | 'R'
+
+/** Which filter letters a form lights up (Normal lights none). */
+export function formLetters(variant: string | null): AmLetter[] {
+  const t = amTrait(variant)
+  if (!t) return []
+  const out: AmLetter[] = []
+  if (t.tier === 'neon') out.push('N')
+  if (t.tier === 'mega') out.push('M')
+  if (t.fly) out.push('F')
+  if (t.ride) out.push('R')
+  return out
+}
+
+/**
+ * The offer filter (owner, 2026-10-28): N / M / F / R toggles that pick ONE
+ * form, so F + R shows the Fly Ride offers and N + F + R the Neon Fly Ride
+ * ones. Same rules as the picker (N and M exclude each other; on Neon / Mega
+ * the potions switch together). `filter` is the form shown, null = every
+ * offer; switching the last letter off goes back to every offer.
+ */
+export function toggleFilterLetter(filter: string | null, letter: AmLetter): string | null {
+  const t = amTrait(filter) ?? NORMAL
+  let next: string
+  if (letter === 'N' || letter === 'M') {
+    const tier: AmTier = letter === 'N' ? 'neon' : 'mega'
+    next = withTier(formKey(t), t.tier === tier ? 'normal' : tier)
+  } else {
+    next = withPotion(formKey(t), letter === 'F' ? 'fly' : 'ride')
+  }
+  return next === 'normal' ? null : next
+}
