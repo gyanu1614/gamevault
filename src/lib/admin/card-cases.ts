@@ -112,7 +112,7 @@ const BUCKET = 'delivery-evidence'
 
 async function orderProofPaths(orderId: string): Promise<string[]> {
   const { data } = (await createServiceRoleClient().from('orders').select('delivery_evidence_urls').eq('id', orderId).maybeSingle()) as any
-  return proofPhotoPaths(data?.delivery_evidence_urls)
+  return proofPhotoPaths(data?.delivery_evidence_urls, orderId)
 }
 
 /** The order's delivery photos with 10-minute links, for the Submit Evidence dialog. */
@@ -123,11 +123,7 @@ export async function loadProofPhotos(orderId: string): Promise<Array<{ path: st
   return (data ?? []).flatMap((d) => (d.path && d.signedUrl ? [{ path: d.path, url: d.signedUrl }] : []))
 }
 
-// Upload paths start with the upload time in ms (`<orderId>/<ms>-<name>`).
-const uploadedAt = (path: string) => {
-  const ms = /^(\d{13})-/.exec(path.split('/').pop() ?? '')?.[1]
-  return ms ? `, uploaded by the seller ${new Date(Number(ms)).toISOString().slice(0, 16).replace('T', ' ')} UTC` : ''
-}
+const PHOTO_MAX_BYTES = 15 * 1024 * 1024
 
 /** The photos an admin chose, read from storage. Each must be one of the order's own. */
 export async function loadChosenProofPhotos(orderId: string, orderRef: string, chosen: string[]): Promise<ProofPhoto[]> {
@@ -139,8 +135,9 @@ export async function loadChosenProofPhotos(orderId: string, orderRef: string, c
     paths.map(async (path) => {
       const { data, error } = await storage.download(path)
       if (error || !data) throw new Error(`Could not read the photo ${path.split('/').pop()}.`)
+      if (data.size > PHOTO_MAX_BYTES) throw new Error(`The photo ${path.split('/').pop()} is too large to send.`)
       return new Uint8Array(await data.arrayBuffer())
     })
   )
-  return files.map((data, n) => ({ data, caption: `Delivery photo ${n + 1} of ${files.length}, order ${orderRef}${uploadedAt(paths[n])}` }))
+  return files.map((data, n) => ({ data, caption: `Delivery photo ${n + 1} of ${files.length} uploaded by the seller, order ${orderRef}` }))
 }

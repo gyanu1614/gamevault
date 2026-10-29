@@ -34,7 +34,7 @@ const ascii = (s: string) => s.replace(/[–—]/g, '-').replace(/[^\x20-\x7E]/g
 
 async function toJpeg(data: Uint8Array, px: number, quality: number): Promise<Buffer | null> {
   try {
-    return await sharp(data)
+    return await sharp(data, { limitInputPixels: 40_000_000 })
       .rotate()
       .resize({ width: px, height: px, fit: 'inside', withoutEnlargement: true })
       .flatten({ background: '#ffffff' })

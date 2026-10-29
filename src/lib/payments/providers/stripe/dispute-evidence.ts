@@ -139,7 +139,7 @@ export function buildDisputeEvidence(i: DisputeEvidenceInput): DisputeEvidence {
     i.buyerConfirmedAt
       ? `The buyer confirmed on ${stamp(i.buyerConfirmedAt)} that they received the order.`
       : i.deliveredAt || i.sellerMarkedDeliveredAt || i.instantDeliveredAt
-        ? 'The order was marked delivered; the buyer did not report a problem through our order dispute process.'
+        ? 'The order was marked delivered.'
         : 'The order record is below.',
     visitsSentence(i.accessLog, purchaseIp) ?? '',
     chat.length ? `\nOrder chat (most recent ${chat.length} messages; the buyer's words, the seller's as times only):\n${chat.join('\n')}` : '',

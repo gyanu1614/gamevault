@@ -3,8 +3,9 @@
 /**
  * Card refunds and disputes on this order (card_cases, 2026-10-28):
  *   · Submit Evidence — one click: the order record, the buyer's visits,
- *     the chat and the delivery photos the admin leaves ticked (untick any
- *     showing login details) go to the bank through Stripe (once per dispute);
+ *     the chat and the delivery photos the admin ticks (none by default: a
+ *     photo may show login details) go to the bank through Stripe (once per
+ *     dispute);
  *   · Seller Pays / DropMarket Pays — a card refund made in Stripe after the
  *     seller was paid; the seller share is on hold until you choose;
  *   · Unblock Buyer — a card dispute blocks the buyer from checking out.
@@ -60,7 +61,7 @@ export function CardCasePanel({
   if (cases.length === 0 && !buyerBlock) return null
 
   function openEvidence(c: CardCaseRow) {
-    setChosen(new Set(proofPhotos.slice(0, PHOTOS_MAX).map((p) => p.path)))
+    setChosen(new Set())
     setPending({ kind: 'evidence', c })
   }
   function toggle(path: string, on: boolean) {
@@ -149,7 +150,7 @@ export function CardCasePanel({
           </div>
           {pending?.kind === 'evidence' && proofPhotos.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[12.5px] text-text-tertiary">Untick any photo that shows login details.</p>
+              <p className="text-[12.5px] text-text-tertiary">Tick the photos to send. Leave out any that show login details.</p>
               <div className="grid grid-cols-3 gap-2">
                 {proofPhotos.map((p, n) => {
                   const on = chosen.has(p.path)

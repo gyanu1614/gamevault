@@ -9,10 +9,20 @@
 -- own SafeDrop dispute is open: the case waits for an admin (Seller Pays /
 -- DropMarket Pays on the order page).
 --
+-- Proof counts only if it existed BEFORE the card case was recorded: a
+-- delivery, confirmation, view or photo added once the chargeback is open
+-- cannot shift the loss to DropMarket. A photo counts only if the file is
+-- in the delivery-evidence bucket under the order's own folder.
+--
+-- Once the bank has returned a card payment (a settled case), the order can
+-- no longer be disputed or refunded on DropMarket (no double refund), and a
+-- payment that was partly refunded through a dispute is only recorded.
+--
 -- order_access_log is what the bank sees in a dispute: when, and from which
 -- IP and device, the buyer paid and opened the delivered order.
--- Replaces card_case_settle_internal and card_dispute_close from
--- 20261028143542 (only the parts marked "changed" differ).
+-- Replaces guard_orders_card_case, card_case_review_reason,
+-- card_case_settle_internal and card_dispute_close from 20261028143542 (only
+-- the parts marked "changed" differ).
 
 -- ── 1. Access log ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.order_access_log (
@@ -78,19 +88,88 @@ END;
 $$;
 
 -- ── 2. Delivery proof ───────────────────────────────────────────────────────
--- NULL when the order was never delivered (by the seller or an instant code)
--- or has no proof; else which proof (strongest first): confirmed · opened · photo.
-CREATE OR REPLACE FUNCTION public.card_case_delivery_proof(p_order orders)
+-- NULL when the order was not delivered (by the seller or an instant code)
+-- before p_before, or has no proof from before then; else which proof
+-- (strongest first): confirmed · opened · photo. p_before = when the card
+-- case was recorded.
+CREATE OR REPLACE FUNCTION public.card_case_delivery_proof(p_order orders, p_before timestamptz)
   RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT CASE
-    WHEN p_order.delivered_at IS NULL AND p_order.seller_marked_delivered_at IS NULL
-         AND p_order.instant_delivery_delivered_at IS NULL THEN NULL
-    WHEN p_order.buyer_confirmed_at IS NOT NULL THEN 'confirmed'
+    WHEN LEAST(p_order.delivered_at, p_order.seller_marked_delivered_at, p_order.instant_delivery_delivered_at) IS NULL
+      OR LEAST(p_order.delivered_at, p_order.seller_marked_delivered_at, p_order.instant_delivery_delivered_at) >= p_before
+      THEN NULL
+    WHEN p_order.buyer_confirmed_at < p_before THEN 'confirmed'
     WHEN EXISTS (SELECT 1 FROM order_access_log l
-                  WHERE l.order_id = p_order.id AND l.user_id = p_order.buyer_id AND l.event = 'view') THEN 'opened'
-    WHEN EXISTS (SELECT 1 FROM unnest(COALESCE(p_order.delivery_evidence_urls, '{}'::text[])) u
-                  WHERE btrim(u) <> '') THEN 'photo'
+                  WHERE l.order_id = p_order.id AND l.user_id = p_order.buyer_id AND l.event = 'view'
+                    AND l.first_seen_at < p_before) THEN 'opened'
+    WHEN EXISTS (SELECT 1 FROM storage.objects so
+                  WHERE so.bucket_id = 'delivery-evidence'
+                    AND so.name = ANY (COALESCE(p_order.delivery_evidence_urls, '{}'::text[]))
+                    AND so.name LIKE p_order.id::text || '/%'
+                    AND so.name ~* '\.(webp|jpe?g|png|gif|avif)$'
+                    AND so.created_at < p_before) THEN 'photo'
   END;
+$$;
+
+-- changed: a payment the bank already returned (a settled case), or one
+-- partly refunded through a dispute, is only recorded.
+CREATE OR REPLACE FUNCTION public.card_case_review_reason(
+  p_order orders, p_session text, p_amount_minor bigint, p_currency text, p_kind text)
+  RETURNS text LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_att payment_attempts%ROWTYPE;
+BEGIN
+  SELECT * INTO v_att FROM payment_attempts
+   WHERE order_id = p_order.id AND provider = 'stripe' AND provider_charge_id = p_session
+   ORDER BY created_at DESC LIMIT 1;
+  IF NOT FOUND OR v_att.status <> 'paid' OR COALESCE(v_att.credited_minor, 0) > 0 THEN
+    RETURN 'This payment is not the one that paid the order (a duplicate or late payment kept as store credit). Nothing was held or booked.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM card_cases WHERE order_id = p_order.id AND status IN ('open', 'awaiting_decision')) THEN
+    RETURN 'The order already has an open card dispute or refund. Nothing more was held or booked.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM card_cases WHERE order_id = p_order.id AND status = 'settled') THEN
+    RETURN 'The bank already returned this card payment once. Nothing more was held or booked.';
+  END IF;
+  IF p_order.status NOT IN ('paid', 'delivering', 'delivered', 'completed', 'disputed') THEN
+    RETURN 'The order was already ' || p_order.status || ' — the buyer may be paid twice. Nothing was held or booked.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM disputes d WHERE d.transaction_id = p_order.id AND d.status = 'resolved_partial')
+     OR EXISTS (SELECT 1 FROM dispute_resolutions r JOIN disputes d ON d.id = r.dispute_id
+                 WHERE d.transaction_id = p_order.id AND COALESCE(r.refund_amount, 0) > 0) THEN
+    RETURN 'Part of this order was already refunded to the buyer through a dispute — they may be paid twice. Nothing was held or booked.';
+  END IF;
+  IF p_kind = 'refund' THEN
+    IF p_amount_minor <> v_att.amount_minor OR UPPER(p_currency) <> UPPER(v_att.currency) THEN
+      RETURN 'The refund is not the full card payment. Nothing was booked.';
+    END IF;
+    IF EXISTS (SELECT 1 FROM refund_to_source_requests WHERE order_id = p_order.id AND status IN ('approved', 'sent')) THEN
+      RETURN 'A store-credit refund to this card is also on record. Nothing was booked.';
+    END IF;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+-- changed: once the bank returned the card payment (a settled case), the
+-- order cannot be disputed or refunded again on DropMarket.
+CREATE OR REPLACE FUNCTION public.guard_orders_card_case() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF current_setting('app.card_case', true) IS DISTINCT FROM 'on' AND NEW.status IS DISTINCT FROM OLD.status THEN
+    IF OLD.status = 'disputed'
+       AND EXISTS (SELECT 1 FROM card_cases WHERE order_id = NEW.id AND status IN ('open', 'awaiting_decision')) THEN
+      RAISE EXCEPTION 'order % is held by a card dispute or refund; settle it from the card case', NEW.id
+        USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status IN ('disputed', 'refunded')
+       AND EXISTS (SELECT 1 FROM card_cases WHERE order_id = NEW.id AND status = 'settled') THEN
+      RAISE EXCEPTION 'order %: the bank already returned this card payment, so it cannot be disputed or refunded again', NEW.id
+        USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
 $$;
 
 -- ── 3. Settle (changed: DropMarket may also absorb a delivered order that is
@@ -187,8 +266,9 @@ $$;
 -- only open dispute is the one this case opened is released to the seller;
 -- otherwise (undelivered, or the buyer's own dispute is open) an admin
 -- finishes it with the money controls.
--- lost, the full payment: delivered with proof → DropMarket pays (or an admin
--- decides while the buyer's own dispute is open); no proof → the seller pays.
+-- lost, the full payment: delivered with proof from before the case → DropMarket
+-- pays (or an admin decides while the buyer's own dispute is open); no proof →
+-- the seller pays.
 -- lost, part of it: the hold lifts, an admin settles.
 -- Unknown dispute: raise, so Stripe retries until the `created` event lands.
 CREATE OR REPLACE FUNCTION public.card_dispute_close(p_ref text, p_outcome text)
@@ -254,7 +334,7 @@ BEGIN
   END IF;
 
   -- changed: delivery proof decides who pays.
-  v_proof := card_case_delivery_proof(v_o);
+  v_proof := card_case_delivery_proof(v_o, v_case.created_at);
   IF v_proof IS NULL THEN
     PERFORM card_case_settle_internal(v_case.id, 'seller', NULL);
     PERFORM admin_alert_once('payment_review', 'Card Dispute Lost · ' || v_amount,
@@ -281,10 +361,13 @@ $$;
 
 -- ── 5. Grants: service role only ────────────────────────────────────────────
 REVOKE ALL ON FUNCTION public.order_access_record(uuid, uuid, text, text, text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.card_case_delivery_proof(orders) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.card_case_delivery_proof(orders, timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.card_case_review_reason(orders, text, bigint, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.guard_orders_card_case() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.card_case_settle_internal(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.card_dispute_close(text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.order_access_record(uuid, uuid, text, text, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.card_case_delivery_proof(orders) TO service_role;
+GRANT EXECUTE ON FUNCTION public.card_case_delivery_proof(orders, timestamptz) TO service_role;
+GRANT EXECUTE ON FUNCTION public.card_case_review_reason(orders, text, bigint, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.card_case_settle_internal(uuid, text, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.card_dispute_close(text, text) TO service_role;
