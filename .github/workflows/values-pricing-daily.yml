@@ -26,6 +26,24 @@ name: Values Pricing Daily
 # on a market whose prices move daily, and its changed-items revalidation
 # would mostly re-confirm the morning's numbers.
 #
+# ONE Eldorado crawl at a time (2026-10-29). Eldorado tightened its rate limit
+# and answered the SAB crawl with 429 on 2026-10-28 and -29 (the crawl now
+# paces every request through scripts/lib/eldorado-http.mjs and stops cleanly
+# on a throttle). MM2 and Steal an Egg used to crawl at the same time as SAB;
+# now the Eldorado jobs run in a chain, each with always() so one game's
+# failure still never blocks another:
+#
+#   steal-an-egg → murder-mystery-2 → sab → adopt-me
+#   sab-g2g (G2G, not Eldorado) ──────┘
+#
+# The worst case is unchanged: steal-an-egg 15 + murder-mystery-2 45 = the 60
+# minutes sab-g2g may already take before sab starts (pinned in
+# src/test/routes/values-pricing-workflow.test.ts).
+#
+# A throttled SAB crawl imports what it collected and stays green; the alert
+# job posts a 🟡 notice for it (sab's `eldorado_stopped_early` output) so a
+# partial day is still heard about.
+#
 # Weekly catalogue refresh stays separate: adopt-me-weekly-catalog.yml.
 
 on:
@@ -146,15 +164,24 @@ jobs:
           retention-days: 14
 
   sab:
-    needs: sab-g2g
-    # always(): a failed G2G cross-check must not cost SAB its Eldorado crawl
-    # and reprice. Skipped only when SAB was not selected.
+    # After MM2 too, so two Eldorado crawls never overlap (2026-10-29).
+    needs: [sab-g2g, murder-mystery-2]
+    # always(): a failed G2G cross-check (or MM2 crawl) must not cost SAB its
+    # Eldorado crawl and reprice. Skipped only when SAB was not selected.
     if: >-
       always()
       && (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'sab')
     runs-on: ubuntu-latest
-    # A full priority sweep is ~60-80 min at 420 brainrots; the reprice ~5.
+    # Paced crawl (2026-10-29): ~1,250 requests at one per 2.0-2.5 s ≈ 47 min,
+    # plus ~3 min import; the reprice ~2. The crawl stops itself at
+    # --max-crawl-minutes (100) and imports what it has, so a throttle-slowed
+    # crawl still leaves room for the import (incl. up to 20 min lock wait),
+    # expire, reprice and freshness steps.
     timeout-minutes: 150
+    outputs:
+      # Set only when Eldorado throttled the crawl (or it hit its budget); the
+      # alert job posts it.
+      eldorado_stopped_early: ${{ steps.eldorado.outputs.stopped_early }}
     permissions:
       contents: read
       # ROUTE-017: the publish-only recovery downloads a PRIOR run's feed
@@ -198,7 +225,15 @@ jobs:
       # committed progress file). One run a day, so the queue takes up to 420
       # brainrots not priced in the last 20 h — the whole curated tradeable
       # set daily (was 210 per run at 6 h, twice a day).
+      #
+      # --request-interval-ms paces EVERY Eldorado request (2026-10-29; the
+      # unpaced in-brainrot bursts drew the 429s of 2026-10-28/29). A throttle
+      # or the --max-crawl-minutes budget ends the crawl early: it imports what
+      # it collected, annotates a warning, sets `stopped_early` and exits 0, so
+      # expire, reprice and freshness still run; tomorrow's queue starts with
+      # the brainrots it did not reach. A stop with nothing collected fails.
       - name: Collect and import Eldorado market data (priority queue)
+        id: eldorado
         if: inputs.sab_publish_only_run_id == ''
         run: >-
           pnpm sab:eldorado:send
@@ -206,6 +241,8 @@ jobs:
           --max-pages ${{ inputs.sab_max_pages || '10' }}
           --samples-per-variant 25
           --delay-ms 1500
+          --request-interval-ms 2000
+          --max-crawl-minutes 100
           --refresh-after-hours ${{ inputs.sab_refresh_after_hours || '20' }}
           ${{ (inputs.sab_reset_progress == 'true') && '--reset-progress' || '' }}
 
@@ -304,12 +341,15 @@ jobs:
           retention-days: 14
 
   # ── Steal an Egg: generic values_* pipeline ───────────────────────────────
+  # First in the Eldorado chain (beside sab-g2g). ~40 pages at 1.5 s ≈ 1 min,
+  # reprice ~10 s; 15 min (was 30) still covers two cool-downs, and keeps
+  # steal-an-egg + murder-mystery-2 within sab-g2g's 60 (see header).
   steal-an-egg:
     if: >-
       (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'steal-an-egg')
       && inputs.sab_publish_only_run_id == ''
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -354,16 +394,22 @@ jobs:
   # values-revalidate answers 400 for a game that is not a content hub yet, so
   # until the MM2 pages ship the job collects, prices and records daily history
   # (charts have data on launch day) but revalidates nothing.
+  #
+  # After Steal an Egg, before SAB: one Eldorado crawl at a time (2026-10-29).
+  # always(): Steal an Egg's outcome never blocks MM2.
   murder-mystery-2:
+    needs: steal-an-egg
     if: >-
-      inputs.sab_publish_only_run_id == ''
+      always()
+      && inputs.sab_publish_only_run_id == ''
       && (
         (vars.MM2_PRICING_ENABLED == 'true'
           && (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'murder-mystery-2'))
         || (inputs.games == 'murder-mystery-2' && inputs.mm2_force)
       )
     runs-on: ubuntu-latest
-    # ~282 pages at 1.5 s ≈ 8 min (+ backoff headroom); reprice ~1 min.
+    # ~282 pages at 1.5 s ≈ 8 min (+ backoff headroom: a throttle-slowed walk at
+    # 3 s is ~15 min); reprice ~1 min.
     timeout-minutes: 45
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -400,9 +446,16 @@ jobs:
   # One post when any game's pricing job fails or times out (a timeout kill is
   # a cancellation). A job skipped on purpose (MM2 behind its repo variable) is
   # not an alarm. Never fails the run itself.
+  #
+  # Also a 🟡 post when the SAB crawl stopped early (Eldorado throttle or crawl
+  # budget, 2026-10-29): that job is green — it imported what it collected —
+  # but part of the queue waits a day, and a run that is throttled every day
+  # would otherwise only surface as the 48 h freshness alert.
   alert:
     needs: [sab-g2g, sab, adopt-me, steal-an-egg, murder-mystery-2]
-    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    if: >-
+      ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+      || needs.sab.outputs.eldorado_stopped_early != '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -411,6 +464,7 @@ jobs:
           DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RESULTS: ${{ toJSON(needs) }}
+          SAB_STOPPED_EARLY: ${{ needs.sab.outputs.eldorado_stopped_early }}
         run: |
           set -uo pipefail
           if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
@@ -418,8 +472,18 @@ jobs:
             exit 0
           fi
           failed="$(printf '%s' "$RESULTS" | jq -r 'to_entries | map(select(.value.result == "failure" or .value.result == "cancelled")) | map("\(.key) (\(.value.result))") | join(", ")')"
+          partial=""
+          if [ -n "${SAB_STOPPED_EARLY:-}" ]; then
+            partial="🟡 **SAB pricing partial**: ${SAB_STOPPED_EARLY}. The brainrots it did not reach are first in tomorrow's queue."
+          fi
+          if [ -n "$failed" ]; then
+            content="🔴 **Values pricing failed**: ${failed}. Prices for those games did not update today. Run: ${RUN_URL}"
+            if [ -n "$partial" ]; then content="${content}"$'\n'"${partial}"; fi
+          else
+            content="${partial} Run: ${RUN_URL}"
+          fi
           payload="$(jq -nc \
-            --arg content "🔴 **Values pricing failed**: ${failed}. Prices for those games did not update today. Run: ${RUN_URL}" \
+            --arg content "$content" \
             '{content: $content, allowed_mentions: {parse: []} }')"
           code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
             -X POST -H 'content-type: application/json' \

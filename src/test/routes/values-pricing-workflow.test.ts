@@ -66,11 +66,39 @@ describe('values-pricing-daily.yml', () => {
     // but runs whatever SAB's outcome.
     expect(J['adopt-me']).toMatch(/(^|\n) {4}needs: sab\n/)
     expect(J['adopt-me']).toMatch(/always\(\)/)
+    // One Eldorado crawl at a time (2026-10-29: Eldorado throttled SAB two
+    // days running): steal-an-egg → murder-mystery-2 → sab → adopt-me, each
+    // running whatever the previous one's outcome.
     expect(J['steal-an-egg']).not.toMatch(/\n {4}needs:/)
-    expect(J['murder-mystery-2']).not.toMatch(/\n {4}needs:/)
-    // SAB waits for its own G2G cross-check, but runs even when it failed.
-    expect(J.sab).toMatch(/needs: sab-g2g/)
+    expect(J['murder-mystery-2']).toMatch(/(^|\n) {4}needs: steal-an-egg\n/)
+    expect(J['murder-mystery-2']).toMatch(/always\(\)/)
+    // SAB waits for its own G2G cross-check and for MM2, but runs even when they failed.
+    expect(J.sab).toMatch(/(^|\n) {4}needs: \[sab-g2g, murder-mystery-2\]\n/)
     expect(J.sab).toMatch(/always\(\)/)
+  })
+
+  it("serialising the Eldorado crawls does not lengthen the worst case", () => {
+    // steal-an-egg → murder-mystery-2 runs beside sab-g2g; both lead into sab.
+    // As long as the chain fits in sab-g2g's timeout, the window's worst case
+    // stays sab-g2g → sab → adopt-me (src/test/routes/db-heavy-schedule.test.ts).
+    const timeout = (job: string) => Number(J[job].match(/timeout-minutes: (\d+)/)?.[1])
+    expect(timeout('steal-an-egg') + timeout('murder-mystery-2')).toBeLessThanOrEqual(timeout('sab-g2g'))
+  })
+
+  it('a throttled SAB crawl stops inside its job and is still reported', () => {
+    // The crawl's own budget leaves room for import (≤20 min lock wait + ~3),
+    // popularity, expire, reprice and freshness inside the job timeout.
+    const step = stepWith(J.sab, 'pnpm sab:eldorado:send')
+    const budget = Number(step.match(/--max-crawl-minutes (\d+)/)?.[1])
+    const timeout = Number(J.sab.match(/timeout-minutes: (\d+)/)?.[1])
+    expect(budget).toBeGreaterThan(0)
+    expect(budget + 40).toBeLessThanOrEqual(timeout)
+    expect(step).toMatch(/--request-interval-ms \d+/)
+    expect(step).toMatch(/\bid: eldorado\b/)
+    // The crawl's stopped_early output → a job output → the alert job's 🟡 post.
+    expect(J.sab).toContain('eldorado_stopped_early: ${{ steps.eldorado.outputs.stopped_early }}')
+    expect(J.alert).toContain("needs.sab.outputs.eldorado_stopped_early != ''")
+    expect(J.alert).toContain('SAB_STOPPED_EARLY: ${{ needs.sab.outputs.eldorado_stopped_early }}')
   })
 
   it('every game ends in the shared publish step, which may not be skipped on error', () => {
