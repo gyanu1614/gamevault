@@ -39,10 +39,16 @@ export function loadLocalCatalogue(game, cataloguePath = `data/values-catalogue/
   const aliases = fs.existsSync(aliasFile) ? JSON.parse(fs.readFileSync(aliasFile, 'utf8')) : {}
   return {
     items: cat.items,
-    entries: cat.items.map((i) => ({ slug: i.slug, title: i.wikiTitle, displayTitle: i.displayTitle, itemType: i.itemType, isChroma: i.isChroma, releaseYear: i.releaseYear })),
+    entries: cat.items.map((i) => ({ slug: i.slug, title: i.wikiTitle, displayTitle: i.displayTitle, itemType: i.itemType, isChroma: i.isChroma, releaseYear: i.releaseYear, origin: i.origin })),
     aliases: Object.entries(aliases).map(([key, slug]) => ({ key, slug })),
     idBySlug: null,
   }
+}
+
+/** One values_items row → the resolver's catalogue entry (resolve.ts CatalogueEntry). */
+export function catalogueEntryFromRow(r) {
+  const title = r.wiki_title ?? r.name
+  return { slug: r.slug, title, displayTitle: r.name !== title ? r.name : null, itemType: r.item_type, isChroma: r.base_item_id != null || /^chroma\s/i.test(title), releaseYear: r.release_year, origin: r.origin }
 }
 
 async function loadDbCatalogue(db, gameId) {
@@ -51,17 +57,12 @@ async function loadDbCatalogue(db, gameId) {
     () =>
       db
         .from('values_items')
-        .select('id,slug,name,wiki_title,item_type,base_item_id,release_year,kind,values_item_aliases(alias)')
+        .select('id,slug,name,wiki_title,item_type,base_item_id,release_year,origin,kind,values_item_aliases(alias)')
         .eq('game_id', gameId)
         .eq('is_enabled', true),
     'id',
   )
-  const entries = rows
-    .filter((r) => r.kind === 'item')
-    .map((r) => {
-      const title = r.wiki_title ?? r.name
-      return { slug: r.slug, title, displayTitle: r.name !== title ? r.name : null, itemType: r.item_type, isChroma: r.base_item_id != null || /^chroma\s/i.test(title), releaseYear: r.release_year }
-    })
+  const entries = rows.filter((r) => r.kind === 'item').map(catalogueEntryFromRow)
   const aliases = rows.flatMap((r) =>
     (r.values_item_aliases ?? [])
       .map((a) => a.alias)

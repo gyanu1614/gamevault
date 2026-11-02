@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * MM2 item types vs the wiki, re-read with the catalogue's own parser
- * (buildMm2Catalogue: title → opening sentence → infobox).
+ * (buildMm2Catalogue: title → infobox + box table agreeing → opening
+ * sentence → infobox).
  *
  *   pnpm mm2:type-audit --env=prod --yes            # list the differences (reads only)
  *   pnpm mm2:type-audit --env=prod --yes --write    # fix them + refresh those value pages
@@ -12,10 +13,12 @@
  * each page's opening sentence, and Eldorado, said knife; their Eldorado
  * listings matched nothing. The parser now trusts the opening sentence; this
  * re-checks the rows that already exist. A chroma whose type changes is
- * re-linked to its base of the new type.
+ * re-linked to its base of the new type. Dolphins was the reverse case: its
+ * sentence said gun, its infobox and the 2025 Summer Box table said knife.
  */
 import process from 'node:process'
 import { createWikiClient } from '../src/lib/catalogue/wiki.ts'
+import { murderMystery2 } from '../src/lib/catalogue/games/murder-mystery-2.ts'
 import { buildMm2Catalogue } from '../src/lib/values/catalogue/mm2-wiki.ts'
 import { httpRevalidator } from '../src/lib/pricing/publish.ts'
 import { valuesDbClient } from './lib/values-db.mjs'
@@ -51,6 +54,7 @@ async function main() {
   const pageBySlug = new Map(refs.map((r) => [r.item_slug, Number(r.page_id)]))
 
   const wiki = createWikiClient({ host: 'murder-mystery-2.fandom.com' })
+  const { boxes } = await murderMystery2.prepare(wiki)
   const pages = await wiki.fetchPages([...new Set(items.map((i) => pageBySlug.get(i.slug)).filter(Boolean))])
   const textByTitle = new Map(pages.map((p) => [p.title.toLowerCase(), p.content]))
   for (const i of items) {
@@ -61,7 +65,7 @@ async function main() {
   for (const i of items) {
     const text = textByTitle.get(i.wiki_title.toLowerCase())
     if (!text) continue
-    const parsed = buildMm2Catalogue([{ title: i.wiki_title, wikitext: text }]).items[0]
+    const parsed = buildMm2Catalogue([{ title: i.wiki_title, wikitext: text }], boxes).items[0]
     if (parsed?.itemType && parsed.itemType !== i.item_type) diffs.push({ item: i, to: parsed.itemType, why: lead(text, i.wiki_title) })
   }
   console.log(`${items.length} items read (${wiki.requests()} wiki requests); ${diffs.length} stored with a type the wiki page contradicts:`)
