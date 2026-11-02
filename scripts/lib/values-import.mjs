@@ -183,6 +183,11 @@ export function applyMarketNames({ game, plan, catalogue, ledger, now }) {
   return { plan: { rows, stats, unmatched: plan.unmatched.filter((u) => !mapped.has(u.key)) }, log }
 }
 
+/** The market keys exact matching resolved this run (title / derived / year / alias), once each. */
+export function exactlyMatchedNames(plan) {
+  return [...new Set(plan.rows.filter((r) => r.parse_status === 'matched' && r._market_key).map((r) => r._market_key))]
+}
+
 export async function importEldoradoFeed({ game, feed, env, yes = false, write = false, allowPartial = false, cataloguePath }) {
   const observedAt = new Date().toISOString()
   if (!write) {
@@ -231,7 +236,7 @@ export async function importEldoradoFeed({ game, feed, env, yes = false, write =
     // History is untouched.
     await retireUnseenRawListings(db, game_.id, observedAt)
     // Offer counts are only true for a complete crawl.
-    if (log) await saveMarketNamesSafe(db, game, log.rows)
+    if (log) await saveMarketNamesSafe(db, game, log.rows, 'eldorado', { resolvedNames: exactlyMatchedNames(exact) })
   }
   return plan
 }

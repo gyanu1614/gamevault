@@ -14,7 +14,8 @@
  *
  * Order of trust: the exact wiki title / infobox title (1.0) → a title with
  * its type qualifier removed (0.9) → a reviewed alias (0.85) → the name plus
- * the row's release year, "Harvester (2021)" (0.8). A derived or year key
+ * the row's release year, "Harvester (2021)", or a season-dated name without
+ * its season, "Soda (2025)" for "Soda Knife (Summer 2025)" (0.8). A derived or year key
  * two rows both claim is dropped (ambiguous) rather than guessed. Nothing
  * fuzzy: a name that resolves to nothing goes to the alias review file.
  *
@@ -124,6 +125,13 @@ export function buildMarketIndex(entries: CatalogueEntry[], aliases: MarketAlias
           const n = e.isChroma ? chromaBase(name) : name
           if (n) claim(yearClaims, marketKey(e.itemType, variant, `${n} (${e.releaseYear})`), e.slug)
         }
+      }
+      // "Soda (Summer 2025)" (from "Soda Knife (Summer 2025)") also sells as
+      // "Soda 2025": Eldorado drops the season word and keeps the year.
+      for (const name of derived) {
+        const seasoned = name.match(/^(.*\S)\s+\((?:[A-Za-z]+\s+)+(\d{4})\)$/)
+        const n = seasoned && (e.isChroma ? chromaBase(seasoned[1]) : seasoned[1])
+        if (n) claim(yearClaims, marketKey(e.itemType, variant, `${n} (${seasoned[2]})`), e.slug)
       }
     }
   }

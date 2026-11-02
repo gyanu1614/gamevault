@@ -108,6 +108,42 @@ describe('resolveMarketKey', () => {
   })
 })
 
+/**
+ * 2026-11-02: Eldorado sells "Soda Knife (Summer 2025)" as knife "Soda 2025"
+ * (and Coconut, Striped, Leaves the same way): the season word goes, the year
+ * stays. A season-dated name also answers to "<name> (<year>)", at the year
+ * rule's trust, and never when two rows would claim it.
+ */
+describe('season-dated names', () => {
+  const rows = [
+    e('soda-knife-summer-2025', 'Soda Knife (Summer 2025)', 'knife', { releaseYear: 2025 }),
+    e('soda-gun-summer-2025', 'Soda Gun (Summer 2025)', 'gun', { releaseYear: 2025 }),
+    e('stickers-knife-christmas-2025', 'Stickers Knife (Christmas 2025)', 'knife', { releaseYear: 2025 }),
+    e('stickers-knife-summer-2025', 'Stickers Knife (Summer 2025)', 'knife', { releaseYear: 2025 }),
+    e('soda', 'Soda', 'gun'),
+  ]
+  const idx = buildMarketIndex(rows)
+  const r = (type: string, name: string) => resolveMarketKey(marketKey(type, 'default', name), idx)
+
+  it('drops the season, keeps the year', () => {
+    expect(r('knife', 'Soda 2025')).toMatchObject({ slug: 'soda-knife-summer-2025', via: 'year' })
+    expect(r('gun', 'Soda 2025')).toMatchObject({ slug: 'soda-gun-summer-2025', via: 'year' })
+  })
+
+  it('still answers to the full season name', () => {
+    expect(r('knife', 'Stickers (Christmas 2025)').slug).toBe('stickers-knife-christmas-2025')
+  })
+
+  it('never guesses between two seasons of the same year', () => {
+    expect(r('knife', 'Stickers 2025').slug).toBeNull()
+    expect(idx.ambiguousKeys.has(marketKey('knife', 'default', 'Stickers (2025)'))).toBe(true)
+  })
+
+  it('a plain title keeps its own exact match', () => {
+    expect(r('gun', 'Soda')).toMatchObject({ slug: 'soda', via: 'title' })
+  })
+})
+
 describe('suggestForReview', () => {
   it('suggests same-type rows sharing the first word, for the review CSV only', () => {
     expect(suggestForReview('gun|default|rainbow', CATALOGUE)).toEqual(['rainbow-gun', 'rainbow-gun-godly'])

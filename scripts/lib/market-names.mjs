@@ -81,8 +81,16 @@ export async function loadMarketNames(db, game, source = 'eldorado') {
   }
 }
 
-/** Upsert this run's rows (decisions are carried through unchanged) and forget stale unmatched names. */
-export async function saveMarketNames(db, game, rows, source = 'eldorado') {
+/**
+ * Upsert this run's rows (decisions are carried through unchanged) and forget
+ * stale unmatched names: any not seen for FORGET_UNMATCHED_DAYS, and at once
+ * any that exact matching caught this run (`resolvedNames`, e.g. a new item's
+ * "embergun 2026" once the item exists), so the admin list only shows names
+ * that are still open.
+ * @param {{ resolvedNames?: string[] }} [options]
+ */
+export async function saveMarketNames(db, game, rows, source = 'eldorado', options = {}) {
+  const resolvedNames = options.resolvedNames ?? []
   for (let i = 0; i < rows.length; i += 500) {
     const { error } = await db.from('market_name_matches').upsert(rows.slice(i, i + 500), { onConflict: 'game_slug,source,market_name' })
     if (error) throw new Error(`market_name_matches upsert: ${error.message}`)
@@ -96,6 +104,16 @@ export async function saveMarketNames(db, game, rows, source = 'eldorado') {
     .eq('status', 'unmatched')
     .lt('last_seen_at', cutoff)
   if (error) throw new Error(`market_name_matches prune: ${error.message}`)
+  for (let i = 0; i < resolvedNames.length; i += 200) {
+    const { error: clearError } = await db
+      .from('market_name_matches')
+      .delete()
+      .eq('game_slug', game)
+      .eq('source', source)
+      .eq('status', 'unmatched')
+      .in('market_name', resolvedNames.slice(i, i + 200))
+    if (clearError) throw new Error(`market_name_matches clear: ${clearError.message}`)
+  }
 }
 
 /**
@@ -112,9 +130,9 @@ export async function loadMarketNamesSafe(db, game, source = 'eldorado') {
   }
 }
 
-export async function saveMarketNamesSafe(db, game, rows, source = 'eldorado') {
+export async function saveMarketNamesSafe(db, game, rows, source = 'eldorado', options = {}) {
   try {
-    await saveMarketNames(db, game, rows, source)
+    await saveMarketNames(db, game, rows, source, options)
   } catch (e) {
     console.warn(`::warning::match log not saved for ${game} (${e.message})`)
   }
