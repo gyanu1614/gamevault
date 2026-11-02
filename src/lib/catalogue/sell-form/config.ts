@@ -13,7 +13,7 @@ export const MM2_SELL_FORM: SellFormConfig = {
     { key: 'gun', label: 'Guns', aliases: ['gun', 'guns'], listName: 'Gun Name' },
     { key: 'pet', label: 'Pets', aliases: ['pet', 'pets'], listName: 'Pet Name' },
   ],
-  rarities: ['Common', 'Uncommon', 'Rare', 'Legendary', 'Vintage', 'Godly', 'Ancient', 'Unique', 'Chroma'],
+  rarities: ['Common', 'Uncommon', 'Rare', 'Legendary', 'Vintage', 'Godly', 'Ancient', 'Evo', 'Unique', 'Chroma'],
   // The 2026-10-09 copied lists and the 2026-10-13 hand-made rarity/name fields.
   legacyFields: [
     'select-knife', 'select-gun', 'select-pet',

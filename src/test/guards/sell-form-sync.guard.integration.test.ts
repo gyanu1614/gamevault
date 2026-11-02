@@ -110,9 +110,9 @@ describe.skipIf(!hasEnv)('sell-form sync (integration)', () => {
       { attribute_id: byslug['knife-name-5'], trigger_attribute_id: byslug['rarity-2'], operator: 'equals', trigger_values: ['ancient'] },
     ]))
     await must('items', svc.from('values_items').insert([
-      { game_id: gameId, kind: 'item', slug: 'emberbow', name: 'Emberbow', item_type: 'gun', rarity: 'Ancient', is_enabled: true },
-      { game_id: gameId, kind: 'item', slug: 'hallowscythe', name: 'Hallowscythe', item_type: 'knife', rarity: 'Ancient', is_enabled: true },
-      { game_id: gameId, kind: 'item', slug: 'gingerscythe', name: 'Gingerscythe', item_type: 'knife', rarity: null, is_enabled: true },
+      { game_id: gameId, kind: 'item', slug: 'emberbow', name: 'Emberbow', item_type: 'gun', rarity: 'Ancient', is_enabled: true, is_priced: true },
+      { game_id: gameId, kind: 'item', slug: 'hallowscythe', name: 'Hallowscythe', item_type: 'knife', rarity: 'Ancient', is_enabled: true, is_priced: true },
+      { game_id: gameId, kind: 'item', slug: 'gingerscythe', name: 'Gingerscythe', item_type: 'knife', rarity: null, is_enabled: true, is_priced: true },
     ]))
     const l = await must<any>('listing', svc.from('listings').insert({
       seller_id: fx.seller.id, game_id: gameId, game_category_id: gcId, title: fx.ns.listingTitle(), description: 'guard test throwaway',
@@ -186,7 +186,7 @@ describe.skipIf(!hasEnv)('sell-form sync (integration)', () => {
     await must('admin option', svc.from('attribute_options').insert({ attribute_id: gun.id, slug: 'night-bow', value: 'night-bow', label: 'Night Bow', sort_order: 9 }))
     await run()
     expect(await optionValues('gun-ancient')).toEqual(['emberbow', 'night-bow', 'other'])
-    await must('new item', svc.from('values_items').insert({ game_id: gameId, kind: 'item', slug: 'nightbow', name: 'Nightbow', item_type: 'gun', rarity: 'Ancient', is_enabled: true }))
+    await must('new item', svc.from('values_items').insert({ game_id: gameId, kind: 'item', slug: 'nightbow', name: 'Nightbow', item_type: 'gun', rarity: 'Ancient', is_enabled: true, is_priced: true }))
     const { report } = await run()
     expect(report.optionsCreated).toEqual([])
     expect(await optionValues('gun-ancient')).toEqual(['emberbow', 'nightbow', 'other'])

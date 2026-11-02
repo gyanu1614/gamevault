@@ -331,3 +331,39 @@ describe('buildMm2Catalogue: the opening sentence beats a copied infobox type', 
     expect(typeFromTitle('Gun')).toBeNull()
   })
 })
+
+/**
+ * 2026-11-02: 12 MM2 rows had no rarity. Four are Evo gamepass knives (the wiki
+ * keeps "Evo" in `tier=`, which was never read); eight can't be traded at all
+ * (unreleased designs, default skins, the Classic Knife/Gun everyone gets),
+ * and were offered for sale and priced like any item.
+ */
+describe('buildMm2Catalogue: Evo tier and items that cannot be traded', () => {
+  const box = (title: string, fields: string, lead: string) => ({
+    title,
+    wikitext: `{{Infobox_Item\n|title=${title}\n|type=[[:Category:Knives|Knife]]\n${fields}\n}}\n'''${title}''' ${lead}`,
+  })
+  const { items } = buildMm2Catalogue([
+    box('Reaver', '|rarity=\n|tier=Evo\n|obtain=[[Reaver Gamepass]] (Offsale)', 'is an Evo knife that was originally obtainable by purchasing the Reaver Gamepass.'),
+    box('Gingerscythe', '|rarity=[[Rare Weapons|<span>Evo</span>]]\n|tier=Evo\n|obtain=[[Gingerscythe Gamepass]]', 'is an Evo knife that was obtainable in the 2023 Christmas Event.'),
+    box('Wrapped Knife (2022)', '|rarity=N/A\n|tier=N/A\n|obtain=Unreleased', 'is an unreleased knife that was designed for the 2022 Christmas Event.'),
+    box('Classic Knife', '|rarity=N/A\n|tier=N/A\n|obtain=Default', 'or Default Knife, was a knife given to players by default upon joining a game.'),
+    box('Twitter', '|rarity=Default\n|tier=N/A\n|obtain=N/A', 'was a Default Knife skin made by didi1147.'),
+    box('Harvester', '|rarity=[[Ancient Weapons|Ancient]]\n|obtain=[[Halloween Event 2021]]', 'is an ancient knife.'),
+  ])
+  const bySlug = new Map(items.map((i) => [i.slug, i]))
+
+  it('reads the Evo tier, from rarity= or tier=', () => {
+    expect(parseRarity('Evo')).toBe('Evo')
+    expect(bySlug.get('reaver')?.rarity).toBe('Evo')
+    expect(bySlug.get('gingerscythe')?.rarity).toBe('Evo')
+  })
+
+  it('marks unreleased designs and default items as not tradeable (kept, never priced or sold)', () => {
+    expect(bySlug.get('wrapped-knife-2022')?.tradeable).toBe(false)
+    expect(bySlug.get('classic-knife')?.tradeable).toBe(false)
+    expect(bySlug.get('twitter')?.tradeable).toBe(false)
+    expect(bySlug.get('harvester')?.tradeable).toBe(true)
+    expect(bySlug.get('reaver')?.tradeable).toBe(true)
+  })
+})

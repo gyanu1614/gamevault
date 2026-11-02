@@ -58,6 +58,7 @@ export function parseMm2Page(page: WikiPage, boxes: BoxPage[], checkedAt: string
       displayTitle: item.displayTitle,
       releaseYear: item.releaseYear,
       obtain: item.obtain,
+      tradeable: item.tradeable,
     },
   }
 }
@@ -159,7 +160,8 @@ export const murderMystery2: CatalogueAdapter = {
         how_to_get: item.howToGet,
         image_url: copied ? publicImageUrl(db, BUCKET, path) : null,
         image_attribution: copied && item.imageFile ? attribution(item.imageFile) : null,
-        is_priced: true,
+        // An unreleased design or default skin keeps its page but is never priced or sold.
+        is_priced: item.extra.tradeable !== false,
         is_enabled: true,
         sort_order: order++,
       })

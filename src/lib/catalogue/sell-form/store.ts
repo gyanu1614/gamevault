@@ -64,8 +64,11 @@ export async function loadForm(db: Db, gameSlug: string): Promise<LoadedForm | n
 /** Every catalogue row, disabled ones too (a disabled item's option is dropped, not orphaned). */
 export async function loadCatalogue(db: Db, gameId: string): Promise<CatalogueEntry[]> {
   const rows = await selectAll<any>('values_items', (a, b) =>
-    db.from('values_items').select('slug,name,item_type,rarity,is_enabled').eq('game_id', gameId).order('slug').range(a, b))
-  return rows.map((r) => ({ slug: r.slug, name: r.name, itemType: r.item_type ?? null, rarity: r.rarity ?? null, enabled: r.is_enabled !== false }))
+    db.from('values_items').select('slug,name,item_type,rarity,is_enabled,is_priced').eq('game_id', gameId).order('slug').range(a, b))
+  return rows.map((r) => ({
+    slug: r.slug, name: r.name, itemType: r.item_type ?? null, rarity: r.rarity ?? null,
+    enabled: r.is_enabled !== false, priced: r.is_priced !== false,
+  }))
 }
 
 /** Listings a seller can still come back to (choice-usage's set). */

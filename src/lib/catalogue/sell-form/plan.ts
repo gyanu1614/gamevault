@@ -70,7 +70,9 @@ export function planSellForm(config: SellFormConfig, items: CatalogueEntry[], fo
     typeValues: {},
     warnings: [],
   }
-  const enabled = items.filter((i) => i.enabled)
+  // For sale: enabled, and tradeable (an unreleased design or default skin keeps its page, is never sold).
+  const sellable = (i: CatalogueEntry) => i.enabled && i.priced !== false
+  const enabled = items.filter(sellable)
   const typed = new Map<string, CatalogueEntry[]>(config.types.map((t) => [t.key, []]))
   const untyped = new Map<string, number>()
   for (const i of enabled) {
@@ -218,7 +220,7 @@ export function planSellForm(config: SellFormConfig, items: CatalogueEntry[], fo
         continue
       }
       const known = (m?.item && catalogueBySlug.get(m.item)) || catalogueBySlug.get(o.value) || catalogueByName.get(nameKey(o.label))
-      if (known && !known.enabled) plan.deleteOptions.push({ id: o.id, node, value: o.value, reason: 'disabled in the catalogue' })
+      if (known && !sellable(known)) plan.deleteOptions.push({ id: o.id, node, value: o.value, reason: known.enabled ? 'not tradeable' : 'disabled in the catalogue' })
       else if (known && homeOf(known)) plan.deleteOptions.push({ id: o.id, node, value: o.value, reason: `belongs in ${homeOf(known)}` })
       else if (m) plan.deleteOptions.push({ id: o.id, node, value: o.value, reason: 'not in the catalogue' })
       else rows.push({ label: o.label, option: o }) // the admin's own option: kept as it is

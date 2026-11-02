@@ -119,6 +119,16 @@ describe('planSellForm: building the chain from the catalogue', () => {
     expect(plan.deleteOptions).toEqual([])
   })
 
+  it('never offers an item the catalogue marks not tradeable (unreleased, default skins)', () => {
+    const rows = [...ITEMS, { ...item('classic-knife', 'Classic Knife', 'knife', null), priced: false }]
+    const form = apply(empty(), planSellForm(CONFIG, rows, empty()))
+    expect(optionsOf(form, 'knife-other').map((o) => o.value)).toEqual(['gingerscythe', 'other'])
+    // An option that already exists for one is dropped (when no listing uses it).
+    const list = field(form, 'knife-other')!
+    form.options.push({ id: 'old', attributeId: list.id, slug: 'classic-knife', value: 'classic-knife', label: 'Classic Knife', metadata: {}, sortOrder: 5 })
+    expect(planSellForm(CONFIG, rows, form).deleteOptions).toEqual([{ id: 'old', node: 'knife-other', value: 'classic-knife', reason: 'not tradeable' }])
+  })
+
   it('reports items of a type the form has no chain for', () => {
     const plan = planSellForm(CONFIG, [...ITEMS, item('cat', 'Cat', 'pet', 'Common')], empty())
     expect(plan.warnings.join(' ')).toMatch(/1 item of type "pet"/)

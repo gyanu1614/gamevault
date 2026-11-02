@@ -84,6 +84,8 @@ export interface CatalogueEntry {
   itemType: string | null
   rarity: string | null
   enabled: boolean
+  /** values_items.is_priced: false for an item that cannot be traded (unreleased, a default skin). */
+  priced?: boolean
 }
 
 /** A field the chain needs; `node` is also its canonical slug. */
