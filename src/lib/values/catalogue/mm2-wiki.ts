@@ -46,6 +46,8 @@ export interface BoxReward {
   chancePct: number | null
   /** As listed ("0.004%", "<0.2%"). */
   chanceText: string | null
+  /** The table's Type column, when it has one. */
+  itemType: 'knife' | 'gun' | 'pet' | null
 }
 
 export interface BoxPage {
@@ -272,7 +274,9 @@ export function parseObtain(raw: string | null | undefined): ObtainSource[] {
     if (!text || /^trading\b/i.test(text) || /^\w+=/.test(text)) continue
     const linked = firstLinkTarget(rawLine)
     const formerly = FORMERLY_RE.test(text)
-    const year = Number(text.match(YEAR_RE)?.[1] ?? NaN)
+    // "Summer Box '26" is the 2026 box.
+    const shortYear = text.match(/\b(?:Box|Crate)\s+'(\d{2})\b/)?.[1]
+    const year = Number(text.match(YEAR_RE)?.[1] ?? (shortYear ? `20${shortYear}` : NaN))
     const base: Omit<ObtainSource, 'kind' | 'name'> = {
       year: Number.isFinite(year) ? year : null,
       method: null,
@@ -348,16 +352,29 @@ export function parseBoxPage(title: string, wikitext: string): BoxPage {
       const chanceCell = cells.find((c) => /^<?\s*[\d.]+\s*%\**$/.test(stripWiki(c)))
       const chanceText = chanceCell ? stripWiki(chanceCell).replace(/\*+$/, '') : null
       const rarityCell = cells.find((c) => RARITIES.some((r) => stripWiki(c).toLowerCase() === r.toLowerCase()))
+      const typeCell = cells.map((c) => stripWiki(c).toLowerCase()).find((c) => c === 'knife' || c === 'gun' || c === 'pet')
       rewards.push({
         title: target,
         rarity: rarityCell ? stripWiki(rarityCell) : null,
         // "<0.2%" is a bound, not a chance: keep the text, never a number.
         chancePct: chanceText && /^[\d.]+\s*%$/.test(chanceText) ? Number(chanceText.replace('%', '')) : null,
         chanceText,
+        itemType: (typeCell as BoxReward['itemType']) ?? null,
       })
     }
   }
   return { title, purchasable, costs: parseCosts(intro), rewards }
+}
+
+/** The Type column of the box tables that list this item; null when none do, or they disagree. */
+function boxTableType(title: string, obtain: ObtainSource[], boxByTitle: Map<string, BoxPage>): Mm2CatalogueItem['itemType'] {
+  const types = new Set<BoxReward['itemType']>()
+  for (const source of obtain) {
+    if (source.kind !== 'box') continue
+    const reward = boxByTitle.get((source.wiki_page ?? source.name).toLowerCase())?.rewards.find((r) => r.title.toLowerCase() === title.toLowerCase())
+    if (reward?.itemType) types.add(reward.itemType)
+  }
+  return types.size === 1 ? [...types][0] : null
 }
 
 /** `[[Category:X]]` names on a page. */
@@ -388,15 +405,21 @@ export function buildMm2Catalogue(pages: WikiPage[], boxes: BoxPage[] = []): { i
       continue
     }
     const categories = pageCategories(page.wikitext)
+    const obtain = parseObtain(box.obtain ?? box.oqbtain)
     // A type in the TITLE ("Pop Art (Knife)", "Bats Knife (2018)"), then the
-    // page's own opening sentence, beat an infobox copied from the sibling
-    // page with the wrong `type=`.
-    const itemType = typeFromTitle(page.title) ?? typeFromLead(page.wikitext, page.title) ?? parseItemType(box.type, categories)
+    // infobox and the box table when they agree (Dolphins), then the page's
+    // own opening sentence, beat an infobox copied from the sibling page with
+    // the wrong `type=`.
+    const boxType = boxTableType(page.title, obtain, boxByTitle)
+    const itemType =
+      typeFromTitle(page.title) ??
+      (boxType && boxType === parseItemType(box.type) ? boxType : null) ??
+      typeFromLead(page.wikitext, page.title) ??
+      parseItemType(box.type, categories)
     if (!itemType) {
       skipped.push({ title: page.title, reason: `no item type (${stripWiki(box.type) || 'empty'})` })
       continue
     }
-    const obtain = parseObtain(box.obtain ?? box.oqbtain)
     if (/\(scrapped\)/i.test(page.title) || (obtain.length > 0 && obtain.every((o) => o.kind === 'unobtainable'))) {
       skipped.push({ title: page.title, reason: 'scrapped' })
       continue

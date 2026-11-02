@@ -144,6 +144,41 @@ describe('season-dated names', () => {
   })
 })
 
+/**
+ * 2026-11-02: the first Halloween 2021 Stickers pair is titled "Stickers
+ * (Knife)" / "Stickers (Gun)" on the wiki, while Eldorado (which sells a
+ * dozen Stickers) names each by its event: "Stickers (Halloween 2021)". A row
+ * whose first source is a dated event or box answers to that name too.
+ */
+describe('event-dated names from the origin', () => {
+  const rows = [
+    e('stickers-knife', 'Stickers (Knife)', 'knife', { releaseYear: 2021, origin: '2021 Halloween Box' }),
+    e('stickers-gun', 'Stickers (Gun)', 'gun', { releaseYear: 2021, origin: 'Halloween Event 2021' }),
+    e('stickers-knife-halloween-2022', 'Stickers Knife (Halloween 2022)', 'knife', { releaseYear: 2022, origin: '2022 Halloween Box' }),
+    e('hearts-2016', 'Hearts (2016)', 'knife', { releaseYear: 2016, origin: 'Valentines Event 2016' }),
+    e('cowboy-knife', 'Cowboy (Knife)', 'knife', { origin: 'Shop' }),
+    e('twin-a', 'Twin (Knife)', 'knife', { releaseYear: 2024, origin: 'Christmas Event 2024' }),
+    e('twin-b', 'Twin Knife (Rare)', 'knife', { displayTitle: 'Twin', releaseYear: 2024, origin: '2024 Christmas Box' }),
+  ]
+  const idx = buildMarketIndex(rows)
+  const r = (type: string, name: string) => resolveMarketKey(marketKey(type, 'default', name), idx)
+
+  it('an item from a dated event or box sells under "<name> (<season> <year>)"', () => {
+    expect(r('knife', 'Stickers (Halloween 2021)')).toMatchObject({ slug: 'stickers-knife', via: 'year' })
+    expect(r('gun', 'Stickers (Halloween 2021)')).toMatchObject({ slug: 'stickers-gun', via: 'year' })
+  })
+
+  it('never for an undated or season-less origin, and never over a real title', () => {
+    expect(r('knife', 'Cowboy (Shop)').slug).toBeNull()
+    expect(r('knife', 'Stickers (Halloween 2022)').slug).toBe('stickers-knife-halloween-2022')
+    expect(r('knife', 'Hearts (2016)')).toMatchObject({ slug: 'hearts-2016', via: 'title' })
+  })
+
+  it('two rows from the same event claiming one name is ambiguous', () => {
+    expect(r('knife', 'Twin (Christmas 2024)').slug).toBeNull()
+  })
+})
+
 describe('suggestForReview', () => {
   it('suggests same-type rows sharing the first word, for the review CSV only', () => {
     expect(suggestForReview('gun|default|rainbow', CATALOGUE)).toEqual(['rainbow-gun', 'rainbow-gun-godly'])

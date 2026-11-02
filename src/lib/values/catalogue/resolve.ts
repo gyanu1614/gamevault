@@ -14,8 +14,10 @@
  *
  * Order of trust: the exact wiki title / infobox title (1.0) → a title with
  * its type qualifier removed (0.9) → a reviewed alias (0.85) → the name plus
- * the row's release year, "Harvester (2021)", or a season-dated name without
- * its season, "Soda (2025)" for "Soda Knife (Summer 2025)" (0.8). A derived or year key
+ * the row's release year, "Harvester (2021)", or its event, "Stickers
+ * (Halloween 2021)" for "Stickers (Knife)" from the 2021 Halloween Box, or a
+ * season-dated name without its season, "Soda (2025)" for "Soda Knife (Summer
+ * 2025)" (0.8). A derived or year key
  * two rows both claim is dropped (ambiguous) rather than guessed. Nothing
  * fuzzy: a name that resolves to nothing goes to the alias review file.
  *
@@ -39,6 +41,12 @@ export interface CatalogueEntry {
    * known year also answers to "<name> (<year>)".
    */
   releaseYear?: number | null
+  /**
+   * First source ("2021 Halloween Box", "Halloween Event 2021"). Eldorado
+   * dates an event item by its event, "Stickers (Halloween 2021)", when the
+   * wiki title carries none.
+   */
+  origin?: string | null
 }
 
 export interface MarketAlias {
@@ -80,6 +88,15 @@ export function marketNamesFor(title: string, itemType: string | null): { exact:
   return { exact, derived }
 }
 
+const SEASON_RE = /\b(Halloween|Christmas|Easter|Summer|Thanksgiving|Valentine'?s?)\b/i
+
+/** "2021 Halloween Box" / "Halloween Event 2021" → "Halloween 2021"; null without both. */
+function eventDate(origin: string | null | undefined): string | null {
+  const season = origin?.match(SEASON_RE)?.[1]
+  const year = origin?.match(/\b(20\d{2})\b/)?.[1]
+  return season && year ? `${season} ${year}` : null
+}
+
 function chromaBase(name: string): string | null {
   const m = name.match(/^chroma\s+(.+)$/i)
   return m ? m[1] : null
@@ -117,13 +134,15 @@ export function buildMarketIndex(entries: CatalogueEntry[], aliases: MarketAlias
         const n = e.isChroma ? chromaBase(name) : name
         if (n) claim(derivedClaims, marketKey(e.itemType, variant, n), e.slug)
       }
-      // "Harvester" released 2021 also sells as "Harvester (2021)". Only for a
-      // name that carries no parenthetical of its own.
-      if (e.releaseYear) {
+      // "Harvester" released 2021 also sells as "Harvester (2021)", and
+      // "Stickers (Knife)" from the 2021 Halloween Box as "Stickers (Halloween
+      // 2021)". Only for a name that carries no parenthetical of its own.
+      const dates = [e.releaseYear ? String(e.releaseYear) : null, eventDate(e.origin)].filter(Boolean)
+      for (const date of dates) {
         for (const name of [...exact, ...derived]) {
           if (/\(/.test(name)) continue
           const n = e.isChroma ? chromaBase(name) : name
-          if (n) claim(yearClaims, marketKey(e.itemType, variant, `${n} (${e.releaseYear})`), e.slug)
+          if (n) claim(yearClaims, marketKey(e.itemType, variant, `${n} (${date})`), e.slug)
         }
       }
       // "Soda (Summer 2025)" (from "Soda Knife (Summer 2025)") also sells as

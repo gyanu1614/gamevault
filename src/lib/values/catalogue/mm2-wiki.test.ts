@@ -189,6 +189,10 @@ describe('parseObtain', () => {
     expect(sources[2].year).toBe(2023)
     expect(sources[7].cost).toEqual({ amount: 75, currency: 'Coins' })
   })
+
+  it("dates a box written with a two-digit year (\"Summer Box '26\")", () => {
+    expect(parseObtain("[[Summer Box '26]]\n[[Trading]]")).toMatchObject([{ kind: 'box', name: "Summer Box '26", year: 2026 }])
+  })
 })
 
 describe('parseBoxPage', () => {
@@ -213,6 +217,11 @@ describe('parseBoxPage', () => {
     const chroma = box.rewards.find((r) => r.title === "Chroma Traveler's Gun")!
     expect(chroma.chancePct).toBeNull()
     expect(chroma.chanceText).toBe('<0.2%')
+  })
+
+  it('reads the Type column when the table has one', () => {
+    expect(parseBoxPage('2023 Halloween Box', HALLOWEEN_BOX_2023).rewards.map((r) => r.itemType)).toEqual(['gun', 'gun'])
+    expect(parseBoxPage('Knife Box 2', KNIFE_BOX_2).rewards.map((r) => r.itemType)).toEqual([null, null, null])
   })
 })
 
@@ -280,6 +289,37 @@ describe('buildMm2Catalogue', () => {
  * sentence (and Eldorado) says knife. The opening sentence is written for the
  * page; the infobox is often copied from a sibling.
  */
+/**
+ * 2026-11-02: the Dolphins page's opening sentence (and category) say gun,
+ * copied from a sibling page, while its infobox, its picture ("Dolphins K
+ * 2025") and the 2025 Summer Box table all say knife, as does Eldorado. The
+ * box table alone is no better: it calls Bells (a knife) a gun. So the infobox
+ * and the box table beat the sentence only when they agree.
+ */
+describe('buildMm2Catalogue: infobox and box table agreeing beat the opening sentence', () => {
+  const box = (rows: Array<[string, string]>) =>
+    parseBoxPage('2025 Summer Box', `{| class="wikitable"\n${rows.map(([t, type]) => `|-\n|[[${t}]]\n|${type}\n|Common\n|70%`).join('\n')}\n|}`)
+  const page = (title: string, type: string, lead: string) => ({
+    title,
+    wikitext: `{{Infobox_Item\n|title=${title}\n|type=[[:Category:Knives|${type}]]\n|rarity=[[Common Weapons|Common]]\n|obtain=[[2025 Summer Box]]\n}}'''${title}''' is a common ${lead} that is obtainable from the [[2025 Summer Box]].`,
+  })
+  const { items } = buildMm2Catalogue(
+    [page('Dolphins', 'Knife', 'gun'), page('Bells', 'Knife', 'knife'), page('Ritual', 'Gun', 'gun'), page('Skyline', 'Gun', 'knife')],
+    [box([['Dolphins', 'Knife'], ['Bells', 'Gun'], ['Ritual', 'Knife'], ['Skyline', 'Knife']])],
+  )
+  const typeOf = (slug: string) => items.find((i) => i.slug === slug)?.itemType
+
+  it('takes the type the infobox and the box table both state', () => {
+    expect(typeOf('dolphins')).toBe('knife')
+  })
+
+  it('keeps the sentence when the box table stands alone', () => {
+    expect(typeOf('bells')).toBe('knife')
+    expect(typeOf('ritual')).toBe('gun')
+    expect(typeOf('skyline')).toBe('knife')
+  })
+})
+
 describe('typeFromLead', () => {
   it('reads the type the opening sentence states', () => {
     expect(typeFromLead("{{Infobox_Item\n|title=Sand\n|type=[[:Category:Knives|Gun]]\n}}\n'''Sand''' is a common Knife obtainable from opening the [[Summer Box '26]].", 'Sand')).toBe('knife')
