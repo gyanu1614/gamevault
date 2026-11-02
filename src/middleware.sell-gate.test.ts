@@ -23,8 +23,8 @@ vi.mock('@/lib/supabase/middleware', () => ({
 
 import { middleware } from './middleware'
 
-async function go(path: string) {
-  const res = await middleware(new NextRequest(`http://localhost${path}`))
+async function go(path: string, init?: { method?: string; headers?: Record<string, string> }) {
+  const res = await middleware(new NextRequest(`http://localhost${path}`, init))
   return { status: res.status, location: res.headers.get('location') }
 }
 
@@ -82,5 +82,35 @@ describe('ACC-07 — /sell surface gate', () => {
     const r = await go('/sell/new')
     expect(r.location).toBe('http://localhost/login?redirect=%2Fsell%2Fnew')
     expect(h.rpcCalls).toEqual([])
+  })
+
+  // Speed (2026-10-29): every sell-wizard server action is a POST to /sell/*.
+  // The action re-checks sell access itself (publish / update / bulk / upload
+  // call sellAccessKind; RLS and the listings trigger check it again), so the
+  // page gate's RPC on an action POST is a duplicate round trip.
+  it('a server-action POST is signed-in checked but skips the sell-access RPC', async () => {
+    h.kind = 'none'
+    const r = await go('/sell/new', { method: 'POST', headers: { 'next-action': 'abc123' } })
+    expect(r.status).toBe(200)
+    expect(h.rpcCalls).toEqual([])
+  })
+
+  it('a signed-out server-action POST still goes to login', async () => {
+    h.user = null
+    const r = await go('/sell/new', { method: 'POST', headers: { 'next-action': 'abc123' } })
+    expect(r.location).toBe('http://localhost/login?redirect=%2Fsell%2Fnew')
+  })
+
+  it('a page GET carrying a forged Next-Action header is still gated', async () => {
+    h.kind = 'none'
+    const r = await go('/sell/new', { headers: { 'next-action': 'abc123' } })
+    expect(r.location).toBe('http://localhost/founding')
+    expect(h.rpcCalls).toEqual(['sell_access_kind'])
+  })
+
+  it('an action POST on a seller-only /account route keeps the role gate', async () => {
+    h.kind = 'applicant'
+    const r = await go('/account/listings', { method: 'POST', headers: { 'next-action': 'abc123' } })
+    expect(r.location).toBe('http://localhost/?access=seller-only')
   })
 })

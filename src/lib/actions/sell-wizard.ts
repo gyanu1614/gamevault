@@ -18,7 +18,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
-import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
+import { getAttributeTemplateFull } from '@/lib/actions/new-schema'
+import { getSellCategories, getSellGames } from '@/lib/sell/catalog-read'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
 import { findEnabledGameCategory } from '@/lib/categories'
 import { logUrlEvents, snapshotListings, submitListingChanges } from '@/lib/seo/indexnow'
@@ -386,7 +387,11 @@ export async function fetchPublishPolicy(): Promise<Result<SellerPublishPolicy>>
 // ─── READS (thin wrappers) ───────────────────────────────────────────────────
 
 export async function fetchSellCategories(): Promise<Result<GlobalCategory[]>> {
-  return getGlobalCategories({ includeDisabled: true })
+  try {
+    return { success: true, data: await getSellCategories() }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
 }
 
 /**
@@ -410,53 +415,10 @@ export interface SellGameOption {
   delivery_modes: string[]
 }
 
+/** Cached for every seller alike (lib/sell/catalog-read). */
 export async function fetchSellGamesForCategory(categorySlug: string): Promise<Result<SellGameOption[]>> {
   try {
-    const supabase = await createClient()
-
-    // First get the (game, category) join rows for this category slug
-    const gcRes = await getGamesForGlobalCategory(categorySlug)
-    if (!gcRes.success) return gcRes
-    const joins = gcRes.data
-    if (joins.length === 0) return { success: true, data: [] }
-
-    // Fetch all the matching games in one query
-    const gameIds = joins.map((j) => j.game_id)
-    const { data: games, error } = await supabase
-      .from('games')
-      .select('id, name, slug, image_url, cover_url, emoji, sort_order, is_active')
-      .in('id', gameIds)
-      .eq('is_active', true)
-    if (error) return { success: false, error: error.message }
-
-    const byGameId = new Map<string, any>()
-    for (const g of (games ?? []) as any[]) byGameId.set(g.id, g)
-
-    const data: SellGameOption[] = joins
-      .map((j) => {
-        const g = byGameId.get(j.game_id)
-        if (!g) return null
-        return {
-          game_category_id: j.id,
-          game_id: j.game_id,
-          game_name: g.name,
-          game_slug: g.slug,
-          game_logo_url: g.image_url ?? null,
-          game_cover_url: g.cover_url ?? null,
-          game_emoji: g.emoji ?? null,
-          game_sort_order: g.sort_order ?? 99,
-          game_is_active: !!g.is_active,
-          requires_region: j.requires_region,
-          available_regions: j.available_regions ?? [],
-          requires_platform: j.requires_platform,
-          available_platforms: j.available_platforms ?? [],
-          delivery_modes: j.delivery_modes ?? ['manual'],
-        }
-      })
-      .filter((x): x is SellGameOption => !!x)
-      .sort((a, b) => a.game_sort_order - b.game_sort_order || a.game_name.localeCompare(b.game_name))
-
-    return { success: true, data }
+    return { success: true, data: await getSellGames(categorySlug) }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }

@@ -68,6 +68,21 @@ export interface Mm2CatalogueItem {
   origin: string | null
   obtain: ObtainSource[]
   imageFile: string | null
+  /**
+   * False for a page that exists but is not a tradeable item: an unreleased
+   * design, a default skin, the Classic Knife/Gun every player has. Kept (it
+   * has a values page), but never priced or offered for sale.
+   */
+  tradeable: boolean
+}
+
+/** No rarity, and the page says the item was never released or is a default one. */
+function untradeable(box: Record<string, string>, wikitext: string, title: string, rarity: string | null): boolean {
+  if (rarity) return false
+  if (/\bunreleased\b|^\s*default\b/i.test(stripWiki(box.obtain ?? '')) || /\bdefault\b/i.test(stripWiki(box.rarity ?? ''))) return true
+  const name = title.replace(/\s*\([^)]*\)\s*$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const lead = wikitext.match(new RegExp(`'''${name}'''([^\\n]{0,200})`, 'i'))?.[1] ?? ''
+  return /\bunreleased\b|\bby default\b|\bdefault (?:knife|gun)\b/i.test(lead)
 }
 
 // ── wikitext helpers ─────────────────────────────────────────────────────────
@@ -166,7 +181,8 @@ export function slugifyTitle(title: string): string {
 
 // ── field parsers ────────────────────────────────────────────────────────────
 
-const RARITIES = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Godly', 'Ancient', 'Vintage', 'Unique', 'Chroma', 'Classic'] as const
+// Evo: the gamepass knives that evolve (Reaver, Icecrusher, Gingerscythe, Synthwave); the wiki keeps it in `tier=`.
+const RARITIES = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Godly', 'Ancient', 'Vintage', 'Unique', 'Chroma', 'Classic', 'Evo'] as const
 
 /** Infobox rarity → one canonical tier, or null when the page is ambiguous/N/A. */
 export function parseRarity(raw: string | null | undefined): string | null {
@@ -426,22 +442,25 @@ export function buildMm2Catalogue(pages: WikiPage[], boxes: BoxPage[] = []): { i
     const eventYears = categories.map((c) => Number(c.match(EVENT_RE)?.[2] ?? NaN)).filter(Number.isFinite)
     const years = [...obtain.map((o) => o.year).filter((y): y is number => y != null), ...eventYears]
     const firstSource = obtain.find((o) => o.kind !== 'other') ?? obtain[0]
+    // Older pages put the tier in `type=` ("Godly Weapons") or only in
+    // categories; Evo gamepass knives keep it in `tier=`.
+    const rarity = isChroma
+      ? 'Chroma'
+      : parseRarity(box.rarity) ?? parseRarity(box.type) ?? parseRarity(box.tier) ?? rarityFromCategories(categories)
     parsed.push({
       slug,
       name,
       wikiTitle: page.title,
       displayTitle: displayTitle && displayTitle !== page.title ? displayTitle : null,
       itemType,
-      // Older pages put the tier in `type=` ("Godly Weapons") or only in categories.
-      rarity: isChroma
-        ? 'Chroma'
-        : parseRarity(box.rarity) ?? parseRarity(box.type) ?? rarityFromCategories(categories),
+      rarity,
       isChroma,
       baseSlug: null,
       releaseYear: years.length ? Math.min(...years) : null,
       origin: firstSource?.name ?? null,
       obtain,
       imageFile: parseImageFile(box.image),
+      tradeable: !untradeable(box, page.wikitext, page.title, rarity),
       _base: isChroma ? page.title.replace(/^chroma\s+/i, '') : null,
     })
   }

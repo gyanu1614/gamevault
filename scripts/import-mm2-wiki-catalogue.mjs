@@ -246,7 +246,7 @@ async function write(items) {
     origin: i.origin,
     obtain: i.obtain,
     wiki_title: i.wikiTitle,
-    is_priced: true,
+    is_priced: i.tradeable !== false,
     is_enabled: true,
     sort_order: startOrder + n,
   }))

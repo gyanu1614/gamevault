@@ -38,6 +38,11 @@ const EXEMPT: Record<string, string> = {
   // caller does, so a 500-row import revalidates once per category instead of
   // once per listing. Every caller of it is itself in the pinned set below.
   'src/lib/listings/create.ts': 'the shared insert seam; its callers revalidate (and are pinned here)',
+  // 2026-10-29 — the sell-form sync moves a listing's chain answers with its
+  // catalogue item. Its writer takes no Next APIs (the tsx CLI loads it);
+  // the one prod caller, /api/internal/sell-form/sync, re-links and calls
+  // revalidateListingSurfaces for every repaired listing (afterRepairs).
+  'src/lib/catalogue/sell-form/store.ts': 'sell-form sync writer; its route revalidates every repaired listing',
   // Admin Variant Mismatches (2026-10-23): switches an Adopt Me Trait pick.
   // Its only caller, lib/actions/admin-variant-mismatches, re-links and then
   // calls the seam for every fixed listing.
@@ -142,6 +147,8 @@ describe('listing mutations revalidate the category surfaces', () => {
       'src/lib/actions/seller-presence.ts',
       // The browser seller API (split from lib/api/seller-compatible.ts, 2026-10-20).
       'src/lib/api/seller/listings.ts',
+      // 2026-10-29: the sell-form sync's listing repair (exempt above; its route revalidates).
+      'src/lib/catalogue/sell-form/store.ts',
       'src/lib/escrow/transition.ts',
       // Step 4: the shared insert seam (exempt from calling the seam itself —
       // see EXEMPT above — but still a writer, so it is pinned here).

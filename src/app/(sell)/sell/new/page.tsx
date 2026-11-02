@@ -13,6 +13,7 @@
 import SellWizard from '../../_components/SellWizard'
 import { fetchSellCategories, fetchSellGamesForCategory } from '@/lib/actions/sell-wizard'
 import { loadWizardPrefill } from '@/lib/sell/wizard-prefill'
+import { getSellTemplate } from '@/lib/sell/template-read'
 import { pickWizardStart, readWizardStartParams, type WizardStart } from '@/lib/sell/wizard-start'
 
 export const dynamic = 'force-dynamic'
@@ -31,8 +32,10 @@ export default async function SellNewPage({
     want ? fetchSellGamesForCategory(want.categorySlug) : Promise.resolve(null),
   ])
   const initialCategories = categories.success ? categories.data : []
-  const start: WizardStart | null =
+  const picked: WizardStart | null =
     want && games?.success ? pickWizardStart(want, initialCategories.map((c) => c.slug), games.data) : null
+  // The same cached read the form's GET route serves; a miss just lets the wizard fetch it.
+  const start = picked ? { ...picked, template: await getSellTemplate(picked.game.game_category_id).catch(() => undefined) } : null
   return (
     <SellWizard
       initialCategories={initialCategories}

@@ -73,7 +73,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
   const startCategory = !prefill && !isEditMode && start ? categories.find((c) => c.slug === start.categorySlug) ?? null : null
   const [category, setCategory] = useState<GlobalCategory | null>(prefillCategory ?? startCategory)
   const [game, setGame] = useState<SellGameOption | null>(prefillCategory ? prefill?.game ?? null : startCategory ? start?.game ?? null : null)
-  const { form, setForm, update, setters } = useOfferForm(prefill && prefillCategory ? offerFormFromListing(prefill.listing, prefill.template) : EMPTY_OFFER_FORM)
+  const { form, setForm, update, setters } = useOfferForm(() => (prefill && prefillCategory ? offerFormFromListing(prefill.listing, prefill.template) : EMPTY_OFFER_FORM))
   const { step, setStep, direction } = useWizardSteps({
     initialStep: prefillCategory || startCategory ? 3 : 1,
     historyEnabled: !isEditMode,
@@ -93,6 +93,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     platform: form.platform,
     isEditMode,
     prefill: prefillCategory ? prefill : null,
+    start: startCategory ? start : null,
   })
   const { template, currencyConfig, policy } = catalog
 
@@ -246,14 +247,16 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
           unitLabelLoading={catalog.currencyConfigLoading}
         />
 
-        {/* initial={false}: no entry animation on first paint; step changes still slide. */}
-        <AnimatePresence mode="wait" initial={false}>
+        {/* initial={false}: no entry animation on first paint; step changes still slide.
+            popLayout, not wait: the next step slides in WHILE the last one leaves (lifted out
+            of the flow by the relative section), instead of after its exit — `wait` held the
+            Details form back ~0.26 s on every step change (speed audit 2026-10-29). */}
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={step}
             initial={{ opacity: 0, x: 64 * direction }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -64 * direction }}
-            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            animate={{ opacity: 1, x: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } }}
+            exit={{ opacity: 0, x: -64 * direction, transition: { duration: 0.16, ease: [0.4, 0, 1, 1] } }}
           >
             {step === 1 && <Step1Category categories={categories} selected={category} onSelect={selectCategory} />}
 

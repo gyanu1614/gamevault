@@ -22,6 +22,7 @@ const DAY = 86_400
 /** file → why a sub-day window is fine there. */
 const SUB_DAY_ALLOWED: Record<string, string> = {
   'src/lib/sell/template-read.ts': 'sell wizard templates: a signed-in seller surface, never a public page',
+  'src/lib/sell/catalog-read.ts': 'sell wizard category + game lists: a signed-in seller surface, never a public page',
   'src/lib/price-helper/server.ts': 'market price hint for the sell form (server action), never a public page',
 }
 
