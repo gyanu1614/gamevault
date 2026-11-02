@@ -1,4 +1,5 @@
 {
+  "regions": ["pdx1"],
   "crons": [
     { "path": "/api/cron/expire-pending-payments", "schedule": "20 1 * * *" },
     { "path": "/api/cron/not-delivered-sweep", "schedule": "25 1 * * *" },
