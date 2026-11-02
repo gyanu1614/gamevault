@@ -36,9 +36,10 @@ import { DeliveryInstructions } from './_DeliveryInstructions'
 import { OrderStatusCard } from './_OrderStatusCard'
 import { DeliveredInRow } from './_DeliveredInRow'
 import { getAvatarUrl } from '@/lib/utils/avatar'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { logDeliveredOrderView } from '@/lib/actions/order-access'
 import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
 interface OrderClientProps {
@@ -129,6 +130,24 @@ export function OrderClient(props: OrderClientProps) {
   // When the seller marked the order delivered (null until they do).
   const deliveredAt: string | null =
     order.delivered_at ?? order.seller_marked_delivered_at ?? null
+
+  // Card-dispute delivery proof: the buyer looking at the delivered order —
+  // on arrival in a visible tab, or coming back to the tab (at most once a
+  // minute). A live refresh (realtime) never counts: the buyer did nothing.
+  const deliveredRef = useRef(false)
+  deliveredRef.current = Boolean(deliveredAt || (order as any).instant_delivery_delivered_at)
+  useEffect(() => {
+    if (userRole !== 'buyer') return
+    let last = 0
+    const log = () => {
+      if (document.visibilityState !== 'visible' || !deliveredRef.current || Date.now() - last < 60_000) return
+      last = Date.now()
+      void logDeliveredOrderView(order.id).catch(() => undefined)
+    }
+    log()
+    document.addEventListener('visibilitychange', log)
+    return () => document.removeEventListener('visibilitychange', log)
+  }, [userRole, order.id])
 
   // Hide the progress bar once delivery is done — it morphs into the
   // appropriate status strip in the right rail instead. A dispute opened

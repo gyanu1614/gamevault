@@ -42,6 +42,9 @@ export function orderEventFor(event: CanonicalEvent): OrderEvent | null {
     case 'PAYMENT_NOTICE':
       // Recorded for admins in dispatch() below; never an order transition.
       return null
+    case 'CARD_CASE':
+      // Booked by its own SQL seam in dispatch() below (card_* functions).
+      return null
     default: {
       // Exhaustiveness guard: if a new CanonicalEvent type is added, TS errors here.
       const _never: never = event
@@ -78,6 +81,14 @@ export async function dispatch(
   if (event.type === 'PAYMENT_NOTICE') {
     const { recordPaymentNotice } = await import('@/lib/payments/payment-notice')
     await recordPaymentNotice(event, providerName)
+    return { applied: false, orderId: event.orderId }
+  }
+  // A card refund made outside DropMarket or a card dispute: ONE SQL seam each.
+  // A failed RPC throws → the router marks the event failed → retry (the
+  // seams are idempotent on the provider ref).
+  if (event.type === 'CARD_CASE') {
+    const { recordCardCase } = await import('@/lib/payments/card-cases')
+    await recordCardCase(event)
     return { applied: false, orderId: event.orderId }
   }
 

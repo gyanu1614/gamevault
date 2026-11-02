@@ -9,10 +9,12 @@ import {
 import {
   cleanEldoradoOffer,
   crawlEldoradoPets,
+  fetchEldoradoOffers,
   isToyTitle,
   itemNameOf,
   traitValue,
 } from '../../../scripts/lib/adoptme-eldorado.mjs'
+import { EldoradoBlockedError } from '../../../scripts/lib/eldorado-http.mjs'
 
 function card(slug: string, name: string, rarity: string) {
   return (
@@ -192,5 +194,30 @@ describe('crawlEldoradoPets', () => {
     expect(asked.filter((a) => a.startsWith('a'))).toHaveLength(1000)
     expect(asked.filter((a) => a.startsWith('d'))).toEqual(['d1', 'd2', 'd3'])
     expect(crawl.byName.get('owl')?.listings).toHaveLength(total)
+  })
+
+  // 2026-10-28/29: Eldorado tightened its rate limit. A throttle must end the
+  // walk at once ('blocked', never 'complete'), not be skipped like a failed
+  // page and walked into four more times.
+  it('stops at once on a throttle and never reports complete', async () => {
+    const asked: number[] = []
+    const fetchPage = async (n: number) => {
+      asked.push(n)
+      if (n === 2) throw new EldoradoBlockedError({ status: 429, url: 'x', blocks: 2, waitedMs: 60_000 })
+      return { recordCount: 200, totalPages: 4, results: [offer({ id: `o${n}`, name: 'Owl' })] }
+    }
+    const crawl = await crawlEldoradoPets({ delayMs: 0, fetchPage })
+    expect(crawl.stoppedBy).toBe('blocked')
+    expect(asked).toEqual([1, 2])
+    expect(crawl.errors).toHaveLength(1)
+  })
+
+  it('fetchEldoradoOffers goes through the shared client', async () => {
+    const urls: string[] = []
+    const client = { getJson: async (url: string) => (urls.push(url), { results: [] }) }
+    await expect(fetchEldoradoOffers({ tradeEnvironmentValue2: 'Owl' }, 3, { client })).resolves.toEqual({ results: [] })
+    const u = new URL(urls[0])
+    expect(u.searchParams.get('tradeEnvironmentValue2')).toBe('Owl')
+    expect(u.searchParams.get('pageIndex')).toBe('3')
   })
 })

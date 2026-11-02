@@ -101,7 +101,7 @@ describe('legal documents render the shared numbers', () => {
 describe('payment processors', () => {
   it('no retired or planned provider is named anywhere in the legal pack', () => {
     const all = JSON.stringify(LEGAL_DOCS)
-    for (const name of ['CoinGate', 'Tazapay', 'Glocash', 'Stripe']) expect(all).not.toContain(name)
+    for (const name of ['CoinGate', 'Tazapay', 'Glocash']) expect(all).not.toContain(name)
   })
 
   it('every live processor is named on the Fees page and in the Privacy Policy', () => {

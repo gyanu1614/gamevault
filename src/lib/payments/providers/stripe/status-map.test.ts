@@ -10,8 +10,6 @@ import {
   stripeSessionOrderId,
   stripeSessionToCanonical,
   stripeSessionEventId,
-  stripeRefundNotice,
-  stripeDisputeNotice,
   type StripeSessionView,
 } from './status-map'
 
@@ -104,49 +102,5 @@ describe('stripeSessionEventId', () => {
     expect(stripeSessionEventId(session())).toBe('cs_test_1:completed')
     expect(stripeSessionEventId(session({ status: 'expired', payment_status: 'unpaid' }))).toBe('cs_test_1:expired')
     expect(stripeSessionEventId(session({ payment_status: 'unpaid' }), { asyncFailed: true })).toBe('cs_test_1:failed')
-  })
-})
-
-describe('refund and dispute notices (recorded for admin, never a money move)', () => {
-  it('a refund becomes a PAYMENT_NOTICE carrying the total refunded so far', () => {
-    const r = stripeRefundNotice({
-      id: 'ch_1',
-      amount_refunded: 500,
-      currency: 'usd',
-      payment_intent: { id: 'pi_1', metadata: { order_id: ORDER } },
-    })
-    expect(r.providerEventId).toBe('ch_1:refunded:500')
-    expect(r.events).toEqual([
-      { type: 'PAYMENT_NOTICE', kind: 'refund', orderId: ORDER, providerChargeId: 'ch_1', amount: { amountMinor: 500n, currency: 'USD' }, detail: null },
-    ])
-  })
-
-  it('a refund on a payment that is not one of our orders records nothing', () => {
-    const r = stripeRefundNotice({ id: 'ch_2', amount_refunded: 100, currency: 'usd', payment_intent: { id: 'pi_2', metadata: {} } })
-    expect(r.events).toEqual([])
-    expect(r.providerEventId).toBe('ch_2:refunded:100')
-  })
-
-  it('a dispute becomes a PAYMENT_NOTICE with its reason and deadline', () => {
-    const d = stripeDisputeNotice({
-      id: 'dp_1',
-      amount: 1234,
-      currency: 'usd',
-      reason: 'fraudulent',
-      charge: 'ch_1',
-      evidence_details: { due_by: 1_800_000_000 },
-      payment_intent: { id: 'pi_1', metadata: { order_id: ORDER } },
-    })
-    expect(d.providerEventId).toBe('dp_1:created')
-    expect(d.events).toEqual([
-      {
-        type: 'PAYMENT_NOTICE',
-        kind: 'dispute',
-        orderId: ORDER,
-        providerChargeId: 'ch_1',
-        amount: { amountMinor: 1234n, currency: 'USD' },
-        detail: 'reason fraudulent, respond by 2027-01-15',
-      },
-    ])
   })
 })

@@ -9,8 +9,9 @@
  *     and closes the attempt as paid
  *   · a replay is deduped: no second dispatch, no second journal
  *   · a forged signature is rejected before any side effect
- *   · charge.refunded / charge.dispute.created alert admins and move nothing
- *     (order status, ledger and buyer wallet unchanged)
+ *   · a partial refund made in Stripe alerts admins and moves nothing
+ *   · a full one books the order refunded to the card (no store credit)
+ *   · a card dispute holds the order and blocks the buyer; lost → refunded
  *
  * Every row this file causes is removed in afterAll (orders, attempts,
  * ledger journals, webhook_events, notifications by link, audit logs).
@@ -43,6 +44,9 @@ vi.mock('@/lib/payments/providers/stripe/client', () => ({
           if (!stripeState.sessions[id]) throw new Error(`no such session ${id}`)
           return stripeState.sessions[id]
         },
+        list: async ({ payment_intent }: { payment_intent: string }) => ({
+          data: Object.values(stripeState.sessions).filter((s: any) => s.payment_intent === payment_intent),
+        }),
       },
     },
     charges: { retrieve: async (id: string) => stripeState.charges[id] },
@@ -125,6 +129,15 @@ async function adminAlert(orderId: string, titlePrefix: string) {
   return ((data ?? []) as any[]).filter((n) => n.user_id === fx!.admin.id)
 }
 
+function chargeOf(orderId: string, amount: number, refunds: Array<Record<string, unknown>>) {
+  return {
+    id: `ch_${orderId.slice(0, 8)}`, amount, currency: 'usd',
+    amount_refunded: refunds.reduce((sum, r) => sum + Number(r.amount), 0),
+    payment_intent: { id: `pi_${orderId.slice(0, 8)}`, metadata: { order_id: orderId } },
+    refunds: { data: refunds, has_more: false },
+  }
+}
+
 describe.skipIf(!hasEnv)('stripe webhook → paid (integration)', () => {
   beforeAll(async () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_guard_dummy'
@@ -147,6 +160,8 @@ describe.skipIf(!hasEnv)('stripe webhook → paid (integration)', () => {
       await del(`ledger_test_cleanup_by_order(${id})`, svc.rpc('ledger_test_cleanup_by_order', { p_order_id: id } as any))
       await del('notifications(by link)', svc.from('notifications').delete().like('link', `%${id}%`))
       await del('payment_attempts', svc.from('payment_attempts').delete().eq('order_id', id))
+      await del('order_dispute_events', svc.from('order_dispute_events').delete().eq('order_id', id))
+      await del('disputes', svc.from('disputes').delete().eq('transaction_id', id))
       await del('orders', svc.from('orders').delete().eq('id', id))
     }
     for (const s of Object.keys(stripeState.sessions)) {
@@ -210,7 +225,7 @@ describe.skipIf(!hasEnv)('stripe webhook → paid (integration)', () => {
     expect(await sellerAvailableMinor()).toBe(before + 1500)
   }, 30_000)
 
-  it('charge.refunded and charge.dispute.created alert admins and move no money', async () => {
+  it('a partial refund made in Stripe alerts admins and moves no money', async () => {
     const { handleWebhook } = await import('@/lib/payments/webhook-router')
     const { orderId, sessionId, orderNumber } = await pendingStripeOrder(2500)
     const paid = signedEvent('checkout.session.completed', sessionId)
@@ -219,33 +234,59 @@ describe.skipIf(!hasEnv)('stripe webhook → paid (integration)', () => {
     const walletBefore = await walletMinor(fx!.buyer.id)
 
     const chargeId = `ch_${orderId.slice(0, 8)}`
-    stripeState.charges[chargeId] = {
-      id: chargeId, amount_refunded: 2500, currency: 'usd',
-      payment_intent: { id: `pi_${orderId.slice(0, 8)}`, metadata: { order_id: orderId } },
-    }
+    stripeState.charges[chargeId] = chargeOf(orderId, 2500, [{ id: `re_${orderId.slice(0, 8)}`, amount: 1000, status: 'succeeded', metadata: {} }])
     const refunded = signedEvent('charge.refunded', chargeId)
     expect(await handleWebhook('stripe', refunded.headers, refunded.body)).toMatchObject({ ok: true, processed: 1 })
-    const refundAlerts = await adminAlert(orderId, 'Card Refund Recorded')
-    expect(refundAlerts).toHaveLength(1)
-    expect(refundAlerts[0].title).toBe('Card Refund Recorded · $25.00')
-    expect(refundAlerts[0].message).toContain(orderNumber)
-
-    const disputeId = `dp_${orderId.slice(0, 8)}`
-    stripeState.disputes[disputeId] = {
-      id: disputeId, amount: 2500, currency: 'usd', reason: 'fraudulent', charge: chargeId,
-      evidence_details: { due_by: null }, payment_intent: { id: `pi_${orderId.slice(0, 8)}`, metadata: { order_id: orderId } },
-    }
-    const disputed = signedEvent('charge.dispute.created', disputeId)
-    expect(await handleWebhook('stripe', disputed.headers, disputed.body)).toMatchObject({ ok: true, processed: 1 })
-    expect(await adminAlert(orderId, 'Card Dispute Opened')).toHaveLength(1)
-
-    // Replays alert nobody twice.
+    const alerts = await adminAlert(orderId, 'Card Refund Recorded')
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].message).toContain(orderNumber)
     expect(await handleWebhook('stripe', refunded.headers, refunded.body)).toMatchObject({ deduped: true })
-    expect(await adminAlert(orderId, 'Card Refund Recorded')).toHaveLength(1)
 
-    // Nothing moved.
     expect((await order(orderId)).status).toBe('paid')
     expect(await ledgerRows(orderId)).toBe(ledgerBefore)
     expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
+  }, 30_000)
+
+  it('a full refund made in Stripe books the order as refunded to the card: no store credit', async () => {
+    const { handleWebhook } = await import('@/lib/payments/webhook-router')
+    const { orderId, sessionId } = await pendingStripeOrder(2500)
+    const paid = signedEvent('checkout.session.completed', sessionId)
+    expect((await handleWebhook('stripe', paid.headers, paid.body)).ok).toBe(true)
+    const walletBefore = await walletMinor(fx!.buyer.id)
+
+    const chargeId = `ch_${orderId.slice(0, 8)}`
+    stripeState.charges[chargeId] = chargeOf(orderId, 2500, [{ id: `re_${orderId.slice(0, 8)}`, amount: 2500, status: 'succeeded', metadata: {} }])
+    const refunded = signedEvent('charge.refunded', chargeId)
+    expect(await handleWebhook('stripe', refunded.headers, refunded.body)).toMatchObject({ ok: true, processed: 1 })
+    expect(await order(orderId)).toMatchObject({ status: 'refunded', escrow_status: 'refunded' })
+    expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
+    const { data: cases } = await fx!.svc.from('card_cases').select('status, bearer').eq('order_id', orderId)
+    expect(cases).toEqual([{ status: 'settled', bearer: 'seller' }])
+  }, 30_000)
+
+  it('a card dispute holds the order and blocks the buyer; lost without delivery refunds it', async () => {
+    const { handleWebhook } = await import('@/lib/payments/webhook-router')
+    const { orderId, sessionId } = await pendingStripeOrder(2500)
+    const paid = signedEvent('checkout.session.completed', sessionId)
+    expect((await handleWebhook('stripe', paid.headers, paid.body)).ok).toBe(true)
+    const walletBefore = await walletMinor(fx!.buyer.id)
+
+    const disputeId = `dp_${orderId.slice(0, 8)}`
+    stripeState.disputes[disputeId] = {
+      id: disputeId, amount: 2500, currency: 'usd', reason: 'fraudulent', status: 'needs_response',
+      evidence_details: { due_by: null }, payment_intent: { id: `pi_${orderId.slice(0, 8)}`, metadata: { order_id: orderId } },
+    }
+    const opened = signedEvent('charge.dispute.created', disputeId)
+    expect(await handleWebhook('stripe', opened.headers, opened.body)).toMatchObject({ ok: true, processed: 1 })
+    expect((await order(orderId)).status).toBe('disputed')
+    const { data: block } = await fx!.svc.from('buyer_blocks').select('reason').eq('user_id', fx!.buyer.id).maybeSingle()
+    expect(block).toMatchObject({ reason: 'card_dispute' })
+
+    stripeState.disputes[disputeId] = { ...stripeState.disputes[disputeId], status: 'lost' }
+    const closed = signedEvent('charge.dispute.closed', disputeId)
+    expect(await handleWebhook('stripe', closed.headers, closed.body)).toMatchObject({ ok: true, processed: 1 })
+    expect(await order(orderId)).toMatchObject({ status: 'refunded' })
+    expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
+    await fx!.svc.from('buyer_blocks').delete().eq('user_id', fx!.buyer.id)
   }, 30_000)
 })
