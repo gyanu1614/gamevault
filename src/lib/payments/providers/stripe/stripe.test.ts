@@ -141,6 +141,23 @@ describe('stripe: createCharge (hosted Checkout)', () => {
     expect(opts).toEqual({ idempotencyKey: 'dm-checkout:attempt-uuid-1' })
   })
 
+  it('names the real item and prefills the buyer email (bank recognition + dispute evidence)', async () => {
+    const api = fakeApi()
+    await provider(api).createCharge({ ...input, itemTitle: '  2,000   Robux ', buyerEmail: 'buyer@example.com' })
+    const params = api.checkout.sessions.create.mock.calls[0][0] as any
+    expect(params.line_items[0].price_data.product_data).toEqual({ name: '2,000 Robux', description: 'DropMarket order DM-ABCD-EFGH' })
+    expect(params.payment_intent_data.description).toBe('2,000 Robux · DropMarket order DM-ABCD-EFGH')
+    expect(params.customer_email).toBe('buyer@example.com')
+  })
+
+  it('without an item title or email it keeps the plain order name and asks Stripe for the email', async () => {
+    const api = fakeApi()
+    await provider(api).createCharge({ ...input, itemTitle: '   ', buyerEmail: null })
+    const params = api.checkout.sessions.create.mock.calls[0][0] as any
+    expect(params.payment_intent_data.description).toBe('DropMarket order DM-ABCD-EFGH')
+    expect(params).not.toHaveProperty('customer_email')
+  })
+
   it('expires the session after an hour and reports that expiry', async () => {
     const api = fakeApi()
     const before = Math.floor(Date.now() / 1000)

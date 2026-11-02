@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { AdminOrderActions } from './_AdminOrderActions'
 import { CardCasePanel } from './_CardCasePanel'
-import { loadOrderCardCases } from '@/lib/admin/card-cases'
+import { loadOrderCardCases, loadProofPhotos } from '@/lib/admin/card-cases'
 import { AdminPanel, StatusBadge } from '../../components/kit'
 import { GameTile } from '../../components/GameTile'
 import { PAYOUT_LABEL, PAYOUT_TONE } from '../payout'
@@ -103,6 +103,8 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   ])
   // While a card case holds the order, only its own controls may settle it.
   const cardCaseActive = cardCases.cases.some((c) => c.status === 'open' || c.status === 'awaiting_decision')
+  const evidenceDue = cardCases.cases.some((c) => c.kind === 'dispute' && c.status === 'open' && !c.evidence_submitted_at)
+  const proofPhotos = evidenceDue ? await loadProofPhotos(order.id) : []
 
   const money = adminOrderMoney(order)
 
@@ -243,7 +245,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             </AdminPanel>
           )}
 
-          <CardCasePanel orderId={order.id} buyerId={order.buyer_id ?? null} cases={cardCases.cases} buyerBlock={cardCases.buyerBlock} />
+          <CardCasePanel orderId={order.id} buyerId={order.buyer_id ?? null} cases={cardCases.cases} buyerBlock={cardCases.buyerBlock} proofPhotos={proofPhotos} />
 
           {/* PR 7 — Money controls: mark disputed / resolve */}
           {!cardCaseActive && (
