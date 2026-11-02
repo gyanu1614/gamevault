@@ -33,13 +33,10 @@ describe('seller stat line', () => {
 describe('seller pills (checkout item card, owner 2026-10-27)', () => {
   const labels = (s: Parameters<typeof sellerPills>[0]) => sellerPills(s).map((p) => p.label)
 
-  it('reviews → positive %, review count, then Verified Seller', () => {
-    expect(labels({ ratingPercent: 99.6, reviews: 84237, sales: 5, verified: true })).toEqual([
-      '99.6% Positive',
-      '84,237 Reviews',
-      'Verified Seller',
-    ])
-    expect(labels({ ratingPercent: 100, reviews: 1, sales: 1, verified: true })).toEqual(['100% Positive', '1 Review', 'Verified Seller'])
+  // Owner 2026-11-01: no review-count pill, so the record fits one row on phones.
+  it('reviews → positive %, then Verified Seller (no review count)', () => {
+    expect(labels({ ratingPercent: 99.6, reviews: 84237, sales: 5, verified: true })).toEqual(['99.6% Positive', 'Verified Seller'])
+    expect(labels({ ratingPercent: 100, reviews: 1, sales: 1, verified: true })).toEqual(['100% Positive', 'Verified Seller'])
   })
 
   it('sales but no reviews yet → sold count instead of a rating', () => {

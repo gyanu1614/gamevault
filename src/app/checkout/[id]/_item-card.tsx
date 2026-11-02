@@ -9,7 +9,6 @@
 import Image from 'next/image'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { ThumbsUp } from '@phosphor-icons/react/dist/ssr/ThumbsUp'
-import { Star } from '@phosphor-icons/react/dist/ssr/Star'
 import { SealCheck } from '@phosphor-icons/react/dist/ssr/SealCheck'
 import { Package } from '@phosphor-icons/react/dist/ssr/Package'
 import { CalendarCheck } from '@phosphor-icons/react/dist/ssr/CalendarCheck'
@@ -23,7 +22,6 @@ import { BAND_CLASS, CARD_CLASS, TRUST_BLUE } from './_surfaces'
 
 const PILL_ICON: Record<SellerPill['kind'], PhosphorIcon> = {
   positive: ThumbsUp,
-  reviews: Star,
   sold: Package,
   new: UserCircle,
   verified: SealCheck,
@@ -112,12 +110,7 @@ export function ItemCard({
                 return (
                   <li
                     key={p.kind}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-md bg-[rgba(106,168,255,0.12)] px-2 py-1 text-[12px] font-semibold leading-none text-[#E9EDF2] sm:px-2.5 sm:text-[12.5px]',
-                      // Phones: the blue check beside the name already says it,
-                      // so the record fits one row.
-                      p.kind === 'verified' && seller.verified && seller.pills.length > 1 && 'max-sm:hidden',
-                    )}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(106,168,255,0.12)] px-2 py-1 text-[12px] font-semibold leading-none text-[#E9EDF2] sm:px-2.5 sm:text-[12.5px]"
                   >
                     <Icon aria-hidden size={14} weight="fill" color={TRUST_BLUE} />
                     {p.label}
