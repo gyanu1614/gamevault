@@ -27,13 +27,13 @@ function ItemCardSkeleton({ className = '' }: { className?: string }) {
         </div>
         <Block className="col-span-2 mt-3 h-3.5 w-full max-w-[260px] sm:col-span-1 sm:col-start-2 sm:mt-1.5" />
       </div>
-      <div className={`${BAND_CLASS} px-4 pb-3.5 pt-3`}>
+      <div className={`${BAND_CLASS} px-4 py-2.5`}>
         <Block className="h-3 w-12" />
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
           <Block className="h-4 w-28" />
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {[0, 1, 2].map((i) => (
-              <Block key={i} className="h-7 w-24" />
+              <Block key={i} className="h-6 w-24" />
             ))}
           </div>
         </div>
