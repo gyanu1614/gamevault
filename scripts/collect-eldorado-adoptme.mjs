@@ -52,6 +52,7 @@ import {
   eldoradoKeyFor,
   normalizeName,
 } from './lib/adoptme-eldorado.mjs'
+import { isEldoradoBlocked } from './lib/eldorado-http.mjs'
 import { describeMarketNames, loadMarketNamesSafe, planMarketNames, saveMarketNamesSafe } from './lib/market-names.mjs'
 
 const DEFAULT_OUTPUT = 'data/adopt-me-feeds/eldorado-cash-latest.json'
@@ -123,24 +124,30 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
  * name>` is Eldorado's server-side Item-name facet, so "Owl" returns only Owl
  * (a `searchQuery` substring match also returned Snow Owl, Peach Owl …).
  */
-const fetchOffers = (itemName, page) =>
-  fetchEldoradoOffers({ tradeEnvironmentValue2: itemName }, page, { retries: 0 })
+const fetchOffers = (itemName, page) => fetchEldoradoOffers({ tradeEnvironmentValue2: itemName }, page)
 
 /**
  * Fallback for casing/spelling drift (our "Ring-Tailed Lemur" vs Eldorado's
  * "Ring-tailed Lemur" — te_v2 is case-sensitive). Fuzzy, so the caller MUST
  * re-filter each result by normalised Item name.
  */
-const fetchSearchOffers = (query, page) =>
-  fetchEldoradoOffers({ searchQuery: query }, page, { retries: 0 })
+const fetchSearchOffers = (query, page) => fetchEldoradoOffers({ searchQuery: query }, page)
 
-/** Per-pet mode: walk every page of each pet's te_v2 query. */
+/**
+ * Per-pet mode: walk every page of each pet's te_v2 query.
+ *
+ * A throttle (EldoradoBlockedError) ends the walk and keeps the pets read IN
+ * FULL before it. The pet it hit is dropped: the importer retires listings per
+ * (pet, source) it sees, so a half-read pet would lose its unread pages.
+ */
 async function collectPerPet(targets, opts) {
   const listings = []
   let matched = 0
   let skipped = 0
+  let stoppedEarly = null
   for (let i = 0; i < targets.length; i += 1) {
     const pet = targets[i]
+    const before = { listings: listings.length, matched, skipped }
     let petListings = 0
     try {
       const petKey = normalizeName(pet.name)
@@ -186,11 +193,20 @@ async function collectPerPet(targets, opts) {
       }
       console.log(`  [${i + 1}/${targets.length}] ${pet.name.padEnd(20)} ${petListings} clean listings`)
     } catch (err) {
+      if (isEldoradoBlocked(err)) {
+        listings.length = before.listings
+        matched = before.matched
+        skipped = before.skipped
+        stoppedEarly = { reason: 'eldorado_blocked', at_index: i, targets_done: i, targets_total: targets.length, pet: pet.name }
+        console.log(`  [${i + 1}/${targets.length}] ${pet.name.padEnd(20)} BLOCKED: ${err.message}`)
+        console.log(`::warning::Eldorado throttled the Adopt Me per-pet crawl at ${i}/${targets.length}; kept the pets read before it`)
+        break
+      }
       console.log(`  [${i + 1}/${targets.length}] ${pet.name.padEnd(20)} ERROR: ${err.message}`)
     }
     if (i < targets.length - 1) await sleep(opts.delayMs)
   }
-  return { listings, matched, skipped }
+  return { listings, matched, skipped, stoppedEarly }
 }
 
 /** Crawl mode: one walk of the Pets category, kept for catalog pets only. */
@@ -250,7 +266,13 @@ async function collectByCrawl(targets, opts) {
       `${crawl.uniqueOffers} unique, ${crawl.duplicates} duplicates, ${crawl.errors.length} page errors, stopped: ${crawl.stoppedBy}`,
   )
   if (crawl.stoppedBy !== 'complete') {
-    // A truncated crawl would make the importer retire listings it never saw.
+    // A truncated crawl would make the importer retire listings it never saw:
+    // a cheapest-first walk cut short has read most pets' cheap end only. That
+    // holds for a throttle stop ('blocked') too, so it fails here as well;
+    // yesterday's listings stay active until tomorrow's complete crawl.
+    if (crawl.stoppedBy === 'blocked') {
+      console.log(`::error::Eldorado throttled the Adopt Me crawl after ${crawl.pagesFetched} pages; nothing imported`)
+    }
     throw new Error(`crawl incomplete (${crawl.stoppedBy}) — not writing a partial feed`)
   }
   // Saved only after a complete crawl: offer counts from a partial one would mislead the review list.
@@ -294,7 +316,7 @@ async function main() {
   const targets = opts.limit > 0 ? pets.slice(0, opts.limit) : pets
 
   const started = Date.now()
-  const { listings, matched, skipped, crawlStats } = opts.crawl
+  const { listings, matched, skipped, crawlStats, stoppedEarly } = opts.crawl
     ? await collectByCrawl(targets, opts)
     : await collectPerPet(targets, opts)
 
@@ -310,6 +332,7 @@ async function main() {
     matched,
     skipped,
     ...(crawlStats ? { crawl: crawlStats } : {}),
+    ...(stoppedEarly ? { stopped_early: stoppedEarly } : {}),
     listings,
   }
 

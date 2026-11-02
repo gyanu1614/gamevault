@@ -197,9 +197,36 @@ export function parseItemType(raw: string | null | undefined, categories: string
   return null
 }
 
-/** "Adurite (Knife)" / "Bats Knife (2018)" / "Bat (Pet)" → the type the title states. */
+/**
+ * The type the page's opening sentence states: "'''Sand''' is a common Knife
+ * obtainable…", "'''Chroma Ornament''' is a chroma knife…". It is written for
+ * the page, while the infobox `type=` is often copied from a sibling: on
+ * 2026-11-02 the infobox said Gun on Sand, Tourist, Serpent and Scarytree and
+ * "Godly" on Chroma Ornament, and Eldorado (rightly) sold all five as knives.
+ * Null unless the clause names exactly one type.
+ */
+export function typeFromLead(wikitext: string, title: string): Mm2CatalogueItem['itemType'] {
+  const name = title.replace(/\s*\([^)]*\)\s*$/, '')
+  const text = wikitext.replace(/\[\[(?:[^|\]]*\|)?([^\]]*)\]\]/g, '$1')
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = text.match(new RegExp(`'''${esc}'''\\s+(?:is|was)\\s+an?\\s+([^.\\n]{0,60})`, 'i'))
+  if (!m) return null
+  const types = new Set([...m[1].toLowerCase().matchAll(/\b(knife|knives|gun|guns|pet|pets)\b/g)].map((t) => LEAD_TYPE[t[1]]))
+  return types.size === 1 ? [...types][0] : null
+}
+const LEAD_TYPE: Record<string, 'knife' | 'gun' | 'pet'> = { knife: 'knife', knives: 'knife', gun: 'gun', guns: 'gun', pet: 'pet', pets: 'pet' }
+
+/**
+ * "Adurite (Knife)" / "Bats Knife (2018)" / "Bat (Pet)" / "Embergun" → the type
+ * the title states. A name that ends in its type ("Embergun", "Emberknife",
+ * "Biogun") is the strongest signal there is: on 2026-11-02 the wiki's own
+ * sentence called Embergun "a legendary knife".
+ */
 export function typeFromTitle(title: string): Mm2CatalogueItem['itemType'] {
-  const m = title.match(/\((Knife|Gun|Pet)\)\s*$/i) ?? title.match(/\s(Knife|Gun)\s+\([^)]*\)\s*$/i)
+  const m =
+    title.match(/\((Knife|Gun|Pet)\)\s*$/i) ??
+    title.match(/\s(Knife|Gun)\s+\([^)]*\)\s*$/i) ??
+    title.replace(/\s*\([^)]*\)\s*$/, '').match(/\S(gun|knife)$/i)
   return m ? (m[1].toLowerCase() as 'knife' | 'gun' | 'pet') : null
 }
 
@@ -361,9 +388,10 @@ export function buildMm2Catalogue(pages: WikiPage[], boxes: BoxPage[] = []): { i
       continue
     }
     const categories = pageCategories(page.wikitext)
-    // A type in the TITLE ("Pop Art (Knife)", "Bats Knife (2018)") beats an
-    // infobox copied from the sibling page with the wrong `type=`.
-    const itemType = typeFromTitle(page.title) ?? parseItemType(box.type, categories)
+    // A type in the TITLE ("Pop Art (Knife)", "Bats Knife (2018)"), then the
+    // page's own opening sentence, beat an infobox copied from the sibling
+    // page with the wrong `type=`.
+    const itemType = typeFromTitle(page.title) ?? typeFromLead(page.wikitext, page.title) ?? parseItemType(box.type, categories)
     if (!itemType) {
       skipped.push({ title: page.title, reason: `no item type (${stripWiki(box.type) || 'empty'})` })
       continue

@@ -51,6 +51,8 @@ import { promoRefusalMessage, resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
 import { PROVIDER_UNAVAILABLE_MESSAGE, chargeFailureMessage } from '@/lib/actions/checkout-errors'
 import { BUYER_BLOCKED_MESSAGE, isBuyerBlocked } from '@/lib/checkout/buyer-block'
+import { recordOrderAccess } from '@/lib/orders/access-log'
+import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 
 // Order currency is the ledger base. USD end-to-end (decided 2026-09-04):
 // listings, checkout totals, orders, wallet ledger and provider invoices all
@@ -391,6 +393,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       return { success: false, error: isDev ? `Failed to create order: ${detail}` : 'Failed to create order' }
     }
     const { orderId, orderNumber, attemptId, chargeMinor } = created.result
+    // Card-dispute delivery proof: when, and from where, the buyer paid.
+    await recordOrderAccess(orderId, user.id, 'checkout')
 
     // If wallet fully covered it, confirm the order now (no provider charge:
     // the RPC opened no attempt).
@@ -422,12 +426,15 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     //  • cancel  → back to checkout so the buyer can retry.
     const base = publicAppUrl()
     const provider = getProvider(providerName)
+    const itemTitle = await orderItemTitleFor(orderId, listing.title || 'Game item')
     let charge
     try {
       charge = await provider.createCharge({
         orderId,
         orderNumber,
         amount: money(chargeMinor, ORDER_CURRENCY),
+        itemTitle,
+        buyerEmail: user.email ?? null,
         // Payssion has ONE return URL for paid AND cancelled — the smart
         // /checkout/return route inspects the outcome and lands the buyer on
         // Order Paid (paid / confirming), back at checkout (cancelled or
@@ -750,12 +757,18 @@ export async function retryOrderPayment(orderId: string): Promise<{
 
     const base = publicAppUrl()
     const provider = getProvider(providerName)
+    const [itemTitle] = await Promise.all([
+      orderItemTitleFor(orderId, 'Game item'),
+      recordOrderAccess(orderId, user.id, 'checkout'),
+    ])
     let charge
     try {
       charge = await provider.createCharge({
         orderId,
         orderNumber: order.order_number ?? null,
         amount: money(remainingMinor, ORDER_CURRENCY),
+        itemTitle,
+        buyerEmail: user.email ?? null,
         returnUrl: usesReturnRoute(providerName)
           ? `${base}/checkout/return/${orderId}`
           : `${base}/account/orders/${orderId}?paid=1`,

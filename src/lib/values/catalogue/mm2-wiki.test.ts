@@ -17,6 +17,7 @@ import {
   parseRarity,
   parseRobuxPrice,
   stripWiki,
+  typeFromLead,
   typeFromTitle,
 } from './mm2-wiki'
 
@@ -270,5 +271,63 @@ describe('buildMm2Catalogue', () => {
     ])
     applySourceCosts(gp, new Map([['batwing gamepass', { amount: 2499, currency: 'Robux' }]]))
     expect(gp[0].obtain[0]).toMatchObject({ kind: 'gamepass', cost: { amount: 2499, currency: 'Robux' }, still_obtainable: false })
+  })
+})
+
+/**
+ * 2026-11-02: the wiki's infobox said Gun on Sand, Tourist, Serpent and
+ * Scarytree and "Godly" on Chroma Ornament, while each page's own opening
+ * sentence (and Eldorado) says knife. The opening sentence is written for the
+ * page; the infobox is often copied from a sibling.
+ */
+describe('typeFromLead', () => {
+  it('reads the type the opening sentence states', () => {
+    expect(typeFromLead("{{Infobox_Item\n|title=Sand\n|type=[[:Category:Knives|Gun]]\n}}\n'''Sand''' is a common Knife obtainable from opening the [[Summer Box '26]].", 'Sand')).toBe('knife')
+    expect(typeFromLead("|theme=rare}}'''Serpent''' is a rare knife that is currently obtainable in the [[Halloween Event 2026]].", 'Serpent')).toBe('knife')
+    expect(typeFromLead("'''Chroma Ornament''' is a chroma knife that was obtainable by giving 100 [[Gifts]].", 'Chroma Ornament')).toBe('knife')
+    expect(typeFromLead("'''Sun''' is a rare gun that was originally obtainable during the [[Summer Event 2023]].", 'Sun')).toBe('gun')
+    expect(typeFromLead("'''Bat''' is a godly pet.", 'Bat (Pet)')).toBe('pet')
+  })
+
+  it('says nothing when the sentence is missing or names no single type', () => {
+    expect(typeFromLead('{{Infobox_Item\n|title=X\n}}\nNo lead here.', 'X')).toBeNull()
+    expect(typeFromLead("'''Twins''' is a knife and gun set.", 'Twins')).toBeNull()
+  })
+})
+
+describe('buildMm2Catalogue: the opening sentence beats a copied infobox type', () => {
+  const page = (title: string, type: string, lead: string) => ({
+    title,
+    wikitext: `{{Infobox_Item\n|title=${title}\n|type=${type}\n|rarity=[[Common Weapons|Common]]\n|obtain=[[Summer Event 2026]] - [[Summer Box '26]]\n}}\n'''${title}''' ${lead}`,
+  })
+  const { items } = buildMm2Catalogue([
+    page('Tourist', '[[:Category:Guns|Gun]]', "is a common Knife obtainable from opening the [[Summer Box '26]]."),
+    page('Chroma Ornament', '[[Godly Weapons|Godly]]', 'is a chroma knife that was obtainable by giving 100 Gifts.'),
+    page('Ornament', '[[:Category:Knives|Knife]]', 'is a godly knife.'),
+    page('Harvester', '[[:Category:Guns|Gun]]', 'is an ancient gun.'),
+    page('Pop Art (Knife)', '[[:Category:Guns|Gun]]', 'is a gun.'),
+  ])
+  const bySlug = new Map(items.map((i) => [i.slug, i]))
+
+  it('takes the type from the sentence when the infobox disagrees or has none', () => {
+    expect(bySlug.get('tourist')?.itemType).toBe('knife')
+    expect(bySlug.get('chroma-ornament')?.itemType).toBe('knife')
+    expect(bySlug.get('harvester')?.itemType).toBe('gun')
+  })
+
+  it('a chroma whose type is fixed links to its base again', () => {
+    expect(bySlug.get('chroma-ornament')?.baseSlug).toBe('ornament')
+  })
+
+  it('a type in the title still wins over both', () => {
+    expect(bySlug.get('pop-art-knife')?.itemType).toBe('knife')
+  })
+
+  it('a name that ends in its type wins over a wrong sentence (the wiki calls Embergun a knife)', () => {
+    const { items: [embergun] } = buildMm2Catalogue([page('Embergun', '[[:Category:Guns|Gun]]', 'is a legendary knife that is currently obtainable.')])
+    expect(embergun.itemType).toBe('gun')
+    expect(typeFromTitle('Emberknife')).toBe('knife')
+    expect(typeFromTitle('Biogun')).toBe('gun')
+    expect(typeFromTitle('Gun')).toBeNull()
   })
 })

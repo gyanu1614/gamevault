@@ -10,16 +10,18 @@
  * identity attribute "Item Name" → "Item name". The readers below accept both
  * shapes (and any casing) so a listing never silently loses its trait.
  *
- * Pure helpers + plain fetch. No DB, no writes.
+ * Pure helpers + requests through the shared Eldorado client
+ * (scripts/lib/eldorado-http.mjs). No DB, no writes.
  */
+
+import { ELDORADO_USER_AGENT, createEldoradoClient, isEldoradoBlocked } from './eldorado-http.mjs'
 
 export const ELDORADO_BASE_URL = 'https://www.eldorado.gg'
 export const ELDORADO_AM_GAME_ID = '201'
 export const ELDORADO_AM_CATEGORY = 'CustomItem'
 export const ELDORADO_PAGE_SIZE = 50 // the API rejects anything larger (400)
-export const BROWSER_UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+/** One User-Agent for every Eldorado crawl (the shared client sends it). */
+export const BROWSER_UA = ELDORADO_USER_AGENT
 
 // Toys / non-pet items named after a pet, and bundles — reject outright.
 // Tested against the title with the pet's OWN name removed, so a pet whose
@@ -279,22 +281,22 @@ export function eldoradoOffersUrl(filters, pageIndex) {
   return u.toString()
 }
 
-export async function fetchEldoradoOffers(filters, pageIndex, { ua = BROWSER_UA, retries = 2 } = {}) {
-  let lastErr
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    try {
-      const res = await fetch(eldoradoOffersUrl(filters, pageIndex), {
-        headers: { 'user-agent': ua, accept: 'application/json' },
-      })
-      if (res.status === 429) throw new Error('429 rate limited')
-      if (!res.ok) throw new Error(`offers p${pageIndex} → ${res.status}`)
-      return await res.json()
-    } catch (err) {
-      lastErr = err
-      if (attempt < retries) await new Promise((r) => setTimeout(r, 5000 * (attempt + 1)))
-    }
-  }
-  throw lastErr
+let runClient = null
+
+/**
+ * The run's one Eldorado client. Its floor (1 req/s + jitter) sits under the
+ * crawl's own page delay (1.5 s in CI), so it does not slow the walk; what it
+ * adds is the shared throttle rule (2026-10-28/29): Retry-After / cool-down on
+ * a 429/403 and EldoradoBlockedError on the second in a row. This used to
+ * retry a 429 twice after 5 s and 10 s — straight back into the block.
+ */
+export function adoptMeEldoradoClient() {
+  runClient ??= createEldoradoClient({ minIntervalMs: 1000, jitterMs: 250 })
+  return runClient
+}
+
+export async function fetchEldoradoOffers(filters, pageIndex, { client = adoptMeEldoradoClient() } = {}) {
+  return client.getJson(eldoradoOffersUrl(filters, pageIndex))
 }
 
 /** The whole Adopt Me "Pets" item type, cheapest first (stable-ish paging). */
@@ -324,6 +326,10 @@ export const ELDORADO_MAX_PAGE_INDEX = 1000
  * and images — ~5 KB each).
  *
  * `fetchPage(page, ascending)` is injectable for tests.
+ *
+ * A failed page is skipped (five in a row end the walk, 'errors'). A block
+ * (EldoradoBlockedError) ends it at once, 'blocked': the caller refuses a
+ * feed that is not 'complete', so nothing half-read is ever imported.
  *
  * @returns {Promise<{
  *   byName: Map<string, { itemName: string, offers: number, listings: any[] }>,
@@ -413,6 +419,8 @@ export async function crawlEldoradoPets({
         consecutiveErrors = 0
       } catch (err) {
         errors.push(`${label} p${page}: ${err.message}`)
+        // Never walk on into a throttle (2026-10-28/29).
+        if (isEldoradoBlocked(err)) return 'blocked'
         consecutiveErrors += 1
         if (consecutiveErrors >= 5) return 'errors'
         continue

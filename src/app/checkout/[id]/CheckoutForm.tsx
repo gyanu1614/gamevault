@@ -985,8 +985,7 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
             <button
               type="button"
               onClick={() => setCodeOpen((v) => !v)}
-              className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
-              style={{ color: T.ink }}
+              className="flex w-fit items-center gap-2 text-[12.5px] font-semibold text-[#E9EDF2] transition-colors hover:text-[#6AA8FF]"
             >
               <Tag className="h-3.5 w-3.5" />
               Have A Discount Code?
@@ -1007,8 +1006,8 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
                 <div className={cn('flex gap-2', !promoResult?.valid && 'mt-2.5')}>
                   {promoResult?.valid ? (
             <div
-              className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
-              style={{ background: T.limeTint, borderColor: 'rgba(86,184,127,0.35)', color: T.accentText }}
+              className="flex h-[38px] w-full items-center justify-between gap-2 rounded-md px-3 text-[13px] font-semibold"
+              style={{ background: T.limeTint, color: T.accentText }}
             >
               <span className="truncate">Code Applied: {promoResult.code}</span>
               <button type="button" onClick={handleRemovePromo} aria-label="Remove Code">
@@ -1024,15 +1023,17 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
                   if (e.key === 'Enter') void handleApplyPromo()
                 }}
                 placeholder="Discount Code"
-                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-focus-border"
-                style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
+                aria-label="Discount Code"
+                // Fill only, no outline (owner 2026-11-01): the well lightens
+                // a step on hover and on focus, like the payment rows.
+                className="h-[38px] min-w-0 flex-1 rounded-md bg-white/[0.05] px-3 text-[13px] text-[#E9EDF2] outline-none transition-colors placeholder:text-[#6C7684] hover:bg-white/[0.08] focus:bg-white/[0.09]"
               />
+              {/* Trust-blue tint like the seller pills; hover fills solid blue. */}
               <button
                 type="button"
                 onClick={() => void handleApplyPromo()}
                 disabled={promoValidating}
-                className="h-[38px] rounded-md border px-3.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
-                style={{ borderColor: T.accentText, color: T.accentText }}
+                className="h-[38px] shrink-0 rounded-md bg-[rgba(106,168,255,0.14)] px-4 text-[13px] font-semibold text-[#6AA8FF] transition-colors hover:bg-[#6AA8FF] hover:text-[#0E1A2B] disabled:pointer-events-none disabled:opacity-60"
               >
                 {promoValidating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
               </button>

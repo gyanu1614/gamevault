@@ -19,6 +19,8 @@
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
 
+import { createEldoradoClient } from './lib/eldorado-http.mjs'
+
 dotenv.config({ path: '.env.local' })
 
 const BASE_URL = 'https://www.eldorado.gg'
@@ -26,6 +28,11 @@ const GAME_ID = '259'
 const MAX_PAGES = 8
 const PAGE_SIZE = 50
 const REQUEST_TIMEOUT_MS = 20_000
+
+// The shared client (scripts/lib/eldorado-http.mjs): this runs in the SAB job
+// right after the SAB crawl, and its 8 pages used to go out back to back —
+// the same burst Eldorado answered with 429 on 2026-10-28/29. Default pace.
+const eldorado = createEldoradoClient({ timeoutMs: REQUEST_TIMEOUT_MS })
 
 const DRY_RUN = process.argv.includes('--dry')
 
@@ -53,27 +60,15 @@ async function fetchPopularOffers() {
     url.searchParams.set('pageIndex', String(page))
     url.searchParams.set('pageSize', String(PAGE_SIZE))
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+    // Any failure — a throttle included — ends the walk with the pages read.
     try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/json',
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        },
-      })
-      if (!response.ok) break
-      const body = await response.json()
-      const results = body.results ?? []
+      const body = await eldorado.getJson(url)
+      const results = body?.results ?? []
       offers.push(...results)
       if (results.length < PAGE_SIZE) break
     } catch (error) {
       console.error(`Popular offers page ${page} failed:`, error.message)
       break
-    } finally {
-      clearTimeout(timeout)
     }
   }
 
@@ -118,6 +113,9 @@ async function main() {
   const match = buildMatcher(brainrots)
   const offers = await fetchPopularOffers()
   console.log(`Fetched ${offers.length} popular offers.`)
+  // A failed (e.g. throttled) first page used to fall through to "clear every
+  // rank, set none" and wipe the Popular tab. No ranking read → keep the last one.
+  if (!offers.length) throw new Error('no popular offers fetched; keeping the existing ranking')
 
   // First occurrence of each brainrot in the popular feed = its rank (1-based).
   const rankByBrainrot = new Map()

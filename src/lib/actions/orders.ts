@@ -402,6 +402,9 @@ export async function markOrderAsDelivered(
         console.error('Database error marking disputed order delivered:', markError)
         return { success: false, error: markError.message || 'Failed to update order' }
       }
+      if (marked?.reason === 'card_case') {
+        return { success: false, error: 'This order is on hold while the buyer’s bank reviews a card dispute, so delivery can’t be recorded now. Send your delivery proof to support.' }
+      }
       // already_delivered / race lost: nothing more to do.
       if (marked?.changed === true) {
         await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
@@ -1048,6 +1051,9 @@ export async function openDispute(
     })
     if (openError) {
       console.error('Database error opening dispute:', openError)
+      if (/already returned this card payment/.test(openError.message ?? '')) {
+        return { success: false, error: 'Your bank already returned this payment to your card, so this order cannot be disputed again.' }
+      }
       return { success: false, error: openError.message || 'Failed to open dispute' }
     }
     if (!opened || opened.opened !== true) {

@@ -63,6 +63,8 @@
   - Our own refunds carry `dm_refund` metadata.
   - Disputing buyers land in `buyer_blocks`, which checkout refuses.
   - Admin controls are in `_CardCasePanel` on the order page.
+  - **Who pays a lost chargeback (migration 20261029123820):** a delivered order with proof (`card_case_delivery_proof`: buyer confirmed · buyer opened it after delivery · seller photo) is DropMarket's, even before completion; no proof → the seller's; proof plus the buyer's own open dispute → `awaiting_decision` for an admin.
+  - `order_access_log` (IP + device at checkout and on each delivered-order view) is written only by `order_access_record` via `recordOrderAccess`; it feeds the dispute evidence. Seller photos reach Stripe only as the PDF an admin ticks in Submit Evidence.
 - Why: on 2026-09-11 the audit (DB-015/016/017) found every money seam composed two atomic RPCs with no compensation; reproduced on the local stack 2026-09-14: stranded wallet holds, lost refund credits, "Funds stay in your wallet" on a paid-out hold, one code sold to two buyers.
 
 ## Trend radar: external ids, metrics, review state (from migration 20260918185535, Step 2)

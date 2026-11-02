@@ -174,3 +174,49 @@ describe('the match log never fails a price run', () => {
     expect(seen[0]).toMatch(/::warning::match log unavailable for adopt-me/)
   })
 })
+
+import { saveMarketNames } from '../../../scripts/lib/market-names.mjs'
+import { exactlyMatchedNames } from '../../../scripts/lib/values-import.mjs'
+
+/**
+ * 2026-11-02: "gun|default|embergun 2026" stayed 'unmatched' in the admin list
+ * for a week after Embergun was added and the year rule matched it every day:
+ * the log only ever wrote names exact matching MISSED, so a name it later
+ * caught kept its old row until the 30-day prune.
+ */
+describe('a name exact matching now catches leaves the review list', () => {
+  it('exactlyMatchedNames: the market keys this run matched exactly, once each', () => {
+    const plan = {
+      rows: [
+        { parse_status: 'matched', _market_key: 'gun|default|embergun 2026' },
+        { parse_status: 'matched', _market_key: 'gun|default|embergun 2026' },
+        { parse_status: 'unmatched', _market_key: 'misc|default|candies 2017' },
+        { parse_status: 'matched', _market_key: null },
+      ],
+    }
+    expect(exactlyMatchedNames(plan)).toEqual(['gun|default|embergun 2026'])
+  })
+
+  it('saveMarketNames deletes only UNMATCHED rows for those names (decisions are kept)', async () => {
+    const calls: Array<{ op: string; filters: Array<[string, unknown]> }> = []
+    const builder = (op: string) => {
+      const filters: Array<[string, unknown]> = []
+      const b: any = {
+        eq: (c: string, v: unknown) => (filters.push([c, v]), b),
+        lt: (c: string, v: unknown) => (filters.push([`${c}<`, v]), b),
+        in: (c: string, v: unknown) => (filters.push([`${c} in`, v]), b),
+        then: (done: (r: { error: null }) => void) => (calls.push({ op, filters }), done({ error: null })),
+      }
+      return b
+    }
+    const db = { from: () => ({ upsert: async () => ({ error: null }), delete: () => builder('delete') }) }
+    await saveMarketNames(db, 'murder-mystery-2', [], 'eldorado', { resolvedNames: ['gun|default|embergun 2026'] })
+    const cleared = calls.find((c) => c.filters.some(([k]) => k === 'market_name in'))!
+    expect(cleared.filters).toEqual([
+      ['game_slug', 'murder-mystery-2'],
+      ['source', 'eldorado'],
+      ['status', 'unmatched'],
+      ['market_name in', ['gun|default|embergun 2026']],
+    ])
+  })
+})
