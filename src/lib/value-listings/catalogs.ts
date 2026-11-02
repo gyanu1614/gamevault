@@ -7,6 +7,7 @@
  */
 import { VARIANTS, VARIANT_ALIASES, VARIANT_KEY, VARIANT_LABEL, isVariant, variantFromKey, type Variant } from '../adopt-me/variants'
 import { variantFromTitle } from '../adopt-me/variant-from-title'
+import { listFieldSlugs, MM2_SELL_FORM } from '../catalogue/sell-form/config'
 import type { ValueCatalog } from './match'
 import type { SimilarCandidate } from './stock'
 
@@ -21,12 +22,13 @@ export const VALUE_CATALOG_GAMES: readonly string[] = ['steal-a-brainrot', 'adop
 
 /**
  * Sell-form fields whose option value is the catalogue slug, per game, most
- * specific first (the first picked one wins). MM2: one name list per item
- * type (a chroma is its own row). Steal an Egg: a named egg or pet beats the
- * area it comes from.
+ * specific first (the first picked one wins). MM2: the synced chain's one
+ * list per (type, rarity) (lib/catalogue/sell-form), then the old item lists
+ * a listing may still answer until the cutover moves it. Steal an Egg: a
+ * named egg or pet beats the area it comes from.
  */
 const PIPELINE_IDENTITY_KEYS: Record<string, readonly string[]> = {
-  'murder-mystery-2': ['select-knife', 'select-gun', 'select-pet'],
+  'murder-mystery-2': [...listFieldSlugs(MM2_SELL_FORM), ...MM2_SELL_FORM.legacyFields.filter((k) => !k.startsWith('rarity'))],
   'steal-an-egg': ['select-egg', 'select-pet', 'egg-area'],
 }
 

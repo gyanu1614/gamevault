@@ -18,6 +18,11 @@ on:
         description: "One game key (blank = every game)"
         required: false
         default: ""
+      allow_large_sell_form:
+        description: "Let the sell form sync pass its safety cap (one-time cutover, after a dry run)"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: values-catalogue
@@ -59,6 +64,26 @@ jobs:
           ONLY_GAME: ${{ inputs.game }}
           TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'manual' }}
         run: pnpm catalogue --game=${{ matrix.game }} --only="$ONLY_GAME" --write --trigger="$TRIGGER"
+
+      # The sell form follows the catalogue (src/lib/catalogue/sell-form): Item
+      # Type → Rarity → Item, and listings move with their item. It runs inside
+      # the app (signed route) because a repair re-links listings and refreshes
+      # pages. Daily even when the wiki had nothing new, so an accidental admin
+      # edit is repaired within a day. A game with no config answers "skipped".
+      # 409 = stopped at its safety cap (posted to Discord), not a failure.
+      - name: Sync the sell form from the catalogue
+        if: ${{ inputs.game == '' || inputs.game == matrix.game }}
+        env:
+          GAME: ${{ matrix.game }}
+          ALLOW_LARGE: ${{ inputs.allow_large_sell_form && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /tmp/sell-form.json -w '%{http_code}' -X POST \
+            -H "x-values-revalidate-secret: ${VALUES_REVALIDATE_SECRET}" \
+            "${PUBLIC_API_URL}/api/internal/sell-form/sync?game=${GAME}&allowLarge=${ALLOW_LARGE}")"
+          cat /tmp/sell-form.json; echo
+          if [ "$code" = "409" ]; then echo "::warning::sell form sync stopped at its safety cap"; exit 0; fi
+          [ "$code" = "200" ]
 
       # Runs on failure OR cancellation (a timeout kill is a cancellation) and
       # never fails the job itself, so it cannot hide the original error.

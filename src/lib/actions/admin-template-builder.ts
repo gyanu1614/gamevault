@@ -20,6 +20,7 @@ import { ensureGameCategory } from '@/lib/categories'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { SELL_TEMPLATE_TAG } from '@/lib/sell/template-tags'
 import { guardChoiceCodeChange, guardChoiceDelete, guardFieldDelete } from '@/lib/listings/choice-usage'
+import { guardManagedFieldEdit } from '@/lib/catalogue/sell-form/managed'
 
 /** Admin pages + the seller form's cached template (getSellTemplate). */
 function refreshTemplates() {
@@ -469,6 +470,8 @@ export async function updateAttribute(input: UpdateAttributeInput): Promise<Resu
     if (input.sort_order    !== undefined) patch.sort_order = input.sort_order
 
     if (Object.keys(patch).length === 0) return { success: true, data: { id: input.id } }
+    const managed = await guardManagedFieldEdit(supabase, input.id, { slug: patch.slug, type: patch.type })
+    if (managed) return { success: false, error: managed }
     const { error } = await supabase.from('attributes').update(patch).eq('id', input.id)
     if (error) {
       if ((error as any).code === '23505') {
