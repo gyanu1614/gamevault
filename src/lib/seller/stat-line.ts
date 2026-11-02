@@ -72,12 +72,13 @@ export function sellerStatText(s: SellerStatInput): string {
     .join(' · ')
 }
 
-export type SellerPill = { kind: 'positive' | 'reviews' | 'sold' | 'new' | 'verified' | 'since'; label: string }
+export type SellerPill = { kind: 'positive' | 'sold' | 'new' | 'verified' | 'since'; label: string }
 
 /**
  * The checkout item card's seller pills (owner 2026-10-27, Eldorado-style
  * "99.6% positive · 84237 reviews · Verified since 2021"): the same rule as
- * the stat line, as chips. The tier stays on the stat line. "Member Since"
+ * the stat line, as chips. No review-count chip (owner 2026-11-01: the
+ * record fits one row on phones). The tier stays on the stat line. "Member Since"
  * is the account year: we have no verification date, so an unverified
  * seller never gets a "Verified" claim.
  */
@@ -86,9 +87,7 @@ export function sellerPills(s: SellerStatInput & { memberSince?: string | null }
   const pills: SellerPill[] = []
   if (line.kind === 'new') pills.push({ kind: 'new', label: 'New Seller' })
   if (line.kind === 'stats' && line.rating) {
-    const r = line.rating.reviews
     pills.push({ kind: 'positive', label: `${line.rating.percent}% Positive` })
-    pills.push({ kind: 'reviews', label: `${r.toLocaleString('en-US')} ${r === 1 ? 'Review' : 'Reviews'}` })
   } else if (line.kind === 'stats' && line.sales > 0) {
     pills.push({ kind: 'sold', label: `${line.sales.toLocaleString('en-US')} Sold` })
   }

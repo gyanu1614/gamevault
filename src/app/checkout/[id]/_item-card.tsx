@@ -9,7 +9,6 @@
 import Image from 'next/image'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { ThumbsUp } from '@phosphor-icons/react/dist/ssr/ThumbsUp'
-import { Star } from '@phosphor-icons/react/dist/ssr/Star'
 import { SealCheck } from '@phosphor-icons/react/dist/ssr/SealCheck'
 import { Package } from '@phosphor-icons/react/dist/ssr/Package'
 import { CalendarCheck } from '@phosphor-icons/react/dist/ssr/CalendarCheck'
@@ -23,7 +22,6 @@ import { BAND_CLASS, CARD_CLASS, TRUST_BLUE } from './_surfaces'
 
 const PILL_ICON: Record<SellerPill['kind'], PhosphorIcon> = {
   positive: ThumbsUp,
-  reviews: Star,
   sold: Package,
   new: UserCircle,
   verified: SealCheck,
@@ -90,10 +88,12 @@ export function ItemCard({
       </div>
 
       {/* The seller in the card's lower block (block style, no divider). */}
-      <div className={cn(BAND_CLASS, 'px-4 pb-3.5 pt-3')}>
-        <p className="text-[12.5px] text-[#9AA6B3]">Seller</p>
-        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
-          <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold text-[#E9EDF2]">
+      {/* Tight (owner 2026-11-01: "too padded"): label, name and the
+          record sit close, so the band stays a slim strip. */}
+      <div className={cn(BAND_CLASS, 'px-4 py-2.5')}>
+        <p className="text-[12px] leading-4 text-[#9AA6B3]">Seller</p>
+        <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold leading-6 text-[#E9EDF2]">
             <span className="truncate">{seller.name}</span>
             {seller.verified && <VerifiedBadge size={16} />}
             {seller.online && (
@@ -104,18 +104,13 @@ export function ItemCard({
             )}
           </span>
           {seller.pills.length > 0 && (
-            <ul aria-label="Seller Record" className="flex flex-wrap gap-2">
+            <ul aria-label="Seller Record" className="flex flex-wrap gap-1.5">
               {seller.pills.map((p) => {
                 const Icon = PILL_ICON[p.kind]
                 return (
                   <li
                     key={p.kind}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-md bg-[rgba(106,168,255,0.12)] px-2 py-1.5 text-[12px] font-semibold leading-none text-[#E9EDF2] sm:px-2.5 sm:text-[12.5px]',
-                      // Phones: the blue check beside the name already says it,
-                      // so the record fits one row.
-                      p.kind === 'verified' && seller.verified && seller.pills.length > 1 && 'max-sm:hidden',
-                    )}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(106,168,255,0.12)] px-2 py-1 text-[12px] font-semibold leading-none text-[#E9EDF2] sm:px-2.5 sm:text-[12.5px]"
                   >
                     <Icon aria-hidden size={14} weight="fill" color={TRUST_BLUE} />
                     {p.label}
