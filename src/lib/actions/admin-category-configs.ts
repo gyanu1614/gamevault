@@ -53,20 +53,22 @@ export async function fetchCategoryConfig<T extends CategoryConfigType>(
 
 /**
  * Convenience variant that resolves the game by slug. Useful for the
- * marketplace pages which receive slugs in the URL, not ids.
+ * marketplace pages which receive slugs in the URL, not ids. ONE request:
+ * the game is matched through the embedded join (was a games lookup, then
+ * the config; DB read audit 2026-11-02).
  */
 export async function fetchCategoryConfigBySlug<T extends CategoryConfigType>(
   gameSlug: string,
   categoryType: T,
 ): Promise<CategoryConfigByType[T] | null> {
   const supabase = createAnonClient()
-  const { data: game } = await supabase
-    .from('games')
-    .select('id')
-    .eq('slug', gameSlug)
+  const { data } = await (supabase.from('category_configs') as any)
+    .select('config, game:games!inner(slug)')
+    .eq('game.slug', gameSlug)
+    .eq('category_type', categoryType)
     .maybeSingle()
-  if (!game) return null
-  return fetchCategoryConfig((game as { id: string }).id, categoryType)
+  if (!data) return null
+  return (data as { config: CategoryConfigByType[T] }).config
 }
 
 /**

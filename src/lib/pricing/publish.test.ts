@@ -10,6 +10,12 @@ import { httpRevalidator, publishPriceChanges, type RevalidateRequest } from './
 type Row = { game_slug: string; item_slug: string; variant: string; prices: Record<string, number | null> }
 
 /** In-memory values_published_prices: select/eq/order/limit (keyset)/range, upsert, delete. */
+function matches(row: unknown, col: string, v: unknown): boolean {
+  const actual = (row as Record<string, unknown>)[col]
+  if (v && typeof v === 'object' && 'in' in (v as object)) return ((v as { in: unknown[] }).in).includes(actual)
+  return actual === v
+}
+
 function fakeSnapshotClient(initial: Row[] = [], opts: { missing?: boolean } = {}) {
   const rows = [...initial]
   const writes: string[] = []
@@ -25,6 +31,10 @@ function fakeSnapshotClient(initial: Row[] = [], opts: { missing?: boolean } = {
           filters.push([col, val])
           return builder
         },
+        in: (col: string, vals: unknown[]) => {
+          filters.push([col, { in: vals }])
+          return builder
+        },
         // Keyset read (loadPublishedSnapshot): fixtures stay under one page, so
         // the first `limit` returns everything and no cursor filter follows.
         gt: () => builder,
@@ -33,14 +43,14 @@ function fakeSnapshotClient(initial: Row[] = [], opts: { missing?: boolean } = {
           if (opts.missing) {
             return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.values_published_prices' in the schema cache" } }
           }
-          const hit = rows.filter((r) => filters.every(([c, v]) => (r as any)[c] === v))
+          const hit = rows.filter((r) => filters.every(([c, v]) => matches(r, c, v)))
           return { data: hit.slice(0, n), error: null }
         },
         range: async (from: number, to: number) => {
           if (opts.missing) {
             return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.values_published_prices' in the schema cache" } }
           }
-          const hit = rows.filter((r) => filters.every(([c, v]) => (r as any)[c] === v))
+          const hit = rows.filter((r) => filters.every(([c, v]) => matches(r, c, v)))
           return { data: hit.slice(from, to + 1), error: null }
         },
         upsert: async (batch: Row[]) => {
@@ -62,7 +72,7 @@ function fakeSnapshotClient(initial: Row[] = [], opts: { missing?: boolean } = {
           if (mode === 'delete') {
             writes.push('delete')
             for (let i = rows.length - 1; i >= 0; i -= 1) {
-              if (filters.every(([c, v]) => (rows[i] as any)[c] === v)) rows.splice(i, 1)
+              if (filters.every(([c, v]) => matches(rows[i], c, v))) rows.splice(i, 1)
             }
           }
           return Promise.resolve({ error: null }).then(resolve)
@@ -188,6 +198,26 @@ describe('publishPriceChanges', () => {
     })
     expect(calls).toEqual([{ gameSlug: 'adopt-me', changedSlugs: ['frog'] }])
     expect(out.snapshot_deleted).toBe(1)
+    expect(db.rows.map((r) => r.item_slug)).toEqual(['owl'])
+  })
+
+  it('deletes many vanished rows in one request per variant', async () => {
+    const db = fakeSnapshotClient([
+      snap('owl', 'FR', 60),
+      snap('frog', 'FR', 3),
+      snap('cat', 'FR', 4),
+      snap('dog', 'N', 5),
+    ])
+    const out = await publishPriceChanges({
+      client: db.client,
+      gameSlug: 'adopt-me',
+      current: [p('owl', 'FR', 60)],
+      rule,
+      revalidate: async () => {},
+      log: silent,
+    })
+    expect(out.snapshot_deleted).toBe(3)
+    expect(db.writes.filter((w) => w === 'delete')).toHaveLength(2)
     expect(db.rows.map((r) => r.item_slug)).toEqual(['owl'])
   })
 })

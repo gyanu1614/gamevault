@@ -95,8 +95,15 @@ export async function runAdoptMeCorrection(
   // to the market (average) so the existing values page / snapshot keep
   // working unchanged, while cheapest_usd/average_usd carry the buyer-facing
   // split. last_priced_at therefore means "price last changed".
+  //
+  // Written in chunks of CORRECTION_CHUNK rows per request (an upsert on the
+  // (pet_id, variant) key, like adopt-me-trade.ts) — it was one PATCH per
+  // pet+variant: 4,269 requests in 8 minutes on 2026-11-02. Only rows that
+  // already exist are written (the per-row UPDATE never inserted), so the
+  // upsert only ever takes its UPDATE branch.
   let updated = 0
   let unchanged = 0
+  const changed: ValueRow[] = []
   for (const c of corrections) {
     const key = `${c.petId}:${c.variant}`
     const next: ValueRow = {
@@ -111,33 +118,26 @@ export async function runAdoptMeCorrection(
       is_estimated: false,
     }
     const before = existing.get(key)
-    if (before && sameValueRow(before, next)) {
+    if (!before || sameValueRow(before, next)) {
       unchanged += 1
       continue
     }
+    changed.push(next)
+  }
+  for (let i = 0; i < changed.length; i += CORRECTION_CHUNK) {
+    const chunk = changed.slice(i, i + CORRECTION_CHUNK)
     const { error } = await (admin as any)
       .from('adopt_me_pet_values')
-      .update({
-        cash_value_usd: next.cash_value_usd,
-        cheapest_usd: next.cheapest_usd,
-        average_usd: next.average_usd,
-        reputable_count: next.reputable_count,
-        listings_tracked: next.listings_tracked,
-        confidence: next.confidence,
-        is_estimated: false,
-        last_priced_at: startedAt,
-      })
-      .eq('pet_id', c.petId)
-      .eq('variant', c.variant)
-    if (error) {
-      console.error(
-        `Adopt Me correction ${c.petId}/${c.variant}: ${error.message}`,
+      .upsert(
+        chunk.map((next) => ({ ...next, last_priced_at: startedAt })),
+        { onConflict: 'pet_id,variant' },
       )
-    } else {
-      updated += 1
-      // Only rows that exist are updated (no insert), so merge only those.
-      if (before) existing.set(key, next)
+    if (error) {
+      console.error(`Adopt Me corrections ${i + 1}-${i + chunk.length}: ${error.message}`)
+      continue
     }
+    updated += chunk.length
+    for (const next of chunk) existing.set(`${next.pet_id}:${next.variant}`, next)
   }
 
   // Reconcile TODAY's price-history snapshot with the freshly corrected values,
@@ -324,6 +324,9 @@ async function unpublishLadderOutliers(
   }
   return cleared
 }
+
+/** Rows per upsert request when writing changed prices. */
+const CORRECTION_CHUNK = 500
 
 type ValueRow = {
   pet_id: string
