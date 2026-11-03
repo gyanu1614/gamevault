@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { StockAlertsProvider } from '@/features/items-grid/stock-alerts-context'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
-import { BuyBox } from './BuyBox'
+import { BuyBox, ItemTitle } from './BuyBox'
 import { DeliveryNotes } from './DeliveryNotes'
 import { ItemSpecs } from './ItemSpecs'
 import { OffersSection } from './OffersSection'
@@ -42,12 +42,14 @@ export interface ItemBuyClientProps {
  * as the reference; StockX's trait field and buy box).
  *
  * Desktop (owner, 2026-11-02): the left column holds ONE picture card with
- * the facts in a strip under the picture, then the delivery instructions and
- * the three promises; the buy column on the right stays in view while the
- * left column scrolls. Under that block, every offer as a full-width row with
- * the trait filter. Phones and tablets: picture card, buy column,
- * instructions, promises, and a Buy bar docks at the bottom once the box
- * scrolls away.
+ * the facts in a strip under the picture, then the delivery instructions; the
+ * buy column on the right (title, buy box with the promises, seller) stays in
+ * view while the left column scrolls. Under that block, every offer as a
+ * full-width row with the trait filter. Phones and tablets (Eldorado's phone
+ * page as the reference, no box in a box): title, picture, the facts floating
+ * 2 × 2, the buy box on the page, instructions, and a Buy bar docks at the
+ * bottom once the box scrolls away. One DOM order serves both: the buy column
+ * is `display: contents` on phones so its pieces take their own `order`.
  *
  * The page opens on the URL's trait, else the cheapest offer's. Picking a
  * trait shows its cheapest offer; picking a row shows that offer and its
@@ -124,35 +126,44 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      <div className="grid grid-cols-1 gap-4 [grid-template-areas:'pic'_'buy'_'notes'] lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:[grid-template-areas:'pic_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-12">
-        <div className="min-w-0 [grid-area:pic]">
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-4 lg:[grid-template-areas:'pic_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-12">
+        <div className="order-2 min-w-0 lg:order-none lg:[grid-area:pic]">
           <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null}>
-            <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
+            <div className="hidden lg:block">
+              <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
+            </div>
           </PictureStage>
         </div>
 
-        <div className="min-w-0 pt-2 [grid-area:buy] sm:pt-4 lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:self-start lg:pt-0">
-          <BuyBox
-            gameSlug={p.gameSlug}
-            itemSlug={p.itemSlug}
-            itemName={p.itemName}
-            kicker={{ game: p.gameName, type: p.itemType, rarity: p.rarity }}
-            noun={p.noun}
-            traits={options}
-            trait={trait}
-            onTrait={onTrait}
-            offer={offer}
-            wantedName={named(trait)}
-            qty={qty}
-            onQty={setQty}
-            onBuy={onBuy}
-            navigating={navigating}
-            isOwn={isOwn}
-            buyRef={buyRef}
-          />
+        <div className="order-3 min-w-0 lg:hidden">
+          <ItemSpecs variant="floating" rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
         </div>
 
-        <div className="min-w-0 [grid-area:notes] lg:self-start">
+        <div className="contents lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:block lg:self-start lg:[grid-area:buy]">
+          <div className="order-1 min-w-0 lg:mb-4">
+            <ItemTitle itemName={p.itemName} kicker={{ game: p.gameName, type: p.itemType, rarity: p.rarity }} />
+          </div>
+          <div className="order-4 min-w-0 pt-1 lg:pt-0">
+            <BuyBox
+              gameSlug={p.gameSlug}
+              itemSlug={p.itemSlug}
+              noun={p.noun}
+              traits={options}
+              trait={trait}
+              onTrait={onTrait}
+              offer={offer}
+              wantedName={named(trait)}
+              qty={qty}
+              onQty={setQty}
+              onBuy={onBuy}
+              navigating={navigating}
+              isOwn={isOwn}
+              buyRef={buyRef}
+            />
+          </div>
+        </div>
+
+        <div className="order-5 min-w-0 pt-2 lg:order-none lg:self-start lg:pt-0 lg:[grid-area:notes]">
           {offer ? <DeliveryNotes text={offer.description ?? null} fallback={p.deliveryFallback} resetKey={offer.id} /> : null}
           {p.trust}
         </div>

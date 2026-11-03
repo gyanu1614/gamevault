@@ -2,7 +2,7 @@
 
 import type { Ref } from 'react'
 import NumberFlow from '@number-flow/react'
-import { IconChevronRight, IconShieldCheckFilled } from '@tabler/icons-react'
+import { IconChevronRight } from '@tabler/icons-react'
 import { SmartLink } from '@/components/global/SmartLink'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { SellerIdentity } from '@/components/marketplace/CurrencySellerRow'
@@ -11,8 +11,8 @@ import { NotifyMeButton } from '@/features/items-grid/NotifyMeButton'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
-import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
+import { BuyPromises } from './BuyPromises'
 import { PaymentMarks } from './PaymentMarks'
 import { TraitField } from './TraitField'
 import { TraitSwitches } from './TraitSwitches'
@@ -22,12 +22,36 @@ import { traitPicker } from './model/traits'
 
 const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 } as const
 
+/** Desktop only: the buy box and seller sit in cards; phones keep everything on the page (owner, 2026-11-02). */
+const LG_CARD = 'lg:rounded-lg lg:bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] lg:shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]'
+
+/**
+ * The pet's name with its game, rarity and type above it. Its own piece so
+ * phones can show it first (over the picture, as Eldorado does) while
+ * desktop keeps it at the top of the buy column.
+ */
+export function ItemTitle({ itemName, kicker }: { itemName: string; kicker: { game: string; type: string; rarity: { label: string; color: string } | null } }) {
+  return (
+    <div>
+      <p className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+        {kicker.game} ·{' '}
+        {kicker.rarity ? (
+          <span className="font-semibold" style={{ color: kicker.rarity.color }}>
+            {kicker.rarity.label}{' '}
+          </span>
+        ) : null}
+        {kicker.type}
+      </p>
+      <h1 id="item-title" className="mt-1 text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', lineHeight: 1.12, letterSpacing: '-0.025em' }}>
+        {itemName}
+      </h1>
+    </div>
+  )
+}
+
 export interface BuyBoxProps {
   gameSlug: string
   itemSlug: string
-  itemName: string
-  /** The line over the title: "Adopt Me · Legendary Pet". */
-  kicker: { game: string; type: string; rarity: { label: string; color: string } | null }
   noun: 'Trait' | 'Mutation'
   traits: TraitOption[]
   trait: string | null
@@ -44,13 +68,13 @@ export interface BuyBoxProps {
 }
 
 /**
- * The buy column (owner, 2026-10-27/28; StockX's buy box as the reference):
- * the pet's name, then ONE framed box: the trait picker (Adopt Me's on/off
- * tiles, else the dropdown), a clear divider, the price (rolling when the
- * trait changes) with the quantity, Buy and ways to pay — the decision and its
- * reassurance in one place. The seller is a small card under
- * it. A trait nobody sells gets Notify Me in the box instead. The title is
- * kept small (owner, 2026-10-28) so the box sits high on the first screen.
+ * The buy column (owner, 2026-10-27/28, 2026-11-02; StockX's buy box and
+ * Eldorado's phone page as references): the trait picker (Adopt Me's
+ * segmented type + potion toggles, else the dropdown), a divider, the price
+ * (rolling when the trait changes) with the quantity, Buy, the three promises
+ * as plain rows, then the ways to pay; the seller under it. Desktop frames it
+ * in a card; on phones it floats on the page. A trait nobody sells gets
+ * Notify Me instead.
  */
 export function BuyBox(p: BuyBoxProps) {
   const { offer } = p
@@ -59,20 +83,7 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome">
-      <p className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
-        {p.kicker.game} ·{' '}
-        {p.kicker.rarity ? (
-          <span className="font-semibold" style={{ color: p.kicker.rarity.color }}>
-            {p.kicker.rarity.label}{' '}
-          </span>
-        ) : null}
-        {p.kicker.type}
-      </p>
-      <h1 id="item-title" className="mt-1 text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', lineHeight: 1.12, letterSpacing: '-0.025em' }}>
-        {p.itemName}
-      </h1>
-
-      <div className="mt-4 rounded-lg bg-[linear-gradient(180deg,#1F2025_0%,#191A1E_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_48px_-28px_rgba(0,0,0,0.9)] sm:p-6">
+      <div className={cn('lg:p-6', LG_CARD)}>
         {p.traits.length > 0 ? (
           <>
             {traitPicker(p.traits) === 'toggles' ? (
@@ -111,12 +122,6 @@ export function BuyBox(p: BuyBoxProps) {
               <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="h-14 w-full text-[16px]" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
                 {p.isOwn ? 'Edit Your Listing' : BUY_CTA_LABEL}
               </BuyButton>
-              {p.isOwn ? null : (
-                <p className="mt-3 flex items-center justify-center gap-1.5 text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>
-                  <IconShieldCheckFilled aria-hidden size={15} className="shrink-0 text-[#6AA8FF]" />
-                  SafeDrop Protection: money back if it doesn’t arrive
-                </p>
-              )}
             </div>
           </>
         ) : (
@@ -130,6 +135,10 @@ export function BuyBox(p: BuyBoxProps) {
             <NotifyMeButton gameSlug={p.gameSlug} itemSlug={p.itemSlug} itemName={p.wantedName} variant={p.trait} className="mt-4 h-12 w-full justify-center text-[15px]" />
           </div>
         )}
+
+        <div className="mt-5">
+          <BuyPromises />
+        </div>
         <div className="mt-5">
           <PaymentMarks />
         </div>
@@ -141,9 +150,9 @@ export function BuyBox(p: BuyBoxProps) {
 }
 
 /**
- * Who sells it, in a small card of its own (owner, 2026-10-28: "inside a
- * small modal, not floating"): the house seller identity (avatar, name,
- * badge, rating and sales) and the way into their shop.
+ * Who sells it: the house seller identity (avatar, name, badge, rating and
+ * sales) and the way into their shop. A small card on desktop (owner,
+ * 2026-10-28); on phones a plain row between two hairlines.
  */
 function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
   const slug = sellerShopSlug(offer.seller)
@@ -160,9 +169,17 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
       {slug ? <IconChevronRight aria-hidden size={16} stroke={2} className="shrink-0 text-text-tertiary" /> : null}
     </>
   )
-  const cls = cn('mt-3 flex min-w-0 items-center gap-3 rounded-lg px-4 py-3', MARKET_CARD)
+  const cls = cn(
+    'mt-5 flex min-w-0 items-center gap-3 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
+    'lg:mt-3 lg:px-4 lg:py-3',
+    LG_CARD,
+  )
   return slug ? (
-    <SmartLink href={`/shop/${slug}`} aria-label={`${sellerDisplayName(s)}'s shop`} className={cn(cls, MARKET_CARD_HOVER, 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}>
+    <SmartLink
+      href={`/shop/${slug}`}
+      aria-label={`${sellerDisplayName(s)}'s shop`}
+      className={cn(cls, 'transition-[background-image] duration-200 lg:hover:bg-[linear-gradient(180deg,#27282F_0%,#1E1F25_100%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
+    >
       {body}
     </SmartLink>
   ) : (

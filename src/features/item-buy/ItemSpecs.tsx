@@ -10,6 +10,8 @@ export interface ItemSpecsProps {
   rarity: { label: string; color: string } | null
   offer: ItemOffer | null
   deliveryMethod: string
+  /** strip: the row inside the picture card (desktop); floating: plain 2 × 2 on the page (phones). */
+  variant?: 'strip' | 'floating'
 }
 
 /**
@@ -18,7 +20,8 @@ export interface ItemSpecsProps {
  * how it is delivered, how many are left; the item type sits in the title's
  * eyebrow and the trait in the buy box. Offer facts (time, stock) show only
  * while an offer is on show; a changed value eases in when another offer is
- * chosen.
+ * chosen. Phones get them floating on the page, 2 × 2 with no box (owner,
+ * 2026-11-02: no box in a box; Eldorado's phone page as the reference).
  */
 export function ItemSpecs(p: ItemSpecsProps) {
   const { offer } = p
@@ -31,6 +34,25 @@ export function ItemSpecs(p: ItemSpecsProps) {
     { label: 'Delivery Method', value: p.deliveryMethod, key: p.deliveryMethod },
     ...(offer ? [{ label: 'In Stock', value: stockLabel(offer), key: `s:${offer.id}` }] : []),
   ]
+
+  if (p.variant === 'floating') {
+    return (
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {cells.map((c) => (
+          <div key={c.label} className="min-w-0">
+            <dt className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+              {c.label}
+            </dt>
+            <dd className="mt-0.5 truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
+              <Fade key={c.key} animate={hydrated}>
+                {c.value}
+              </Fade>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    )
+  }
 
   return (
     <dl className={cn('grid grid-cols-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]', cells.length > 2 ? 'sm:grid-cols-4' : 'sm:grid-cols-2')}>
