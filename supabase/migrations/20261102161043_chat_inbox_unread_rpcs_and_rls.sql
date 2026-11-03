@@ -110,21 +110,22 @@ create policy "Participants and admins read conversations" on public.conversatio
   for select to authenticated
   using ((select auth.uid()) in (buyer_id, seller_id) or (select public.is_admin()));
 
--- An order chat may only be opened on an order the caller is party to (the
--- inbox shows the order summary, so a conversation must not be pointable at
--- someone else's order).
+-- A chat belongs to one order and exactly that order's buyer and seller. order_id
+-- is unique, so the first insert wins: a row naming anyone else would lock the real
+-- seller out of the chat and show staff a made-up thread as the order's conversation
+-- (dispute page, card-dispute evidence). A new chat with no order could reach any
+-- user and email them; the app's only insert always has an order, and the last such
+-- row dates from April 2026. Existing ones stay readable.
 drop policy if exists "Users can create conversations" on public.conversations;
 create policy "Users can create conversations" on public.conversations
   for insert to authenticated
   with check (
     (select auth.uid()) in (buyer_id, seller_id)
-    and (
-      order_id is null
-      or exists (
-        select 1 from public.orders o
-        where o.id = conversations.order_id
-          and (select auth.uid()) in (o.buyer_id, o.seller_id)
-      )
+    and exists (
+      select 1 from public.orders o
+      where o.id = conversations.order_id
+        and o.buyer_id = conversations.buyer_id
+        and o.seller_id = conversations.seller_id
     )
   );
 

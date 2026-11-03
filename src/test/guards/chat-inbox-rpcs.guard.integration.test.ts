@@ -204,6 +204,40 @@ describe.skipIf(!hasEnv)('chat inbox + unread RPCs, chat RLS (integration)', () 
       expect(data ?? []).toHaveLength(0)
     })
 
+    it('a party cannot bind an order chat to anyone but the order\'s own buyer and seller', async () => {
+      // First insert wins (order_id is unique): a forged row would lock the real
+      // seller out and show staff a made-up thread as the order's chat.
+      const forged = [
+        // The buyer naming another account as the seller.
+        { client: fx!.buyer.client, row: { buyer_id: fx!.buyer.id, seller_id: fx!.admin.id } },
+        // The buyer on both sides.
+        { client: fx!.buyer.client, row: { buyer_id: fx!.buyer.id, seller_id: fx!.buyer.id } },
+        // The seller naming another account as the buyer.
+        { client: fx!.seller.client, row: { buyer_id: fx!.admin.id, seller_id: fx!.seller.id } },
+      ]
+      for (const { client, row } of forged) {
+        const { error } = await client.from('conversations').insert({ ...row, order_id: fx!.pendingOrderId })
+        expect(error, JSON.stringify(row)).not.toBeNull()
+      }
+      const { data } = await fx!.svc.from('conversations').select('id').eq('order_id', fx!.pendingOrderId)
+      expect(data ?? []).toHaveLength(0)
+    })
+
+    it('nobody can open a chat with no order (it reaches any user, and emails them)', async () => {
+      const { error } = await fx!.buyer.client.from('conversations').insert({ buyer_id: fx!.buyer.id, seller_id: fx!.admin.id, order_id: null })
+      expect(error).not.toBeNull()
+    })
+
+    it('the real seller can open the chat on their order', async () => {
+      const { data, error } = await fx!.seller.client
+        .from('conversations')
+        .insert({ buyer_id: fx!.buyer.id, seller_id: fx!.seller.id, order_id: fx!.pendingOrderId })
+        .select('id')
+        .single()
+      expect(error).toBeNull()
+      await fx!.svc.from('conversations').delete().eq('id', (data as { id: string }).id)
+    })
+
     it('still lets a participant mark the other side read (and nothing else)', async () => {
       const read = await fx!.seller.client
         .from('messages')
