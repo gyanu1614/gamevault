@@ -1,10 +1,34 @@
+import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getDashboardStats, getRecentActivity } from '@/lib/actions/admin-dashboard'
 import CompactDashboard from '../components/CompactDashboard'
+import { RecentActivityPanel, RecentActivitySkeleton } from '../components/RecentActivityPanel'
+import { SkAdminStrip } from '../components/AdminSkeletons'
 import { TrustpilotCard } from '../components/TrustpilotCard'
 import { getTrustpilotSummary } from '@/lib/actions/admin-trustpilot'
 
 export const metadata = { title: 'Dashboard' }
+
+/** The feed reads three tables; the numbers above it never wait for them. */
+async function RecentActivitySection() {
+  const result = await getRecentActivity()
+  return (
+    <RecentActivityPanel
+      activities={result.success && result.activities ? result.activities : []}
+      failed={!result.success}
+    />
+  )
+}
+
+async function TrustpilotSection() {
+  const trustpilot = await getTrustpilotSummary().catch(() => ({ ok: false as const, error: 'Couldn’t load invite stats.' }))
+  return (
+    <TrustpilotCard
+      summary={trustpilot.ok ? trustpilot.summary : null}
+      loadError={trustpilot.ok ? undefined : trustpilot.error}
+    />
+  )
+}
 
 export default async function AdminDashboardPage() {
   const admin = await requireAdmin()
@@ -12,14 +36,7 @@ export default async function AdminDashboardPage() {
   // Admin / super-admin only (the card can change the public TrustBox switch).
   const showTrustpilot = admin.role === 'admin' || admin.role === 'super_admin'
 
-  // Side by side: none of these needs another's answer.
-  const [statsResult, activityResult, trustpilot] = await Promise.all([
-    getDashboardStats(),
-    getRecentActivity(),
-    showTrustpilot
-      ? getTrustpilotSummary().catch(() => ({ ok: false as const, error: 'Couldn’t load invite stats.' }))
-      : null,
-  ])
+  const statsResult = await getDashboardStats()
 
   // Default to empty data if fetch fails
   const stats = statsResult.success && statsResult.stats ? statsResult.stats : {
@@ -50,21 +67,21 @@ export default async function AdminDashboardPage() {
     systemHealth: 'good' as const,
   }
 
-  const activities = activityResult.success && activityResult.activities ? activityResult.activities : []
-
   return (
     <div className="space-y-7 sm:space-y-8">
       <CompactDashboard
         admin={admin}
         stats={stats}
-        activities={activities}
-        activityFailed={!activityResult.success}
+        activity={
+          <Suspense fallback={<RecentActivitySkeleton />}>
+            <RecentActivitySection />
+          </Suspense>
+        }
       />
-      {trustpilot && (
-        <TrustpilotCard
-          summary={trustpilot.ok ? trustpilot.summary : null}
-          loadError={trustpilot.ok ? undefined : trustpilot.error}
-        />
+      {showTrustpilot && (
+        <Suspense fallback={<SkAdminStrip count={3} />}>
+          <TrustpilotSection />
+        </Suspense>
       )}
     </div>
   )

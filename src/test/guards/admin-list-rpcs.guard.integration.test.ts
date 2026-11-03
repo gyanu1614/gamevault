@@ -31,6 +31,7 @@ vi.mock('@/lib/actions/admin-permissions', () => {
 import { deriveStage } from '@/lib/founding/onboarding'
 import { getActiveSellers, getSellerStats } from '@/lib/actions/admin-active-sellers'
 import { getAllSellers } from '@/lib/actions/admin-all-sellers'
+import { getSellerDetail } from '@/lib/actions/admin-seller-detail'
 
 let fx: Fixture | null = null
 
@@ -185,6 +186,33 @@ describe.skipIf(!hasEnv)('admin list RPCs (integration)', () => {
     })
   })
 
+  it('a seller\'s page counts in the database and shows the newest rows', async () => {
+    const { detail, success } = await getSellerDetail(fx!.seller.id)
+    expect(success).toBe(true)
+    // The fixture: one pending order and one completed, $1 each.
+    expect(detail!.orders.totalOrders).toBe(2)
+    expect(detail!.orders.completedCount).toBe(1)
+    expect(detail!.orders.revenue).toBe(1)
+    expect(detail!.orders.gmv).toBe(1)
+    expect(detail!.orders.completionRate).toBe(50)
+    expect(detail!.orders.recent).toHaveLength(2)
+    expect(detail!.listings.countsByStatus.pending_approval).toBe(1)
+    expect(detail!.listings.recent).toHaveLength(1)
+    expect(detail!.moderation.activeStrikes).toBe(0)
+  })
+
+  it('a seller\'s page reads the games from the shape /founding saves', async () => {
+    await fx!.svc
+      .from('seller_onboarding')
+      .upsert({ user_id: fx!.seller.id, sells: [{ game: 'adopt-me', categories: ['items'] }] }, { onConflict: 'user_id' })
+    try {
+      const { detail } = await getSellerDetail(fx!.seller.id)
+      expect(detail!.onboarding?.sells).toEqual(['adopt-me'])
+    } finally {
+      await fx!.svc.from('seller_onboarding').delete().eq('user_id', fx!.seller.id)
+    }
+  })
+
   it('moderation numbers match plain queries', async () => {
     const today = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate())).toISOString()
     const { data, error } = await fx!.svc.rpc('admin_moderation_stats', { p_today: today })
@@ -234,6 +262,7 @@ describe.skipIf(!hasEnv)('admin list RPCs (integration)', () => {
       staff.rpc('admin_moderation_stats', { p_today: new Date().toISOString() }),
       staff.rpc('admin_seller_released_counts', { p_seller_ids: [fx!.seller.id] }),
       staff.rpc('admin_review_stats'),
+      staff.rpc('admin_seller_detail_numbers', { p_seller_id: fx!.seller.id }),
       staff.rpc('admin_game_listing_counts'),
       staff.rpc('withdrawal_risk_snapshots', { p_seller_ids: [fx!.seller.id] }),
       staff.rpc('admin_withdrawal_totals', { p_open_statuses: ['pending'] }),

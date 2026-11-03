@@ -15,6 +15,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole } from './admin-permissions'
 import { ilikeContains } from '@/lib/db/ilike'
+import { sellsGames } from '@/lib/founding/onboarding'
 import {
   SELLERS_PAGE_SIZE,
   type AllSellersFilters,
@@ -24,12 +25,6 @@ import {
 
 /** "Stalled" = started but not live and no step for 3 days. */
 const STALL_MS = 3 * 24 * 60 * 60 * 1000
-
-/** Saved as { game, categories } today; bare strings or { slug | name } before. */
-function sellsOf(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return []
-  return raw.map((s: any) => (typeof s === 'string' ? s : s?.game ?? s?.slug ?? s?.name)).filter(Boolean)
-}
 
 function rowFromDb(r: any): SellerListRow {
   return {
@@ -50,7 +45,7 @@ function rowFromDb(r: any): SellerListRow {
     milestone: r.has_sale ? 'sold' : r.has_listing ? 'listed' : 'none',
     country: r.country ?? null,
     discord: r.discord ?? null,
-    sells: sellsOf(r.sells),
+    sells: sellsGames(r.sells),
     agreement_signed_at: r.agreement_signed_at ?? null,
     completed_at: r.completed_at ?? null,
     last_active_at: r.last_active_at ?? null,

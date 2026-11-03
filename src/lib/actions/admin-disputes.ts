@@ -208,6 +208,46 @@ export async function getDisputeById(disputeId: string) {
     return { success: false, error: disputeResult.error.message }
   }
 
+  // The order behind the dispute and its chat. Shared order columns only: '*'
+  // on orders is refused to a session client (orders column grant).
+  const transactionId = (disputeResult.data as any).transaction_id as string | null
+  const [orderResult, conversationResult] = transactionId
+    ? await Promise.all([
+        supabase
+          .from('orders')
+          .select(`
+            id,
+            order_number,
+            total_amount,
+            status,
+            created_at,
+            chat_active_until,
+            listing:listing_id (
+              title,
+              images,
+              game_id
+            ),
+            buyer:buyer_id (
+              id,
+              username,
+              avatar_url
+            ),
+            seller:seller_id (
+              id,
+              username,
+              avatar_url
+            )
+          `)
+          .eq('id', transactionId)
+          .maybeSingle() as any,
+        supabase
+          .from('conversations')
+          .select('id')
+          .eq('order_id', transactionId)
+          .maybeSingle() as any,
+      ])
+    : [{ data: null }, { data: null }]
+
   await logAdminActivity({
     action: ADMIN_ACTIONS.DISPUTE_VIEWED,
     actionCategory: 'dispute',
@@ -220,6 +260,8 @@ export async function getDisputeById(disputeId: string) {
     success: true,
     dispute: disputeResult.data,
     messages: messagesResult.data || [],
+    order: orderResult.data ?? null,
+    conversationId: (conversationResult.data?.id as string | undefined) ?? null,
   }
 }
 

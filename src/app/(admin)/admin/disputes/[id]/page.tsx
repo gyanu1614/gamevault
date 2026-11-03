@@ -3,7 +3,6 @@
 import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { getDisputeById } from '@/lib/actions/admin-disputes'
-import { createClient } from '@/lib/supabase/client'
 import Link from '@/components/navigation/AppLink'
 import { CaretDown, CaretLeft, ChatsCircle, CheckCircle, Scales, WarningOctagon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
@@ -21,8 +20,6 @@ export default function DisputeDetailPage() {
   const params = useParams()
   const disputeId = params.id as string
   const { user } = useAuth()
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const [order, setOrder] = useState<any>(null)
   const [showResolveModal, setShowResolveModal] = useState(false)
   const [showEscalateModal, setShowEscalateModal] = useState(false)
   const [isChatCollapsed, setIsChatCollapsed] = useState(false) // Will be set to true for resolved disputes
@@ -34,6 +31,8 @@ export default function DisputeDetailPage() {
   })
 
   const dispute = (data?.success ? data.dispute : null) as any
+  const order = (data?.success ? data.order : null) as any
+  const conversationId = data?.success ? data.conversationId : null
 
   // Set chat collapsed state for resolved disputes
   useEffect(() => {
@@ -41,88 +40,6 @@ export default function DisputeDetailPage() {
       setIsChatCollapsed(true)
     }
   }, [dispute?.status])
-
-  // Fetch conversation for this order
-  useEffect(() => {
-    if (!dispute?.transaction_id) {
-      return
-    }
-
-    const fetchConversation = async () => {
-      const supabase = createClient()
-
-
-      // Get order details
-      const { data: orderData, error: orderError } = (await supabase
-        .from('orders')
-        // Shared order columns only: '*' on orders is refused to a session
-        // client (orders column grant).
-        .select(`
-          id,
-          order_number,
-          total_amount,
-          status,
-          created_at,
-          chat_active_until,
-          listing:listing_id (
-            title,
-            images,
-            game_id
-          ),
-          buyer:buyer_id (
-            id,
-            username,
-            avatar_url
-          ),
-          seller:seller_id (
-            id,
-            username,
-            avatar_url
-          )
-        `)
-        .eq('id', dispute.transaction_id)
-        .single()) as any
-
-      if (orderError) {
-        console.error('❌ Error fetching order:', orderError)
-        return
-      }
-
-
-      if (orderData) {
-        setOrder({
-          id: orderData.id,
-          order_number: orderData.order_number,
-          listing: orderData.listing,
-          total_amount: orderData.total_amount,
-          status: orderData.status,
-          created_at: orderData.created_at,
-          chat_active_until: orderData.chat_active_until,
-          buyer: orderData.buyer,
-          seller: orderData.seller
-        })
-
-        // Get conversation
-        const { data: conv, error: convError } = (await supabase
-          .from('conversations')
-          .select('id')
-          .eq('order_id', dispute.transaction_id)
-          .single()) as any
-
-        if (convError) {
-          console.error('❌ Error fetching conversation:', convError)
-          return
-        }
-
-
-        if (conv) {
-          setConversationId(conv.id)
-        }
-      }
-    }
-
-    fetchConversation()
-  }, [dispute?.transaction_id])
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('en-US', {

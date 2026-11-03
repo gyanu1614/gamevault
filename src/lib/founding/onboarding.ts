@@ -31,6 +31,12 @@ export const sellsEntrySchema = z.object({
 })
 export type SellsEntry = z.infer<typeof sellsEntrySchema>
 
+/** The games in a saved `sells` value: { game, categories } today, bare strings or { slug | name } before. */
+export function sellsGames(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((s: any) => (typeof s === 'string' ? s : s?.game ?? s?.slug ?? s?.name)).filter(Boolean)
+}
+
 /** Discord: new-style handle (2–32, lowercase letters/digits/._) or legacy Name#1234 (spaces allowed). */
 export const DISCORD_RE = /^(?:[a-z0-9._]{2,32}|[^#@:`<>]{2,32}#\d{4})$/
 
