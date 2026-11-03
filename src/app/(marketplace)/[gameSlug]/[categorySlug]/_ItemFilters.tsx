@@ -405,6 +405,31 @@ export function PriceRangeFilter({
 }) {
   const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('start')
   const [lo, hi] = value ?? bounds
+  const buttonLabel = value ? `${money(lo)} – ${money(hi)}` : 'Price'
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Trigger icon={DollarSign} label={buttonLabel} active={!!value} open={open} buttonRef={triggerRef} />
+      <Panel title="Price" alignOffset={alignOffset} onClear={value ? () => onChange(null) : undefined}>
+        <PriceRangeFields bounds={bounds} value={value} onChange={onChange} className="min-h-0 overflow-y-auto px-4 pb-4 pt-4" />
+      </Panel>
+    </Popover.Root>
+  )
+}
+
+/** The price filter's From / To boxes and slider: the dropdown's body, and the items grid's phone filter sheet. */
+export function PriceRangeFields({
+  bounds,
+  value,
+  onChange,
+  className,
+}: {
+  bounds: [number, number]
+  value: [number, number] | null
+  onChange: (next: [number, number] | null) => void
+  className?: string
+}) {
+  const [lo, hi] = value ?? bounds
   const span = bounds[1] - bounds[0]
   // Whole dollars on wide ranges; cents when the page's prices are close.
   const step = span > 50 ? 1 : 0.01
@@ -415,8 +440,6 @@ export function PriceRangeFilter({
     const b = Math.min(bounds[1], Math.max(next[0], next[1]))
     onChange(a <= bounds[0] && b >= bounds[1] ? null : [a, b])
   }
-
-  const buttonLabel = value ? `${money(lo)} – ${money(hi)}` : 'Price'
 
   const field = (which: 0 | 1, text: string) => (
     <label className="block min-w-0 flex-1">
@@ -443,32 +466,27 @@ export function PriceRangeFilter({
   )
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Trigger icon={DollarSign} label={buttonLabel} active={!!value} open={open} buttonRef={triggerRef} />
-      <Panel title="Price" alignOffset={alignOffset} onClear={value ? () => onChange(null) : undefined}>
-        <div className="min-h-0 space-y-5 overflow-y-auto px-4 pb-4 pt-4">
-          <div className="flex items-end gap-2.5">
-            {field(0, 'From')}
-            <span aria-hidden className="pb-2.5 text-text-tertiary">–</span>
-            {field(1, 'To')}
-          </div>
-          <div>
-            <Slider
-              min={bounds[0]}
-              max={bounds[1]}
-              step={step}
-              value={[lo, hi]}
-              minStepsBetweenThumbs={0}
-              onValueChange={(v) => commit([v[0], v[1]])}
-              aria-label="Price range"
-            />
-            <div className="mt-2.5 flex justify-between text-body-sm tabular-nums text-text-secondary">
-              <span>{money(bounds[0])}</span>
-              <span>{money(bounds[1])}</span>
-            </div>
-          </div>
+    <div className={cn('space-y-5', className)}>
+      <div className="flex items-end gap-2.5">
+        {field(0, 'From')}
+        <span aria-hidden className="pb-2.5 text-text-tertiary">–</span>
+        {field(1, 'To')}
+      </div>
+      <div>
+        <Slider
+          min={bounds[0]}
+          max={bounds[1]}
+          step={step}
+          value={[lo, hi]}
+          minStepsBetweenThumbs={0}
+          onValueChange={(v) => commit([v[0], v[1]])}
+          aria-label="Price range"
+        />
+        <div className="mt-2.5 flex justify-between text-body-sm tabular-nums text-text-secondary">
+          <span>{money(bounds[0])}</span>
+          <span>{money(bounds[1])}</span>
         </div>
-      </Panel>
-    </Popover.Root>
+      </div>
+    </div>
   )
 }

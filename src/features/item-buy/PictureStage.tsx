@@ -44,7 +44,8 @@ export function PictureStage({
             decoding="async"
             onLoad={(e) => setCap(e.currentTarget.naturalWidth * MAX_UPSCALE)}
             style={cap ? { maxWidth: cap, maxHeight: cap } : undefined}
-            className="h-[74%] w-auto object-contain drop-shadow-[0_18px_22px_rgba(0,0,0,0.45)]"
+            // Sized against the positioned box, not the grid track: a big source can never spill out.
+            className="absolute inset-0 m-auto h-[74%] w-[74%] object-contain drop-shadow-[0_18px_22px_rgba(0,0,0,0.45)]"
           />
         ) : (
           <span className="font-medium uppercase tracking-[0.14em] text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>

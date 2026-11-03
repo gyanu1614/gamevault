@@ -262,7 +262,10 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const subj = categorySubject({
     gameName: game.name,
     gameSlug,
-    categoryName: category.name,
+    // A values game's item grid goes by its item word, as players search it:
+    // "Adopt Me Pets", not the category's "Items" (GSC 2026-11: every query
+    // the page shows for says "pets"). Same rule as the grid's heading.
+    categoryName: category.type === 'items' && VALUE_CATALOG_GAMES.includes(gameSlug) ? itemNoun(gameSlug) : category.name,
     isCurrency,
     unitLabel: currencyCfg?.unit_label,
     regionOptions: regionField?.enabled ? normalizePlatformOptions(regionField.options).map((o) => o.value) : [],
@@ -873,8 +876,9 @@ async function CategoryBrowsePage({ params }: PageProps) {
         {stats.count > 0 && stats.lowPrice != null && stats.highPrice != null && (
           <JsonLd
             data={productAggregate({
-              name: `${game.name} ${category.name}`,
-              description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
+              // Named like the heading: "Adopt Me Pets" on a values game's grid.
+              name: `${game.name} ${gridItems ? itemNoun(gameSlug) : category.name}`,
+              description: `Buy ${game.name} ${gridItems ? itemNoun(gameSlug) : category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
               brand: game.name,
               lowPrice: stats.lowPrice,
               highPrice: stats.highPrice,
@@ -899,7 +903,6 @@ async function CategoryBrowsePage({ params }: PageProps) {
               gameSlug={gameSlug}
               gameName={game.name}
               gameImageUrl={(game as any).image_url ?? null}
-              categoryLabel={category.name}
               itemNoun={itemNoun(gameSlug)}
               items={gridItems}
               options={filterOptions(gameSlug, gridItems)}

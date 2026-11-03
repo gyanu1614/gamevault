@@ -8,6 +8,9 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), prefetch: vi.fn() }) }))
 vi.mock('@/hooks/useScrollDirection', () => ({ useScrollDirection: () => ({ hidden: false }) }))
+// The Sell button reads who is looking; the static HTML is the signed-out visitor's.
+vi.mock('@/hooks/use-auth', () => ({ useAuth: () => ({ user: null, profile: null, loading: false }) }))
+vi.mock('@/hooks/use-seller-prompt', () => ({ useSellerPrompt: () => ({ state: 'visitor', forgetCount: vi.fn() }), forgetSellerListingCount: vi.fn() }))
 
 import GameSubNav from '@/components/marketplace/GameSubNav'
 import { hubNavExtras } from '@/app/(marketplace)/[gameSlug]/values/_HubNavExtras'
@@ -51,6 +54,15 @@ describe('GameSubNav links', () => {
     expect(html).toContain('href="/adopt-me/blog"')
     expect(html).toContain('Values &amp; Guides')
     expect(html).not.toContain('href="/adopt-me/calculator"')
+  })
+
+  // Owner, 2026-11-02: the ask to sell left the listings header for the
+  // sub-navbar (desktop); it is a real link in the server HTML, every game.
+  it('carries the Sell button as a link to the seller sign-up', () => {
+    for (const [slug, name] of [['adopt-me', 'Adopt Me'], ['fortnite', 'Fortnite']]) {
+      const html = render(slug, name)
+      expect(html).toMatch(/<a[^>]*href="\/founding#src=subnav"[^>]*>.*?Start Selling<\/a>/)
+    }
   })
 
   it('adds no tool tabs (and no divider) for a game without a value hub', () => {

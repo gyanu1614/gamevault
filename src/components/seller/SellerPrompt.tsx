@@ -6,8 +6,13 @@
  *
  *   <HeroEyebrow />      homepage: one line above the headline, the call to
  *                        action in a subtle outlined box. No dismiss.
- *   <SellerPromptCard /> listings page: a small card beside the page title
+ *   <SellerPromptCard /> game landing: a small card beside the page title
  *                        (its own row on phones), copy per game + category.
+ *   <SubnavSellButton /> desktop game sub-navbar: one Sell button on every
+ *                        game page (owner, 2026-11-02: the listings header
+ *                        card took the space the pets should have).
+ *   <SellerPromptRow />  listings pages on phones: one slim row inside the
+ *                        grid after the first cards.
  *
  * Both reserve their space while `useSellerPrompt()` resolves (invisible,
  * same height, so the common visitor case never jumps), fade and rise in
@@ -25,7 +30,9 @@ import {
 } from '@tabler/icons-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
+import { useAuth } from '@/hooks/use-auth'
 import {
+  forgetSellerListingCount,
   useSellerPrompt,
   type SellerPromptState,
 } from '@/hooks/use-seller-prompt'
@@ -166,6 +173,60 @@ export function SellerPromptCard({
           href={cta.href}
           onClick={cta.onClick}
                     className={`inline-flex h-10 shrink-0 items-center rounded-md px-4 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
+            variant === 'seller' ? 'bg-lime text-text-inverse hover:bg-lime-hover active:bg-lime-pressed' : 'bg-white text-black hover:bg-white/90'
+          }`}
+        >
+          {copy.cta}
+        </Link>
+      </div>
+    </Reveal>
+  )
+}
+
+/**
+ * The desktop sub-navbar's Sell button, right of the content tab. A visitor
+ * goes to the seller sign-up, a seller straight to a new listing. Reads only
+ * `useAuth()` (no listing count), so it costs nothing on every game page; the
+ * static HTML carries the visitor label.
+ */
+export function SubnavSellButton({ className = '' }: { className?: string }) {
+  const { profile } = useAuth()
+  const variant: SellerPromptVariant = profile?.role === 'seller' ? 'seller' : 'visitor'
+  const cta = useCta(variant, 'subnav', () => {
+    if (profile?.id) forgetSellerListingCount(profile.id)
+  })
+  return (
+    <Link
+      href={cta.href}
+      onClick={cta.onClick}
+      className={`inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/[0.07] px-3.5 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${className}`}
+    >
+      <IconBuildingStore aria-hidden className="h-[17px] w-[17px] text-lime-text" stroke={1.9} />
+      {variant === 'seller' ? 'Create Listing' : 'Start Selling'}
+    </Link>
+  )
+}
+
+/**
+ * Phones: the ask to sell as one slim row inside the grid, after the first
+ * cards (Eldorado drops its promo row into the grid the same way), so the
+ * first screen is all items. Same copy and variants as the card.
+ */
+export function SellerPromptRow({ gameName, categoryLabel, className = '' }: { gameName: string; categoryLabel: string; className?: string }) {
+  const { state, forgetCount } = useSellerPrompt()
+  const variant: SellerPromptVariant | null = state === 'visitor' || state === 'seller' ? state : null
+  const copy = listingsCardCopy(variant ?? 'visitor', gameName, categoryLabel)
+  const cta = useCta(variant ?? 'visitor', 'listings-row', forgetCount)
+
+  return (
+    <Reveal state={state} className={className}>
+      <div className="flex min-h-[56px] items-center gap-3 rounded-lg bg-[#1C1D22] py-2.5 pl-4 pr-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]">
+        <IconBuildingStore aria-hidden className="h-5 w-5 shrink-0 text-lime-text" stroke={1.9} />
+        <p className="m-0 line-clamp-2 min-w-0 flex-1 text-[14px] font-semibold leading-snug text-text-primary">{copy.lead}</p>
+        <Link
+          href={cta.href}
+          onClick={cta.onClick}
+          className={`inline-flex h-9 shrink-0 items-center rounded-md px-3.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
             variant === 'seller' ? 'bg-lime text-text-inverse hover:bg-lime-hover active:bg-lime-pressed' : 'bg-white text-black hover:bg-white/90'
           }`}
         >

@@ -31,6 +31,8 @@ export interface GridItem {
   isNew: boolean
   /** Orders out-of-stock items only; never shown. */
   rankValue: number
+  /** 1 = most popular (sellers listing it); orders Recommended. Null when unranked. */
+  popularRank: number | null
   /** Our live listings of the item. */
   offers: number
   /** Our cheapest live price, or null when we have none. */
@@ -73,6 +75,7 @@ export function toGridItems(gameSlug: string, feed: ValuesFeed, categorySlug: st
       itemType: i.itemType,
       isNew: i.isNew,
       rankValue: i.valueUsd ?? 0,
+      popularRank: i.popularRank,
       offers: feed.stock[i.slug] ?? 0,
       minPrice: feed.minPrice[i.slug] ?? null,
       forms: feed.forms[i.slug] ?? [],
@@ -108,9 +111,11 @@ export function sortGrid(items: readonly GridItem[], sort: GridSort): GridItem[]
   const inStock = items.filter((i) => i.offers > 0)
   const out = items.filter((i) => i.offers === 0).sort(outOfStockOrder)
   const price = (i: GridItem) => i.minPrice ?? Number.POSITIVE_INFINITY
+  const rank = (i: GridItem) => i.popularRank ?? Number.POSITIVE_INFINITY
   if (sort === 'cheapest') inStock.sort((a, b) => price(a) - price(b))
   else if (sort === 'priciest') inStock.sort((a, b) => price(b) - price(a))
-  else inStock.sort((a, b) => b.offers - a.offers || price(a) - price(b))
+  // Recommended (owner, 2026-11-02): the pets most players trade first (seller count), then the most offers, then cheapest.
+  else inStock.sort((a, b) => rank(a) - rank(b) || b.offers - a.offers || price(a) - price(b))
   return [...inStock, ...out]
 }
 

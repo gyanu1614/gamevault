@@ -40,13 +40,18 @@ export function useSellerPrompt(): { state: SellerPromptState; forgetCount: () =
     return () => { alive = false }
   }, [sellerId])
 
-  const forgetCount = () => { if (sellerId) safeSession.remove(cacheKey(sellerId)) }
+  const forgetCount = () => { if (sellerId) forgetSellerListingCount(sellerId) }
 
   if (loading) return { state: 'pending', forgetCount }
   if (!isSeller) return { state: 'visitor', forgetCount }
   if (listings === null) return { state: 'pending', forgetCount }
   if (listings >= SELLER_PROMPT_LISTING_CAP) return { state: 'hidden', forgetCount }
   return { state: 'seller', forgetCount }
+}
+
+/** A seller off to list: drop the cached "no listing yet" so the prompt re-checks. */
+export function forgetSellerListingCount(sellerId: string) {
+  safeSession.remove(cacheKey(sellerId))
 }
 
 function cacheKey(sellerId: string) {

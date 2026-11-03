@@ -37,8 +37,9 @@ export function Header({ header }: { header: HeaderModel }) {
           </p>
         )}
       </div>
-      {/* Seller prompt beside the title; its own row on phones (as on the category pages). */}
-      <SellerPromptCard gameName={gameName} categoryLabel={itemNoun} className="w-full sm:ml-auto sm:w-auto sm:max-w-[520px]" />
+      {/* Seller prompt beside the title, its own row on phones; from lg up the
+          sub-navbar's Sell button carries it (owner, 2026-11-02). */}
+      <SellerPromptCard gameName={gameName} categoryLabel={itemNoun} className="w-full sm:ml-auto sm:w-auto sm:max-w-[520px] lg:hidden" />
     </header>
   )
 }

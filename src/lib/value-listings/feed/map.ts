@@ -27,6 +27,7 @@ export function fromAdoptMe(rows: readonly AdoptMePetItem[]): FeedItem[] {
       trendPct: value?.trendPct ?? null,
       trendLabel: value?.trendPct != null ? v : null,
       valueUsd: value?.cashUsd ?? null,
+      popularRank: p.demandRank ?? null,
     }
   })
 }
@@ -44,6 +45,7 @@ export function fromSab(rows: readonly BrainrotDirectoryItem[]): FeedItem[] {
     trendPct: b.trendPct ?? null,
     trendLabel: null,
     valueUsd: num(b.average_usd) ?? num(b.display_price_usd),
+    popularRank: null,
   }))
 }
 
@@ -60,5 +62,6 @@ export function fromGeneric(rows: readonly ValueListRow[]): FeedItem[] {
     trendPct: r.trendPct,
     trendLabel: null,
     valueUsd: r.marketUsd ?? r.cheapestUsd,
+    popularRank: null,
   }))
 }

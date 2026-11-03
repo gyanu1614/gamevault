@@ -19,6 +19,7 @@ import Link from '@/components/navigation/AppLink'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameIcon } from '@/features/home/lib/game-icons'
+import { SubnavSellButton } from '@/components/seller/SellerPrompt'
 import { useScrollDirection } from '@/hooks/useScrollDirection'
 import {
   SUBNAV_BG,
@@ -273,8 +274,13 @@ export default function GameSubNav({
             </div>
           )}
 
-          {/* ── Content tab (desktop: right column) ────────────────────── */}
-          <div className="hidden items-center justify-self-end md:flex">{extraTabs}</div>
+          {/* ── Content tab + Sell (desktop: right column). Sell from lg up:
+                 below that the strip is full, and listings carry a Sell row
+                 in their grid instead. ─────────────────────────────────── */}
+          <div className="hidden items-center gap-3 justify-self-end md:flex">
+            {extraTabs}
+            <SubnavSellButton className="max-lg:hidden" />
+          </div>
         </div>
       </motion.div>
     </nav>

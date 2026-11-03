@@ -13,6 +13,7 @@ const item = (slug: string, over: Partial<FeedItem> = {}): FeedItem => ({
   trendPct: null,
   trendLabel: null,
   valueUsd: 10,
+  popularRank: null,
   ...over,
 })
 
@@ -44,6 +45,7 @@ describe('toGridItems', () => {
       itemType: null,
       isNew: false,
       rankValue: 10,
+      popularRank: null,
       offers: 2,
       minPrice: 269.99,
       forms: ['FR', 'NFR'],
@@ -69,6 +71,18 @@ describe('sortGrid', () => {
 
   it('recommended: in stock first (most offers, then cheapest), then New, then by value', () => {
     expect(slugs(sortGrid(items, 'recommended'))).toEqual(['a', 'e', 'd', 'c', 'b'])
+  })
+
+  it('recommended: in-stock pets by popularity first (1 = most sellers), unranked after them', () => {
+    const ranked = toGridItems(
+      'adopt-me',
+      feed(
+        [item('owl', { popularRank: 3 }), item('cow', { popularRank: 1 }), item('crow'), item('frost', { popularRank: 2 }), item('ghost', { popularRank: 9 })],
+        { owl: [1, 60], cow: [1, 40], crow: [5, 300], frost: [2, 90] },
+      ),
+    )
+    // ghost is ranked but nobody sells it: still after every in-stock pet.
+    expect(slugs(sortGrid(ranked, 'recommended'))).toEqual(['cow', 'frost', 'owl', 'crow', 'ghost'])
   })
 
   it('cheapest / priciest sort the in-stock items and keep out-of-stock after them', () => {

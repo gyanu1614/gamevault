@@ -24,6 +24,8 @@ export interface FeedItem {
   trendLabel: string | null
   /** The item's headline value in USD: ordering and penny filtering only, never shown on marketplace cards. */
   valueUsd: number | null
+  /** 1 = most popular (Adopt Me: distinct sellers listing it, `pnpm adoptme:popularity`); null when unranked or the game has no ranking. */
+  popularRank: number | null
 }
 
 /** One form (trait / mutation) of an item that we have in stock. */

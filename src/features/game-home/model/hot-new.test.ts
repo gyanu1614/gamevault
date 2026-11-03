@@ -13,6 +13,7 @@ const item = (slug: string, isNew = true): FeedItem => ({
   trendPct: null,
   trendLabel: null,
   valueUsd: 10,
+  popularRank: null,
 })
 const feed = (items: FeedItem[], stock: Record<string, number> = {}, minPrice: Record<string, number> = {}): ValuesFeed => ({
   items,

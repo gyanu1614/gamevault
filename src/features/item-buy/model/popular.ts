@@ -23,6 +23,7 @@ export function stockedToGridItems(gameSlug: string, items: readonly StockedItem
       itemType: null,
       isNew: false,
       rankValue: 0,
+      popularRank: null,
       offers: s.count,
       minPrice: s.minPriceUsd,
       forms: s.variants.map((v) => variantShortCode(gameSlug, v)).filter((c): c is string => !!c),

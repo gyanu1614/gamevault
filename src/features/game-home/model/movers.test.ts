@@ -13,6 +13,7 @@ const m = (slug: string, pct: number | null, valueUsd: number | null = 10, trend
   trendPct: pct,
   trendLabel,
   valueUsd,
+  popularRank: null,
 })
 
 describe('pickMovers', () => {

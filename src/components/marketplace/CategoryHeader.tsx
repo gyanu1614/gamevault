@@ -1,13 +1,14 @@
 'use client'
 
 import { Gamepad2, ShieldCheck } from 'lucide-react'
-import { SellerPromptCard } from '@/components/seller/SellerPrompt'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
 
 /**
  * The category page header (owner, 2026-09-28): logo on the left, the game
- * small on top and the category as the big line beside it, the seller prompt
- * card on the right (its own row on phones). The H1 reads "{Game} {Category}"
+ * small on top and the category as the big line beside it. The ask to sell
+ * moved out (owner, 2026-11-02: it took the room the listings should have):
+ * the sub-navbar's Sell button on desktop, a row inside the grid on phones
+ * and tablets (SellerPromptRow). The H1 reads "{Game} {Category}"
  * to crawlers (the game name is in it, visually hidden). The stats line and
  * intro stay in the HTML for search engines but are not shown: the owner wants
  * the header to be logo + game + category only. Shared by the listings view
@@ -76,7 +77,6 @@ export function CategoryHeader({
         </div>
         {introLine && <p className="sr-only">{introLine}</p>}
       </div>
-      <SellerPromptCard gameName={gameName} categoryLabel={categoryLabel} className="w-full sm:ml-auto sm:w-auto sm:max-w-[520px]" />
     </div>
   )
 }

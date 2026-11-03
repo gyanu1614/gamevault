@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils'
 import { TraitMarks } from './TraitMarks'
 import type { AmLetter } from './model/am-traits'
 
-/** The filter letters in the picker's order, each in its badge's colour. */
-const LETTERS: Array<{ letter: AmLetter; label: string; color: string }> = [
+/** The filter letters in the picker's order, each in its badge's colour (also the items grid's phone filter sheet). */
+export const TRAIT_LETTERS: Array<{ letter: AmLetter; label: string; color: string }> = [
   { letter: 'N', label: 'Neon', color: '#8DC54A' },
   { letter: 'M', label: 'Mega Neon', color: '#A970FF' },
   { letter: 'F', label: 'Fly', color: '#3298CB' },
@@ -19,27 +19,34 @@ const LETTERS: Array<{ letter: AmLetter; label: string; color: string }> = [
  * "Traits" menu as the reference, in our design): each row is a tick box,
  * the game's own badge and its name; the menu stays open while you tick. The
  * trigger shows the ticked badges. The letters still land on one form
- * (model/am-traits: N and M exclude each other).
+ * (model/am-traits: N and M exclude each other). The items grid puts it in
+ * its filter row (`leading` icon, `className` for the row's button height).
  */
 export function TraitFilterMenu({
   lit,
   onToggle,
   onClear,
+  leading,
+  className,
 }: {
   lit: ReadonlySet<AmLetter>
   onToggle: (letter: AmLetter) => void
   onClear: () => void
+  leading?: React.ReactNode
+  className?: string
 }) {
-  const picked = LETTERS.filter((l) => lit.has(l.letter))
+  const picked = TRAIT_LETTERS.filter((l) => lit.has(l.letter))
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger
         className={cn(
           'flex h-11 items-center gap-2 rounded-md bg-white/[0.05] pl-3.5 pr-2.5 font-semibold text-text-primary transition-colors hover:bg-white/[0.08]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring data-[state=open]:bg-white/[0.08]',
+          className,
         )}
         style={{ fontSize: 'var(--fs-body)' }}
       >
+        {leading}
         {picked.length > 0 ? 'Traits' : 'Choose Traits'}
         {picked.length > 0 ? (
           <span className="flex items-center gap-1">
@@ -61,7 +68,7 @@ export function TraitFilterMenu({
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1',
           )}
         >
-          {LETTERS.map((l) => {
+          {TRAIT_LETTERS.map((l) => {
             const on = lit.has(l.letter)
             return (
               <DropdownMenu.CheckboxItem

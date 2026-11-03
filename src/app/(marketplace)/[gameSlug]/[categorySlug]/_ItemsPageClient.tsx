@@ -12,7 +12,7 @@
  * changes — Steal-a-Brainrot, Adopt Me, Blox Fruits, MM2, all the same.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
 import { useUrlPage } from '@/hooks/use-url-page'
@@ -21,6 +21,7 @@ import { Search, Store } from 'lucide-react'
 import { track } from '@vercel/analytics'
 import { track as phTrack } from '@/lib/analytics/client'
 import { CategoryHeader } from '@/components/marketplace/CategoryHeader'
+import { SellerPromptRow } from '@/components/seller/SellerPrompt'
 import { useSellerPrompt } from '@/hooks/use-seller-prompt'
 import { SELLER_PROMPT_EVENT, listingsEmptyCopy, sellerPromptHref } from '@/lib/seller/seller-prompt'
 import { bestOfferId, sortOffers } from './_itemsSort'
@@ -37,6 +38,8 @@ import { MultiSelectFilter, PriceRangeFilter, SingleSelectFilter, iconForFilter,
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 
 const PAGE_SIZE = 24
+/** Phones and tablets: the Sell row follows this many listings (two full rows on a two-column tablet). */
+const SELL_ROW_AFTER = 4
 
 /**
  * Delivery-time filter options. Non-overlapping windows, so ticking several
@@ -291,7 +294,7 @@ export default function ItemsPageClient({
       {/* scroll-mt clears the fixed navbar + sub-navbar when a page change scrolls here. */}
       <section ref={paged.topRef} className="relative scroll-mt-game-chrome overflow-hidden">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
-          {/* Header: logo + game + category, seller prompt on the right (shared CategoryHeader). */}
+          {/* Header: logo + game + category (shared CategoryHeader). */}
           <CategoryHeader
             gameName={gameName}
             gameImageUrl={gameImageUrl ?? null}
@@ -409,15 +412,20 @@ export default function ItemsPageClient({
                 and felt cramped. Now: gap-5 on mobile, gap-6 on sm+ so
                 each card has breathing room horizontally AND vertically. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>
-              {visible.map((o) => (
-                <ItemCard
-                  key={o.id}
-                  offer={o}
-                  gameSlug={gameSlug}
-                  gameName={gameName}
-                  isOwn={!!viewerId && o.sellerId === viewerId}
-                  isBestDeal={o.id === bestDealId}
-                />
+              {visible.map((o, i) => (
+                <Fragment key={o.id}>
+                  <ItemCard
+                    offer={o}
+                    gameSlug={gameSlug}
+                    gameName={gameName}
+                    isOwn={!!viewerId && o.sellerId === viewerId}
+                    isBestDeal={o.id === bestDealId}
+                  />
+                  {/* Below lg the ask to sell sits here, after the first cards (desktop: the sub-navbar's button). */}
+                  {paged.page === 1 && i === Math.min(SELL_ROW_AFTER, visible.length) - 1 && (
+                    <SellerPromptRow gameName={gameName} categoryLabel={categoryLabel} className="col-span-full lg:hidden" />
+                  )}
+                </Fragment>
               ))}
             </div>
 

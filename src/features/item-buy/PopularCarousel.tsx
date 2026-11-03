@@ -57,7 +57,7 @@ export function PopularCarousel({ id, heading, items, gameSlug }: { id: string; 
       <div ref={ref} className="overflow-hidden" style={{ maskImage: `linear-gradient(to right, ${mask})`, WebkitMaskImage: `linear-gradient(to right, ${mask})` }}>
         <ul className="flex touch-pan-y gap-3 sm:gap-4">
           {items.map((item) => (
-            <li key={item.key} className="min-w-0 shrink-0 grow-0 basis-[86%] sm:basis-[calc((100%-1rem)/2)] lg:basis-[calc((100%-2rem)/3)] xl:basis-[calc((100%-3rem)/4)]">
+            <li key={item.key} className="min-w-0 shrink-0 grow-0 basis-[44%] sm:basis-[calc((100%-2rem)/3)] xl:basis-[calc((100%-3rem)/4)]">
               <GridCard item={item} gameSlug={gameSlug} />
             </li>
           ))}

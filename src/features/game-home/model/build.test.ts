@@ -90,7 +90,7 @@ describe('buildGameHome', () => {
 
   it('Price Moves: hidden without trends; a real update date, else "Updated daily"', () => {
     expect(buildGameHome(data(), NOW).priceMoves).toBeNull()
-    const row = (slug: string, trendPct: number) => ({ slug, name: slug, imageUrl: null, href: null, rarityKey: null, itemType: null, isNew: false, trendPct, trendLabel: null, valueUsd: 50 })
+    const row = (slug: string, trendPct: number) => ({ slug, name: slug, imageUrl: null, href: null, rarityKey: null, itemType: null, isNew: false, trendPct, trendLabel: null, valueUsd: 50, popularRank: null })
     const values = { items: [row('up', 4), row('down', -2)], stock: {}, buyHref: {}, minPrice: {}, forms: {}, categorySlug: null, updatedAt: '2026-10-22T09:00:00Z' }
     const m = buildGameHome(data({ values }), NOW)
     expect(m.priceMoves).toMatchObject({ title: 'Biggest Adopt Me Price Moves This Week', listHref: '/adopt-me/values', updatedLabel: 'Prices updated Oct 22' })
@@ -121,7 +121,7 @@ describe('buildGameHome', () => {
   it('shows Hot New only for a values game with new items, linking the value list and the sell page', () => {
     expect(buildGameHome(data(), NOW).hotNew).toBeNull()
     const values = {
-      items: [{ slug: 'boohoo', name: 'Boohoo', imageUrl: null, href: '/adopt-me/values/boohoo', rarityKey: null, itemType: null, isNew: true, trendPct: null, trendLabel: null, valueUsd: null }],
+      items: [{ slug: 'boohoo', name: 'Boohoo', imageUrl: null, href: '/adopt-me/values/boohoo', rarityKey: null, itemType: null, isNew: true, trendPct: null, trendLabel: null, valueUsd: null, popularRank: null }],
       stock: {},
       buyHref: {},
       minPrice: {},
