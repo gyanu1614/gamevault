@@ -148,12 +148,13 @@ export const earningsApi = {
 
     const { data, error } = await (supabase
       .from('withdrawal_requests' as any)
-      .select('id, amount, status, method_name, created_at, processed_at, completed_at')
+      .select('id, amount, status, method_name, created_at, completed_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50) as any)
 
-    if (error || !data) return []
+    if (error) throw error
+    if (!data) return []
 
     return (data as any[]).map((w) => ({
       id: w.id,
@@ -161,7 +162,7 @@ export const earningsApi = {
       status: w.status,
       method: w.method_name || 'Withdrawal',
       created_at: w.created_at,
-      completed_at: w.completed_at ?? w.processed_at ?? null,
+      completed_at: w.completed_at ?? null,
     }))
   },
 }

@@ -36,8 +36,7 @@ export const reviewsApi = {
           listing:listing_id (title)
         )
       `)
-      .eq('reviewed_user_id', user.id)
-      .eq('review_type', 'buyer_to_seller')
+      .eq('seller_id', user.id)
       .order('created_at', { ascending: false })
 
     if (filters?.rating) {
@@ -86,8 +85,7 @@ export const reviewsApi = {
     const { data: reviews, error } = await supabase
       .from('reviews')
       .select('rating, seller_response')
-      .eq('reviewed_user_id', user.id)
-      .eq('review_type', 'buyer_to_seller') as any
+      .eq('seller_id', user.id) as any
 
     if (error) throw error
 
