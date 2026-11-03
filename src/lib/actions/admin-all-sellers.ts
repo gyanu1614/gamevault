@@ -14,6 +14,7 @@
  */
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole } from './admin-permissions'
+import { timed } from '@/lib/admin/timing'
 import { ilikeContains } from '@/lib/db/ilike'
 import { sellsGames } from '@/lib/founding/onboarding'
 import {
@@ -65,7 +66,7 @@ export async function getAllSellers(filters: AllSellersFilters = {}): Promise<Al
   const q = (filters.q ?? '').trim()
   const stage = filters.stage ?? 'all'
   const trust = filters.trust ?? 'all'
-  const { data, error } = await (createServiceRoleClient().rpc as any)('admin_all_sellers_page', {
+  const { data, error } = await timed('admin_all_sellers_page', () => (createServiceRoleClient().rpc as any)('admin_all_sellers_page', {
     p_q: q ? ilikeContains(q) : null,
     p_stage: stage === 'all' ? null : stage,
     p_trust: trust === 'all' ? null : trust,
@@ -73,7 +74,7 @@ export async function getAllSellers(filters: AllSellersFilters = {}): Promise<Al
     p_limit: SELLERS_PAGE_SIZE,
     p_page: Math.max(1, filters.page ?? 1),
     p_stalled_before: new Date(Date.now() - STALL_MS).toISOString(),
-  })
+  })) as any
   if (error) throw new Error(`admin_all_sellers_page: ${error.message}`)
 
   return {

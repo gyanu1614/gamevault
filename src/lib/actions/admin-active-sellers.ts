@@ -11,6 +11,7 @@
  * (store_paused, last_active_at) and pending withdrawal counts.
  */
 
+import { timed } from '@/lib/admin/timing'
 import { ilikeContains } from '@/lib/db/ilike'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
@@ -121,7 +122,7 @@ function activeSellerFromRow(row: any): ActiveSeller {
 
 async function readActiveSellers(filters: ActiveSellersFilters, limit: number, offset: number) {
   const search = filters.searchQuery?.trim()
-  const { data, error } = await (createServiceRoleClient().rpc as any)('admin_active_sellers_page', {
+  const { data, error } = await timed('admin_active_sellers_page', () => (createServiceRoleClient().rpc as any)('admin_active_sellers_page', {
     p_search: search ? ilikeContains(search) : null,
     p_status: filters.status ?? null,
     p_tier: filters.tier ?? null,
@@ -132,7 +133,7 @@ async function readActiveSellers(filters: ActiveSellersFilters, limit: number, o
     p_ascending: filters.sortOrder === 'asc',
     p_limit: limit,
     p_offset: offset,
-  })
+  })) as any
   if (error) throw new Error(error.message)
   return { total: Number(data.total ?? 0), sellers: (data.rows as any[]).map(activeSellerFromRow) }
 }

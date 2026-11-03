@@ -25,6 +25,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { shouldTouchAdminLastActive } from '@/lib/admin/last-active'
+import { timed } from '@/lib/admin/timing'
 import type { AdminRole, AdminUser } from '@/lib/admin/permissions-constants'
 
 export type AdminGate =
@@ -103,7 +104,7 @@ export function getAdminGate(): Promise<AdminGate> {
   if (!key) return loadAdminGate()
   let gate = perRequest.get(key)
   if (!gate) {
-    gate = loadAdminGate()
+    gate = timed('loadAdminGate', loadAdminGate)
     perRequest.set(key, gate)
   }
   return gate

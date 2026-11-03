@@ -10,6 +10,7 @@
  * their data for display.
  */
 
+import { timed } from '@/lib/admin/timing'
 import { sellsGames } from '@/lib/founding/onboarding'
 import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
@@ -335,6 +336,14 @@ async function readSellerModeration(service: any, userId: string): Promise<Selle
 }
 
 export async function getSellerDetail(userId: string): Promise<{
+  success: boolean
+  detail?: SellerDetail
+  error?: string
+}> {
+  return timed('getSellerDetail', () => readSellerDetail(userId))
+}
+
+async function readSellerDetail(userId: string): Promise<{
   success: boolean
   detail?: SellerDetail
   error?: string

@@ -15,6 +15,7 @@
 import { unstable_cache } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { utcPeriods } from '@/lib/admin/periods'
+import { timed } from '@/lib/admin/timing'
 import {
   COLLECTED_ORDER_STATUSES,
   FINISHED_DISPUTE_STATUSES,
@@ -73,7 +74,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
 async function readOverview(dayKey: string): Promise<AdminOverviewStats> {
   const { todayStart, monthStart, prevMonthStart } = utcPeriods(new Date(`${dayKey}T00:00:00.000Z`))
-  const { data, error } = await (createServiceRoleClient().rpc as any)('admin_overview_stats', {
+  const { data, error } = await timed('admin_overview_stats', () => (createServiceRoleClient().rpc as any)('admin_overview_stats', {
     p_today: todayStart.toISOString(),
     // The rolling week starts from the day, so one cache entry serves all of it.
     p_week: new Date(todayStart.getTime() - WEEK_MS).toISOString(),
@@ -83,7 +84,7 @@ async function readOverview(dayKey: string): Promise<AdminOverviewStats> {
     p_in_progress: [...IN_PROGRESS_ORDER_STATUSES],
     p_open_disputes: [...OPEN_DISPUTE_STATUSES],
     p_finished_disputes: [...FINISHED_DISPUTE_STATUSES],
-  })
+  })) as any
   if (error) throw new Error(`admin_overview_stats: ${error.message}`)
   return data as AdminOverviewStats
 }

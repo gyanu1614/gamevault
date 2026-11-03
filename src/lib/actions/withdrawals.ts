@@ -1,6 +1,7 @@
 'use server'
 
 import { afterResponse } from '@/lib/after-response'
+import { timed } from '@/lib/admin/timing'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole } from '@/lib/actions/admin-permissions'
@@ -325,6 +326,17 @@ export async function getAllWithdrawalRequests(filters?: {
   method?: string
   page?: number
 }): Promise<{
+  success: boolean
+  requests?: any[]
+  total?: number
+  page?: number
+  pageSize?: number
+  error?: string
+}> {
+  return timed('getAllWithdrawalRequests', () => readWithdrawalRequests(filters))
+}
+
+async function readWithdrawalRequests(filters?: { status?: string; method?: string; page?: number }): Promise<{
   success: boolean
   requests?: any[]
   total?: number

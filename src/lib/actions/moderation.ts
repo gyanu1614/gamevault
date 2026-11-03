@@ -14,6 +14,7 @@ import { UNVERIFIED_REVIEW_PRICE_USD } from '@/lib/fees'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivities, type LogActivityParams } from '@/lib/admin/activity-log'
 import { getAdminGate } from '@/lib/admin/context'
+import { timed } from '@/lib/admin/timing'
 import { utcPeriods } from '@/lib/admin/periods'
 import { afterResponse } from '@/lib/after-response'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
@@ -73,6 +74,14 @@ const QUEUE_LIMIT = 200
  * batch-computed per-seller moderation context.
  */
 export async function getPendingListings(): Promise<{
+  success: boolean
+  listings?: any[]
+  error?: string
+}> {
+  return timed('getPendingListings', readPendingListings)
+}
+
+async function readPendingListings(): Promise<{
   success: boolean
   listings?: any[]
   error?: string
@@ -411,7 +420,7 @@ export async function approveListing(
     const gate = await requireModerator()
     if (!gate.ok) return { success: false, error: gate.error }
 
-    const { error, drainedCount } = await releaseListings(gate, [listingId], notes)
+    const { error, drainedCount } = await timed('approveListing', () => releaseListings(gate, [listingId], notes))
     if (error) return { success: false, error }
     return { success: true, drainedCount }
   } catch (error: any) {
@@ -435,7 +444,7 @@ export async function approveListings(listingIds: string[]): Promise<{
     const gate = await requireModerator()
     if (!gate.ok) return { success: false, approvedIds: [], error: gate.error }
 
-    const { approvedIds, drainedCount, error } = await releaseListings(gate, listingIds)
+    const { approvedIds, drainedCount, error } = await timed('approveListings', () => releaseListings(gate, listingIds))
     if (error) return { success: false, approvedIds, drainedCount, error }
     return { success: true, approvedIds, drainedCount }
   } catch (error: any) {
