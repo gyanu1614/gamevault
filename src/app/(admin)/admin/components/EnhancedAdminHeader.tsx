@@ -51,6 +51,7 @@ import Link from '@/components/navigation/AppLink'
 import { toast } from 'sonner'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { ilikeContains } from '@/lib/db/ilike'
 import { OPEN_DISPUTE_STATUSES } from '@/lib/admin/status-sets'
 import type { AdminProfile } from './AdminChrome'
 import { NavIconButton, NavMenuDivider, NavPanel, NavPanelHeader, navMenuIconCls, navMenuRowCls } from '@/components/navbar/NavChrome'
@@ -108,6 +109,9 @@ const SEARCH_PANEL =
   'shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)] ' +
   'animate-in fade-in-0 slide-in-from-top-1 duration-150'
 
+/** One letter matches nearly everything and cannot use the trigram indexes. */
+const MIN_SEARCH_CHARS = 2
+
 export default function EnhancedAdminHeader({
   role,
   user,
@@ -130,6 +134,7 @@ export default function EnhancedAdminHeader({
   /** Phones: the search field takes over the whole bar while open. */
   const [mobileSearch, setMobileSearch] = useState(false)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const searchRequestRef = useRef(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const searchRef = useRef<HTMLDivElement>(null)
@@ -217,37 +222,27 @@ export default function EnhancedAdminHeader({
 
   // Entity search — users, applications, disputes, orders.
   const performSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
+    if (query.trim().length < MIN_SEARCH_CHARS) {
       setSearchResults([])
       return
     }
     setSearching(true)
-    const supabase = createClient()
+    const requestId = ++searchRequestRef.current
     const results: EntityResult[] = []
 
-    const [{ data: users }, { data: applications }, { data: disputes }, { data: orders }] =
-      await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, username, email, full_name')
-          .or(`username.ilike.%${query}%,email.ilike.%${query}%,full_name.ilike.%${query}%`)
-          .limit(3) as any,
-        supabase
-          .from('seller_applications')
-          .select('id, display_name, email, status')
-          .or(`display_name.ilike.%${query}%,email.ilike.%${query}%`)
-          .limit(3) as any,
-        supabase
-          .from('disputes')
-          .select('id, title, reason, status')
-          .or(`title.ilike.%${query}%,reason.ilike.%${query}%`)
-          .limit(3) as any,
-        supabase
-          .from('orders')
-          .select('id, order_number, status')
-          .ilike('order_number_search', orderNumberSearchPattern(query))
-          .limit(3) as any,
-      ])
+    // One call for all four (admin_quick_search), from the browser so it never
+    // queues behind a server action.
+    const { data } = await (createClient().rpc as any)('admin_quick_search', {
+      p_like: ilikeContains(query.trim()),
+      p_order_like: orderNumberSearchPattern(query),
+    })
+    // Typing moved on while this ran: a newer answer is on its way.
+    if (requestId !== searchRequestRef.current) return
+
+    const users = data?.users as any[] | undefined
+    const applications = data?.applications as any[] | undefined
+    const disputes = data?.disputes as any[] | undefined
+    const orders = data?.orders as any[] | undefined
 
     users?.forEach((u: any) =>
       results.push({
@@ -294,10 +289,12 @@ export default function EnhancedAdminHeader({
   // Debounce
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
-    if (searchQuery.trim()) {
+    if (searchQuery.trim().length >= MIN_SEARCH_CHARS) {
       searchTimeoutRef.current = setTimeout(() => performSearch(searchQuery), 300)
     } else {
+      searchRequestRef.current += 1
       setSearchResults([])
+      setSearching(false)
     }
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)

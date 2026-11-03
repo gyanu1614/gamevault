@@ -15,6 +15,7 @@ import {
 } from '@/lib/email'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { logAudit } from '@/lib/audit'
+import { orIlike } from '@/lib/db/ilike'
 import { afterResponse } from '@/lib/after-response'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
@@ -217,9 +218,7 @@ export async function getSellerApplications(filters: ApplicationFilters = {}) {
     }
 
     if (filters.searchQuery) {
-      query = query.or(
-        `display_name.ilike.%${filters.searchQuery}%,full_legal_name.ilike.%${filters.searchQuery}%,phone_number.ilike.%${filters.searchQuery}%`
-      )
+      query = query.or(orIlike(['display_name', 'full_legal_name', 'phone_number'], filters.searchQuery))
     }
 
     // Sorting

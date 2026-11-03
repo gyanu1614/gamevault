@@ -73,6 +73,7 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   // Admin stats (20261103131903): the header's badges and own notifications;
   // null unless is_admin (two-factor).
   'admin_header_snapshot',
+  'admin_quick_search',
 ].sort()
 
 /**

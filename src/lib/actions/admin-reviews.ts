@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireRole } from '@/lib/actions/admin-permissions'
+import { ilikeContains, orIlike } from '@/lib/db/ilike'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -49,9 +50,10 @@ export interface AdminReviewStats {
  * Get reviews with filters (admin)
  */
 export async function getAdminReviews(filters: AdminReviewFilters = {}) {
-  const supabase = await createClient()
-
   try {
+    await requireReviewModerator()
+    const supabase = await createClient()
+
     const {
       status = [],
       rating = [],
@@ -127,7 +129,16 @@ export async function getAdminReviews(filters: AdminReviewFilters = {}) {
 
     // Search filter
     if (search) {
-      query = query.or(`comment.ilike.%${search}%,title.ilike.%${search}%`)
+      const term = search.trim()
+      // The people first, as ids: a typed comma or parenthesis stays inside a value.
+      const { data: people } = await supabase.from('profiles').select('id').ilike('username', ilikeContains(term)).limit(50)
+      const ids = (people ?? []).map((p: any) => p.id as string)
+      query = query.or(
+        [
+          orIlike(['comment', 'title'], term),
+          ...(ids.length > 0 ? [`reviewer_id.in.(${ids.join(',')})`, `seller_id.in.(${ids.join(',')})`] : []),
+        ].join(','),
+      )
     }
 
     // Pagination
