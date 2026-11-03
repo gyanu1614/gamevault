@@ -28,7 +28,7 @@ export default async function AdminActiveSellersPage() {
       // On a failed fetch, pass undefined so the client hook falls back to
       // its own fetch (original loading/error states) instead of caching a
       // bad seed as fresh data.
-      initialSellers={sellersResult.success ? sellersResult.sellers ?? [] : undefined}
+      initialSellers={sellersResult.success ? sellersResult : undefined}
       initialStats={statsResult.success ? statsResult.stats : undefined}
     />
   )

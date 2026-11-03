@@ -14,6 +14,7 @@ import { UNVERIFIED_REVIEW_PRICE_USD } from '@/lib/fees'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivities, type LogActivityParams } from '@/lib/admin/activity-log'
 import { getAdminGate } from '@/lib/admin/context'
+import { utcPeriods } from '@/lib/admin/periods'
 import { afterResponse } from '@/lib/after-response'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { snapshotListings, submitListingChanges, type ListingSnapshot } from '@/lib/seo/indexnow'
@@ -62,6 +63,9 @@ export interface SellerModerationContext {
   pendingCount: number
 }
 
+/** The newest this many rows reach the screen; the numbers on top count all of them. */
+const QUEUE_LIMIT = 200
+
 /**
  * Get the moderation queue: listings awaiting an admin decision
  * (pending_approval) plus listings bounced back to the seller
@@ -80,7 +84,8 @@ export async function getPendingListings(): Promise<{
     const { data: listings, error } = await (gate.supabase
       .from('listings')
       .select(`
-        *,
+        id, seller_id, title, slug, price, quantity, images, template_data, status,
+        created_at, updated_at, moderation_notes, changes_requested_at,
         seller:profiles!listings_seller_id_fkey(
           id, username, shop_name, avatar_url, seller_tier, is_verified,
           total_sales, seller_rating, created_at, seller_status, is_test,
@@ -90,7 +95,8 @@ export async function getPendingListings(): Promise<{
         category:game_categories!listings_game_category_id_fkey(name, slug)
       `)
       .in('status', ['pending_approval', 'changes_requested'])
-      .order('created_at', { ascending: false }) as any)
+      .order('created_at', { ascending: false })
+      .limit(QUEUE_LIMIT) as any)
 
     if (error) {
       console.error('Error fetching listings:', error)
@@ -109,12 +115,7 @@ export async function getPendingListings(): Promise<{
 
       const [approvedRes, tierRes, presenceRes] = await Promise.all([
         // 1) Released listings per seller (approved + live/sold/archived).
-        service
-          .from('listings')
-          .select('seller_id')
-          .in('seller_id', sellerIds)
-          .in('status', ['active', 'sold', 'archived'])
-          .not('approved_at', 'is', null) as any,
+        (service.rpc as any)('admin_seller_released_counts', { p_seller_ids: sellerIds }),
         // 2) Tier thresholds (tiny table — fetch all rows once).
         service
           .from('seller_tier_config')
@@ -128,7 +129,7 @@ export async function getPendingListings(): Promise<{
 
       const approvedCounts = new Map<string, number>()
       for (const r of approvedRes.data ?? []) {
-        approvedCounts.set(r.seller_id, (approvedCounts.get(r.seller_id) ?? 0) + 1)
+        approvedCounts.set(r.seller_id, Number(r.released))
       }
 
       const thresholds = new Map<string, number>()
@@ -626,55 +627,13 @@ export async function getModerationStats(): Promise<{
   try {
     const gate = await requireModerator()
     if (!gate.ok) return { success: false, error: gate.error }
-    const { supabase } = gate
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const { data, error } = await (createServiceRoleClient().rpc as any)('admin_moderation_stats', {
+      p_today: utcPeriods(new Date()).todayStart.toISOString(),
+    })
+    if (error) return { success: false, error: error.message }
 
-    const [
-      { count: pending },
-      { count: awaiting_seller },
-      { count: approved_today },
-      { count: rejected_today },
-      { count: total_approved },
-    ] = await Promise.all([
-      supabase
-        .from('listings')
-        .select('*', { count: 'exact' })
-        .eq('status', 'pending_approval').limit(1),
-      supabase
-        .from('listings')
-        .select('*', { count: 'exact' })
-        .eq('status', 'changes_requested').limit(1),
-      supabase
-        .from('listings')
-        .select('*', { count: 'exact' })
-        .eq('status', 'active')
-        .gte('approved_at', today.toISOString()).limit(1),
-      // reject_listing nulls approved_at and stamps rejected_at, so the
-      // "today" filter must use rejected_at (approved_at was always 0).
-      supabase
-        .from('listings')
-        .select('*', { count: 'exact' })
-        .eq('status', 'rejected')
-        .gte('rejected_at', today.toISOString()).limit(1),
-      supabase
-        .from('listings')
-        .select('*', { count: 'exact' })
-        .eq('status', 'active')
-        .not('approved_at', 'is', null).limit(1),
-    ])
-
-    return {
-      success: true,
-      stats: {
-        pending: pending || 0,
-        awaiting_seller: awaiting_seller || 0,
-        approved_today: approved_today || 0,
-        rejected_today: rejected_today || 0,
-        total_approved: total_approved || 0,
-      },
-    }
+    return { success: true, stats: data }
   } catch (error: any) {
     console.error('Error in getModerationStats:', error)
     return {

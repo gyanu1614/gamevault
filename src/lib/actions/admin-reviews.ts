@@ -177,32 +177,15 @@ export async function getReviewStats(): Promise<{
   stats?: AdminReviewStats
   error?: string
 }> {
-  const supabase = await createClient()
-
   try {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('id, rating, flagged_for_moderation, is_visible') as any
+    await requireReviewModerator()
 
+    const { data, error } = await (createServiceRoleClient().rpc as any)('admin_review_stats')
     if (error) {
       console.error('Error fetching review stats:', error)
       return { success: false, error: error.message }
     }
-
-    const reviews = data || []
-
-    const stats: AdminReviewStats = {
-      total_reviews: reviews.length,
-      flagged_reviews: reviews.filter((r: any) => r.flagged_for_moderation).length,
-      hidden_reviews: reviews.filter((r: any) => !r.is_visible).length,
-      avg_rating: reviews.length > 0
-        ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
-        : 0,
-      positive_reviews: reviews.filter((r: any) => r.rating >= 4).length,
-      negative_reviews: reviews.filter((r: any) => r.rating <= 2).length,
-    }
-
-    return { success: true, stats }
+    return { success: true, stats: { ...data, avg_rating: Number(data.avg_rating) } }
   } catch (error: any) {
     console.error('Error in getReviewStats:', error)
     return { success: false, error: error.message }

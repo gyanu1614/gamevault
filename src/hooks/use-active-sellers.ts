@@ -1,23 +1,23 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   getActiveSellers,
   getSellerStats,
-  type ActiveSeller,
   type ActiveSellersFilters,
+  type ActiveSellersPage,
   type SellerStatsOverview,
 } from '@/lib/actions/admin-active-sellers'
 
 export type SellerStatsSummary = SellerStatsOverview
 
 export function useActiveSellers(
-  filters?: ActiveSellersFilters,
+  filters: ActiveSellersFilters,
   options?: {
     /**
      * V54 — Server-fetched seed for the query cache so the page arrives
      * rendered (no loading flash). Only pass data fetched with the SAME
      * filters as this hook call; counts as fresh within staleTime.
      */
-    initialData?: ActiveSeller[]
+    initialData?: ActiveSellersPage
   },
 ) {
   return useQuery({
@@ -27,9 +27,10 @@ export function useActiveSellers(
       if (!result.success) {
         throw new Error(result.error)
       }
-      return result.sellers || []
+      return result
     },
     initialData: options?.initialData,
+    placeholderData: keepPreviousData,
     staleTime: 30000, // 30 seconds
   })
 }

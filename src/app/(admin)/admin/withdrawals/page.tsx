@@ -8,12 +8,19 @@
  * mutation re-checks requireAdmin server-side.
  */
 
-import { getAllWithdrawalRequests } from '@/lib/actions/withdrawals'
+import { getAllWithdrawalRequests, getWithdrawalTotals } from '@/lib/actions/withdrawals'
 import WithdrawalsClient from './_WithdrawalsClient'
 
 export const metadata = { title: 'Withdrawals' }
 
 export default async function AdminWithdrawalsPage() {
-  const result = await getAllWithdrawalRequests()
-  return <WithdrawalsClient initialRequests={result.requests ?? []} />
+  const [result, totals] = await Promise.all([getAllWithdrawalRequests(), getWithdrawalTotals()])
+  return (
+    <WithdrawalsClient
+      // A failed read falls back to the client's own fetch and its error state,
+      // never an empty queue.
+      initialResult={result.success ? result : undefined}
+      initialTotals={totals.success ? totals.totals : undefined}
+    />
+  )
 }

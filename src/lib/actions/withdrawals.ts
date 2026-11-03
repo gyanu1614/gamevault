@@ -317,17 +317,28 @@ export async function cancelWithdrawalRequest(requestId: string): Promise<{
 
 // ADMIN FUNCTIONS
 
-// 6. Get all withdrawal requests (admin)
+// 6. One page of withdrawal requests (admin)
+const WITHDRAWALS_PAGE_SIZE = 50
+
 export async function getAllWithdrawalRequests(filters?: {
   status?: string
   method?: string
+  page?: number
 }): Promise<{
   success: boolean
   requests?: any[]
+  total?: number
+  page?: number
+  pageSize?: number
   error?: string
 }> {
   try {
+    // Decrypted payout destinations: the same roles that can decide on them.
+    await requireRole(['admin', 'super_admin'])
     const supabase = await createClient()
+
+    const page = Math.max(1, filters?.page ?? 1)
+    const from = (page - 1) * WITHDRAWALS_PAGE_SIZE
 
     let query = supabase
       .from('withdrawal_requests' as any)
@@ -335,8 +346,9 @@ export async function getAllWithdrawalRequests(filters?: {
         *,
         user:profiles!withdrawal_requests_user_id_fkey(username, email, avatar_url),
         method:withdrawal_methods(display_name, icon_name)
-      `)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false })
+      .range(from, from + WITHDRAWALS_PAGE_SIZE - 1)
 
     if (filters?.status) {
       query = query.eq('status', filters.status)
@@ -346,23 +358,56 @@ export async function getAllWithdrawalRequests(filters?: {
       query = query.eq('method_name', filters.method)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query
 
     if (error) throw error
 
     // PR 7: risk snapshot per row (account age, completed sales, open disputes,
-    // refund rate, recent payout-detail change) from ONE SQL function.
-    const service = createServiceRoleClient()
+    // refund rate, recent payout-detail change), one call for the page.
     const rows = (data ?? []) as any[]
     const sellerIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
     const snapshots = new Map<string, any>()
-    await Promise.all(sellerIds.map(async (id) => {
-      const { data: snap } = await (service.rpc as any)('withdrawal_risk_snapshot', { p_seller_id: id })
-      if (snap) snapshots.set(id, snap)
-    }))
+    if (sellerIds.length > 0) {
+      const { data: risks, error: riskError } = await (createServiceRoleClient().rpc as any)('withdrawal_risk_snapshots', { p_seller_ids: sellerIds })
+      if (riskError) throw riskError
+      for (const r of risks ?? []) snapshots.set(r.seller_id, r.snapshot)
+    }
     const requests = rows.map((r) => ({ ...r, payment_details: revealPaymentDetails(r.payment_details), risk: snapshots.get(r.user_id) ?? null }))
 
-    return { success: true, requests }
+    return { success: true, requests, total: count ?? 0, page, pageSize: WITHDRAWALS_PAGE_SIZE }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/** The queue's numbers and tab counts, over every request. */
+export async function getWithdrawalTotals(): Promise<{
+  success: boolean
+  totals?: {
+    total: number
+    counts: Record<string, number>
+    approved_sum: number
+    paid_sum: number
+    clearing_sum: number
+  }
+  error?: string
+}> {
+  try {
+    await requireRole(['admin', 'super_admin'])
+    const { data, error } = await (createServiceRoleClient().rpc as any)('admin_withdrawal_totals', {
+      p_open_statuses: ['pending', 'approved', 'processing'],
+    })
+    if (error) throw error
+    return {
+      success: true,
+      totals: {
+        total: Number(data.total ?? 0),
+        counts: data.counts ?? {},
+        approved_sum: Number(data.approved_sum ?? 0),
+        paid_sum: Number(data.paid_sum ?? 0),
+        clearing_sum: Number(data.clearing_sum ?? 0),
+      },
+    }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
