@@ -12,17 +12,16 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { UNVERIFIED_REVIEW_PRICE_USD } from '@/lib/fees'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
-import { logAdminActivity } from '@/lib/admin/activity-log'
+import { logAdminActivities, type LogActivityParams } from '@/lib/admin/activity-log'
 import { getAdminGate } from '@/lib/admin/context'
-import { revalidatePath } from 'next/cache'
+import { afterResponse } from '@/lib/after-response'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { snapshotListings, submitListingChanges, type ListingSnapshot } from '@/lib/seo/indexnow'
 
 // ─── Shared moderator gate ───────────────────────────────────────────────────
 
-type ModeratorGate =
-  | { ok: true; user: { id: string }; supabase: Awaited<ReturnType<typeof createClient>> }
-  | { ok: false; error: string }
+type ModeratorSession = { ok: true; user: { id: string }; supabase: Awaited<ReturnType<typeof createClient>> }
+type ModeratorGate = ModeratorSession | { ok: false; error: string }
 
 /**
  * ONE admin-role check for every moderation action: active staff with two-factor
@@ -41,10 +40,10 @@ async function requireModerator(): Promise<ModeratorGate> {
   return { ok: true, user: gate.user, supabase: await createClient() }
 }
 
-/** Fire-and-forget activity log — logging failures never fail the action. */
-async function safeLog(params: Parameters<typeof logAdminActivity>[0]) {
+/** Activity log: a logging failure never fails the action. */
+async function safeLog(entries: LogActivityParams[]) {
   try {
-    await logAdminActivity(params)
+    await logAdminActivities(entries)
   } catch (err) {
     console.error('[Moderation] Activity log failed:', err)
   }
@@ -191,6 +190,213 @@ export async function getPendingListings(): Promise<{
 
 // ─── Approve ─────────────────────────────────────────────────────────────────
 
+const RELEASE_ROW = `
+  id,
+  seller_id,
+  title,
+  slug,
+  seller:profiles!listings_seller_id_fkey(email, username, full_name),
+  game:games!listings_game_id_fkey(slug),
+  category:game_categories!listings_game_category_id_fkey(slug)
+`
+
+interface ReleaseRow {
+  id: string
+  seller_id: string | null
+  title: string
+  slug: string | null
+  seller: { email: string | null; username: string | null; full_name: string | null } | null
+  game: { slug: string | null } | null
+  category: { slug: string | null } | null
+}
+
+function greetingName(seller: ReleaseRow['seller']): string {
+  return seller?.full_name || seller?.username || 'Gamer'
+}
+
+/**
+ * One seller told once, however many listings one decision released.
+ * Service client: the admin session can't read the seller's profile or insert
+ * notifications for another user under RLS.
+ */
+async function tellSellerReleased(
+  service: ReturnType<typeof createServiceRoleClient>,
+  rows: ReleaseRow[],
+  drained: number,
+): Promise<void> {
+  const first = rows[0]
+  if (!first?.seller_id) return
+
+  const notify = (title: string, message: string) => ({
+    user_id: first.seller_id,
+    type: 'listing_approved',
+    title,
+    message,
+    link: '/account/listings',
+    is_read: false,
+  })
+  await (service.from('notifications').insert as any)([
+    rows.length > 1
+      ? notify('Listings Approved', `${rows.length} of your listings passed review and are now live for buyers.`)
+      : notify('Listing Approved', `"${first.title}" passed review and is now live for buyers.`),
+    ...(drained > 0
+      ? [notify('Listings Released', `${drained} more of your listings went live automatically — you've passed your initial review.`)]
+      : []),
+  ])
+
+  if (!first.seller?.email) return
+  const { sendListingApprovedEmail, sendListingsApprovedEmail } = await import('@/lib/email')
+  const name = greetingName(first.seller)
+  if (rows.length > 1) {
+    await sendListingsApprovedEmail({ to: first.seller.email, name, count: rows.length })
+    return
+  }
+  await sendListingApprovedEmail({
+    to: first.seller.email,
+    name,
+    listingTitle: first.title,
+    listingPath:
+      first.slug && first.game?.slug && first.category?.slug
+        ? `/${first.game.slug}/${first.category.slug}/${first.slug}`
+        : undefined,
+  })
+}
+
+/**
+ * Put listings live: one decision, whether it covers one listing or a seller's
+ * whole group. A failure stops there; what went live stays live and is reported.
+ *
+ * What the action promises happens before it returns: the decision, the audit
+ * rows, the public cache refresh. The seller's email and notification and the
+ * search-engine ping run after the response, so staff never wait on them.
+ */
+async function releaseListings(
+  gate: ModeratorSession,
+  ids: string[],
+  notes?: string,
+): Promise<{ approvedIds: string[]; drainedCount: number; error?: string }> {
+  const service = createServiceRoleClient()
+
+  // IndexNow: the approval is the moment most listings go live, so snapshot
+  // the listings (and, below, any queue they drain) BEFORE they change.
+  const [indexNowBefore, { data: rowData }] = await Promise.all([
+    snapshotListings(service, ids),
+    service.from('listings').select(RELEASE_ROW).in('id', ids) as any,
+  ])
+  const rows = (rowData ?? []) as ReleaseRow[]
+
+  // The database function bypasses the moderation trigger.
+  const approvedIds: string[] = []
+  let failure: string | undefined
+  for (const id of ids) {
+    const { error } = await (gate.supabase.rpc as any)('approve_listing', {
+      listing_id: id,
+      admin_id: gate.user.id,
+    })
+    if (error) {
+      console.error('Error approving listing:', error)
+      failure = error.message
+      break
+    }
+    approvedIds.push(id)
+  }
+  if (approvedIds.length === 0) return { approvedIds, drainedCount: 0, error: failure }
+
+  if (notes) {
+    // AUTH-006: moderation_notes is trigger-protected; the moderator session
+    // (gated by requireModerator) writes it via the service role.
+    await (service.from('listings').update as any)({ moderation_notes: notes }).in('id', approvedIds)
+  }
+
+  const approvedRows = rows.filter((r) => approvedIds.includes(r.id))
+  const sellerIds = Array.from(new Set(approvedRows.map((r) => r.seller_id).filter(Boolean))) as string[]
+
+  // Threshold drain: if THIS approval pushed the seller past their tier's
+  // pre-moderation count (e.g. the "first 3" for unverified), the seller is
+  // now trusted — release the rest of their queued listings automatically so
+  // admins never re-review a seller who already crossed the bar.
+  const drainedBySeller = new Map<string, string[]>()
+  try {
+    for (const sellerId of sellerIds) {
+      const { data: stillNeedsModeration } = await (service.rpc as any)(
+        'check_seller_needs_moderation',
+        { seller_id: sellerId },
+      )
+      if (stillNeedsModeration !== false) continue
+      const { data: queued } = await service
+        .from('listings')
+        .select('id')
+        .eq('seller_id', sellerId)
+        .eq('status', 'pending_approval') as any
+      // Snapshot the queue before it is released so IndexNow sees these go live too.
+      const queueBefore = await snapshotListings(service, (queued ?? []).map((q: { id: string }) => q.id))
+      if (queueBefore) for (const [id, snap] of queueBefore) indexNowBefore?.set(id, snap)
+      const released: string[] = []
+      for (const q of queued ?? []) {
+        const { error: drainError } = await (service.rpc as any)('approve_listing', {
+          listing_id: q.id,
+          admin_id: gate.user.id,
+        })
+        if (!drainError) released.push(q.id)
+      }
+      if (released.length > 0) drainedBySeller.set(sellerId, released)
+    }
+  } catch (err) {
+    console.error('[Moderation] Threshold drain failed:', err)
+  }
+  const drainedIds = Array.from(drainedBySeller.values()).flat()
+
+  // Audit trail (never fails the action).
+  await safeLog([
+    ...approvedIds.map((id): LogActivityParams => ({
+      action: 'listing_approved',
+      actionCategory: 'moderation',
+      resourceType: 'listing',
+      resourceId: id,
+      resourceName: rows.find((r) => r.id === id)?.title,
+      notes,
+    })),
+    ...Array.from(drainedBySeller, ([sellerId, released]): LogActivityParams => {
+      const trigger = approvedRows.find((r) => r.seller_id === sellerId)
+      return {
+        action: 'listing_threshold_drain',
+        actionCategory: 'moderation',
+        resourceType: 'listing',
+        resourceId: trigger?.id,
+        resourceName: trigger?.title,
+        notes: `Auto-released ${released.length} queued listing(s) after the seller crossed their review threshold`,
+        metadata: { drained: released.length },
+      }
+    }),
+  ])
+
+  // No revalidatePath('/'): the homepage's featured/popular shelves are
+  // CLIENT react-query hooks (features/home/hooks/*), which server
+  // revalidation cannot reach. The category tags below are the real
+  // public-facing refresh (build audit 2026-09-22, §4).
+  // Step 7b — the category pages (24 h TTL). A drain releases the seller's
+  // whole queue, so resolve by seller as well as by listing.
+  await revalidateListingSurfaces(service as never, {
+    listingIds: approvedIds,
+    sellerIds: Array.from(drainedBySeller.keys()),
+  })
+
+  afterResponse('Moderation release', async () => {
+    await Promise.all([
+      ...sellerIds.map((sellerId) =>
+        tellSellerReleased(
+          service,
+          approvedRows.filter((r) => r.seller_id === sellerId),
+          drainedBySeller.get(sellerId)?.length ?? 0,
+        ),
+      ),
+      submitListingChanges(indexNowBefore, await snapshotListings(service, [...approvedIds, ...drainedIds])),
+    ])
+  })
+
+  return { approvedIds, drainedCount: drainedIds.length, error: failure }
+}
+
 export async function approveListing(
   listingId: string,
   notes?: string
@@ -203,176 +409,9 @@ export async function approveListing(
   try {
     const gate = await requireModerator()
     if (!gate.ok) return { success: false, error: gate.error }
-    const { user, supabase } = gate
 
-    // IndexNow: the approval is the moment most listings go live, so snapshot
-    // the listing (and, below, any queue it drains) BEFORE it changes.
-    const indexNowBefore: Map<string, ListingSnapshot> | null = await snapshotListings(
-      createServiceRoleClient(),
-      [listingId],
-    )
-
-    // Use the database function to approve listing (bypasses the moderation trigger)
-    const { error: approveError } = await (supabase.rpc as any)('approve_listing', {
-      listing_id: listingId,
-      admin_id: user.id,
-    })
-
-    if (approveError) {
-      console.error('Error approving listing:', approveError)
-      return { success: false, error: approveError.message }
-    }
-
-    // Update moderation notes if provided
-    if (notes) {
-      // AUTH-006: moderation_notes is trigger-protected; the moderator session
-      // (gated by requireModerator above) writes it via the service role.
-      await (createServiceRoleClient()
-        .from('listings')
-        .update as any)({ moderation_notes: notes })
-        .eq('id', listingId)
-    }
-
-    // Seller comms (email + in-app, awaited but never fails the approval).
-    // Service client: the admin session's cookie client can't read the
-    // seller's profile or insert notifications for another user under RLS.
-    let approvedTitle: string | undefined
-    await (async () => {
-      const service = createServiceRoleClient()
-      const { data: listing } = await service
-        .from('listings')
-        .select(`
-          seller_id,
-          title,
-          slug,
-          seller:profiles!listings_seller_id_fkey(email, username, full_name),
-          game:games!listings_game_id_fkey(slug),
-          category:game_categories!listings_game_category_id_fkey(slug)
-        `)
-        .eq('id', listingId)
-        .single() as any
-
-      if (!listing?.seller_id) return
-      approvedTitle = listing.title
-
-      const listingPath =
-        listing.slug && listing.game?.slug && listing.category?.slug
-          ? `/${listing.game.slug}/${listing.category.slug}/${listing.slug}`
-          : undefined
-
-      await (service.from('notifications').insert as any)({
-        user_id: listing.seller_id,
-        type: 'listing_approved',
-        title: 'Listing Approved',
-        message: `"${listing.title}" passed review and is now live for buyers.`,
-        link: '/account/listings',
-        is_read: false,
-      })
-
-      if (listing.seller?.email) {
-        const { sendListingApprovedEmail } = await import('@/lib/email')
-        await sendListingApprovedEmail({
-          to: listing.seller.email,
-          name: listing.seller.full_name || listing.seller.username || 'Gamer',
-          listingTitle: listing.title,
-          listingPath,
-        })
-      }
-    })().catch((err) => console.error('[Moderation] Approval comms failed:', err))
-
-    // Threshold drain: if THIS approval pushed the seller past their tier's
-    // pre-moderation count (e.g. the "first 3" for unverified), the seller is
-    // now trusted — release the rest of their queued listings automatically so
-    // admins never re-review a seller who already crossed the bar.
-    let drainedCount = 0
-    let drainedSellerId: string | undefined
-    const drainedIds: string[] = []
-    try {
-      const service = createServiceRoleClient()
-      const { data: approvedRow } = await service
-        .from('listings')
-        .select('seller_id')
-        .eq('id', listingId)
-        .single() as any
-      const sellerId = approvedRow?.seller_id as string | undefined
-      drainedSellerId = sellerId
-      if (sellerId) {
-        const { data: stillNeedsModeration } = await (service.rpc as any)(
-          'check_seller_needs_moderation',
-          { seller_id: sellerId },
-        )
-        if (stillNeedsModeration === false) {
-          const { data: queued } = await service
-            .from('listings')
-            .select('id')
-            .eq('seller_id', sellerId)
-            .eq('status', 'pending_approval') as any
-          // Snapshot the queue before it is released so IndexNow sees these go live too.
-          const queueBefore = await snapshotListings(service, (queued ?? []).map((q: { id: string }) => q.id))
-          if (queueBefore) for (const [id, snap] of queueBefore) indexNowBefore?.set(id, snap)
-          for (const q of queued ?? []) {
-            const { error: drainError } = await (service.rpc as any)('approve_listing', {
-              listing_id: q.id,
-              admin_id: user.id,
-            })
-            if (!drainError) {
-              drainedCount++
-              drainedIds.push(q.id)
-            }
-          }
-          if (drainedCount > 0) {
-            await (service.from('notifications').insert as any)({
-              user_id: sellerId,
-              type: 'listing_approved',
-              title: 'Listings Released',
-              message: `${drainedCount} more of your listings went live automatically — you've passed your initial review.`,
-              link: '/account/listings',
-              is_read: false,
-            })
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[Moderation] Threshold drain failed:', err)
-    }
-
-    // Audit trail (never fails the action).
-    await safeLog({
-      action: 'listing_approved',
-      actionCategory: 'moderation',
-      resourceType: 'listing',
-      resourceId: listingId,
-      resourceName: approvedTitle,
-      notes,
-    })
-    if (drainedCount > 0) {
-      await safeLog({
-        action: 'listing_threshold_drain',
-        actionCategory: 'moderation',
-        resourceType: 'listing',
-        resourceId: listingId,
-        resourceName: approvedTitle,
-        notes: `Auto-released ${drainedCount} queued listing(s) after the seller crossed their review threshold`,
-        metadata: { drained: drainedCount },
-      })
-    }
-
-    revalidatePath('/admin/moderation')
-    // No revalidatePath('/'): the homepage's featured/popular shelves are
-    // CLIENT react-query hooks (features/home/hooks/*), which server
-    // revalidation cannot reach. The category tags below are the real
-    // public-facing refresh (build audit 2026-09-22, §4).
-    // Step 7b — the category pages (24 h TTL). An approval can drain the
-    // seller's whole queue, so resolve by listing AND seller.
-    await revalidateListingSurfaces(createServiceRoleClient() as never, {
-      listingIds: [listingId],
-      sellerIds: drainedSellerId ? [drainedSellerId] : [],
-    })
-    await submitListingChanges(
-      indexNowBefore,
-      await snapshotListings(createServiceRoleClient(), [listingId, ...drainedIds]),
-    )
-
+    const { error, drainedCount } = await releaseListings(gate, [listingId], notes)
+    if (error) return { success: false, error }
     return { success: true, drainedCount }
   } catch (error: any) {
     console.error('Error in approveListing:', error)
@@ -383,7 +422,75 @@ export async function approveListing(
   }
 }
 
-// ─── Reject ──────────────────────────────────────────────────────────────────
+/** Approve All: one action, one email and one notification for the whole group. */
+export async function approveListings(listingIds: string[]): Promise<{
+  success: boolean
+  /** What went live, even when a later listing failed. */
+  approvedIds: string[]
+  drainedCount?: number
+  error?: string
+}> {
+  try {
+    const gate = await requireModerator()
+    if (!gate.ok) return { success: false, approvedIds: [], error: gate.error }
+
+    const { approvedIds, drainedCount, error } = await releaseListings(gate, listingIds)
+    if (error) return { success: false, approvedIds, drainedCount, error }
+    return { success: true, approvedIds, drainedCount }
+  } catch (error: any) {
+    console.error('Error in approveListings:', error)
+    return {
+      success: false,
+      approvedIds: [],
+      error: error.message || 'Failed to approve listings',
+    }
+  }
+}
+
+// ─── Reject / request changes ────────────────────────────────────────────────
+
+/**
+ * The seller's in-app notice + email for a decision that keeps a listing off
+ * the site. Service client: RLS hides the seller's profile and non-active
+ * listings from the admin's cookie client.
+ */
+async function readDecidedListing(listingId: string): Promise<Pick<ReleaseRow, 'seller_id' | 'title' | 'seller'> | null> {
+  const { data } = await createServiceRoleClient()
+    .from('listings')
+    .select(`
+      seller_id,
+      title,
+      seller:profiles!listings_seller_id_fkey(email, username, full_name)
+    `)
+    .eq('id', listingId)
+    .single() as any
+  return data ?? null
+}
+
+function tellSellerNotLive(
+  label: string,
+  listing: Awaited<ReturnType<typeof readDecidedListing>>,
+  note: { type: string; title: string; message: string },
+  email: { reason: string; changesRequested: boolean },
+): void {
+  if (!listing?.seller_id) return
+  afterResponse(label, async () => {
+    await (createServiceRoleClient().from('notifications').insert as any)({
+      user_id: listing.seller_id,
+      ...note,
+      link: '/account/listings',
+      is_read: false,
+    })
+    if (!listing.seller?.email) return
+    const { sendListingRejectedEmail } = await import('@/lib/email')
+    await sendListingRejectedEmail({
+      to: listing.seller.email,
+      name: greetingName(listing.seller),
+      listingTitle: listing.title,
+      ...email,
+    })
+  })
+}
 
 export async function rejectListing(
   listingId: string,
@@ -408,57 +515,29 @@ export async function rejectListing(
       return { success: false, error: rejectError.message }
     }
 
-    // Seller comms (email + in-app, awaited but never fails the rejection).
-    // Service client: RLS hides the seller's profile and the now-rejected
-    // listing from the admin's cookie client.
-    let rejectedTitle: string | undefined
-    await (async () => {
-      const service = createServiceRoleClient()
-      const { data: listing } = await service
-        .from('listings')
-        .select(`
-          seller_id,
-          title,
-          seller:profiles!listings_seller_id_fkey(email, username, full_name)
-        `)
-        .eq('id', listingId)
-        .single() as any
+    const listing = await readDecidedListing(listingId)
 
-      if (!listing?.seller_id) return
-      rejectedTitle = listing.title
-
-      await (service.from('notifications').insert as any)({
-        user_id: listing.seller_id,
-        type: 'listing_rejected',
-        title: 'Listing Not Approved',
-        message: `"${listing.title}" didn't pass review. Check the reason and update your listing.`,
-        link: '/account/listings',
-        is_read: false,
-      })
-
-      if (listing.seller?.email) {
-        const { sendListingRejectedEmail } = await import('@/lib/email')
-        await sendListingRejectedEmail({
-          to: listing.seller.email,
-          name: listing.seller.full_name || listing.seller.username || 'Gamer',
-          listingTitle: listing.title,
-          reason,
-          changesRequested: false,
-        })
-      }
-    })().catch((err) => console.error('[Moderation] Rejection comms failed:', err))
-
-    await safeLog({
+    await safeLog([{
       action: 'listing_rejected',
       actionCategory: 'moderation',
       resourceType: 'listing',
       resourceId: listingId,
-      resourceName: rejectedTitle,
+      resourceName: listing?.title,
       notes: reason,
-    })
+    }])
 
-    revalidatePath('/admin/moderation')
     await revalidateListingSurfaces(createServiceRoleClient() as never, { listingIds: [listingId] })
+
+    tellSellerNotLive(
+      'Moderation rejection',
+      listing,
+      {
+        type: 'listing_rejected',
+        title: 'Listing Not Approved',
+        message: `"${listing?.title}" didn't pass review. Check the reason and update your listing.`,
+      },
+      { reason, changesRequested: false },
+    )
 
     return { success: true }
   } catch (error: any) {
@@ -469,8 +548,6 @@ export async function rejectListing(
     }
   }
 }
-
-// ─── Request changes ─────────────────────────────────────────────────────────
 
 export async function requestListingChanges(
   listingId: string,
@@ -499,58 +576,29 @@ export async function requestListingChanges(
       return { success: false, error: updateError.message }
     }
 
-    // Seller comms (email + in-app, awaited but never fails the request).
-    // Service client: RLS hides the seller's profile and non-active
-    // listings from the admin's cookie client.
-    let changedTitle: string | undefined
-    await (async () => {
-      const service = createServiceRoleClient()
-      const { data: listing } = await service
-        .from('listings')
-        .select(`
-          seller_id,
-          title,
-          seller:profiles!listings_seller_id_fkey(email, username, full_name)
-        `)
-        .eq('id', listingId)
-        .single() as any
+    const listing = await readDecidedListing(listingId)
 
-      if (!listing?.seller_id) return
-      changedTitle = listing.title
-
-      await (service.from('notifications').insert as any)({
-        user_id: listing.seller_id,
-        type: 'listing_changes_requested',
-        title: 'Changes Requested',
-        message: `Changes requested on "${listing.title}" — review the notes and resubmit.`,
-        link: '/account/listings',
-        is_read: false,
-      })
-
-      if (listing.seller?.email) {
-        const { sendListingRejectedEmail } = await import('@/lib/email')
-        await sendListingRejectedEmail({
-          to: listing.seller.email,
-          name: listing.seller.full_name || listing.seller.username || 'Gamer',
-          listingTitle: listing.title,
-          reason: changes,
-          changesRequested: true,
-        })
-      }
-    })().catch((err) => console.error('[Moderation] Change-request comms failed:', err))
-
-    await safeLog({
+    await safeLog([{
       action: 'listing_changes_requested',
       actionCategory: 'moderation',
       resourceType: 'listing',
       resourceId: listingId,
-      resourceName: changedTitle,
+      resourceName: listing?.title,
       notes: changes,
-    })
+    }])
 
-    revalidatePath('/admin/moderation')
-    revalidatePath('/account/listings')
     await revalidateListingSurfaces(createServiceRoleClient() as never, { listingIds: [listingId] })
+
+    tellSellerNotLive(
+      'Moderation change request',
+      listing,
+      {
+        type: 'listing_changes_requested',
+        title: 'Changes Requested',
+        message: `Changes requested on "${listing?.title}" — review the notes and resubmit.`,
+      },
+      { reason: changes, changesRequested: true },
+    )
 
     return { success: true }
   } catch (error: any) {

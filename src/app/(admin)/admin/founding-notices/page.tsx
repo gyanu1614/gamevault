@@ -7,12 +7,15 @@
  * the Founding Seller HQ (/founding). Auth is enforced by the (admin) layout.
  */
 
+import { isActionResponseRender } from '@/lib/admin/action-render'
 import { listFoundingNotices } from '@/lib/actions/founding-notices'
 import FoundingNoticesClient from './_FoundingNoticesClient'
 
 export const metadata = { title: 'Founding Notices' }
 
 export default async function AdminFoundingNoticesPage() {
+  if (isActionResponseRender()) return <FoundingNoticesClient initialNotices={[]} />
+
   const notices = await listFoundingNotices()
   return <FoundingNoticesClient initialNotices={notices} />
 }

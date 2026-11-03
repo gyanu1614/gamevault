@@ -503,10 +503,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
           ? 'Approved as a founding seller'
           : 'Application approved successfully',
       )
-      setTimeout(() => {
-        router.push('/admin/sellers?status=approved')
-        router.refresh()
-      }, 500)
+      router.push('/admin/sellers?status=approved')
     } else {
       toast.error(result.error || 'Failed to approve application')
       setIsProcessing(false)
@@ -535,10 +532,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     if (result.success) {
       setShowRejectModal(false)
       toast.success('Application rejected successfully')
-      setTimeout(() => {
-        router.push('/admin/sellers?status=rejected')
-        router.refresh()
-      }, 500)
+      router.push('/admin/sellers?status=rejected')
     } else {
       toast.error(result.error || 'Failed to reject application')
       setIsProcessing(false)
@@ -558,10 +552,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     if (result.success) {
       setShowChangesModal(false)
       toast.success('Change request sent to the applicant')
-      setTimeout(() => {
-        router.refresh()
-        setIsProcessing(false)
-      }, 500)
+      setIsProcessing(false)
     } else {
       toast.error(result.error || 'Failed to request changes')
       setIsProcessing(false)

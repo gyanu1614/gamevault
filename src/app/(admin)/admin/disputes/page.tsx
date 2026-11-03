@@ -8,6 +8,7 @@
  * mutations keep their client-side flow.
  */
 
+import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getDisputes, getDisputeStats } from '@/lib/actions/admin-disputes'
 import DisputesPageClient from './components/DisputesPageClient'
 
@@ -32,6 +33,8 @@ async function seed<T>(promise: Promise<T>): Promise<T | undefined> {
 }
 
 export default async function AdminDisputesPage() {
+  if (isActionResponseRender()) return <DisputesPageClient />
+
   // Default view only: page 1, no filters. Filtered/paginated fetches
   // stay client-side exactly as before.
   const [initialDisputes, initialStats] = await Promise.all([

@@ -8,12 +8,15 @@
  * and refetches keep working client-side exactly as before.
  */
 
+import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getSellerApplicationCounts, getSellerApplications } from '@/lib/actions/admin-seller-review'
 import SellersPageClient from './_components/SellersPageClient'
 
 export const metadata = { title: 'Seller Applications' }
 
 export default async function AdminSellersPage() {
+  if (isActionResponseRender()) return <SellersPageClient />
+
   const [allResult, counts] = await Promise.all([
     getSellerApplications({ page: 1, limit: 20 }),
     // A failed count falls back to the client's own fetch.

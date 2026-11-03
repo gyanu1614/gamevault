@@ -14,7 +14,7 @@
  * each action so the loader's numbers are the truth.
  */
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from '@/components/navigation/AppLink'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -52,7 +52,7 @@ const KIND_LABEL: Record<string, string> = {
 const ACTIVE_STATUSES = new Set(['active', 'paused', 'pending_approval', 'changes_requested'])
 
 export function ModerationPanel({ detail }: { detail: SellerDetail }) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [prompt, setPrompt] = useState<Prompt | null>(null)
   const [reason, setReason] = useState('')
   const [strike, setStrike] = useState(true)
@@ -73,7 +73,7 @@ export function ModerationPanel({ detail }: { detail: SellerDetail }) {
       toast.success(okMsg)
       setPrompt(null)
       setReason('')
-      router.refresh()
+      void queryClient.invalidateQueries({ queryKey: ['seller-detail', detail.profile.id] })
     })
   }
 

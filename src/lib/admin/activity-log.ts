@@ -25,24 +25,31 @@ export interface LogActivityParams {
 }
 
 export async function logAdminActivity(params: LogActivityParams) {
+  return logAdminActivities([params])
+}
+
+/** Several rows in one insert, for one staff decision that covers several things. */
+export async function logAdminActivities(entries: LogActivityParams[]) {
   try {
     const admin = await requireAdmin()
     const supabase = await createClient()
 
     const { error } = await (supabase
       .from('admin_activity_log')
-      .insert as any)({
-        admin_id: admin.userId,
-        action: params.action,
-        action_category: params.actionCategory,
-        resource_type: params.resourceType,
-        resource_id: params.resourceId,
-        resource_name: params.resourceName,
-        previous_state: params.previousState,
-        new_state: params.newState,
-        notes: params.notes,
-        metadata: params.metadata || {},
-      })
+      .insert as any)(
+        entries.map((params) => ({
+          admin_id: admin.userId,
+          action: params.action,
+          action_category: params.actionCategory,
+          resource_type: params.resourceType,
+          resource_id: params.resourceId,
+          resource_name: params.resourceName,
+          previous_state: params.previousState,
+          new_state: params.newState,
+          notes: params.notes,
+          metadata: params.metadata || {},
+        })),
+      )
 
     if (error) {
       console.error('Failed to log admin activity:', error)

@@ -15,6 +15,7 @@ import {
 } from '@/lib/email'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { logAudit } from '@/lib/audit'
+import { afterResponse } from '@/lib/after-response'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
 import { assessIdentityForApproval, type IdentityAssessment } from '@/lib/utils/seller-verification'
@@ -533,14 +534,11 @@ export async function markApplicationUnderReview(
       console.error('[markApplicationUnderReview] notification failed:', notifyErr)
     }
 
-    // Best-effort email
-    try {
-      const userEmail = (application.profiles as any)?.email || application.alternate_email
-      if (userEmail) {
-        await sendApplicationInReviewEmail({ to: userEmail, name })
-      }
-    } catch (emailErr) {
-      console.error('[markApplicationUnderReview] email failed:', emailErr)
+    const inReviewEmail = (application.profiles as any)?.email || application.alternate_email
+    if (inReviewEmail) {
+      afterResponse('markApplicationUnderReview email', () =>
+        sendApplicationInReviewEmail({ to: inReviewEmail, name }),
+      )
     }
 
     return { success: true, changed: true }
@@ -779,11 +777,13 @@ export async function approveApplication(
     const userEmail = (application.profiles as any)?.email || application.alternate_email
     const sellerName = application.full_legal_name || (application.profiles as any)?.full_name || 'Seller'
     if (userEmail) {
-      await sendApplicationApprovedEmail({
-        to: userEmail,
-        name: sellerName,
-        displayName: application.display_name,
-      })
+      afterResponse('approveApplication email', () =>
+        sendApplicationApprovedEmail({
+          to: userEmail,
+          name: sellerName,
+          displayName: application.display_name,
+        }),
+      )
     }
 
     // GRO-08 — the drafts built during review go out now, through the normal
@@ -793,12 +793,14 @@ export async function approveApplication(
     try {
       const drafts = await submitApplicantDrafts(serviceClient as never, application.user_id)
       if (userEmail && drafts.submitted.length + drafts.skipped.length > 0) {
-        await sendApplicantDraftsSubmittedEmail({
-          to: userEmail,
-          name: sellerName,
-          submitted: drafts.submitted,
-          skipped: drafts.skipped,
-        })
+        afterResponse('approveApplication drafts email', () =>
+          sendApplicantDraftsSubmittedEmail({
+            to: userEmail,
+            name: sellerName,
+            submitted: drafts.submitted,
+            skipped: drafts.skipped,
+          }),
+        )
       }
     } catch (draftErr) {
       console.error('[approveApplication] applicant drafts submission failed:', draftErr)
@@ -926,12 +928,14 @@ export async function rejectApplication(applicationId: string, reason: string, n
     if (application) {
       const userEmail = (application.profiles as any)?.email || application.alternate_email
       if (userEmail) {
-        await sendApplicationRejectedEmail({
-          to: userEmail,
-          name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
-          displayName: application.display_name,
-          reason: reason,
-        })
+        afterResponse('rejectApplication email', () =>
+          sendApplicationRejectedEmail({
+            to: userEmail,
+            name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
+            displayName: application.display_name,
+            reason: reason,
+          }),
+        )
       }
     }
 
@@ -1020,12 +1024,14 @@ export async function requestMoreInfo(applicationId: string, message: string) {
     if (application) {
       const userEmail = (application.profiles as any)?.email || application.alternate_email
       if (userEmail) {
-        await sendInfoRequestedEmail({
-          to: userEmail,
-          name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
-          displayName: application.display_name,
-          message: message,
-        })
+        afterResponse('requestMoreInfo email', () =>
+          sendInfoRequestedEmail({
+            to: userEmail,
+            name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
+            displayName: application.display_name,
+            message: message,
+          }),
+        )
       }
     }
 

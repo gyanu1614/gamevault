@@ -9,9 +9,10 @@
  *   - Pending queue GROUPED BY SELLER; Awaiting Seller as cards with the
  *     request; History as one panel of rows + pagination.
  *   - Dialogs show WHAT the admin is acting on (thumbnail + title + seller).
- *   - Data via react-query seeded with the server wrapper's initialData;
- *     mutations remove acted rows optimistically + invalidate. No
- *     full-page spinner after mount — per-row pending state only.
+ *   - Data via react-query seeded with the server wrapper's initialData. A
+ *     decision shows the moment it is clicked: the row leaves, the numbers
+ *     move, the dialog closes. The server confirms behind it, and a failure
+ *     reloads the queue. No refetch after a success.
  */
 
 import { listingOwnerUrl } from '@/lib/listings/url'
@@ -25,6 +26,7 @@ import {
 import {
   getPendingListings,
   approveListing,
+  approveListings,
   rejectListing,
   requestListingChanges,
   getModerationStats,
@@ -92,6 +94,24 @@ interface SellerGroup {
 interface QueueData {
   listings: any[]
   stats: any
+}
+
+type StatKey = 'pending' | 'awaiting_seller' | 'approved_today' | 'rejected_today' | 'total_approved'
+
+const APPROVED_TILES: StatKey[] = ['approved_today', 'total_approved']
+
+/** The number a queued listing is counted under. */
+function tileOf(listing: any): StatKey {
+  return listing.status === 'changes_requested' ? 'awaiting_seller' : 'pending'
+}
+
+function moveStats(stats: QueueData['stats'], changes: Partial<Record<StatKey, number>>): QueueData['stats'] {
+  if (!stats) return stats
+  const next = { ...stats }
+  for (const [tile, change] of Object.entries(changes)) {
+    next[tile] = Math.max(0, (next[tile] ?? 0) + (change ?? 0))
+  }
+  return next
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -176,8 +196,9 @@ export default function ModerationPageClient({
   initialStats,
   fetchFailed = false,
 }: {
-  initialListings: any[]
-  initialStats: any
+  /** Absent on a server action's refresh: the client already has the data. */
+  initialListings?: any[]
+  initialStats?: any
   /** True when the server wrapper's own fetch errored — show a real error state, not an empty queue. */
   fetchFailed?: boolean
 }) {
@@ -187,11 +208,6 @@ export default function ModerationPageClient({
   const [historySlice, setHistorySlice] = useState<ModerationHistorySlice>('all')
   const [historyPage, setHistoryPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
-
-  /** Listing ids with an in-flight single action (disables that row). */
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
-  /** Seller id with an in-flight Approve All loop (disables the group). */
-  const [bulkSellerId, setBulkSellerId] = useState<string | null>(null)
 
   const [selectedListing, setSelectedListing] = useState<any>(null)
   const [dialog, setDialog] = useState<'approve' | 'reject' | 'changes' | null>(null)
@@ -218,9 +234,10 @@ export default function ModerationPageClient({
     },
     // When the server fetch failed, do NOT seed — let the client fetch run
     // and surface a real error state if it fails again.
-    initialData: fetchFailed
-      ? undefined
-      : { listings: initialListings, stats: initialStats },
+    initialData:
+      fetchFailed || !initialListings
+        ? undefined
+        : { listings: initialListings, stats: initialStats },
     staleTime: fetchFailed ? 0 : 30_000,
     retry: 1,
   })
@@ -247,81 +264,106 @@ export default function ModerationPageClient({
   })
 
   // ── Cache helpers ──────────────────────────────────────────────────────────
-  const removeFromQueue = (ids: string[]) => {
-    queryClient.setQueryData<QueueData>(['moderation-queue'], (old) =>
-      old
-        ? { ...old, listings: old.listings.filter((l: any) => !ids.includes(l.id)) }
-        : old,
+  const patchQueue = (patch: (data: QueueData) => QueueData) => {
+    queryClient.setQueryData<QueueData>(['moderation-queue'], (old) => (old ? patch(old) : old))
+  }
+
+  /** Take rows out of the queue; the numbers follow. `decidedAs` are the tiles they now count under. */
+  const removeFromQueue = (ids: string[], decidedAs: StatKey[]) => {
+    patchQueue((old) => {
+      const leaving = old.listings.filter((l: any) => ids.includes(l.id))
+      const changes: Partial<Record<StatKey, number>> = {}
+      for (const l of leaving) {
+        changes[tileOf(l)] = (changes[tileOf(l)] ?? 0) - 1
+        for (const tile of decidedAs) changes[tile] = (changes[tile] ?? 0) + 1
+      }
+      return {
+        listings: old.listings.filter((l: any) => !ids.includes(l.id)),
+        stats: moveStats(old.stats, changes),
+      }
+    })
+  }
+
+  /** The threshold drain released the rest of this seller's queue. */
+  const removeSellerQueue = (sellerId: string) => {
+    const queue = queryClient.getQueryData<QueueData>(['moderation-queue'])
+    removeFromQueue(
+      (queue?.listings ?? [])
+        .filter((l: any) => l.seller_id === sellerId && l.status === 'pending_approval')
+        .map((l: any) => l.id),
+      APPROVED_TILES,
     )
   }
 
   const markChangesRequested = (id: string, notes: string) => {
-    queryClient.setQueryData<QueueData>(['moderation-queue'], (old) =>
-      old
-        ? {
-            ...old,
-            listings: old.listings.map((l: any) =>
-              l.id === id
-                ? {
-                    ...l,
-                    status: 'changes_requested',
-                    moderation_notes: notes,
-                    changes_requested_at: new Date().toISOString(),
-                  }
-                : l,
-            ),
-          }
-        : old,
-    )
-  }
-
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['moderation-queue'] })
-    queryClient.invalidateQueries({ queryKey: ['moderation-history'] })
-  }
-
-  const markPending = (id: string, on: boolean) => {
-    setPendingIds((prev) => {
-      const next = new Set(prev)
-      if (on) next.add(id)
-      else next.delete(id)
-      return next
+    patchQueue((old) => {
+      const row = old.listings.find((l: any) => l.id === id)
+      return {
+        listings: old.listings.map((l: any) =>
+          l.id === id
+            ? {
+                ...l,
+                status: 'changes_requested',
+                moderation_notes: notes,
+                changes_requested_at: new Date().toISOString(),
+              }
+            : l,
+        ),
+        // Updating an existing request moves nothing.
+        stats:
+          row && tileOf(row) === 'pending'
+            ? moveStats(old.stats, { pending: -1, awaiting_seller: 1 })
+            : old.stats,
+      }
     })
+  }
+
+  /** Before changing rows: a load already running must not write the old queue back. */
+  const holdQueueLoads = () => {
+    void queryClient.cancelQueries({ queryKey: ['moderation-queue'] })
+  }
+  const reloadQueue = () => {
+    void queryClient.invalidateQueries({ queryKey: ['moderation-queue'] })
+  }
+  /** Marks history out of date. It only loads if the History tab is open. */
+  const refreshHistory = () => {
+    void queryClient.invalidateQueries({ queryKey: ['moderation-history'] })
+  }
+
+  const closeDialog = () => {
+    setDialog(null)
+    setApprovalNotes('')
+    setRejectReason('')
+    setChangeRequest('')
+  }
+
+  const showFailure = (error: Error) => {
+    toast.error(error.message)
+    reloadQueue()
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const approveMutation = useMutation({
-    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+    mutationFn: async ({ id, notes }: { id: string; sellerId?: string; notes?: string }) => {
       const result = await approveListing(id, notes)
       if (!result.success) throw new Error(result.error || 'Failed to approve listing')
       return result
     },
-    onMutate: ({ id }) => markPending(id, true),
-    onSuccess: (result, { id }) => {
-      const acted = listings.find((l: any) => l.id === id)
-      const removed = [id]
-      if ((result.drainedCount ?? 0) > 0 && acted?.seller_id) {
-        // The drain released the seller's whole remaining queue.
-        for (const l of listings) {
-          if (l.seller_id === acted.seller_id && l.status === 'pending_approval') {
-            removed.push(l.id)
-          }
-        }
-      }
-      removeFromQueue(removed)
+    onMutate: ({ id }) => {
+      holdQueueLoads()
+      removeFromQueue([id], APPROVED_TILES)
+      closeDialog()
+    },
+    onSuccess: (result, { sellerId }) => {
+      if ((result.drainedCount ?? 0) > 0 && sellerId) removeSellerQueue(sellerId)
       toast.success(
         (result.drainedCount ?? 0) > 0
           ? `Approved — ${result.drainedCount} more released automatically`
           : 'Listing approved',
       )
-      setDialog(null)
-      setApprovalNotes('')
     },
-    onError: (error: Error) => toast.error(error.message),
-    onSettled: (_result, _error, { id }) => {
-      markPending(id, false)
-      invalidateAll()
-    },
+    onError: showFailure,
+    onSettled: refreshHistory,
   })
 
   const rejectMutation = useMutation({
@@ -330,18 +372,16 @@ export default function ModerationPageClient({
       if (!result.success) throw new Error(result.error || 'Failed to reject listing')
       return result
     },
-    onMutate: ({ id }) => markPending(id, true),
-    onSuccess: (_result, { id }) => {
-      removeFromQueue([id])
+    onMutate: ({ id }) => {
+      holdQueueLoads()
+      removeFromQueue([id], ['rejected_today'])
+      closeDialog()
+    },
+    onSuccess: () => {
       toast.success('Listing rejected')
-      setDialog(null)
-      setRejectReason('')
     },
-    onError: (error: Error) => toast.error(error.message),
-    onSettled: (_result, _error, { id }) => {
-      markPending(id, false)
-      invalidateAll()
-    },
+    onError: showFailure,
+    onSettled: refreshHistory,
   })
 
   const changesMutation = useMutation({
@@ -350,59 +390,38 @@ export default function ModerationPageClient({
       if (!result.success) throw new Error(result.error || 'Failed to send change request')
       return result
     },
-    onMutate: ({ id }) => markPending(id, true),
-    onSuccess: (_result, { id, changes }) => {
+    onMutate: ({ id, changes }) => {
+      holdQueueLoads()
       markChangesRequested(id, changes)
+      closeDialog()
+    },
+    onSuccess: () => {
       toast.success('Change request sent to seller')
-      setDialog(null)
-      setChangeRequest('')
     },
-    onError: (error: Error) => toast.error(error.message),
-    onSettled: (_result, _error, { id }) => {
-      markPending(id, false)
-      invalidateAll()
-    },
+    onError: showFailure,
+    onSettled: refreshHistory,
   })
 
-  const actionBusy =
-    approveMutation.isPending || rejectMutation.isPending || changesMutation.isPending
-
-  // ── Bulk approve (sequential; stop on first error) ─────────────────────────
-  const handleBulkApprove = async (group: SellerGroup) => {
-    setBulkGroup(null)
-    setBulkSellerId(group.sellerId)
-    const done = new Set<string>()
-    let approvedCount = 0
-    let failed = false
-
-    for (const listing of group.listings) {
-      if (done.has(listing.id)) continue
-      const result = await approveListing(listing.id)
-      if (!result.success) {
-        toast.error(result.error || `Failed to approve "${listing.title}"`)
-        failed = true
-        break
-      }
-      approvedCount++
-      done.add(listing.id)
-      removeFromQueue([listing.id])
-      if ((result.drainedCount ?? 0) > 0) {
-        // The threshold drain released the rest of this seller's queue —
-        // nothing left to loop over.
-        approvedCount += result.drainedCount ?? 0
-        for (const rest of group.listings) done.add(rest.id)
-        removeFromQueue(group.listings.map((l: any) => l.id))
-        break
-      }
-    }
-
-    if (!failed && approvedCount > 0) {
+  // ── Approve All: one action for the group ──────────────────────────────────
+  const bulkMutation = useMutation({
+    mutationFn: async (group: SellerGroup) => {
+      const result = await approveListings(group.listings.map((l: any) => l.id))
+      if (!result.success) throw new Error(result.error || 'Failed to approve listings')
+      return result
+    },
+    onMutate: (group) => {
+      holdQueueLoads()
+      removeFromQueue(group.listings.map((l: any) => l.id), APPROVED_TILES)
+      setBulkGroup(null)
+    },
+    onSuccess: (result, group) => {
+      if ((result.drainedCount ?? 0) > 0) removeSellerQueue(group.sellerId)
       const name = group.seller?.shop_name || group.seller?.username || 'seller'
-      toast.success(`Approved ${approvedCount} listings from ${name}`)
-    }
-    setBulkSellerId(null)
-    invalidateAll()
-  }
+      toast.success(`Approved ${result.approvedIds.length + (result.drainedCount ?? 0)} listings from ${name}`)
+    },
+    onError: showFailure,
+    onSettled: refreshHistory,
+  })
 
   // ── Derived queue views ────────────────────────────────────────────────────
   const q = searchQuery.trim().toLowerCase()
@@ -616,9 +635,6 @@ export default function ModerationPageClient({
                   <SellerGroupCard
                     key={group.sellerId}
                     group={group}
-                    pendingIds={pendingIds}
-                    bulkBusy={bulkSellerId === group.sellerId}
-                    anyBulkBusy={bulkSellerId !== null}
                     onApprove={(listing) => {
                       setSelectedListing(listing)
                       setApprovalNotes('')
@@ -652,7 +668,6 @@ export default function ModerationPageClient({
                 <AwaitingRow
                   key={listing.id}
                   listing={listing}
-                  busy={pendingIds.has(listing.id)}
                   onUpdateRequest={() => {
                     setSelectedListing(listing)
                     setChangeRequest(listing.moderation_notes || '')
@@ -725,11 +740,7 @@ export default function ModerationPageClient({
       {/* ── Approve dialog ── */}
       <ModDialog
         open={dialog === 'approve' && !!selectedListing}
-        onClose={() => {
-          setDialog(null)
-          setApprovalNotes('')
-        }}
-        busy={actionBusy}
+        onClose={closeDialog}
         title="Approve Listing"
         description="This listing goes live for buyers immediately."
         listing={selectedListing}
@@ -748,15 +759,7 @@ export default function ModerationPageClient({
           />
         </div>
         <DialogActions>
-          <button
-            type="button"
-            onClick={() => {
-              setDialog(null)
-              setApprovalNotes('')
-            }}
-            className={adminBtn.secondary}
-            disabled={actionBusy}
-          >
+          <button type="button" onClick={closeDialog} className={adminBtn.secondary}>
             Cancel
           </button>
           <button
@@ -765,23 +768,14 @@ export default function ModerationPageClient({
               selectedListing &&
               approveMutation.mutate({
                 id: selectedListing.id,
+                sellerId: selectedListing.seller_id,
                 notes: approvalNotes || undefined,
               })
             }
-            disabled={actionBusy}
             className={adminBtn.primary}
           >
-            {approveMutation.isPending ? (
-              <>
-                <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
-                Approving…
-              </>
-            ) : (
-              <>
-                <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
-                Approve Listing
-              </>
-            )}
+            <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
+            Approve Listing
           </button>
         </DialogActions>
       </ModDialog>
@@ -789,11 +783,7 @@ export default function ModerationPageClient({
       {/* ── Reject dialog ── */}
       <ModDialog
         open={dialog === 'reject' && !!selectedListing}
-        onClose={() => {
-          setDialog(null)
-          setRejectReason('')
-        }}
-        busy={actionBusy}
+        onClose={closeDialog}
         title="Reject Listing"
         description="The seller is notified with your reason. The listing will not go live."
         listing={selectedListing}
@@ -812,15 +802,7 @@ export default function ModerationPageClient({
           />
         </div>
         <DialogActions>
-          <button
-            type="button"
-            onClick={() => {
-              setDialog(null)
-              setRejectReason('')
-            }}
-            className={adminBtn.secondary}
-            disabled={actionBusy}
-          >
+          <button type="button" onClick={closeDialog} className={adminBtn.secondary}>
             Cancel
           </button>
           <button
@@ -829,20 +811,11 @@ export default function ModerationPageClient({
               selectedListing &&
               rejectMutation.mutate({ id: selectedListing.id, reason: rejectReason })
             }
-            disabled={actionBusy || !rejectReason.trim()}
+            disabled={!rejectReason.trim()}
             className={adminBtn.danger}
           >
-            {rejectMutation.isPending ? (
-              <>
-                <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
-                Rejecting…
-              </>
-            ) : (
-              <>
-                <XCircle aria-hidden weight="bold" className="h-4 w-4" />
-                Reject Listing
-              </>
-            )}
+            <XCircle aria-hidden weight="bold" className="h-4 w-4" />
+            Reject Listing
           </button>
         </DialogActions>
       </ModDialog>
@@ -850,11 +823,7 @@ export default function ModerationPageClient({
       {/* ── Request-changes dialog ── */}
       <ModDialog
         open={dialog === 'changes' && !!selectedListing}
-        onClose={() => {
-          setDialog(null)
-          setChangeRequest('')
-        }}
-        busy={actionBusy}
+        onClose={closeDialog}
         title={
           selectedListing?.status === 'changes_requested' ? 'Update Request' : 'Request Changes'
         }
@@ -875,15 +844,7 @@ export default function ModerationPageClient({
           />
         </div>
         <DialogActions>
-          <button
-            type="button"
-            onClick={() => {
-              setDialog(null)
-              setChangeRequest('')
-            }}
-            className={adminBtn.secondary}
-            disabled={actionBusy}
-          >
+          <button type="button" onClick={closeDialog} className={adminBtn.secondary}>
             Cancel
           </button>
           <button
@@ -892,20 +853,11 @@ export default function ModerationPageClient({
               selectedListing &&
               changesMutation.mutate({ id: selectedListing.id, changes: changeRequest })
             }
-            disabled={actionBusy || !changeRequest.trim()}
+            disabled={!changeRequest.trim()}
             className={adminBtn.primary}
           >
-            {changesMutation.isPending ? (
-              <>
-                <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
-                Sending…
-              </>
-            ) : (
-              <>
-                <ChatText aria-hidden weight="bold" className="h-4 w-4" />
-                Send Request
-              </>
-            )}
+            <ChatText aria-hidden weight="bold" className="h-4 w-4" />
+            Send Request
           </button>
         </DialogActions>
       </ModDialog>
@@ -927,7 +879,7 @@ export default function ModerationPageClient({
           </button>
           <button
             type="button"
-            onClick={() => bulkGroup && handleBulkApprove(bulkGroup)}
+            onClick={() => bulkGroup && bulkMutation.mutate(bulkGroup)}
             className={adminBtn.primary}
           >
             <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
@@ -949,7 +901,6 @@ export default function ModerationPageClient({
 function ModDialog({
   open,
   onClose,
-  busy,
   title,
   description,
   listing,
@@ -959,7 +910,6 @@ function ModDialog({
 }: {
   open: boolean
   onClose: () => void
-  busy?: boolean
   title: string
   description: string
   listing?: any
@@ -969,7 +919,7 @@ function ModDialog({
   children: React.ReactNode
 }) {
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-[480px] border-0 p-5 sm:p-6">
         <div className="pr-8">
           <DialogTitle className="text-[18px] font-bold leading-tight">{title}</DialogTitle>
@@ -1072,18 +1022,12 @@ function SellerAvatar({ seller, className }: { seller: any; className?: string }
 
 function SellerGroupCard({
   group,
-  pendingIds,
-  bulkBusy,
-  anyBulkBusy,
   onApprove,
   onReject,
   onChanges,
   onBulkApprove,
 }: {
   group: SellerGroup
-  pendingIds: Set<string>
-  bulkBusy: boolean
-  anyBulkBusy: boolean
   onApprove: (listing: any) => void
   onReject: (listing: any) => void
   onChanges: (listing: any) => void
@@ -1122,14 +1066,9 @@ function SellerGroupCard({
           <button
             type="button"
             onClick={onBulkApprove}
-            disabled={anyBulkBusy}
             className={cn(adminBtnSm.primary, 'shrink-0')}
           >
-            {bulkBusy ? (
-              <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
-            )}
+            <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
             Approve All ({group.listings.length})
           </button>
         </div>
@@ -1158,7 +1097,6 @@ function SellerGroupCard({
           <ListingRow
             key={listing.id}
             listing={listing}
-            busy={pendingIds.has(listing.id) || bulkBusy}
             onApprove={() => onApprove(listing)}
             onReject={() => onReject(listing)}
             onChanges={() => onChanges(listing)}
@@ -1187,13 +1125,11 @@ function ListingThumb({ listing }: { listing: any }) {
 
 function ListingRow({
   listing,
-  busy,
   onApprove,
   onReject,
   onChanges,
 }: {
   listing: any
-  busy: boolean
   onApprove: () => void
   onReject: () => void
   onChanges: () => void
@@ -1259,19 +1195,15 @@ function ListingRow({
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
-        <button type="button" onClick={onApprove} disabled={busy} className={cn(adminBtnSm.primary, 'min-w-0 flex-1 md:flex-none')}>
-          {busy ? (
-            <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
-          )}
+        <button type="button" onClick={onApprove} className={cn(adminBtnSm.primary, 'min-w-0 flex-1 md:flex-none')}>
+          <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
           Approve
         </button>
-        <button type="button" onClick={onChanges} disabled={busy} className={cn(adminBtnSm.secondary, 'min-w-0 flex-1 md:flex-none')}>
+        <button type="button" onClick={onChanges} className={cn(adminBtnSm.secondary, 'min-w-0 flex-1 md:flex-none')}>
           <ChatText aria-hidden weight="bold" className="h-3.5 w-3.5" />
           Changes
         </button>
-        <button type="button" onClick={onReject} disabled={busy} className={cn(adminBtnSm.danger, 'min-w-0 flex-1 md:flex-none')}>
+        <button type="button" onClick={onReject} className={cn(adminBtnSm.danger, 'min-w-0 flex-1 md:flex-none')}>
           <XCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
           Reject
         </button>
@@ -1291,12 +1223,10 @@ function ListingRow({
 
 function AwaitingRow({
   listing,
-  busy,
   onUpdateRequest,
   onReject,
 }: {
   listing: any
-  busy: boolean
   onUpdateRequest: () => void
   onReject: () => void
 }) {
@@ -1330,16 +1260,12 @@ function AwaitingRow({
         </p>
       )}
       <div className="mt-3 flex items-center gap-1.5 border-t border-white/[0.06] pt-3">
-        <button type="button" onClick={onUpdateRequest} disabled={busy} className={adminBtnSm.secondary}>
+        <button type="button" onClick={onUpdateRequest} className={adminBtnSm.secondary}>
           <ChatText aria-hidden weight="bold" className="h-3.5 w-3.5" />
           Update Request
         </button>
-        <button type="button" onClick={onReject} disabled={busy} className={adminBtnSm.danger}>
-          {busy ? (
-            <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <XCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
-          )}
+        <button type="button" onClick={onReject} className={adminBtnSm.danger}>
+          <XCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
           Reject
         </button>
       </div>

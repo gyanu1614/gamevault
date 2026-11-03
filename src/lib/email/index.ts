@@ -814,6 +814,34 @@ export async function sendListingApprovedEmail({
   return error ? { success: false, error } : { success: true, data }
 }
 
+/** Several listings approved in one decision: one email, not one per listing. */
+export async function sendListingsApprovedEmail({
+  to,
+  name,
+  count,
+}: {
+  to: string
+  name: string
+  count: number
+}) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: `${count} of your listings are live`,
+    html: emailShell({
+      preview: `${count} of your listings passed review and are live.`,
+      icon: 'listinglive',
+      heading: 'Your listings are live',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — <strong style="color:${EMAIL_TOKENS.INK};">${count} of your listings</strong> passed review and are now live for buyers.`) +
+        emailButton('View Your Listings', `${APP_URL}/account/listings`),
+    }),
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
 export async function sendListingRejectedEmail({
   to,
   name,

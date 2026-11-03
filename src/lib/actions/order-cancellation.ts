@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getVerifiedAdmin } from '@/lib/admin/context'
+import { afterResponse } from '@/lib/after-response'
 import { revalidatePath } from 'next/cache'
 import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
 // Money seams (CLAUDE.md): a cancellation's status move and the buyer's
@@ -485,7 +486,7 @@ export async function processCancellationRequest(
 
       // Buyer refund email — mirrors cancelOrder's comms (wallet-aware copy;
       // the credit above already posted, so pending: false).
-      await (async () => {
+      afterResponse('Cancellation buyer refund email', async () => {
         const service = createServiceRoleClient()
         const orderRef =
           order.order_number || String(request.order_id).slice(0, 8).toUpperCase()
@@ -514,9 +515,7 @@ export async function processCancellationRequest(
             pending: false,
           })
         }
-      })().catch((err) =>
-        console.error('[Cancellation] Buyer refund email failed:', err)
-      )
+      })
     }
 
     // The report follows the decision: cancelled on approve, back to expired

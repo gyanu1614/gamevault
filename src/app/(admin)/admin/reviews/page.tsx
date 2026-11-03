@@ -8,12 +8,15 @@
  * their client-side loadData() refresh flow.
  */
 
+import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getAdminReviews, getReviewStats } from '@/lib/actions/admin-reviews'
 import ReviewsPageClient from './_components/ReviewsPageClient'
 
 export const metadata = { title: 'Reviews' }
 
 export default async function AdminReviewsPage() {
+  if (isActionResponseRender()) return <ReviewsPageClient initialReviews={[]} initialStats={null} />
+
   // Same call shape as the client's initial loadData(): default filters
   // are empty arrays. Filtered views are fetched client-side as before.
   const [reviewsResult, statsResult] = await Promise.all([

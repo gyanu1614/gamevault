@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -27,7 +26,6 @@ export default function EscalateDisputeModal({
   onClose,
   dispute,
 }: EscalateDisputeModalProps) {
-  const router = useRouter()
   const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -54,7 +52,6 @@ export default function EscalateDisputeModal({
       await queryClient.invalidateQueries({ queryKey: ['dispute', dispute.id] })
 
       handleClose()
-      router.refresh()
     } catch (error) {
       console.error('Error escalating dispute:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to escalate dispute')

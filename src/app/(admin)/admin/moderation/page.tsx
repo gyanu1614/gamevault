@@ -9,12 +9,15 @@
  * retry) instead of a fake "All Caught Up" empty queue.
  */
 
+import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getPendingListings, getModerationStats } from '@/lib/actions/moderation'
 import ModerationPageClient from './_components/ModerationPageClient'
 
 export const metadata = { title: 'Moderation' }
 
 export default async function ModerationQueuePage() {
+  if (isActionResponseRender()) return <ModerationPageClient />
+
   const [listingsResult, statsResult] = await Promise.all([
     getPendingListings(),
     getModerationStats(),

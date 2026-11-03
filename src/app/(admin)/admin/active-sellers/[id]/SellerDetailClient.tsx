@@ -238,11 +238,9 @@ export default function SellerDetailClient({
   initialDetail,
 }: {
   userId: string
-  initialDetail: SellerDetail
+  /** Absent on a server action's refresh: the mounted client already has the data. */
+  initialDetail?: SellerDetail
 }) {
-  const queryClient = useQueryClient()
-  const now = useNow()
-
   const detailQuery = useQuery({
     queryKey: ['seller-detail', userId],
     queryFn: async () => {
@@ -256,7 +254,13 @@ export default function SellerDetailClient({
     staleTime: 30_000,
   })
 
-  const detail = detailQuery.data
+  if (!detailQuery.data) return null
+  return <SellerDetailView userId={userId} detail={detailQuery.data} />
+}
+
+function SellerDetailView({ userId, detail }: { userId: string; detail: SellerDetail }) {
+  const queryClient = useQueryClient()
+  const now = useNow()
   const { profile, presence } = detail
 
   const [dialog, setDialog] = useState<DialogKind>(null)

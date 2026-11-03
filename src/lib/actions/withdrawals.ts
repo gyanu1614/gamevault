@@ -1,5 +1,6 @@
 'use server'
 
+import { afterResponse } from '@/lib/after-response'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole } from '@/lib/actions/admin-permissions'
@@ -393,7 +394,7 @@ export async function approveWithdrawalRequest(params: {
     if (error) throw error
     if (!approved?.changed) return { success: true }
 
-    await (async () => {
+    afterResponse('Withdrawals approval comms', async () => {
       const { data: profile } = await serviceClient
         .from('profiles').select('email, username, full_name').eq('id', approved.user_id).single() as any
       if (profile?.email) {
@@ -407,7 +408,7 @@ export async function approveWithdrawalRequest(params: {
           status: 'approved',
         })
       }
-    })().catch((err) => console.error('[Withdrawals] Approval comms failed:', err))
+    })
 
     return { success: true }
   } catch (error: any) {
@@ -456,7 +457,7 @@ export async function markWithdrawalPaid(params: {
       return { success: false, error: `Only an approved withdrawal can be marked paid — this one is ${paid?.status ?? 'unknown'}.` }
     }
 
-    await (async () => {
+    afterResponse('Withdrawals paid comms', async () => {
       const { data: profile } = await serviceClient
         .from('profiles').select('email, username, full_name').eq('id', paid.user_id).single() as any
       // Settings → Notifications → Payout Processed (the paid email only;
@@ -473,7 +474,7 @@ export async function markWithdrawalPaid(params: {
           txReference: paid.reference,
         })
       }
-    })().catch((err) => console.error('[Withdrawals] Paid comms failed:', err))
+    })
 
     return { success: true }
   } catch (error: any) {
@@ -515,10 +516,10 @@ export async function rejectWithdrawalRequest(params: {
       : []
 
     // Tell the user their withdrawal was declined (in-app + email).
-    // Awaited but isolated: comms failures must never fail the decision.
+    // After the response: comms failures must never fail the decision.
     const request = updatedRows?.[0]
     if (request) {
-      await (async () => {
+      afterResponse('Withdrawals rejection comms', async () => {
         const [{ data: profile }, { data: method }] = await Promise.all([
           serviceClient
             .from('profiles')
@@ -547,7 +548,7 @@ export async function rejectWithdrawalRequest(params: {
             reason: params.reason,
           })
         }
-      })().catch((err) => console.error('[Withdrawals] Rejection comms failed:', err))
+      })
     }
 
     return { success: true }
