@@ -79,6 +79,6 @@ export function itemAbout(input: AboutInput): ItemAbout {
     intro,
     traitGuide: isAdoptMe,
     faq,
-    relatedHeading: rarity ? `More ${rarity} ${noun.many}` : `More ${gameName} ${noun.many}`,
+    relatedHeading: `Popular ${gameName} ${noun.many}`,
   }
 }

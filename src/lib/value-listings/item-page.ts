@@ -9,15 +9,16 @@
  *   · results = itemRows of the URL's variant (all of them without one): the
  *     page's title and description
  *   · the item has no live listing at all → similar items with stock (same
- *     rarity, then closest market value); with listings → the same pick as
- *     `related`, the pet-to-pet links under the page
+ *     rarity, then closest market value); with listings → `related`, the
+ *     most popular other items in stock (owner, 2026-11-02: a carousel of
+ *     what buyers actually want, not "more of the same rarity")
  *   · indexable once the item has ITEM_PAGE_MIN_LISTINGS live listing
  *     (all variants) and the page itself has results; a variant page
  *     canonicals to its item page
  */
 import { itemBuyHref, type ItemStock } from './buy-state'
 import { variantLabel, type CatalogItemRow, type LoadedCatalog } from './catalogs'
-import { aggregateStock, pickSimilarItems } from './stock'
+import { aggregateStock, pickPopularItems, pickSimilarItems } from './stock'
 
 export interface ItemPageRow {
   id: string
@@ -51,11 +52,12 @@ export interface ItemPageModel<T extends ItemPageRow> {
   canonicalPath: string
   /** Items with stock to offer instead, only when this item has none at all. */
   similar: StockedItem[]
-  /** Other items with stock (same rarity first), only when this item has some: the pet-to-pet links. */
+  /** The most popular other items in stock, only when this item has some: the carousel under the page. */
   related: StockedItem[]
 }
 
-export type StockedItem = CatalogItemRow & { count: number; minPriceUsd: number; href: string }
+/** `variants`: the forms in stock (variant keys), for the card's form chips. */
+export type StockedItem = CatalogItemRow & { count: number; minPriceUsd: number; href: string; variants: string[] }
 
 /**
  * Owner, 2026-10-27 (was 5 from 2026-10-10): an item page is indexable from
@@ -67,8 +69,8 @@ export type StockedItem = CatalogItemRow & { count: number; minPriceUsd: number;
 export const ITEM_PAGE_MIN_LISTINGS = 1
 
 const SIMILAR_LIMIT = 4
-/** Pet-to-pet links: enough for Google to walk the catalogue, few enough to keep the page light. */
-const RELATED_LIMIT = 8
+/** The popular carousel: a few swipes' worth, few enough to keep the page light. */
+const RELATED_LIMIT = 12
 
 export function isKnownVariant(catalog: LoadedCatalog, variant: string): boolean {
   if (catalog.catalog.defaultVariant === variant) return true
@@ -94,15 +96,16 @@ export function buildItemPage<T extends ItemPageRow>(input: ItemPageInput<T>): I
   const results = variant ? itemRows.filter((r) => r.value_variant === variant) : itemRows
 
   const inStock = itemRows.length > 0
-  const others: StockedItem[] = pickSimilarItems(
-    itemSlug,
-    catalog.items,
-    (s) => (stockMap.get(s)?.total ?? 0) > 0,
-    inStock ? RELATED_LIMIT : SIMILAR_LIMIT,
-  ).map((c) => {
+  const stocked = (c: CatalogItemRow): StockedItem => {
     const s = stockMap.get(c.slug)!
-    return { ...c, count: s.total, minPriceUsd: s.minPriceUsd ?? 0, href: itemBuyHref({ gameSlug, categorySlug, itemSlug: c.slug }) }
-  })
+    return { ...c, count: s.total, minPriceUsd: s.minPriceUsd ?? 0, href: itemBuyHref({ gameSlug, categorySlug, itemSlug: c.slug }), variants: Object.keys(s.byVariant) }
+  }
+  const stockCount = (slug: string) => stockMap.get(slug)?.total ?? 0
+  const others: StockedItem[] = (
+    inStock
+      ? pickPopularItems(itemSlug, catalog.items, stockCount, RELATED_LIMIT)
+      : pickSimilarItems(itemSlug, catalog.items, (s) => stockCount(s) > 0, SIMILAR_LIMIT)
+  ).map(stocked)
 
   return {
     item,

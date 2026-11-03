@@ -4,24 +4,19 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
-import { cn } from '@/lib/utils'
 
 export interface ItemSpecsProps {
   rarity: { label: string; color: string } | null
   offer: ItemOffer | null
   deliveryMethod: string
-  /** strip: the row inside the picture card (desktop); floating: plain 2 × 2 on the page (phones). */
-  variant?: 'strip' | 'floating'
 }
 
 /**
- * The facts under the picture, in the same card (owner, 2026-11-02: no more
- * picture card and spec card side by side). Four cells: rarity, how fast,
- * how it is delivered, how many are left; the item type sits in the title's
- * eyebrow and the trait in the buy box. Offer facts (time, stock) show only
- * while an offer is on show; a changed value eases in when another offer is
- * chosen. Phones get them floating on the page, 2 × 2 with no box (owner,
- * 2026-11-02: no box in a box; Eldorado's phone page as the reference).
+ * The facts under the picture, floating on the page with no box (owner,
+ * 2026-11-02: no box in a box; Eldorado's item page as the reference): rarity,
+ * how fast, how it is delivered, how many are left — 2 × 2 on phones, one row
+ * on desktop. Offer facts (time, stock) show only while an offer is on show;
+ * a changed value eases in when another offer is chosen.
  */
 export function ItemSpecs(p: ItemSpecsProps) {
   const { offer } = p
@@ -35,42 +30,14 @@ export function ItemSpecs(p: ItemSpecsProps) {
     ...(offer ? [{ label: 'In Stock', value: stockLabel(offer), key: `s:${offer.id}` }] : []),
   ]
 
-  if (p.variant === 'floating') {
-    return (
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {cells.map((c) => (
-          <div key={c.label} className="min-w-0">
-            <dt className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
-              {c.label}
-            </dt>
-            <dd className="mt-0.5 truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
-              <Fade key={c.key} animate={hydrated}>
-                {c.value}
-              </Fade>
-            </dd>
-          </div>
-        ))}
-      </dl>
-    )
-  }
-
   return (
-    <dl className={cn('grid grid-cols-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]', cells.length > 2 ? 'sm:grid-cols-4' : 'sm:grid-cols-2')}>
-      {cells.map((c, i) => (
-        <div
-          key={c.label}
-          className={cn(
-            'min-w-0 px-4 py-3.5 sm:px-5 sm:py-4',
-            // Hairlines between cells: a cross on phones (2 × 2), dividers in one row on wider screens.
-            i % 2 === 1 && 'shadow-[inset_1px_0_0_rgba(255,255,255,0.06)]',
-            i >= 2 && 'shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:shadow-[inset_1px_0_0_rgba(255,255,255,0.06)]',
-            i === 3 && 'shadow-[inset_1px_1px_0_rgba(255,255,255,0.06)] sm:shadow-[inset_1px_0_0_rgba(255,255,255,0.06)]',
-          )}
-        >
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+      {cells.map((c) => (
+        <div key={c.label} className="min-w-0">
           <dt className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
             {c.label}
           </dt>
-          <dd className="mt-1 truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-body)' }}>
+          <dd className="mt-0.5 truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
             <Fade key={c.key} animate={hydrated}>
               {c.value}
             </Fade>

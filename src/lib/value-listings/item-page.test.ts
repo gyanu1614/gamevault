@@ -73,11 +73,19 @@ describe('buildItemPage', () => {
     expect(buildItemPage({ ...base, rows: [], itemSlug: 'dragon-cannelloni', variant: null })!.indexable).toBe(false)
   })
 
-  it('with stock → related items with stock for the pet-to-pet links, same rarity first', () => {
+  it('with stock → the most popular other items in stock: rank, then offers, then name', () => {
     const m = buildItemPage({ ...base, itemSlug: 'dragon-cannelloni', variant: null })!
     expect(m.similar).toEqual([])
+    // Unranked: one offer each, so by name.
     expect(m.related.map((s) => s.slug)).toEqual(['garama', 'la-vacca', 'tralalero'])
-    expect(m.related[0]).toMatchObject({ count: 1, minPriceUsd: 9, href: '/steal-a-brainrot/buy-items/item/garama' })
+    expect(m.related[0]).toMatchObject({ count: 1, minPriceUsd: 9, href: '/steal-a-brainrot/buy-items/item/garama', variants: ['default'] })
+
+    const ranked = buildValueCatalog('steal-a-brainrot', {
+      items: sab.items.map((i) => ({ ...i, popularRank: i.slug === 'tralalero' ? 1 : i.slug === 'la-vacca' ? 2 : null })),
+      mutations: sab.mutations,
+    })!
+    const r = buildItemPage({ ...base, catalog: ranked, itemSlug: 'dragon-cannelloni', variant: null })!
+    expect(r.related.map((s) => s.slug)).toEqual(['tralalero', 'la-vacca', 'garama'])
   })
 
   it('no stock for the item at all → similar items with stock (same rarity, then closest value), noindex', () => {

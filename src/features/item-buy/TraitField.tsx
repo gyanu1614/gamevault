@@ -138,7 +138,7 @@ function TraitList({ options, value, onPick, labelId }: { options: TraitOption[]
                   Notify Me
                 </span>
               )}
-              <IconCheck aria-hidden size={16} stroke={2.2} className={cn('shrink-0 text-lime-text', !selected && 'invisible')} />
+              <IconCheck aria-hidden size={16} stroke={2.2} className={cn('shrink-0 text-[#6AA8FF]', !selected && 'invisible')} />
             </button>
           </li>
         )

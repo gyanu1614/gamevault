@@ -9,6 +9,7 @@ import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_i
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import { cn } from '@/lib/utils'
+import { TraitFilterMenu } from './TraitFilterMenu'
 import { TraitMarks } from './TraitMarks'
 import { TraitName } from './TraitName'
 import { fmtUsd } from './money'
@@ -18,19 +19,11 @@ import type { TraitDef } from './model/offers'
 /** Offer rows shown before "Show All". */
 const FIRST = 8
 
-/** The filter letters, in the picker's order, in their badges' colours (rule 10: the pick is an outline in that colour). */
-const LETTERS: Array<{ letter: AmLetter; label: string; color: string }> = [
-  { letter: 'N', label: 'Neon', color: '#8DC54A' },
-  { letter: 'M', label: 'Mega', color: '#A970FF' },
-  { letter: 'F', label: 'Fly', color: '#3298CB' },
-  { letter: 'R', label: 'Ride', color: '#EA2E77' },
-]
-
 /**
  * Every offer of the pet, full width under the top block (owner, 2026-10-28:
  * "full row like the Robux page"; the Prices By Trait tab became a filter).
- * Adopt Me gets N / M / F / R toggles that pick one form — F + R shows the
- * Fly Ride offers. Each offer is the shared CurrencySellerRow: the trait as
+ * Adopt Me gets a Traits dropdown with N / M / F / R tick boxes that pick
+ * one form (owner, 2026-11-02) — F + R shows the Fly Ride offers. Each offer is the shared CurrencySellerRow: the trait as
  * the game's badges, stock and delivery, the price and Select; the offer on
  * show above carries the trust-blue edge and "Selected".
  */
@@ -77,27 +70,14 @@ export function OffersSection({
           <span className="rounded bg-white/[0.07] px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-text-secondary">{matching.length}</span>
         </h2>
         {canFilter ? (
-          <div role="group" aria-label={`Filter by ${noun.toLowerCase()}`} className="flex items-center gap-2">
-            {LETTERS.map((l) => {
-              const on = lit.has(l.letter)
-              return (
-                <button
-                  key={l.letter}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => toggle(l.letter)}
-                  className={cn(
-                    'flex h-9 items-center gap-2 rounded-md bg-white/[0.04] px-2.5 font-semibold transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-                    on ? 'text-text-primary' : 'text-text-secondary shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]',
-                  )}
-                  style={{ fontSize: 'var(--fs-meta)', ...(on ? { boxShadow: `inset 0 0 0 1.5px ${l.color}` } : {}) }}
-                >
-                  <TraitMarks code={l.letter} size={18} />
-                  <span className="max-sm:sr-only">{l.label}</span>
-                </button>
-              )
-            })}
-          </div>
+          <TraitFilterMenu
+            lit={lit}
+            onToggle={toggle}
+            onClear={() => {
+              setFilter(null)
+              setAll(false)
+            }}
+          />
         ) : null}
       </div>
 

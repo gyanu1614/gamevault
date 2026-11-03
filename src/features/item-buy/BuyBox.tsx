@@ -15,10 +15,8 @@ import { cn } from '@/lib/utils'
 import { BuyPromises } from './BuyPromises'
 import { PaymentMarks } from './PaymentMarks'
 import { TraitField } from './TraitField'
-import { TraitSwitches } from './TraitSwitches'
 import { maxQtyOf } from './money'
 import type { TraitOption } from './model/offers'
-import { traitPicker } from './model/traits'
 
 const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 } as const
 
@@ -26,14 +24,15 @@ const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maxi
 const LG_CARD = 'lg:rounded-lg lg:bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] lg:shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]'
 
 /**
- * The pet's name with its game, rarity and type above it. Its own piece so
- * phones can show it first (over the picture, as Eldorado does) while
- * desktop keeps it at the top of the buy column.
+ * The pet's name. Its own piece so phones can show it first (over the
+ * picture, as Eldorado does) while desktop keeps it at the top of the buy
+ * column. The "Adopt Me · Legendary Pet" line stays in the HTML for search
+ * but is not shown (owner, 2026-11-02: the buy column looked cluttered).
  */
 export function ItemTitle({ itemName, kicker }: { itemName: string; kicker: { game: string; type: string; rarity: { label: string; color: string } | null } }) {
   return (
     <div>
-      <p className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+      <p className="sr-only">
         {kicker.game} ·{' '}
         {kicker.rarity ? (
           <span className="font-semibold" style={{ color: kicker.rarity.color }}>
@@ -42,7 +41,7 @@ export function ItemTitle({ itemName, kicker }: { itemName: string; kicker: { ga
         ) : null}
         {kicker.type}
       </p>
-      <h1 id="item-title" className="mt-1 text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', lineHeight: 1.12, letterSpacing: '-0.025em' }}>
+      <h1 id="item-title" className="text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', lineHeight: 1.12, letterSpacing: '-0.025em' }}>
         {itemName}
       </h1>
     </div>
@@ -69,8 +68,8 @@ export interface BuyBoxProps {
 
 /**
  * The buy column (owner, 2026-10-27/28, 2026-11-02; StockX's buy box and
- * Eldorado's phone page as references): the trait picker (Adopt Me's
- * segmented type + potion toggles, else the dropdown), a divider, the price
+ * Eldorado's phone page as references): the trait dropdown (owner,
+ * 2026-11-02: one field, not five buttons), a divider, the price
  * (rolling when the trait changes) with the quantity, Buy, the three promises
  * as plain rows, then the ways to pay; the seller under it. Desktop frames it
  * in a card; on phones it floats on the page. A trait nobody sells gets
@@ -86,11 +85,7 @@ export function BuyBox(p: BuyBoxProps) {
       <div className={cn('lg:p-6', LG_CARD)}>
         {p.traits.length > 0 ? (
           <>
-            {traitPicker(p.traits) === 'toggles' ? (
-              <TraitSwitches noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
-            ) : (
-              <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
-            )}
+            <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
             <div aria-hidden className="my-5 h-px bg-white/[0.08]" />
           </>
         ) : null}

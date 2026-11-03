@@ -63,6 +63,8 @@ export interface CatalogItemRow extends SimilarCandidate {
   imageUrl?: string | null
   /** False when the item has no public value page (an inactive Adopt Me pet). */
   hasPage?: boolean
+  /** 1 = most popular (Adopt Me: distinct sellers listing it, `pnpm adoptme:popularity`); null when unranked. */
+  popularRank?: number | null
 }
 
 export interface LoadedCatalog {
@@ -140,10 +142,13 @@ export async function loadValueCatalog(client: AnyClient, game: { id: string; sl
     })
   }
   if (game.slug === 'adopt-me') {
-    const { data, error } = await client.from('adopt_me_pets').select('slug, name, rarity, image_url, is_active').limit(5000)
+    const { data, error } = await client.from('adopt_me_pets').select('slug, name, rarity, image_url, is_active, demand_rank').limit(5000)
     if (error) throw error
     return buildValueCatalog(game.slug, {
-      items: (data ?? []).map((r: any) => ({ slug: r.slug, name: r.name, rarity: r.rarity, imageUrl: r.image_url, hasPage: r.is_active === true })),
+      items: (data ?? []).map((r: any) => ({
+        slug: r.slug, name: r.name, rarity: r.rarity, imageUrl: r.image_url, hasPage: r.is_active === true,
+        popularRank: r.demand_rank == null ? null : Number(r.demand_rank),
+      })),
     })
   }
   if (VALUES_PIPELINE_GAMES.has(game.slug)) {

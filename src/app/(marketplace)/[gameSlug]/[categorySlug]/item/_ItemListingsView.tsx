@@ -7,7 +7,9 @@ import { traitNoun } from '@/features/item-buy/model/offers'
 import { defaultDeliveryNote, deliveryMethodLabel, itemTypeLabel } from '@/features/item-buy/model/item-kind'
 import { rarityMeta } from '@/lib/values/rarity'
 import { traitDefs } from '@/features/item-buy/model/traits'
-import { ItemDetails, ItemFaq, StockedItemLinks } from '@/features/item-buy/ItemAbout'
+import { ItemDetails, ItemFaq } from '@/features/item-buy/ItemAbout'
+import { PopularCarousel } from '@/features/item-buy/PopularCarousel'
+import { stockedToGridItems } from '@/features/item-buy/model/popular'
 import type { ItemAbout } from '@/features/item-buy/model/about'
 import type { loadItemListingsPage } from '../_valueItemOffers'
 
@@ -79,7 +81,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
       {offers.length === 0 ? (
         <>
           <TrackOnMount event={{ event: 'fallback_shown', surface: 'item_buy', game: gameSlug, item: item.slug, variant: model.variant }} />
-          <StockedItemLinks id="similar-items" heading="Similar Items For Sale" items={model.similar} />
+          <PopularCarousel id="similar-items" heading="Similar Items For Sale" items={stockedToGridItems(gameSlug, model.similar)} gameSlug={gameSlug} />
           <p className="mt-10 text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
             Have a {item.name}?{' '}
             <Link href={`/${gameSlug}/sell?src=item-buy-page`} className="font-semibold text-lime-text hover:underline">
@@ -95,7 +97,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
 
       <ItemDetails about={about} />
       <ItemFaq title={`Questions About Buying ${item.name}`} about={about} />
-      <StockedItemLinks id="related-items" heading={about.relatedHeading} items={model.related} />
+      <PopularCarousel id="related-items" heading={about.relatedHeading} items={stockedToGridItems(gameSlug, model.related)} gameSlug={gameSlug} />
     </main>
   )
 }

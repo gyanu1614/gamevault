@@ -41,10 +41,10 @@ export interface ItemBuyClientProps {
  * The pet page (owner, 2026-10-27; layout 2026-10-28, Eldorado's item page
  * as the reference; StockX's trait field and buy box).
  *
- * Desktop (owner, 2026-11-02): the left column holds ONE picture card with
- * the facts in a strip under the picture, then the delivery instructions; the
- * buy column on the right (title, buy box with the promises, seller) stays in
- * view while the left column scrolls. Under that block, every offer as a
+ * Desktop (owner, 2026-11-02): the left column holds a smaller picture card,
+ * the facts floating under it, then the delivery instructions as plain text;
+ * the buy column on the right (title, buy box with the promises, seller)
+ * stays in view while the left column scrolls. Under that block, every offer as a
  * full-width row with the trait filter. Phones and tablets (Eldorado's phone
  * page as the reference, no box in a box): title, picture, the facts floating
  * 2 × 2, the buy box on the page, instructions, and a Buy bar docks at the
@@ -126,17 +126,13 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-4 lg:[grid-template-areas:'pic_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-12">
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_auto_1fr] lg:gap-x-10 lg:gap-y-6 lg:[grid-template-areas:'pic_buy'_'facts_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-12">
         <div className="order-2 min-w-0 lg:order-none lg:[grid-area:pic]">
-          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null}>
-            <div className="hidden lg:block">
-              <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
-            </div>
-          </PictureStage>
+          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
         </div>
 
-        <div className="order-3 min-w-0 lg:hidden">
-          <ItemSpecs variant="floating" rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
+        <div className="order-3 min-w-0 lg:order-none lg:[grid-area:facts]">
+          <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
         </div>
 
         <div className="contents lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:block lg:self-start lg:[grid-area:buy]">

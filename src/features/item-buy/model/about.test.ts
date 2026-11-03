@@ -23,7 +23,7 @@ describe('itemAbout', () => {
       'What if the seller doesn’t deliver?',
       'What do F, R, N and M mean on a Parrot?',
     ])
-    expect(a.relatedHeading).toBe('More Legendary Pets')
+    expect(a.relatedHeading).toBe('Popular Adopt Me Pets')
   })
 
   it('the late-delivery answer is the help centre’s, word for word', () => {
@@ -40,7 +40,7 @@ describe('itemAbout', () => {
   it('missing facts are left out, never guessed', () => {
     const a = itemAbout({ ...parrot, rarity: null, facts: NO_FACTS })
     expect(a.intro).toBeNull()
-    expect(a.relatedHeading).toBe('More Adopt Me Pets')
+    expect(a.relatedHeading).toBe('Popular Adopt Me Pets')
   })
 
   it('no rarity but an origin: says what is known', () => {
@@ -53,6 +53,6 @@ describe('itemAbout', () => {
     expect(a.traitGuide).toBe(false)
     expect(a.faq).toHaveLength(3)
     expect(a.intro).toBe('Garama is a Secret brainrot in Steal a Brainrot.')
-    expect(a.relatedHeading).toBe('More Secret Brainrots')
+    expect(a.relatedHeading).toBe('Popular Steal a Brainrot Brainrots')
   })
 })
