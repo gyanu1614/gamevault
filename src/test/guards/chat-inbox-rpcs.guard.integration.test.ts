@@ -194,6 +194,16 @@ describe.skipIf(!hasEnv)('chat inbox + unread RPCs, chat RLS (integration)', () 
       expect((data as { seller_id: string }).seller_id).toBe(fx!.seller.id)
     })
 
+    it("nobody can open an order chat on someone else's order", async () => {
+      // The admin is party to neither fixture order (admin powers do not apply to INSERT here).
+      const { error } = await fx!.admin.client
+        .from('conversations')
+        .insert({ buyer_id: fx!.admin.id, seller_id: fx!.seller.id, order_id: fx!.pendingOrderId })
+      expect(error).not.toBeNull()
+      const { data } = await fx!.svc.from('conversations').select('id').eq('order_id', fx!.pendingOrderId)
+      expect(data ?? []).toHaveLength(0)
+    })
+
     it('still lets a participant mark the other side read (and nothing else)', async () => {
       const read = await fx!.seller.client
         .from('messages')

@@ -110,10 +110,23 @@ create policy "Participants and admins read conversations" on public.conversatio
   for select to authenticated
   using ((select auth.uid()) in (buyer_id, seller_id) or (select public.is_admin()));
 
+-- An order chat may only be opened on an order the caller is party to (the
+-- inbox shows the order summary, so a conversation must not be pointable at
+-- someone else's order).
 drop policy if exists "Users can create conversations" on public.conversations;
 create policy "Users can create conversations" on public.conversations
   for insert to authenticated
-  with check ((select auth.uid()) in (buyer_id, seller_id));
+  with check (
+    (select auth.uid()) in (buyer_id, seller_id)
+    and (
+      order_id is null
+      or exists (
+        select 1 from public.orders o
+        where o.id = conversations.order_id
+          and (select auth.uid()) in (o.buyer_id, o.seller_id)
+      )
+    )
+  );
 
 -- 3. Security: no client UPDATE / DELETE on conversations ---------------------
 drop policy if exists "Users can update their conversations" on public.conversations;
@@ -210,7 +223,9 @@ as $$
     cross join me
     left join public.profiles b on b.id = p.buyer_id
     left join public.profiles s on s.id = p.seller_id
-    left join public.orders o on o.id = p.order_id
+    -- Definer: orders RLS does not apply here, so the join itself requires
+    -- the caller to be a party to the order.
+    left join public.orders o on o.id = p.order_id and me.id in (o.buyer_id, o.seller_id)
     left join public.listings l on l.id = o.listing_id
     left join public.games g on g.id = l.game_id
     left join public.game_categories gc on gc.id = l.game_category_id
