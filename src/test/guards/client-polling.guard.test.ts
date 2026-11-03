@@ -45,28 +45,52 @@ describe('client polling budget', () => {
     expect(offenders).toEqual([])
   })
 
-  // 2026-10-20 usage audit (4.3): the order chat re-read the WHOLE thread
-  // every 20 s, and twice more on each return to the tab (visibilitychange
-  // and focus both fire). Realtime delivers new messages; the re-sync is the
-  // safety net for a silently deaf channel.
-  it('the order chat re-syncs on the shared 60 s budget, once per return to the tab', () => {
+  // 2026-10-20 usage audit (4.3) + incident 2026-11-02: the order chat re-read
+  // the WHOLE thread every 20 s, then every 60 s, and twice more on each
+  // return to the tab. Realtime delivers new messages; the re-sync is the
+  // safety net for a silently deaf channel and reads only the newest slice.
+  it('the chat thread re-syncs only its newest messages, on the shared budget, once per return to the tab', () => {
     const src = read('src/hooks/use-chat-thread.ts')
     expect(src).toMatch(/setInterval\(\(\) => void resyncRef\.current\(\), POLL_MS\.chatResync\)/)
     expect(src).not.toMatch(/setInterval\([^)]*,\s*20_000\)/)
     // visibilitychange + focus + online collapse into one read.
     expect(src).toMatch(/RESYNC_MIN_GAP_MS/)
+    // The re-sync reads a limited tail, merged in place.
+    const resync = src.slice(src.indexOf('const resync = useCallback'), src.indexOf('const resyncRef'))
+    expect(resync).toMatch(/fetchTail\(/)
+    expect(resync).toMatch(/mergeServerTail\(/)
+    expect(src).toMatch(/\.limit\(RESYNC_TAIL\)/)
   })
 
-  // 2026-10-20 usage audit (4.4): the seller inbox subscribed to EVERY insert
-  // on messages (Realtime authorises each one per subscriber) and re-joined
-  // the channel on every conversations refetch (`conversations` was an effect
-  // dependency).
-  it('the seller inbox listens only to its own conversations and keeps one channel', () => {
-    const src = read('src/hooks/use-seller-messages.ts')
-    const effect = src.slice(src.indexOf("postgres_changes"), src.indexOf('// Mark as read mutation'))
-    expect(effect).toMatch(/filter:\s*`conversation_id=in\.\(/)
-    expect(effect).not.toMatch(/\[user\?\.id, conversations, queryClient, supabase\]/)
-    expect(src).toMatch(/conversationsRef/)
+  // Incident 2026-11-02: the inbox ran one "last message" query PER
+  // conversation and refetched the whole list on every message, send and
+  // read. It is one RPC page now, kept current from the user's live channel.
+  it('the inbox reads one RPC page and updates from events, not refetches', () => {
+    const api = read('src/lib/api/seller/messages.ts')
+    expect(api).toMatch(/rpc as any\)\('my_inbox'/)
+    expect(api).not.toMatch(/from\('messages'\)\s*\.select\(/)
+    const hook = read('src/hooks/use-seller-messages.ts')
+    expect(hook).toMatch(/useInfiniteQuery/)
+    expect(hook).toMatch(/applyInboxMessage/)
+    expect(hook).not.toMatch(/refetchInterval/)
+    const thread = read('src/hooks/use-chat-thread.ts')
+    expect(thread).not.toMatch(/queryKey: \['seller', 'messages', 'conversations'\]/)
+  })
+
+  it('the Messages badge is one RPC', () => {
+    const src = read('src/hooks/use-unread-messages.ts')
+    expect(src).toMatch(/'my_unread_message_count'/)
+    expect(src).not.toMatch(/from\('messages'\)/)
+  })
+
+  // Incident 2026-11-02: Postgres Changes re-checks RLS per subscriber per
+  // row inside the database. Live updates come from Broadcast topics only
+  // (chat:<conversation id>, user:<id>).
+  it('no browser code subscribes to Postgres Changes', () => {
+    const offenders = files
+      .filter((f) => /['"]postgres_changes['"]/.test(readFileSync(f, 'utf8')))
+      .map((f) => path.relative(ROOT, f))
+    expect(offenders).toEqual([])
   })
 
   // 2026-10-20 usage audit (4.5): buyers loaded the full SELLER order history

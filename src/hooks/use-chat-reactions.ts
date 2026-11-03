@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import { toast } from 'sonner'
 import type { createClient } from '@/lib/supabase/client'
 import type { ChatBroadcast } from '@/lib/chat/broadcast'
-import { reactionIntent, removeReaction, upsertReaction, type ReactionRow } from '@/lib/chat/reactions'
+import { reactionIntent, removeReaction, replaceReactionsFor, upsertReaction, type ReactionRow } from '@/lib/chat/reactions'
 
 const DUPLICATE_KEY = '23505'
 
@@ -27,6 +27,8 @@ export interface ChatReactions {
   rows: ReactionRow[]
   react: (messageId: string, emoji: string) => void
   replace: (conversationId: string, rows: ReactionRow[]) => void
+  /** Replace only these messages' reactions (the newest-slice re-sync). */
+  replaceFor: (conversationId: string, messageIds: string[], rows: ReactionRow[]) => void
   apply: (conversationId: string, event: ChatBroadcast) => void
 }
 
@@ -54,6 +56,13 @@ export function useChatReactions({
   const replace = useCallback(
     (convId: string, next: ReactionRow[]) => {
       if (conversationRef.current === convId) setRows(next)
+    },
+    [conversationRef],
+  )
+
+  const replaceFor = useCallback(
+    (convId: string, messageIds: string[], next: ReactionRow[]) => {
+      if (conversationRef.current === convId) setRows((prev) => replaceReactionsFor(prev, messageIds, next))
     },
     [conversationRef],
   )
@@ -109,5 +118,5 @@ export function useChatReactions({
     [conversationRef, currentUserId, supabase],
   )
 
-  return { rows, react, replace, apply }
+  return { rows, react, replace, replaceFor, apply }
 }

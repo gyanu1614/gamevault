@@ -9,7 +9,7 @@
  * always go out.
  *
  *   new_order         → sendNewOrderNotificationEmail   (payments/notify.ts)
- *   new_message       → sendNewMessageEmail             (actions/message-notify.ts)
+ *   new_message       → the chat digest                 (api/cron/chat-email-digest)
  *   new_review        → sendNewReviewEmail              (actions/review-notify.ts)
  *   payout_processed  → sendWithdrawalProcessedEmail, status 'completed' only
  *   review_invites    → the Trustpilot BCC on the order-complete receipt (lib/trustpilot/invite.ts)
@@ -63,4 +63,27 @@ export async function emailAllowed(userId: string | null | undefined, key: Email
   } catch {
     return EMAIL_PREF_DEFAULTS[key]
   }
+}
+
+/**
+ * emailAllowed for many users in ONE query (the chat digest run). Same
+ * fallback: a user whose row can't be read gets the default.
+ */
+export async function emailAllowedMany(userIds: string[], key: EmailPrefKey): Promise<Map<string, boolean>> {
+  const ids = Array.from(new Set(userIds.filter(Boolean)))
+  const allowed = new Map(ids.map((id) => [id, EMAIL_PREF_DEFAULTS[key]]))
+  if (ids.length === 0) return allowed
+  try {
+    const { data, error } = await (createServiceRoleClient() as any)
+      .from('email_preferences')
+      .select(`user_id, ${key}`)
+      .in('user_id', ids)
+    if (error) return allowed
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      if (typeof row.user_id === 'string') allowed.set(row.user_id, resolveEmailPref(row, key))
+    }
+  } catch {
+    // Defaults stand.
+  }
+  return allowed
 }

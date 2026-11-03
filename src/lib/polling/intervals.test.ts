@@ -16,9 +16,12 @@ describe('client poll intervals', () => {
   })
 
   it('pins the badge and grid intervals', () => {
-    expect(POLL_MS.unreadMessages).toBe(60_000)
-    expect(POLL_MS.navNotifications).toBe(120_000)
-    expect(POLL_MS.navActiveOrders).toBe(120_000)
+    // Live-channel backed (user:<id>): the poll only covers a dropped socket.
+    expect(POLL_MS.unreadMessages).toBe(300_000)
+    expect(POLL_MS.navNotifications).toBe(300_000)
+    expect(POLL_MS.navActiveOrders).toBe(300_000)
+    expect(POLL_MS.notificationsPage).toBe(300_000)
+    expect(POLL_MS.chatResync).toBe(300_000)
     expect(POLL_MS.adminHeader).toBe(60_000)
     expect(POLL_MS.sellerPresence).toBe(120_000)
     expect(POLL_MS.recentSales).toBe(120_000)

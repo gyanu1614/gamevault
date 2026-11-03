@@ -12,28 +12,26 @@
 export const MIN_CLIENT_POLL_MS = 60_000
 
 export const POLL_MS = {
-  /** Navbar + account sidebar Messages badge (one shared query). Chat/realtime invalidates it first. */
-  unreadMessages: 60_000,
-  /** Navbar bell; the per-user notifications realtime channel invalidates it on INSERT. */
-  navNotifications: 120_000,
-  /** Navbar Live Orders; refreshed by the same notifications channel (new order / status notices). */
-  navActiveOrders: 120_000,
+  /** Navbar + account sidebar Messages badge (one shared query). The user's live channel refreshes it on each new message; this only covers a dropped socket. */
+  unreadMessages: 300_000,
+  /** Navbar bell; the user's live channel refreshes it on every new notification. */
+  navNotifications: 300_000,
+  /** Navbar Live Orders; the user's live channel refreshes it on every order change and notification. */
+  navActiveOrders: 300_000,
   /** Admin header queue counts + bell. */
   adminHeader: 60_000,
   /** Admin list pages (notifications, activities). */
   adminPages: 60_000,
-  /** /notifications inbox; the navbar realtime channel invalidates it on INSERT. */
-  notificationsPage: 60_000,
-  /** /account/messages conversation list; its messages realtime channel invalidates it. */
-  sellerConversations: 60_000,
+  /** /notifications inbox; the navbar's live channel refreshes it on every new notification. */
+  notificationsPage: 300_000,
   /** Seller online dots (grids, chat, order header); the heartbeat writes every 2 min. */
   sellerPresence: 120_000,
   /** Homepage "just sold" ticker. */
   recentSales: 120_000,
   /** Profile re-read while a seller application is in flight (realtime is primary). */
   sellerApproval: 60_000,
-  /** Order/inbox chat thread safety-net re-sync (realtime delivers new messages). */
-  chatResync: 60_000,
+  /** Order/inbox chat thread safety-net re-sync of the newest messages (realtime delivers new ones). */
+  chatResync: 300_000,
 } as const
 
 /** React Query options for a poll that only runs while the tab is visible. */
