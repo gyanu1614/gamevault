@@ -1,4 +1,5 @@
 import Link from '@/components/navigation/AppLink'
+import ArrowOutwardRoundedIcon from '@mui/icons-material/ArrowOutwardRounded'
 import { IconSparkles } from '@tabler/icons-react'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
 import { TraitMarks } from '@/features/item-buy/TraitMarks'
@@ -54,14 +55,18 @@ export function GridCard({ item, gameSlug }: { item: GridItem; gameSlug: string 
 
         <div className="mt-auto pt-2 sm:pt-3">
           {inStock ? (
-            <div className="flex items-end justify-center gap-2 sm:justify-between">
-              {/* Phones: "From $54.99" on one line under the name, no offer count, so the card stays short. */}
+            <div className="flex items-end justify-between gap-2">
+              {/* Phones: "From $54.99" on one line, so the card stays short. */}
               <span className="flex min-w-0 items-baseline gap-1.5 sm:flex-col sm:items-start sm:gap-0">
                 <span className="text-[12px] font-medium text-text-secondary sm:text-[13px]">From</span>
                 <span className="text-[16px] font-bold tabular-nums leading-tight text-text-primary sm:text-[length:var(--fs-price)]">${formatStatPrice(item.minPrice!)}</span>
               </span>
-              <span className="whitespace-nowrap pb-0.5 text-[13px] font-medium tabular-nums text-text-secondary max-sm:hidden">
-                {item.offers} {item.offers === 1 ? 'Offer' : 'Offers'}
+              {/* The card's buy cue (the whole card is the link): quiet at rest, brand green on hover, nothing moves. */}
+              <span
+                aria-hidden
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white/[0.07] text-text-primary transition-colors group-hover:bg-lime group-hover:text-text-inverse sm:h-9 sm:w-9"
+              >
+                <ArrowOutwardRoundedIcon style={{ fontSize: 18 }} />
               </span>
             </div>
           ) : (
