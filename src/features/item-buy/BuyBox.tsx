@@ -2,7 +2,7 @@
 
 import type { Ref } from 'react'
 import NumberFlow from '@number-flow/react'
-import { IconChevronRight } from '@tabler/icons-react'
+import { IconChevronRight, IconShieldCheckFilled } from '@tabler/icons-react'
 import { SmartLink } from '@/components/global/SmartLink'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { SellerIdentity } from '@/components/marketplace/CurrencySellerRow'
@@ -26,6 +26,8 @@ export interface BuyBoxProps {
   gameSlug: string
   itemSlug: string
   itemName: string
+  /** The line over the title: "Adopt Me · Legendary Pet". */
+  kicker: { game: string; type: string; rarity: { label: string; color: string } | null }
   noun: 'Trait' | 'Mutation'
   traits: TraitOption[]
   trait: string | null
@@ -57,11 +59,20 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome">
-      <h1 id="item-title" className="text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(24px, 21px + 0.5vw, 28px)', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+      <p className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+        {p.kicker.game} ·{' '}
+        {p.kicker.rarity ? (
+          <span className="font-semibold" style={{ color: p.kicker.rarity.color }}>
+            {p.kicker.rarity.label}{' '}
+          </span>
+        ) : null}
+        {p.kicker.type}
+      </p>
+      <h1 id="item-title" className="mt-1 text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', lineHeight: 1.12, letterSpacing: '-0.025em' }}>
         {p.itemName}
       </h1>
 
-      <div className="mt-4 rounded-lg bg-[linear-gradient(180deg,#1F2025_0%,#191A1E_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_48px_-28px_rgba(0,0,0,0.9)]">
+      <div className="mt-4 rounded-lg bg-[linear-gradient(180deg,#1F2025_0%,#191A1E_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_48px_-28px_rgba(0,0,0,0.9)] sm:p-6">
         {p.traits.length > 0 ? (
           <>
             {traitPicker(p.traits) === 'toggles' ? (
@@ -97,9 +108,15 @@ export function BuyBox(p: BuyBoxProps) {
               ) : null}
             </div>
             <div ref={p.buyRef} className="mt-4">
-              <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="w-full" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
+              <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="h-14 w-full text-[16px]" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
                 {p.isOwn ? 'Edit Your Listing' : BUY_CTA_LABEL}
               </BuyButton>
+              {p.isOwn ? null : (
+                <p className="mt-3 flex items-center justify-center gap-1.5 text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>
+                  <IconShieldCheckFilled aria-hidden size={15} className="shrink-0 text-[#6AA8FF]" />
+                  SafeDrop Protection: money back if it doesn’t arrive
+                </p>
+              )}
             </div>
           </>
         ) : (

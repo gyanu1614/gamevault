@@ -41,12 +41,13 @@ export interface ItemBuyClientProps {
  * The pet page (owner, 2026-10-27; layout 2026-10-28, Eldorado's item page
  * as the reference; StockX's trait field and buy box).
  *
- * Desktop: the left two thirds hold the picture and the spec card side by
- * side, the delivery instructions and the three promises under them; the buy
- * column is on the right. Under that block, every offer as a full-width row
- * with the trait filter. Tablets: picture + specs, then the buy column full
- * width. Phones: picture, buy column, specs, instructions, promises, and a Buy
- * bar docks at the bottom once the box scrolls away.
+ * Desktop (owner, 2026-11-02): the left column holds ONE picture card with
+ * the facts in a strip under the picture, then the delivery instructions and
+ * the three promises; the buy column on the right stays in view while the
+ * left column scrolls. Under that block, every offer as a full-width row with
+ * the trait filter. Phones and tablets: picture card, buy column,
+ * instructions, promises, and a Buy bar docks at the bottom once the box
+ * scrolls away.
  *
  * The page opens on the URL's trait, else the cheapest offer's. Picking a
  * trait shows its cheapest offer; picking a row shows that offer and its
@@ -123,20 +124,19 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      <div className="grid grid-cols-1 gap-4 [grid-template-areas:'pic'_'buy'_'specs'_'notes'] sm:grid-cols-2 sm:[grid-template-areas:'pic_specs'_'buy_buy'_'notes_notes'] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:[grid-template-areas:'pic_specs_buy'_'notes_notes_buy'] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-1 gap-4 [grid-template-areas:'pic'_'buy'_'notes'] lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:[grid-template-areas:'pic_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-12">
         <div className="min-w-0 [grid-area:pic]">
-          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
+          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null}>
+            <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
+          </PictureStage>
         </div>
 
-        <div className="min-w-0 [grid-area:specs]">
-          <ItemSpecs itemType={p.itemType} rarity={p.rarity} noun={p.noun} trait={shown} offer={offer} deliveryMethod={p.deliveryMethod} />
-        </div>
-
-        <div className="min-w-0 pt-2 [grid-area:buy] sm:pt-4 lg:pl-8 lg:pt-0">
+        <div className="min-w-0 pt-2 [grid-area:buy] sm:pt-4 lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:self-start lg:pt-0">
           <BuyBox
             gameSlug={p.gameSlug}
             itemSlug={p.itemSlug}
             itemName={p.itemName}
+            kicker={{ game: p.gameName, type: p.itemType, rarity: p.rarity }}
             noun={p.noun}
             traits={options}
             trait={trait}

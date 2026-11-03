@@ -1,6 +1,7 @@
 'use client'
 
 import { useId } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { IconCheck, IconPaw } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { TraitMarks } from './TraitMarks'
@@ -13,7 +14,7 @@ const COLOR = { normal: '#C9CCD3', neon: '#8DC54A', mega: '#A970FF', fly: '#3298
 /** Normal's round badge: the N/F/R disc in a neutral grey. */
 const NORMAL_DISC = '#7C808A'
 
-interface Tile {
+interface Choice {
   key: string
   label: string
   code: string | null
@@ -23,14 +24,15 @@ interface Tile {
 }
 
 /**
- * Adopt Me's trait picker (owner, 2026-10-27, design lab version 1): three
- * type tiles (Normal / Neon / Mega) and two potion tiles (Fly / Ride). The
- * pick is an outline in the trait's own colour, never a full fill; every
- * badge keeps its colour (owner, 2026-10-28), Normal gets a round badge of
- * its own, and a potion gets a tick. No prices before a pick:
- * the price is the buy box's job, the picked form's name sits on the label
- * row. Neon and Mega exclude each other, and on those tiers Fly and Ride
- * switch together (model/am-traits), so every tap lands on a listed form.
+ * Adopt Me's trait picker. Owner rules: the pick is an outline in the
+ * trait's own colour, never a full fill, and every badge keeps its colour
+ * (2026-10-27/28). 2026-11-02 ("too big, congested"): the type is ONE
+ * segmented control (Normal / Neon / Mega) whose outline glides to the pick,
+ * and the potions are two slim toggles on one row — about half the old
+ * height. No prices before a pick: the price is the buy box's job; the
+ * picked form's name sits on the label row. Neon and Mega exclude each other,
+ * and on those tiers Fly and Ride switch together (model/am-traits), so every
+ * tap lands on a listed form.
  */
 export function TraitSwitches({
   noun,
@@ -44,17 +46,18 @@ export function TraitSwitches({
   onChange: (variant: string) => void
 }) {
   const id = useId()
+  const reduce = useReducedMotion()
   const t = amTrait(value)
   const current = options.find((o) => o.variant === value) ?? null
 
-  const tiers: Tile[] = (
+  const tiers: Choice[] = (
     [
       { k: 'normal', label: 'Normal', code: null },
       { k: 'neon', label: 'Neon', code: 'N' },
       { k: 'mega', label: 'Mega', code: 'M' },
     ] as Array<{ k: AmTier; label: string; code: string | null }>
   ).map((x) => ({ key: x.k, label: x.label, code: x.code, color: COLOR[x.k], on: (t?.tier ?? 'normal') === x.k, tap: () => onChange(withTier(value, x.k)) }))
-  const potions: Tile[] = (['fly', 'ride'] as const).map((p) => ({
+  const potions: Choice[] = (['fly', 'ride'] as const).map((p) => ({
     key: p,
     label: p === 'fly' ? 'Fly' : 'Ride',
     code: p === 'fly' ? 'F' : 'R',
@@ -76,50 +79,67 @@ export function TraitSwitches({
         ) : null}
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {tiers.map((tile) => (
-          <TileButton key={tile.key} tile={tile} />
+      <div className="mt-2.5 grid grid-cols-3 gap-1 rounded-lg bg-black/25 p-1">
+        {tiers.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            aria-pressed={c.on}
+            onClick={c.tap}
+            className={cn(
+              'relative flex h-10 items-center justify-center gap-2 rounded-md font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+              c.on ? 'text-text-primary' : 'text-text-secondary hover:bg-white/[0.04] hover:text-text-primary',
+            )}
+            style={{ fontSize: 'var(--fs-body)' }}
+          >
+            {c.on ? (
+              <motion.span
+                aria-hidden
+                layoutId={`${id}-tier`}
+                className="absolute inset-0 rounded-md bg-white/[0.08]"
+                style={{ boxShadow: `inset 0 0 0 1.5px ${c.color}` }}
+                transition={reduce ? { duration: 0 } : { type: 'spring', bounce: 0, duration: 0.35 }}
+              />
+            ) : null}
+            <span className="relative flex items-center gap-2">
+              {c.code ? (
+                <TraitMarks code={c.code} size={18} className="shrink-0" />
+              ) : (
+                <span aria-hidden className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full text-white" style={{ background: NORMAL_DISC }}>
+                  <IconPaw size={12} stroke={2.4} />
+                </span>
+              )}
+              {c.label}
+            </span>
+          </button>
         ))}
       </div>
+
       <div className="mt-2 grid grid-cols-2 gap-2">
-        {potions.map((tile) => (
-          <TileButton key={tile.key} tile={tile} potion />
+        {potions.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            aria-pressed={c.on}
+            onClick={c.tap}
+            className={cn(
+              'flex h-10 items-center gap-2 rounded-md px-3 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+              c.on ? 'bg-white/[0.08] text-text-primary' : 'bg-black/25 text-text-secondary hover:bg-white/[0.05] hover:text-text-primary',
+            )}
+            style={{ fontSize: 'var(--fs-body)', ...(c.on ? { boxShadow: `inset 0 0 0 1.5px ${c.color}` } : {}) }}
+          >
+            <TraitMarks code={c.code ?? ''} size={18} className="shrink-0" />
+            <span className="flex-1 text-left">{c.label}</span>
+            <span
+              aria-hidden
+              className="grid h-[18px] w-[18px] place-items-center rounded-full transition-colors"
+              style={c.on ? { background: c.color } : { boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.18)' }}
+            >
+              {c.on ? <IconCheck size={12} stroke={3} className="text-[#141519]" /> : null}
+            </span>
+          </button>
         ))}
       </div>
     </div>
-  )
-}
-
-function TileButton({ tile, potion = false }: { tile: Tile; potion?: boolean }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={tile.on}
-      onClick={tile.tap}
-      className={cn(
-        'flex h-12 items-center gap-2.5 rounded-md bg-white/[0.04] px-3 font-semibold transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-        !potion && 'justify-center',
-        tile.on ? 'text-text-primary' : 'text-text-secondary shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]',
-      )}
-      style={{ fontSize: 'var(--fs-body)', ...(tile.on ? { boxShadow: `inset 0 0 0 1.5px ${tile.color}` } : {}) }}
-    >
-      {tile.code ? (
-        <TraitMarks code={tile.code} size={20} className="shrink-0" />
-      ) : (
-        <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-white" style={{ background: NORMAL_DISC }}>
-          <IconPaw size={13} stroke={2.4} />
-        </span>
-      )}
-      <span className={cn(potion && 'flex-1 text-left')}>{tile.label}</span>
-      {potion ? (
-        <span
-          aria-hidden
-          className="grid h-5 w-5 place-items-center rounded-full transition-colors"
-          style={tile.on ? { background: tile.color } : { boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.18)' }}
-        >
-          {tile.on ? <IconCheck size={13} stroke={3} className="text-[#141519]" /> : null}
-        </span>
-      ) : null}
-    </button>
   )
 }
