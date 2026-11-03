@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { redirect } from 'next/navigation'
 import type { AdminRole, AdminUser } from '@/lib/admin/permissions-constants'
+import { shouldTouchAdminLastActive } from '@/lib/admin/last-active'
 
 export type { AdminRole, AdminUser }
 
@@ -49,12 +50,16 @@ export async function requireAdmin(): Promise<AdminUser> {
     .eq('id', user.id)
     .single() as any
 
-  // Update last active timestamp. AUTH-030: admin_roles has no user write
-  // policy any more — touch it as the backend, scoped to the verified user.
-  await (createServiceRoleClient()
-    .from('admin_roles')
-    .update as any)({ last_active_at: new Date().toISOString() })
-    .eq('user_id', user.id)
+  // Update last active timestamp — only when stale (lib/admin/last-active:
+  // this runs on every admin page and action). AUTH-030: admin_roles has no
+  // user write policy any more — touch it as the backend, scoped to the
+  // verified user.
+  if (shouldTouchAdminLastActive(adminRole.last_active_at)) {
+    await (createServiceRoleClient()
+      .from('admin_roles')
+      .update as any)({ last_active_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+  }
 
   return {
     userId: user.id,

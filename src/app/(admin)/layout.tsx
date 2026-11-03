@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { shouldTouchAdminLastActive } from '@/lib/admin/last-active'
 import AdminChrome from './admin/components/AdminChrome'
 import { ADMIN_TITLE_TEMPLATE } from '@/lib/seo/title'
 
@@ -28,23 +29,26 @@ export default async function AdminLayout({
   // Check admin_roles table (NOT profiles.role)
   const { data: adminRoleRaw, error } = await (supabase as any)
     .from('admin_roles')
-    .select('role, is_active')
+    .select('role, is_active, last_active_at')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .single()
 
-  const adminRole = adminRoleRaw as { role: string; is_active: boolean } | null
+  const adminRole = adminRoleRaw as { role: string; is_active: boolean; last_active_at: string | null } | null
 
   if (error || !adminRole) {
     redirect('/')
   }
 
-  // Update last active. AUTH-030: admin_roles has no user write policy any
-  // more — touch it as the backend, scoped to the verified user.
-  await (createServiceRoleClient() as any)
-    .from('admin_roles')
-    .update({ last_active_at: new Date().toISOString() })
-    .eq('user_id', user.id)
+  // Update last active — only when stale (lib/admin/last-active). AUTH-030:
+  // admin_roles has no user write policy any more — touch it as the backend,
+  // scoped to the verified user.
+  if (shouldTouchAdminLastActive(adminRole.last_active_at)) {
+    await (createServiceRoleClient() as any)
+      .from('admin_roles')
+      .update({ last_active_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+  }
 
   // V56 — The admin's marketplace profile (real avatar + username)
   // feeds the header's identity cluster.
