@@ -64,6 +64,9 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   // order fields (seller_id / buyer_id = auth.uid()); the payout sum behind
   // seller_dashboard_stats keeps the invoker view's row scope.
   'orders_buyer_private', 'orders_seller_private', 'seller_completed_payout_sum',
+  // Chat load (20261102161043): the inbox page and the Messages badge, each
+  // pinned to auth.uid() and returning only the caller's own conversations.
+  'my_inbox', 'my_unread_message_count',
 ].sort()
 
 /**
