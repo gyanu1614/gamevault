@@ -4,15 +4,14 @@
  * Eldorado / GameBoost pattern: listings first for the shopper, then a
  * substantial guide for search and for the buyer still deciding.
  *
- * Three parts:
- *   1. Curated guide — game-specific editorial from
+ * Three parts, in the order the owner set (2026-11-03):
+ *   1. How to Buy — the homepage's 4-step section (BuyerSteps) reused, with a
+ *      short line per step; the guide can override the title and step 1's line.
+ *   2. Why Buy — the banner with the game's art; shared, but carries the page's
+ *      LIVE stats (listing count, from-price) so it is never a static
+ *      boilerplate claim.
+ *   3. Curated guide (About) — game-specific editorial from
  *      `src/content/category-guides`. Only rendered when an entry exists.
- *   2. Why Buy — shared, but carries the page's LIVE stats (listing count,
- *      from-price) so it is never a static boilerplate claim.
- *   3. How to Buy — the homepage's 4-step cards, with a short line per step;
- *      the guide can override the title and step 1's line.
- * How to Buy is the homepage's 4-step section (BuyerSteps) reused as its
- * own section below, with a game-specific title.
  *
  * Server component: all copy is in the initial HTML, which is what search
  * engines index. No client JS.
@@ -128,13 +127,36 @@ export function CategoryGuide({
   ]
 
   return (
-    // Two sections, one column. The wrapper owns the spacing between them
-    // and above them (sections carry no margins of their own), and each
-    // section opts into the standard page measure itself.
+    // One column. The wrapper owns the spacing between the sections and above
+    // them (sections carry no margins of their own), and each opts into the
+    // standard page measure itself.
     <div className="mt-12 flex flex-col gap-16 pb-16 sm:mt-16 sm:gap-20 sm:pb-24">
-      <section aria-labelledby="category-guide-title" className="page-measure">
-        {/* ── Curated guide — full measure, left to right ─────────────── */}
-        {guide && (
+      {/* ── How to Buy — the homepage's 4-step section, reused ─────────
+          Same component as the homepage (numerals behind glass cards,
+          rim light), with a game-specific title and one short line per
+          step. It brings its own `.page-measure`. */}
+      <BuyerSteps
+        title={guide?.howToBuy?.title ?? `How to Buy ${subject}`}
+        // No line under the title here — the steps speak for themselves.
+        subtitle={null}
+        subs={stepSubs}
+      />
+
+      {/* ── Why Buy — a card with the game's own art behind it ────────
+          Same art as the game's hub sell band (shared helper), so the page
+          and the hub read as one family. Stack, per the CLAUDE.md artwork
+          rules: the image carries its own normalising filter, then ONE
+          wash reaching the page-base token — even across the card (the
+          text spans the full width) and heavier toward the bottom, where
+          promo art tends to carry its own lettering. If the game has no
+          art, the backdrop hides itself and the card is plain glass. */}
+      <section aria-labelledby="category-why-buy" className="page-measure">
+        <WhyBuyCard gameSlug={gameSlug} subject={subject} count={stats.count} fromPrice={fromPrice} headingId="category-why-buy" />
+      </section>
+
+      {/* ── Curated guide (About) — full measure, left to right ──────── */}
+      {guide && (
+        <section aria-labelledby="category-guide-title" className="page-measure">
           <article className="space-y-6">
             <div>
               <h2 id="category-guide-title" className={title}>
@@ -175,40 +197,8 @@ export function CategoryGuide({
               </p>
             )}
           </article>
-        )}
-
-        {/* ── Why Buy — a card with the game's own art behind it ────────
-            Same art as the game's hub sell band (shared helper), so the page
-            and the hub read as one family. Stack, per the CLAUDE.md artwork
-            rules: the image carries its own normalising filter, then ONE
-            wash reaching the page-base token — even across the card (the
-            text spans the full width) and heavier toward the bottom, where
-            promo art tends to carry its own lettering. If the game has no
-            art, the backdrop hides itself and the card is plain glass. */}
-        <WhyBuyCard
-          gameSlug={gameSlug}
-          subject={subject}
-          count={stats.count}
-          fromPrice={fromPrice}
-          // Without a curated guide this is the section's first heading, so
-          // it takes over the landmark's label.
-          headingId={guide ? undefined : 'category-guide-title'}
-          // Space ABOVE the card matches the space BELOW it (the wrapper's
-          // gap to How to Buy), so the card sits evenly between the two.
-          className={guide ? 'mt-16 sm:mt-20' : undefined}
-        />
-      </section>
-
-      {/* ── How to Buy — the homepage's 4-step section, reused ─────────
-          Same component as the homepage (numerals behind glass cards,
-          rim light), with a game-specific title and one short line per
-          step. It brings its own `.page-measure`. */}
-      <BuyerSteps
-        title={guide?.howToBuy?.title ?? `How to Buy ${subject}`}
-        // No line under the title here — the steps speak for themselves.
-        subtitle={null}
-        subs={stepSubs}
-      />
+        </section>
+      )}
     </div>
   )
 }

@@ -935,7 +935,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           gameSlug={gameSlug}
           categorySlug={categorySlug}
           gameName={game.name}
-          categoryName={category.name}
+          categoryName={gridItems ? itemNoun(gameSlug) : category.name}
           stats={stats}
         />
       </>

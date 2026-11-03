@@ -17,7 +17,7 @@ export const ADOPT_ME_GUIDES: Record<string, CategoryGuide> = {
   'buy-items': {
     // "For Sale" phrasing matches how people search ("adopt me pets for
     // sale") — the same pattern the big marketplaces use for this H2.
-    title: 'Adopt Me Pets & Items For Sale',
+    title: 'About Adopt Me Pets',
     intro: [
       'Pets are the heart of Adopt Me. You raise them, trade them and show them off — and the rarest ones take months of luck or trading to get hold of. Buying from another player lets you skip that: pick the exact pet you want, see its variant and price before you pay, and have it traded to you in-game.',
     ],
