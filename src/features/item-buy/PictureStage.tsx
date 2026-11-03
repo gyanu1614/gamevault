@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { MARKET_CARD } from '@/lib/ui/surfaces'
-import { cn } from '@/lib/utils'
 import { TraitMarks } from './TraitMarks'
 
 /** Never blow the art up beyond this many times its own pixels (it blurs). */
@@ -31,7 +29,8 @@ export function PictureStage({
   const reduce = useReducedMotion()
 
   return (
-    <div className={cn('overflow-hidden rounded-lg', MARKET_CARD)}>
+    // One step lighter than the house card fill so the picture never melts into the page ground (owner, 2026-11-02).
+    <div className="overflow-hidden rounded-lg bg-[linear-gradient(180deg,#2B2C33_0%,#232429_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]">
       <div className="relative grid h-[200px] w-full place-items-center sm:h-[240px] lg:aspect-square lg:h-auto">
         {imageUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element -- catalogue art from storage, same as the value pages */

@@ -177,14 +177,14 @@ export default function GameSubNav({
               type="button"
               onClick={goBack}
               aria-label="Back"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-primary transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-primary transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               <ChevronLeft aria-hidden className="h-5 w-5" />
             </button>
             <Link href={`/${gameSlug}`} className="min-w-0 flex-1 truncate px-2 text-center text-[15px] font-bold text-text-primary">
               {gameName}
             </Link>
-            <span aria-hidden className="w-10 shrink-0" />
+            <span aria-hidden className="w-11 shrink-0" />
           </div>
         ) : null}
         <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>

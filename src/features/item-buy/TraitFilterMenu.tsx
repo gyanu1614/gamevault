@@ -35,7 +35,7 @@ export function TraitFilterMenu({
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger
         className={cn(
-          'flex h-10 items-center gap-2 rounded-md bg-white/[0.05] pl-3.5 pr-2.5 font-semibold text-text-primary transition-colors hover:bg-white/[0.08]',
+          'flex h-11 items-center gap-2 rounded-md bg-white/[0.05] pl-3.5 pr-2.5 font-semibold text-text-primary transition-colors hover:bg-white/[0.08]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring data-[state=open]:bg-white/[0.08]',
         )}
         style={{ fontSize: 'var(--fs-body)' }}
