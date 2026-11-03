@@ -109,7 +109,7 @@ export function FilterTrigger({
           'text-[14px] sm:text-[length:var(--fs-body)]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15',
           // Active or open: one step lighter. Neutral — no accent colour.
-          active || open ? 'bg-white/[0.11]' : 'bg-white/[0.05] hover:bg-white/[0.08]',
+          active || open ? 'bg-[#3A3B43]' : 'bg-[#2E2F36] hover:bg-[#33343B]',
           // Phones: a segment of the filter bar (the Messages tab bar's look:
           // 34px, 14px medium, text-only), see _ItemsPageClient. A hairline
           // sits between neighbours (owner, 2026-10-01: Item Type and Trait

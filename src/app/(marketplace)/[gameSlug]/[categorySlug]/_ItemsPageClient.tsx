@@ -21,6 +21,8 @@ import { Search, Store } from 'lucide-react'
 import { track } from '@vercel/analytics'
 import { track as phTrack } from '@/lib/analytics/client'
 import { CategoryHeader } from '@/components/marketplace/CategoryHeader'
+import { FilterToolbar, type AppliedFilter } from '@/components/marketplace/FilterToolbar'
+import { SheetChips, SheetPickOne, type FilterSheetSection } from '@/components/marketplace/FiltersSheet'
 import { SellerPromptRow } from '@/components/seller/SellerPrompt'
 import { useSellerPrompt } from '@/hooks/use-seller-prompt'
 import { SELLER_PROMPT_EVENT, listingsEmptyCopy, sellerPromptHref } from '@/lib/seller/seller-prompt'
@@ -28,13 +30,12 @@ import { bestOfferId, sortOffers } from './_itemsSort'
 import ItemCard from './_ItemCard'
 import Link from 'next/link'
 import { closestByName } from '@/lib/value-listings/closest'
-import { ScrollRow } from '@/components/ui/scroll-row'
 import type {
   ItemOffer,
   ItemsTaxonomy,
   ItemSort,
 } from './_itemsTypes'
-import { MultiSelectFilter, PriceRangeFilter, SingleSelectFilter, iconForFilter, titleCase } from './_ItemFilters'
+import { MultiSelectFilter, PriceRangeFields, PriceRangeFilter, SingleSelectFilter, titleCase } from './_ItemFilters'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 
 const PAGE_SIZE = 24
@@ -70,7 +71,6 @@ const SORT_OPTIONS: { slug: ItemSort; label: string }[] = [
 interface ItemsPageClientProps {
   gameSlug: string
   gameName: string
-  gameImageUrl?: string | null
   tagline?: string
   offers: ItemOffer[]
   taxonomy: ItemsTaxonomy
@@ -91,7 +91,6 @@ interface ItemsPageClientProps {
 export default function ItemsPageClient({
   gameSlug,
   gameName,
-  gameImageUrl,
   offers,
   taxonomy,
   categoryLabel = 'Items',
@@ -272,118 +271,84 @@ export default function ItemsPageClient({
   const paged = useUrlPage(sorted, PAGE_SIZE, filterKey)
   const visible = paged.visible
 
-  const clearFilters = () => {
-    setQ('')
+  const clearApplied = () => {
     setAttrFilters({})
     setPriceRange(null)
     setDelivery([])
+  }
+  const clearFilters = () => {
+    setQ('')
+    clearApplied()
     setSort('recommended')
   }
+
+  const hasPrice = priceBounds[1] > priceBounds[0]
+  const hasDelivery = deliveryOptions.length > 1
+  const sections: FilterSheetSection[] = [
+    { key: 'sort', title: 'Sort By', content: <SheetPickOne options={SORT_OPTIONS} value={sort} onChange={setSort} /> },
+    ...visibleFilters.map((f) => ({
+      key: f.slug,
+      title: titleCase(f.label),
+      content: <SheetChips options={f.options} selected={getAttrFilter(f.slug)} onChange={(v) => setAttrFilter(f.slug, v)} />,
+    })),
+    ...(hasPrice ? [{ key: 'price', title: 'Price', content: <PriceRangeFields bounds={priceBounds} value={priceRange} onChange={setPriceRange} /> }] : []),
+    ...(hasDelivery ? [{ key: 'delivery', title: 'Delivery Time', content: <SheetChips options={deliveryOptions} selected={delivery} onChange={setDelivery} /> }] : []),
+  ]
+  const applied: AppliedFilter[] = [
+    ...visibleFilters.flatMap((f) =>
+      getAttrFilter(f.slug).map((v) => ({
+        key: `${f.slug}:${v}`,
+        label: f.options.find((o) => o.slug === v)?.label ?? v,
+        onRemove: () => setAttrFilter(f.slug, getAttrFilter(f.slug).filter((x) => x !== v)),
+      })),
+    ),
+    ...(priceRange ? [{ key: 'price', label: `$${priceRange[0]} – $${priceRange[1]}`, onRemove: () => setPriceRange(null) }] : []),
+    ...delivery.map((v) => ({
+      key: `delivery:${v}`,
+      label: deliveryOptions.find((o) => o.slug === v)?.label ?? v,
+      onRemove: () => setDelivery((c) => c.filter((x) => x !== v)),
+    })),
+  ]
 
   return (
     <main className="min-h-screen">
       <SearchParamsBridge onParams={seedFromUrl} />
       <SearchParamsBridge onParams={paged.onParams} />
-      {/* Filter band */}
-      {/* V19/P24/P7.mm — Hero section bg removed so the body's violet
-          gradient bleeds through. The hero is now a transparent
-          layer with just a bottom hairline; matches the currency
-          pages. */}
-      {/* No bottom divider — the band ends with the filter row and the
-          results start below it; a full-width rule added nothing. */}
       {/* scroll-mt clears the fixed navbar + sub-navbar when a page change scrolls here. */}
-      <section ref={paged.topRef} className="relative scroll-mt-game-chrome overflow-hidden">
-        <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
-          {/* Header: logo + game + category (shared CategoryHeader). */}
+      <section ref={paged.topRef} className="scroll-mt-game-chrome">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8">
           <CategoryHeader
             gameName={gameName}
-            gameImageUrl={gameImageUrl ?? null}
             categoryLabel={categoryLabel}
             count={sorted.length}
             countNoun={{ one: 'listing', many: 'listings' }}
             stats={stats}
             introLine={introLine}
           />
-
-          {/* Filter bar (owner, 2026-09-28): the filters on one full-width
-              row, the search on its own full-width row below.
-
-              Filters: sm+ they sit in one row at their natural width (wrapping
-              when there are many); phones scroll them sideways, and ScrollRow
-              fades the clipped edge with a ‹ / › chevron.
-
-              Control height is set HERE, not in tokens.css: the two height
-              vars are overridden on this block and cascade to every control
-              in it, so search, chips and sort stay one height and nothing
-              else on the site changes. */}
-          {/* GameBoost sizing (measured 2026-09-29): 40px controls on phones,
-              42px from sm; buttons as wide as their label, not stretched. */}
-          <div className="[--h-btn-secondary:40px] [--h-input:40px] sm:[--h-btn-secondary:42px] sm:[--h-input:42px]">
-          {/* Phones: the filters live in ONE bar exactly like the Messages
-              tab bar (owner, 2026-09-30): well fill + hairline frame, 34px
-              segments, the scroll cue inside the frame. sm+: loose pills. */}
-          <div className="max-sm:w-fit max-sm:max-w-full max-sm:overflow-hidden max-sm:rounded-lg max-sm:border max-sm:border-white/[0.08] max-sm:bg-bg-well max-sm:[--h-btn-secondary:34px]">
-          <ScrollRow
-            edgeColor="var(--color-bg-well)"
-            className="flex items-center overflow-x-auto [scrollbar-width:none] max-sm:w-max max-sm:max-w-full max-sm:gap-0.5 max-sm:p-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible [&::-webkit-scrollbar]:hidden"
-          >
-            {/* Attribute filters (admin-defined per game), then Price and
-                Delivery Time. All multi-select except Price (a range). */}
-            {visibleFilters.map((f) => (
-              <MultiSelectFilter
-                key={f.slug}
-                label={titleCase(f.label)}
-                icon={iconForFilter(f.label)}
-                options={f.options}
-                selected={getAttrFilter(f.slug)}
-                onChange={(v) => setAttrFilter(f.slug, v)}
-              />
-            ))}
-            {priceBounds[1] > priceBounds[0] && (
-              <PriceRangeFilter bounds={priceBounds} value={priceRange} onChange={setPriceRange} />
-            )}
-            {deliveryOptions.length > 1 && (
-              <MultiSelectFilter
-                label="Delivery Time"
-                icon={iconForFilter('delivery')}
-                options={deliveryOptions}
-                selected={delivery}
-                onChange={setDelivery}
-              />
-            )}
-
-            {/* Sort — a direct sibling of the filters (no wrapper), so the
-                phone bar draws its divider like the others. */}
-            <SingleSelectFilter title="Sort By" options={SORT_OPTIONS} value={sort} onChange={setSort} />
-          </ScrollRow>
-          </div>
-
-          {/* Search — its own full-width row under the filters. */}
-          <div className="relative mt-2.5 w-full">
-            <Search
-              // z-10: the input's backdrop-blur gives it its own layer, which
-              // otherwise paints over this icon (it comes first in the DOM).
-              className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-tertiary"
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search for an Item"
-              aria-label="Search for an item"
-              // Same family as the filter bar above: well fill + hairline.
-              // Focus brightens the hairline (no green ring).
-              className="w-full appearance-none rounded-lg border border-white/[0.08] bg-bg-well pl-10 pr-3 text-[16px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-white/[0.14] focus:border-white/25 focus-visible:shadow-none sm:text-[length:var(--fs-body)] [&::-webkit-search-cancel-button]:appearance-none"
-              style={{ height: 'var(--h-input)' }}
-            />
-          </div>
-          </div>
         </div>
       </section>
 
+      <FilterToolbar
+        search={{ value: q, onChange: setQ, placeholder: `Search ${categoryLabel}`, ariaLabel: `Search ${gameName} ${categoryLabel}` }}
+        filters={
+          <>
+            {/* Attribute filters (admin-defined per game), then Price and
+                Delivery Time. All multi-select except Price (a range). */}
+            {visibleFilters.map((f) => (
+              <MultiSelectFilter key={f.slug} label={titleCase(f.label)} options={f.options} selected={getAttrFilter(f.slug)} onChange={(v) => setAttrFilter(f.slug, v)} />
+            ))}
+            {hasPrice && <PriceRangeFilter icon={null} bounds={priceBounds} value={priceRange} onChange={setPriceRange} />}
+            {hasDelivery && <MultiSelectFilter label="Delivery Time" options={deliveryOptions} selected={delivery} onChange={setDelivery} />}
+          </>
+        }
+        sort={<SingleSelectFilter title="Sort By" prefix="Sort" options={SORT_OPTIONS} value={sort} onChange={setSort} />}
+        sections={sections}
+        applied={applied}
+        onClearFilters={clearApplied}
+      />
+
       {/* Results + grid */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-3 sm:px-6 lg:px-8">
 
         {sorted.length === 0 ? (
           <EmptyState

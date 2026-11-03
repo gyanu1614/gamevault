@@ -112,6 +112,7 @@ export function StoreOffers({
               )}
               <SingleSelectFilter<StoreSort>
                 title="Sort By"
+                prefix="Sort"
                 options={sortOptions}
                 value={filters.sort}
                 onChange={(sort) => update({ sort })}

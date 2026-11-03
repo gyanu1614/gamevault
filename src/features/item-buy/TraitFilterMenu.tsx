@@ -30,11 +30,14 @@ export function TraitFilterMenu({
   onToggle,
   onClear,
   icon,
+  emptyLabel = 'Choose Traits',
 }: {
   lit: ReadonlySet<AmLetter>
   onToggle: (letter: AmLetter) => void
   onClear: () => void
   icon?: LucideIcon
+  /** The button's words while nothing is ticked. */
+  emptyLabel?: string
 }) {
   const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('start')
   const baseId = useId()
@@ -58,7 +61,7 @@ export function TraitFilterMenu({
               </span>
             </span>
           ) : (
-            'Choose Traits'
+            emptyLabel
           )
         }
       />
@@ -86,5 +89,32 @@ export function TraitFilterMenu({
         </ul>
       </FilterPanel>
     </Popover.Root>
+  )
+}
+
+/** The same four letters as big buttons, for the phone Filters sheet: badge, name, picked = an edge in its own colour. */
+export function TraitSheetButtons({ lit, onToggle }: { lit: ReadonlySet<AmLetter>; onToggle: (letter: AmLetter) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      {TRAIT_LETTERS.map((l) => {
+        const on = lit.has(l.letter)
+        return (
+          <button
+            key={l.letter}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onToggle(l.letter)}
+            className={cn(
+              'flex h-11 items-center gap-2.5 rounded-md px-3 text-left font-medium transition-colors',
+              on ? 'bg-white/[0.08] text-text-primary' : 'bg-white/[0.05] text-text-secondary hover:bg-white/[0.08] hover:text-text-primary',
+            )}
+            style={on ? { boxShadow: `inset 0 0 0 1.5px ${l.color}` } : undefined}
+          >
+            <TraitMarks code={l.letter} size={20} />
+            {l.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }

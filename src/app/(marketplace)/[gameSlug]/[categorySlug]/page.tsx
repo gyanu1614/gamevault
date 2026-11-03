@@ -902,7 +902,6 @@ async function CategoryBrowsePage({ params }: PageProps) {
             <ItemsGridClient
               gameSlug={gameSlug}
               gameName={game.name}
-              gameImageUrl={(game as any).image_url ?? null}
               itemNoun={itemNoun(gameSlug)}
               items={gridItems}
               options={filterOptions(gameSlug, gridItems)}
@@ -915,7 +914,6 @@ async function CategoryBrowsePage({ params }: PageProps) {
             <ItemsPageClient
               gameSlug={gameSlug}
               gameName={game.name}
-              gameImageUrl={(game as any).image_url ?? null}
               categoryLabel={category.name}
               tagline={
                 (category as any).description ||

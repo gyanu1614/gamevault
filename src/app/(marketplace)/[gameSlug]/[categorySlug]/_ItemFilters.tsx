@@ -76,7 +76,7 @@ export function MultiSelectFilter({
   onChange,
 }: {
   label: string
-  icon: LucideIcon
+  icon?: LucideIcon
   options: TaxonomyOption[]
   selected: string[]
   onChange: (next: string[]) => void
@@ -159,9 +159,9 @@ export function MultiSelectFilter({
 /**
  * One choice from a list — used for sorting. Same button and panel as the
  * filters, so the whole bar reads as one set. The button says what it is and
- * the current choice ("Sort: Recommended"; owner, 2026-11-03: "Recommended"
- * alone did not read as a control); phones, in the tight filter bar, show the
- * choice only. Picking a row closes the dropdown.
+ * the current choice when it needs saying (`prefix`: "Sort: Recommended";
+ * owner, 2026-11-03: "Recommended" alone did not read as a control). Phones, in
+ * the tight filter bar, show the choice only. Picking a row closes the dropdown.
  */
 export function SingleSelectFilter<T extends string>({
   title,
@@ -169,12 +169,14 @@ export function SingleSelectFilter<T extends string>({
   value,
   onChange,
   icon = ArrowUpDown,
+  prefix,
 }: {
   title: string
   options: { slug: T; label: string }[]
   value: T
   onChange: (next: T) => void
   icon?: LucideIcon
+  prefix?: string
 }) {
   const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('end')
   const current = options.find((o) => o.slug === value)?.label ?? title
@@ -184,7 +186,7 @@ export function SingleSelectFilter<T extends string>({
         icon={icon}
         label={
           <>
-            <span className="font-medium text-text-secondary max-sm:hidden">Sort: </span>
+            {prefix ? <span className="font-medium text-text-secondary max-sm:hidden">{prefix}: </span> : null}
             {current}
           </>
         }
@@ -227,12 +229,15 @@ export function PriceRangeFilter({
   bounds,
   value,
   onChange,
+  icon = DollarSign,
 }: {
   /** Cheapest and dearest price on the page — the slider's limits. */
   bounds: [number, number]
   /** Current range, or null for "any price". */
   value: [number, number] | null
   onChange: (next: [number, number] | null) => void
+  /** Null: label only, as on the listings toolbar. */
+  icon?: LucideIcon | null
 }) {
   const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('start')
   const [lo, hi] = value ?? bounds
@@ -240,7 +245,7 @@ export function PriceRangeFilter({
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <FilterTrigger icon={DollarSign} label={buttonLabel} active={!!value} open={open} buttonRef={triggerRef} />
+      <FilterTrigger icon={icon ?? undefined} label={buttonLabel} active={!!value} open={open} buttonRef={triggerRef} />
       <FilterPanel title="Price" alignOffset={alignOffset} onClear={value ? () => onChange(null) : undefined}>
         <PriceRangeFields bounds={bounds} value={value} onChange={onChange} className="min-h-0 overflow-y-auto px-4 pb-4 pt-4" />
       </FilterPanel>
