@@ -7,7 +7,6 @@ import { describe, it, expect, vi } from 'vitest'
 ;(globalThis as { React?: typeof React }).React = React
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), prefetch: vi.fn() }) }))
-vi.mock('@/hooks/useScrollDirection', () => ({ useScrollDirection: () => ({ hidden: false }) }))
 // The Sell button reads who is looking; the static HTML is the signed-out visitor's.
 vi.mock('@/hooks/use-auth', () => ({ useAuth: () => ({ user: null, profile: null, loading: false }) }))
 vi.mock('@/hooks/use-seller-prompt', () => ({ useSellerPrompt: () => ({ state: 'visitor', forgetCount: vi.fn() }), forgetSellerListingCount: vi.fn() }))

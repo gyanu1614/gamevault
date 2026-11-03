@@ -6,7 +6,7 @@
  * Desktop (owner, 2026-10-26, GameBoost as the reference): a full-width strip
  * one step lighter than the navbar — game lockup left, category tabs centred
  * (icon + label, full bar height), the content tab right. Phones keep the
- * fixed, scrollable strip under the 60px app bar — except inside a listing
+ * scrollable strip under the 60px app bar — except inside a listing
  * (`phoneBack`): there phones get a back button and the game name in the
  * navbar's own colour, so the two bars read as one (owner, 2026-11-02,
  * Eldorado's phone item page as the reference).
@@ -14,13 +14,11 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import Link from '@/components/navigation/AppLink'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { SubnavSellButton } from '@/components/seller/SellerPrompt'
-import { useScrollDirection } from '@/hooks/useScrollDirection'
 import {
   SUBNAV_BG,
   SUBNAV_LOGO,
@@ -78,10 +76,6 @@ export default function GameSubNav({
   phoneBack,
 }: GameSubNavProps) {
   const router = useRouter()
-  // Hide-on-scroll: slides up with the primary navbar (shared signal).
-  // `hideBelow: 768` matches this bar's own `max-md:fixed` treatment — above
-  // `md` it is fixed under the navbar and must stay put.
-  const { hidden: scrollHidden } = useScrollDirection({ revealAt: 40, hideBelow: 768 })
   // V14m — Track which tab is mid-navigation so we can show a small spinner
   // on it (instead of the whole UI sitting silent until the new page paints).
   const [isPendingNav, startNavTransition] = useTransition()
@@ -150,25 +144,10 @@ export default function GameSubNav({
   }, [])
 
   return (
-    /* Desktop: a full-width strip pinned flush under the navbar. On phones
-       this same component becomes the page-local subnavbar: the outer slot
-       reserves the fixed bar's real height (58px measured) so content below
-       never overlaps, while the inner row stays attached directly beneath
-       the fixed 60px primary header. */
+    /* A full-width strip flush under the navbar, in the page: it scrolls away
+       and only the navbar stays. */
     <nav aria-label={`${gameName} categories`} className={SUBNAV_SLOT}>
-      <motion.div
-        initial={false}
-        /* Phones: slide up in lockstep with the primary navbar so the two
-           bars read as ONE unit — the sub-nav's own height PLUS the navbar
-           above it. `hideBelow` on the hook keeps md+ still (a transform
-           would move the fixed strip there too).
-
-           The 120px overshoots the navbar's 60px on purpose: with a banner
-           mounted this bar starts lower, and framer can't interpolate a
-           calc() containing var(--navbar-bottom). Overshooting is invisible
-           (it's off-screen either way) and guarantees a full clear. */
-        animate={{ y: scrollHidden ? 'calc(-100% - 120px)' : '0%' }}
-        transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
+      <div
         className={cn(SUBNAV_STRIP, phoneBack && 'max-md:!bg-[#1C1D22] max-md:shadow-none')}
         style={{ backgroundColor: SUBNAV_BG }}
       >
@@ -282,7 +261,7 @@ export default function GameSubNav({
             <SubnavSellButton className="max-lg:hidden" />
           </div>
         </div>
-      </motion.div>
+      </div>
     </nav>
   )
 }

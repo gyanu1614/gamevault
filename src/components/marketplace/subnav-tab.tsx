@@ -14,14 +14,13 @@ import { cn } from '@/lib/utils'
  * The bar's layout, shared with GameSubNavSkeleton so the loading state draws
  * the same strip.
  *
- * The strip is `fixed` flush under the navbar at --subnav-top (globals.css),
- * exactly like the navbar itself, so the two bars never move — not on scroll
- * and not on the macOS rubber-band at the top of the page (owner, 2026-10-26,
- * GameBoost/Eldorado). A sticky bar does both: it scrolls until it pins and
- * it follows the page when pulled past the top.
+ * The strip sits flush under the navbar and scrolls away with the page: only
+ * the navbar stays on screen (owner, 2026-11-03, reversing the fixed bar of
+ * 2026-10-26).
  *
- * Slot (the <nav>): reserves the strip's height in the flow. lg:-mt-5 lifts
- * it out of the navbar spacer (84px at lg, the bar itself 64px).
+ * Slot (the <nav>): the strip's place in the flow, flush under the navbar on
+ * every width. lg:-mt-5 lifts it out of the navbar spacer (84px at lg, the bar
+ * itself 64px).
  *
  * 52px tall everywhere (owner, 2026-10-27: thinner, GameBoost).
  * `!z-40` beats `.has-backdrop > *` (z-index 1), which would otherwise paint
@@ -35,7 +34,7 @@ export const SUBNAV_SLOT =
  * 2026-10-26: "no outer white line") — a soft shadow carries the bottom edge.
  */
 export const SUBNAV_STRIP = cn(
-  'pointer-events-auto fixed inset-x-0 top-[var(--subnav-top)] z-[45] w-full backdrop-blur-2xl backdrop-saturate-150',
+  'pointer-events-auto absolute inset-x-0 top-0 z-[45] w-full backdrop-blur-2xl backdrop-saturate-150',
   'md:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.9)]',
   'h-[52px] max-md:flex max-md:items-center max-md:px-2 max-md:!bg-[#0b0f0c] max-md:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.85)]',
 )
