@@ -14,7 +14,7 @@ export interface ItemSpecsProps {
 /**
  * The facts under the picture, floating on the page with no box (owner,
  * 2026-11-02: no box in a box; Eldorado's item page as the reference): rarity,
- * how fast, how it is delivered, how many are left — 2 × 2 on phones, one row
+ * how fast, how it is delivered, how many are left — 2 × 2, beside the picture
  * on desktop. Offer facts (time, stock) show only while an offer is on show;
  * a changed value eases in when another offer is chosen.
  */
@@ -31,10 +31,10 @@ export function ItemSpecs(p: ItemSpecsProps) {
   ]
 
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-5">
       {cells.map((c) => (
         <div key={c.label} className="min-w-0">
-          <dt className="text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+          <dt className="text-text-tertiary" style={{ fontSize: 'var(--fs-body)' }}>
             {c.label}
           </dt>
           <dd className="mt-0.5 truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>

@@ -41,7 +41,7 @@ export function ItemTitle({ itemName, kicker }: { itemName: string; kicker: { ga
         ) : null}
         {kicker.type}
       </p>
-      <h1 id="item-title" className="text-balance font-bold text-text-primary" style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', lineHeight: 1.12, letterSpacing: '-0.025em' }}>
+      <h1 id="item-title" className="text-balance text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary lg:text-[28px]">
         {itemName}
       </h1>
     </div>
@@ -98,7 +98,7 @@ export function BuyBox(p: BuyBoxProps) {
                   value={offer.pricePerUnit * p.qty}
                   format={USD}
                   className="font-bold tabular-nums text-text-primary"
-                  style={{ fontSize: 'clamp(30px, 26px + 0.6vw, 34px)', letterSpacing: '-0.03em', lineHeight: 1 }}
+                  style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', letterSpacing: '-0.025em', lineHeight: 1 }}
                 />
                 {off > 0 ? <span className="rounded bg-lime-tint-bg px-1.5 py-0.5 text-[12px] font-bold text-lime-text">-{off}%</span> : null}
               </div>

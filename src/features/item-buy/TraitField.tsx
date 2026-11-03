@@ -13,8 +13,8 @@ import type { TraitOption } from './model/offers'
 
 /**
  * The trait picker (owner, 2026-10-27; StockX's "Size: All ⌄" as the
- * reference): one full-width field — the word "Trait", the picked trait and
- * a chevron. It opens a list of every trait with its cheapest price; a trait
+ * reference; 2026-11-02: a plain row, not a box inside the buy box): the word
+ * "Trait", the picked trait and a chevron. It opens a list of every trait with its cheapest price; a trait
  * nobody sells says Notify Me. Desktop: a dropdown under the field (Radix
  * Popover). Phones: a sheet that slides up from the bottom (vaul).
  */
@@ -46,9 +46,9 @@ export function TraitField({
       aria-expanded={open}
       aria-labelledby={labelId}
       className={cn(
-        'flex h-14 w-full items-center gap-3 rounded-lg px-4 text-left transition-colors',
-        'shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15',
-        open ? 'bg-[#2A2B31]' : 'bg-[#212228] hover:bg-[#26272D]',
+        '-mx-3 flex h-12 w-[calc(100%+1.5rem)] items-center gap-3 rounded-md px-3 text-left transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+        open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]',
       )}
     >
       <span id={labelId} className="shrink-0 text-text-tertiary" style={{ fontSize: 'var(--fs-body)' }}>

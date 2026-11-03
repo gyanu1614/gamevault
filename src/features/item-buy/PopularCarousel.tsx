@@ -7,6 +7,7 @@ import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { GridCard } from '@/features/items-grid/GridCard'
 import type { GridItem } from '@/features/items-grid/model/grid'
 import { cn } from '@/lib/utils'
+import { ITEM_H2 } from './layout'
 
 const FADE = '56px'
 
@@ -39,9 +40,9 @@ export function PopularCarousel({ id, heading, items, gameSlug }: { id: string; 
   const mask = [canPrev ? `transparent 0, #000 ${FADE}` : '#000 0', canNext ? `#000 calc(100% - ${FADE}), transparent 100%` : '#000 100%'].join(', ')
 
   return (
-    <section aria-labelledby={id} className="mt-12 sm:mt-14">
+    <section aria-labelledby={id}>
       <div className="mb-5 flex items-center justify-between gap-4">
-        <h2 id={id} className="text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]">
+        <h2 id={id} className={ITEM_H2}>
           {heading}
         </h2>
         <div className="hidden items-center gap-2 sm:flex">

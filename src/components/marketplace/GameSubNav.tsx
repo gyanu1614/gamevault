@@ -6,7 +6,10 @@
  * Desktop (owner, 2026-10-26, GameBoost as the reference): a full-width strip
  * one step lighter than the navbar — game lockup left, category tabs centred
  * (icon + label, full bar height), the content tab right. Phones keep the
- * fixed, scrollable strip under the 60px app bar.
+ * fixed, scrollable strip under the 60px app bar — except inside a listing
+ * (`phoneBack`): there phones get a back button and the game name in the
+ * navbar's own colour, so the two bars read as one (owner, 2026-11-02,
+ * Eldorado's phone item page as the reference).
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react'
@@ -56,6 +59,12 @@ interface GameSubNavProps {
    * game-agnostic.
    */
   extraTabs?: React.ReactNode
+  /**
+   * Inside a listing (the pet page): phones swap the tab strip for a back
+   * button + the game name. `href` is where Back goes when there is no
+   * earlier page of ours to return to (opened from a search result).
+   */
+  phoneBack?: { href: string }
 }
 
 export default function GameSubNav({
@@ -65,6 +74,7 @@ export default function GameSubNav({
   currentCategorySlug,
   categories,
   extraTabs,
+  phoneBack,
 }: GameSubNavProps) {
   const router = useRouter()
   // Hide-on-scroll: slides up with the primary navbar (shared signal).
@@ -109,6 +119,19 @@ export default function GameSubNav({
     })
   }
 
+  // Back to the page the buyer came from when it is ours, else to the category.
+  const goBack = () => {
+    if (!phoneBack) return
+    let fromUs = false
+    try {
+      fromUs = window.history.length > 1 && !!document.referrer && new URL(document.referrer).origin === window.location.origin
+    } catch {
+      fromUs = false
+    }
+    if (fromUs) router.back()
+    else router.push(phoneBack.href)
+  }
+
   // Keep the game lockup present even when a database row has no artwork yet.
   // The shared registry mirrors the homepage fallback icons and avoids a
   // broken/empty left edge in the compact mobile subnavbar.
@@ -145,10 +168,26 @@ export default function GameSubNav({
            (it's off-screen either way) and guarantees a full clear. */
         animate={{ y: scrollHidden ? 'calc(-100% - 120px)' : '0%' }}
         transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
-        className={SUBNAV_STRIP}
+        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:!bg-[#1C1D22] max-md:shadow-none')}
         style={{ backgroundColor: SUBNAV_BG }}
       >
-        <div className={SUBNAV_ROW}>
+        {phoneBack ? (
+          <div className="flex w-full items-center md:hidden">
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="Back"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-primary transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            >
+              <ChevronLeft aria-hidden className="h-5 w-5" />
+            </button>
+            <Link href={`/${gameSlug}`} className="min-w-0 flex-1 truncate px-2 text-center text-[15px] font-bold text-text-primary">
+              {gameName}
+            </Link>
+            <span aria-hidden className="w-10 shrink-0" />
+          </div>
+        ) : null}
+        <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>
           {/* ── Game name / logo ───────────────────────────────────────── */}
           <Link
             href={`/${gameSlug}`}

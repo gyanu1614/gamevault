@@ -9,6 +9,7 @@ import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_i
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import { cn } from '@/lib/utils'
+import { ITEM_H2 } from './layout'
 import { TraitFilterMenu } from './TraitFilterMenu'
 import { TraitMarks } from './TraitMarks'
 import { TraitName } from './TraitName'
@@ -65,7 +66,7 @@ export function OffersSection({
   return (
     <section aria-labelledby="offers-title">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <h2 id="offers-title" className="flex items-center gap-2.5 text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]">
+        <h2 id="offers-title" className={cn(ITEM_H2, 'flex items-center gap-2.5')}>
           Offers
           <span className="rounded bg-white/[0.07] px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-text-secondary">{matching.length}</span>
         </h2>

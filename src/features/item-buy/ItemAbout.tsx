@@ -1,9 +1,8 @@
-import { FaqSection } from '@/components/marketplace/FaqCards'
+import { FaqCards } from '@/components/marketplace/FaqCards'
 import { JsonLd, faqPage } from '@/lib/seo/jsonld'
 import { cn } from '@/lib/utils'
+import { ITEM_H2 } from './layout'
 import type { ItemAbout } from './model/about'
-
-const H2 = 'mb-5 text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]'
 
 /** Adopt Me's badges, in the order of the trait picker (tier, then potions). */
 const BADGES = [
@@ -22,8 +21,8 @@ const BADGES = [
 export function ItemDetails({ about }: { about: ItemAbout }) {
   if (about.intro == null && !about.traitGuide) return null
   return (
-    <section aria-labelledby="item-about" className="mt-12 sm:mt-14">
-      <h2 id="item-about" className={cn(H2, 'mb-3')}>
+    <section aria-labelledby="item-about">
+      <h2 id="item-about" className={cn(ITEM_H2, 'mb-3')}>
         {about.heading}
       </h2>
       <div className="space-y-5 leading-relaxed text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
@@ -48,11 +47,16 @@ export function ItemDetails({ about }: { about: ItemAbout }) {
   )
 }
 
+/** Buyer questions: the same left heading as every pet page section (owner, 2026-11-02), the house FAQ cards. */
 export function ItemFaq({ title, about }: { title: string; about: ItemAbout }) {
+  if (about.faq.length === 0) return null
   return (
-    <>
+    <section aria-labelledby="item-faq-title">
       <JsonLd data={faqPage(about.faq)} />
-      <FaqSection id="item-faq" title={title} items={about.faq} />
-    </>
+      <h2 id="item-faq-title" className={ITEM_H2}>
+        {title}
+      </h2>
+      <FaqCards items={about.faq} square className="mx-0 mt-5 max-w-3xl" />
+    </section>
   )
 }

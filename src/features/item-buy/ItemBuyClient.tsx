@@ -11,6 +11,7 @@ import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
 import { defaultTrait, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
 import { useBuyOffer } from './use-buy-offer'
+import { ITEM_SECTION_GAP } from './layout'
 
 export interface ItemBuyClientProps {
   gameSlug: string
@@ -41,10 +42,10 @@ export interface ItemBuyClientProps {
  * The pet page (owner, 2026-10-27; layout 2026-10-28, Eldorado's item page
  * as the reference; StockX's trait field and buy box).
  *
- * Desktop (owner, 2026-11-02): the left column holds a smaller picture card,
- * the facts floating under it, then the delivery instructions as plain text;
- * the buy column on the right (title, buy box with the promises, seller)
- * stays in view while the left column scrolls. Under that block, every offer as a
+ * Desktop (owner, 2026-11-02, Eldorado's item page as the reference): a
+ * square picture tile with the title and the facts beside it, the delivery
+ * instructions under them; the buy column on the right (buy box with the
+ * promises, seller) stays in view while the left column scrolls. Under that block, every offer as a
  * full-width row with the trait filter. Phones and tablets (Eldorado's phone
  * page as the reference, no box in a box): title, picture, the facts floating
  * 2 × 2, the buy box on the page, instructions, and a Buy bar docks at the
@@ -126,37 +127,37 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_auto_1fr] lg:gap-x-10 lg:gap-y-6 lg:[grid-template-areas:'pic_buy'_'facts_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-x-12">
-        <div className="order-2 min-w-0 lg:order-none lg:[grid-area:pic]">
-          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
-        </div>
-
-        <div className="order-3 min-w-0 lg:order-none lg:[grid-area:facts]">
-          <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
-        </div>
-
-        <div className="contents lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:block lg:self-start lg:[grid-area:buy]">
-          <div className="order-1 min-w-0 lg:mb-4">
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-12 lg:gap-y-10 lg:[grid-template-areas:'hero_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px]">
+        {/* Phones: title, picture, facts in that order (display: contents). Desktop: a square picture tile with the title and facts beside it. */}
+        <div className="contents lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-8 lg:[grid-area:hero] lg:[grid-template-areas:'pic_title'_'pic_facts']">
+          <div className="order-1 min-w-0 lg:[grid-area:title]">
             <ItemTitle itemName={p.itemName} kicker={{ game: p.gameName, type: p.itemType, rarity: p.rarity }} />
           </div>
-          <div className="order-4 min-w-0 pt-1 lg:pt-0">
-            <BuyBox
-              gameSlug={p.gameSlug}
-              itemSlug={p.itemSlug}
-              noun={p.noun}
-              traits={options}
-              trait={trait}
-              onTrait={onTrait}
-              offer={offer}
-              wantedName={named(trait)}
-              qty={qty}
-              onQty={setQty}
-              onBuy={onBuy}
-              navigating={navigating}
-              isOwn={isOwn}
-              buyRef={buyRef}
-            />
+          <div className="order-2 min-w-0 lg:[grid-area:pic]">
+            <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
           </div>
+          <div className="order-3 min-w-0 lg:mt-6 lg:[grid-area:facts]">
+            <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
+          </div>
+        </div>
+
+        <div className="order-4 min-w-0 pt-1 lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:self-start lg:pt-0 lg:[grid-area:buy]">
+          <BuyBox
+            gameSlug={p.gameSlug}
+            itemSlug={p.itemSlug}
+            noun={p.noun}
+            traits={options}
+            trait={trait}
+            onTrait={onTrait}
+            offer={offer}
+            wantedName={named(trait)}
+            qty={qty}
+            onQty={setQty}
+            onBuy={onBuy}
+            navigating={navigating}
+            isOwn={isOwn}
+            buyRef={buyRef}
+          />
         </div>
 
         <div className="order-5 min-w-0 pt-2 lg:order-none lg:self-start lg:pt-0 lg:[grid-area:notes]">
@@ -165,7 +166,7 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
         </div>
       </div>
 
-      <div className="mt-12 sm:mt-14">
+      <div className={ITEM_SECTION_GAP}>
         <OffersSection
           noun={p.noun}
           offers={allOffers}

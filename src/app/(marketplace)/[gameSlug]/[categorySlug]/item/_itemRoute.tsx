@@ -93,6 +93,7 @@ export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
         currentCategorySlug={data.pair.categorySlug}
         categories={categories}
         extraTabs={hubNavExtras(params.gameSlug, data.pair.gameName)}
+        phoneBack={{ href: `/${params.gameSlug}/${data.pair.categorySlug}` }}
       />
       <ItemListingsView gameSlug={params.gameSlug} data={data} about={about} />
     </GameHeroBackdrop>
