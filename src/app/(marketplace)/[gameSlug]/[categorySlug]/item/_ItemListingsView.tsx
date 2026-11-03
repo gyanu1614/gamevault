@@ -4,7 +4,7 @@ import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
 import { TrustRow } from '@/features/item-buy/TrustRow'
 import { traitNoun } from '@/features/item-buy/model/offers'
-import { defaultDeliveryNote, deliveryMethodLabel, itemTypeLabel } from '@/features/item-buy/model/item-kind'
+import { defaultDeliveryNote, deliveryMethodLabel } from '@/features/item-buy/model/item-kind'
 import { rarityMeta } from '@/lib/values/rarity'
 import { traitDefs } from '@/features/item-buy/model/traits'
 import { ItemDetails, ItemFaq } from '@/features/item-buy/ItemAbout'
@@ -12,6 +12,7 @@ import { PopularCarousel } from '@/features/item-buy/PopularCarousel'
 import { stockedToGridItems } from '@/features/item-buy/model/popular'
 import { ITEM_SECTION_GAP } from '@/features/item-buy/layout'
 import { cn } from '@/lib/utils'
+import { hasHubPage } from '@/lib/content/theme'
 import type { ItemAbout } from '@/features/item-buy/model/about'
 import type { loadItemListingsPage } from '../_valueItemOffers'
 
@@ -34,6 +35,8 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
   const traits = traitDefs(gameSlug, catalog)
   const browseHref = `/${gameSlug}/${pair.categorySlug}`
   const rarity = item.rarity ? rarityMeta(gameSlug, item.rarity) : null
+  // A quiet internal link from the About sentence (never a button): only when the item has a public value page.
+  const valueHref = hasHubPage(gameSlug, 'values') && item.hasPage !== false ? `/${gameSlug}/values/${item.slug}` : null
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pt-0 lg:px-8">
@@ -74,7 +77,6 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
         offerVariants={offerVariants}
         urlVariant={model.variant}
         basePath={model.canonicalPath}
-        itemType={itemTypeLabel(gameSlug)}
         rarity={rarity ? { label: rarity.label, color: rarity.color } : null}
         deliveryMethod={deliveryMethodLabel(gameSlug)}
         deliveryFallback={defaultDeliveryNote(gameSlug, pair.gameName)}
@@ -99,7 +101,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
           </div>
         ) : null}
 
-        <ItemDetails about={about} />
+        <ItemDetails about={about} itemName={item.name} valueHref={valueHref} />
         <ItemFaq title={`Questions About Buying ${item.name}`} about={about} />
         <PopularCarousel id="related-items" heading={about.relatedHeading} items={stockedToGridItems(gameSlug, model.related)} gameSlug={gameSlug} />
       </div>

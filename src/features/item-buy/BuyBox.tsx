@@ -24,27 +24,17 @@ const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maxi
 const LG_CARD = 'lg:rounded-lg lg:bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] lg:shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]'
 
 /**
- * The pet's name. Its own piece so phones can show it first (over the
- * picture, as Eldorado does) while desktop keeps it at the top of the buy
- * column. The "Adopt Me · Legendary Pet" line stays in the HTML for search
- * but is not shown (owner, 2026-11-02: the buy column looked cluttered).
+ * The pet's name. Its own piece so phones show it first (over the picture, as
+ * Eldorado does) and desktop puts it beside the picture. Screens show just
+ * "Parrot" (owner, 2026-11-02: no clutter line over it); the heading reads
+ * "Adopt Me Parrot" to search engines and screen readers.
  */
-export function ItemTitle({ itemName, kicker }: { itemName: string; kicker: { game: string; type: string; rarity: { label: string; color: string } | null } }) {
+export function ItemTitle({ itemName, gameName }: { itemName: string; gameName: string }) {
   return (
-    <div>
-      <p className="sr-only">
-        {kicker.game} ·{' '}
-        {kicker.rarity ? (
-          <span className="font-semibold" style={{ color: kicker.rarity.color }}>
-            {kicker.rarity.label}{' '}
-          </span>
-        ) : null}
-        {kicker.type}
-      </p>
-      <h1 id="item-title" className="text-balance text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary lg:text-[28px]">
-        {itemName}
-      </h1>
-    </div>
+    <h1 id="item-title" className="text-balance text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary lg:text-[28px]">
+      <span className="sr-only">{gameName} </span>
+      {itemName}
+    </h1>
   )
 }
 

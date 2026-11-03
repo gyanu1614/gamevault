@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildValueCatalog } from '@/lib/value-listings/catalogs'
-import { traitDefs, traitPicker, traitTone } from './traits'
+import { traitDefs, traitTone } from './traits'
 
 describe('traitTone', () => {
   it('Neon green, Mega rainbow, the plain forms uncoloured', () => {
@@ -51,22 +51,5 @@ describe('traitDefs', () => {
   it('a game without variants has no traits', () => {
     const loaded = buildValueCatalog('murder-mystery-2', { items: [{ slug: 'icebreaker', name: 'Icebreaker' }] })!
     expect(traitDefs('murder-mystery-2', loaded)).toEqual([])
-  })
-})
-
-describe('traitPicker', () => {
-  const opt = (variant: string) => ({ variant })
-
-  it('Adopt Me: on/off filters', () => {
-    const defs = traitDefs('adopt-me', buildValueCatalog('adopt-me', { items: [{ slug: 'parrot', name: 'Parrot' }] })!)
-    expect(traitPicker(defs.map((d) => opt(d.key)))).toBe('toggles')
-  })
-
-  it('mutations keep the dropdown', () => {
-    expect(traitPicker([opt('default'), opt('gold'), opt('diamond')])).toBe('dropdown')
-  })
-
-  it('no options, no picker', () => {
-    expect(traitPicker([])).toBe('none')
   })
 })

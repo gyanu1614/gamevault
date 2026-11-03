@@ -1,3 +1,4 @@
+import Link from '@/components/navigation/AppLink'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { JsonLd, faqPage } from '@/lib/seo/jsonld'
 import { cn } from '@/lib/utils'
@@ -16,9 +17,12 @@ const BADGES = [
  * The server-rendered half of the pet page: About, buyer questions, more
  * pets. About is plain text on the page ground like Eldorado's (owner,
  * 2026-10-29: "simple title and text below it, small text"), no cards;
- * everything is in the first HTML for search.
+ * everything is in the first HTML for search. The pet's name in the first
+ * sentence links its value page as plain text — an internal link for search,
+ * never a button or a "see the value" pitch (owner, 2026-11-02: buyers are not
+ * sent from the market to values).
  */
-export function ItemDetails({ about }: { about: ItemAbout }) {
+export function ItemDetails({ about, itemName, valueHref }: { about: ItemAbout; itemName: string; valueHref: string | null }) {
   if (about.intro == null && !about.traitGuide) return null
   return (
     <section aria-labelledby="item-about">
@@ -26,7 +30,7 @@ export function ItemDetails({ about }: { about: ItemAbout }) {
         {about.heading}
       </h2>
       <div className="space-y-5 leading-relaxed text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
-        {about.intro ? <p>{about.intro}</p> : null}
+        {about.intro ? <p>{valueHref && about.intro.startsWith(itemName) ? <IntroWithLink intro={about.intro} itemName={itemName} href={valueHref} /> : about.intro}</p> : null}
         {about.traitGuide ? (
           <div>
             <h3 className="font-semibold text-text-primary">What The Badges Mean</h3>
@@ -44,6 +48,17 @@ export function ItemDetails({ about }: { about: ItemAbout }) {
         ) : null}
       </div>
     </section>
+  )
+}
+
+function IntroWithLink({ intro, itemName, href }: { intro: string; itemName: string; href: string }) {
+  return (
+    <>
+      <Link href={href} className="text-inherit underline-offset-4 hover:underline">
+        {itemName}
+      </Link>
+      {intro.slice(itemName.length)}
+    </>
   )
 }
 

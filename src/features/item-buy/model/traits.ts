@@ -1,6 +1,5 @@
 import { variantLabel, variantShortCode, type LoadedCatalog } from '@/lib/value-listings/catalogs'
-import { amTrait } from './am-traits'
-import type { TraitDef, TraitOption } from './offers'
+import type { TraitDef } from './offers'
 
 export type TraitTone = 'neon' | 'mega' | 'gold' | 'diamond' | null
 
@@ -31,14 +30,4 @@ export function traitDefs(gameSlug: string, loaded: LoadedCatalog): TraitDef[] {
     label: variantLabel(gameSlug, key, mutations) ?? key,
     short: variantShortCode(gameSlug, key),
   }))
-}
-
-/**
- * How the buy column offers the traits: Adopt Me's forms as on/off filters
- * (tier + Fly / Ride, the game's own badges; owner 2026-10-27); anything
- * else — mutations have long names and no badges — in the dropdown.
- */
-export function traitPicker(options: readonly Pick<TraitOption, 'variant'>[]): 'toggles' | 'dropdown' | 'none' {
-  if (options.length === 0) return 'none'
-  return options.every((o) => amTrait(o.variant)) ? 'toggles' : 'dropdown'
 }

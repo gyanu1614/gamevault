@@ -28,8 +28,6 @@ export interface ItemBuyClientProps {
   urlVariant: string | null
   /** The pet page without a trait: the URL base when the trait changes. */
   basePath: string
-  /** Spec card facts that don't depend on the offer. */
-  itemType: string
   rarity: { label: string; color: string } | null
   deliveryMethod: string
   /** Delivery card text when the seller wrote no instructions. */
@@ -131,7 +129,7 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
         {/* Phones: title, picture, facts in that order (display: contents). Desktop: a square picture tile with the title and facts beside it. */}
         <div className="contents lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-8 lg:[grid-area:hero] lg:[grid-template-areas:'pic_title'_'pic_facts']">
           <div className="order-1 min-w-0 lg:[grid-area:title]">
-            <ItemTitle itemName={p.itemName} kicker={{ game: p.gameName, type: p.itemType, rarity: p.rarity }} />
+            <ItemTitle itemName={p.itemName} gameName={p.gameName} />
           </div>
           <div className="order-2 min-w-0 lg:[grid-area:pic]">
             <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
