@@ -20,6 +20,7 @@ import { dayKey, dayLabel } from '@/lib/chat/day-label'
 
 interface Message {
   id: string
+  conversation_id?: string
   content: string
   /** NULL = a DropMarket system notice (see lib/chat/system-notice). */
   sender_id: string | null
@@ -140,20 +141,16 @@ export default function MessageList({
   const senderKey = Array.from(new Set(messages.map((m) => m.sender_id).filter((id): id is string => !!id)))
     .sort()
     .join(',')
+  const conversationId = messages[0]?.conversation_id
   useEffect(() => {
     const fetchAdminUsers = async () => {
-      const senderIds = senderKey.split(',')
+      // Which senders in this conversation are staff (the staff list itself
+      // is not readable; the RPC only answers for a participant or staff).
+      const { data: adminUserIds } = await (supabase.rpc as any)('chat_staff_senders', {
+        p_conversation_id: conversationId,
+      })
 
-      // Check which senders are admins
-      const { data: admins } = await supabase
-        .from('admin_roles')
-        .select('user_id')
-        .in('user_id', senderIds)
-        .eq('is_active', true) as any
-
-      if (!admins || admins.length === 0) return
-
-      const adminUserIds = admins.map((a: any) => a.user_id)
+      if (!adminUserIds || adminUserIds.length === 0) return
 
       // Fetch profile info for admins
       const { data: profiles } = await supabase
@@ -173,10 +170,10 @@ export default function MessageList({
       }
     }
 
-    if (senderKey) {
+    if (senderKey && conversationId) {
       fetchAdminUsers()
     }
-  }, [senderKey, supabase])
+  }, [senderKey, conversationId, supabase])
 
   // Sending your own message always brings you back down to it, even if
   // you had scrolled up. Other people's messages only follow when you're

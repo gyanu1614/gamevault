@@ -67,6 +67,9 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   // Chat load (20261102161043): the inbox page and the Messages badge, each
   // pinned to auth.uid() and returning only the caller's own conversations.
   'my_inbox', 'my_unread_message_count',
+  // Admin two-factor (20261103125855): the caller's own staff context, and which
+  // senders in a conversation the caller belongs to are staff.
+  'admin_context', 'chat_staff_senders',
 ].sort()
 
 /**

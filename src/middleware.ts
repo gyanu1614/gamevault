@@ -71,6 +71,36 @@ export async function middleware(request: NextRequest) {
   ]
   const isPublicSellerRoute = publicSellerRoutes.some(route => pathname.startsWith(route))
 
+  // /admin: no auth-server call here. Every admin page and action verifies the
+  // session itself (lib/admin/context), so this check would only repeat it: on
+  // every navigation, server-action POST and hover prefetch, from an edge
+  // location that can be far from the database. getSession reads the cookie and
+  // only goes to the network to refresh an expired token, which is the one job
+  // middleware must do here (server components cannot write cookies).
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    try {
+      const authed = createMiddlewareClient(request)
+      const {
+        data: { session },
+      } = await authed.supabase.auth.getSession()
+      if (!session) {
+        const redirectUrl = new URL('/login', request.url)
+        redirectUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+      const passThrough = NextResponse.next({ request: { headers: requestHeaders } })
+      authed.response.cookies.getAll().forEach((cookie) => {
+        passThrough.cookies.set(cookie)
+      })
+      return passThrough
+    } catch (error) {
+      console.error('Middleware admin session error:', error)
+      const redirectUrl = new URL('/login', request.url)
+      redirectUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
+
   if (isProtectedRoute && !isPublicSellerRoute) {
     try {
       // Edge-safe client built from the request's cookies. The server client

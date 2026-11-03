@@ -13,6 +13,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { UNVERIFIED_REVIEW_PRICE_USD } from '@/lib/fees'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivity } from '@/lib/admin/activity-log'
+import { getAdminGate } from '@/lib/admin/context'
 import { revalidatePath } from 'next/cache'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { snapshotListings, submitListingChanges, type ListingSnapshot } from '@/lib/seo/indexnow'
@@ -24,33 +25,20 @@ type ModeratorGate =
   | { ok: false; error: string }
 
 /**
- * ONE admin-role check for every moderation action: authenticated user with
- * an active admin_roles row of admin / super_admin / moderator.
+ * ONE admin-role check for every moderation action: active staff with two-factor
+ * in this session (lib/admin/context), role admin / super_admin / moderator.
  */
 async function requireModerator(): Promise<ModeratorGate> {
-  const supabase = await createClient()
+  const gate = await getAdminGate()
+  if (gate.status === 'signed_out') return { ok: false, error: 'Unauthorized' }
+  if (gate.status !== 'ok') return { ok: false, error: 'Forbidden - Admin access required' }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { ok: false, error: 'Unauthorized' }
-  }
-
-  const { data: adminRole } = await supabase
-    .from('admin_roles')
-    .select('role, is_active')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single() as any
-
-  const role = (adminRole as any)?.role
-  if (!adminRole || (role !== 'admin' && role !== 'super_admin' && role !== 'moderator')) {
+  const role = gate.admin.role
+  if (role !== 'admin' && role !== 'super_admin' && role !== 'moderator') {
     return { ok: false, error: 'Forbidden - Admin access required' }
   }
 
-  return { ok: true, user, supabase }
+  return { ok: true, user: gate.user, supabase: await createClient() }
 }
 
 /** Fire-and-forget activity log — logging failures never fail the action. */

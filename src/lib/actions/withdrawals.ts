@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
 import { emailAllowed } from '@/lib/email/preferences'
 import { revealPayoutSecret } from '@/lib/crypto/payout-encryption'
 
@@ -377,9 +377,9 @@ export async function approveWithdrawalRequest(params: {
   error?: string
 }> {
   try {
-    // SECURITY: admin-only. Gate on admin_roles BEFORE switching to the
-    // RLS-bypassing service-role client.
-    const admin = await requireAdmin()
+    // SECURITY: the money roles only (admin / super_admin, like mark-paid and
+    // the sidebar). Gate BEFORE switching to the RLS-bypassing service-role client.
+    const admin = await requireRole(['admin', 'super_admin'])
 
     // Ledger note: the funds were already moved into payout_clearing when
     // the request was created (withdrawal_request). Approval flips status only;
@@ -428,9 +428,9 @@ export async function markWithdrawalPaid(params: {
   error?: string
 }> {
   try {
-    // SECURITY: settles real money movement, so this is tighter than
-    // approve/reject — support/moderator roles pass requireAdmin but must not
-    // be able to record payouts. Checked BEFORE any service-role work.
+    // SECURITY: settles real money movement; support/moderator roles pass
+    // requireAdmin but must not be able to record payouts. Checked BEFORE any
+    // service-role work.
     const admin = await requireRole(['admin', 'super_admin'])
 
     const reference = (params.reference ?? params.transactionHash ?? '').trim()
@@ -490,10 +490,11 @@ export async function rejectWithdrawalRequest(params: {
   error?: string
 }> {
   try {
-    // SECURITY: admin-only. Gate on admin_roles BEFORE switching to the
-    // RLS-bypassing service-role client. Previously this only checked
-    // "is logged in", letting any user grief others' pending withdrawals.
-    const admin = await requireAdmin()
+    // SECURITY: the money roles only (admin / super_admin, like mark-paid and
+    // the sidebar). Gate BEFORE switching to the RLS-bypassing service-role
+    // client. Previously this only checked "is logged in", letting any user
+    // grief others' pending withdrawals.
+    const admin = await requireRole(['admin', 'super_admin'])
 
     // DB-015: reversal FIRST, then the status flip — in ONE DB transaction
     // (withdrawal_reject RPC). A refused reversal (hold already paid out)

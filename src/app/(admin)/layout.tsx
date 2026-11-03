@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { shouldTouchAdminLastActive } from '@/lib/admin/last-active'
+import { getAdminGate } from '@/lib/admin/context'
+import type { AdminUser } from '@/lib/admin/permissions-constants'
+import { isPasswordGateExempt, needsPassword, setPasswordUrl } from '@/lib/auth/oauth'
 import AdminChrome from './admin/components/AdminChrome'
 import { ADMIN_TITLE_TEMPLATE } from '@/lib/seo/title'
 
@@ -18,63 +19,38 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
+  // The one staff check (lib/admin/context): role, permissions, profile and the
+  // two-factor level in one call, shared with this request's page and loaders.
+  // The /admin/mfa route is in a separate route group and NOT wrapped by this
+  // layout, so needs_mfa cannot loop.
+  const gate = await getAdminGate()
+  if (gate.status === 'signed_out') redirect('/login?redirect=/admin')
+  if (gate.status === 'not_admin') redirect('/')
+  if (gate.status === 'needs_mfa') redirect('/admin/mfa')
+  const { admin, user } = gate
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login?redirect=/admin')
-  }
-
-  // Check admin_roles table (NOT profiles.role)
-  const { data: adminRoleRaw, error } = await (supabase as any)
-    .from('admin_roles')
-    .select('role, is_active, last_active_at')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single()
-
-  const adminRole = adminRoleRaw as { role: string; is_active: boolean; last_active_at: string | null } | null
-
-  if (error || !adminRole) {
-    redirect('/')
-  }
-
-  // Update last active — only when stale (lib/admin/last-active). AUTH-030:
-  // admin_roles has no user write policy any more — touch it as the backend,
-  // scoped to the verified user.
-  if (shouldTouchAdminLastActive(adminRole.last_active_at)) {
-    await (createServiceRoleClient() as any)
-      .from('admin_roles')
-      .update({ last_active_at: new Date().toISOString() })
-      .eq('user_id', user.id)
+  // The password rule middleware applies to other protected routes (Google /
+  // Discord accounts must set a password), from the verified user. Rule:
+  // src/lib/auth/oauth.ts.
+  const pathname = headers().get('x-pathname') ?? '/admin'
+  if (needsPassword(user) && !isPasswordGateExempt(pathname)) {
+    redirect(setPasswordUrl(pathname))
   }
 
   // V56 — The admin's marketplace profile (real avatar + username)
   // feeds the header's identity cluster.
-  const { data: profileRaw } = await (supabase as any)
-    .from('profiles')
-    .select('username, full_name, avatar_url')
-    .eq('id', user.id)
-    .single()
-  const profile = (profileRaw ?? null) as {
+  const { username, full_name, avatar_url } = admin as AdminUser & {
     username: string | null
     full_name: string | null
     avatar_url: string | null
-  } | null
-
-  // MFA AAL2 enforcement — every admin page requires aal2
-  // (The /admin/mfa route is in a separate route group and NOT wrapped by this layout)
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-  if (!aal || aal.currentLevel !== 'aal2') {
-    redirect('/admin/mfa')
   }
+  const profile = { username, full_name, avatar_url }
 
   return (
     // The site canvas, flat (the account-section design): cards on it are
     // solid bg-bg-raised fills.
     <div className="relative min-h-[100dvh] bg-bg-base text-text-primary">
-      <AdminChrome role={adminRole.role} user={user} profile={profile}>
+      <AdminChrome role={admin.role} user={user} profile={profile}>
         {children}
       </AdminChrome>
     </div>
