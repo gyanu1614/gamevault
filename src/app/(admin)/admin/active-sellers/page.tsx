@@ -9,6 +9,7 @@
  * sorting and refetches keep working client-side exactly as before.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getActiveSellers, getSellerStats } from '@/lib/actions/admin-active-sellers'
 import ActiveSellersPageClient from './_components/ActiveSellersPageClient'
@@ -16,6 +17,8 @@ import ActiveSellersPageClient from './_components/ActiveSellersPageClient'
 export const metadata = { title: 'Active Sellers' }
 
 export default async function AdminActiveSellersPage() {
+  await requireAdmin()
+
   if (isActionResponseRender()) return <ActiveSellersPageClient />
 
   const [sellersResult, statsResult] = await Promise.all([

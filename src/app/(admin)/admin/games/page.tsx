@@ -7,6 +7,7 @@
  * visit/refresh — while mutations keep their invalidate→refetch flow.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { isActionResponseRender } from '@/lib/admin/action-render'
 import { Suspense } from 'react'
 import { fetchAdminGames } from '@/lib/actions/admin-games'
@@ -16,6 +17,8 @@ import GamesPageClient from './_components/GamesPageClient'
 export const metadata = { title: 'Games' }
 
 export default async function AdminGamesPage() {
+  await requireAdmin()
+
   if (isActionResponseRender()) {
     return (
       <Suspense fallback={null}>

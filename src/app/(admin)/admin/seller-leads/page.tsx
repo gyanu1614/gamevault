@@ -7,6 +7,7 @@
  * (admin) layout; data via the admin-guarded action.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getSellerLeads } from '@/lib/actions/seller-leads'
 import SellerLeadsClient from './_SellerLeadsClient'
@@ -14,6 +15,8 @@ import SellerLeadsClient from './_SellerLeadsClient'
 export const metadata = { title: 'Seller Leads' }
 
 export default async function AdminSellerLeadsPage() {
+  await requireAdmin()
+
   if (isActionResponseRender()) return <SellerLeadsClient initialLeads={[]} />
 
   const result = await getSellerLeads()

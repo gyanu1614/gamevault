@@ -7,6 +7,7 @@
  * surface per-category configuration.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { notFound } from 'next/navigation'
 import {
   fetchGameById,
@@ -25,6 +26,8 @@ export default async function EditGamePage({
   // Admin page (force-dynamic, never prerendered): reading ?tab= is fine here.
   searchParams?: { tab?: string }
 }) {
+  await requireAdmin()
+
   const id = params.id
   const [game, rows, globalCategories] = await Promise.all([
     fetchGameById(id),

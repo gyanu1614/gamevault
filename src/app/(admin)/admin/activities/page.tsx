@@ -8,12 +8,15 @@
  * and 30s polling refetch keep working unchanged.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getAllActivities } from '@/lib/actions/admin-dashboard'
 import ActivitiesPageClient from './_components/ActivitiesPageClient'
 
 export const metadata = { title: 'Activities' }
 
 export default async function ActivitiesPage() {
+  await requireAdmin()
+
   const result = await getAllActivities()
 
   return (

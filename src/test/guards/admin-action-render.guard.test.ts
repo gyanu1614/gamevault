@@ -19,6 +19,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const state = vi.hoisted(() => ({ headers: new Headers(), loaderCalls: 0 }))
 
 vi.mock('next/headers', () => ({ headers: () => state.headers }))
+vi.mock('@/lib/actions/admin-permissions', () => ({ requireAdmin: async () => ({ userId: 'admin' }) }))
 vi.mock('@/lib/actions/moderation', () => ({
   getPendingListings: async () => {
     state.loaderCalls += 1

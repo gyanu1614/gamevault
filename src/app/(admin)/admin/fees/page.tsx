@@ -12,6 +12,7 @@
  * edits terms; withdrawal_quote / buyer_fee_quote price the money.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import type { Metadata } from 'next'
 import { fetchMoneySettings } from '@/lib/actions/admin-fees'
 import { fetchBuyerFeeConfig } from '@/lib/actions/admin-buyer-fees'
@@ -25,6 +26,8 @@ export const metadata: Metadata = { title: 'Fees & Payouts' }
 export const dynamic = 'force-dynamic'
 
 export default async function AdminFeesPage() {
+  await requireAdmin()
+
   const [data, buyerFees] = await Promise.all([fetchMoneySettings(), fetchBuyerFeeConfig()])
   return (
     <div>

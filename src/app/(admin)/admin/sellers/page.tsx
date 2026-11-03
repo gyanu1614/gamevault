@@ -8,6 +8,7 @@
  * and refetches keep working client-side exactly as before.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getSellerApplicationCounts, getSellerApplications } from '@/lib/actions/admin-seller-review'
 import SellersPageClient from './_components/SellersPageClient'
@@ -15,6 +16,8 @@ import SellersPageClient from './_components/SellersPageClient'
 export const metadata = { title: 'Seller Applications' }
 
 export default async function AdminSellersPage() {
+  await requireAdmin()
+
   if (isActionResponseRender()) return <SellersPageClient />
 
   const [allResult, counts] = await Promise.all([

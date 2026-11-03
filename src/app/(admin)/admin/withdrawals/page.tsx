@@ -8,12 +8,15 @@
  * mutation re-checks requireAdmin server-side.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getAllWithdrawalRequests, getWithdrawalTotals } from '@/lib/actions/withdrawals'
 import WithdrawalsClient from './_WithdrawalsClient'
 
 export const metadata = { title: 'Withdrawals' }
 
 export default async function AdminWithdrawalsPage() {
+  await requireAdmin()
+
   const [result, totals] = await Promise.all([getAllWithdrawalRequests(), getWithdrawalTotals()])
   return (
     <WithdrawalsClient

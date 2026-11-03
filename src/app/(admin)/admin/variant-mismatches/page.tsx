@@ -3,12 +3,15 @@
  * variant than the seller's Trait pick. Worked out when the page opens (a few
  * hundred rows, admin only); nothing is stored and no job runs for it.
  */
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { loadVariantMismatches } from '@/lib/actions/admin-variant-mismatches'
 import VariantMismatchesClient from './_components/VariantMismatchesClient'
 
 export const metadata = { title: 'Variant Mismatches' }
 
 export default async function VariantMismatchesPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
+  await requireAdmin()
+
   const page = Number(Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page) || 1
   const result = await loadVariantMismatches(page)
   return result.success ? (

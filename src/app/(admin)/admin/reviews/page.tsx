@@ -8,6 +8,7 @@
  * their client-side loadData() refresh flow.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { isActionResponseRender } from '@/lib/admin/action-render'
 import { getAdminReviews, getReviewStats } from '@/lib/actions/admin-reviews'
 import ReviewsPageClient from './_components/ReviewsPageClient'
@@ -15,6 +16,8 @@ import ReviewsPageClient from './_components/ReviewsPageClient'
 export const metadata = { title: 'Reviews' }
 
 export default async function AdminReviewsPage() {
+  await requireAdmin()
+
   if (isActionResponseRender()) return <ReviewsPageClient initialReviews={[]} initialStats={null} />
 
   // Same call shape as the client's initial loadData(): default filters
