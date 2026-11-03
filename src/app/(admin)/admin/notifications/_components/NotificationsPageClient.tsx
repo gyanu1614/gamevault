@@ -118,8 +118,7 @@ export default function NotificationsPageClient({
       })
       .eq('id', id)
     queryClient.invalidateQueries({ queryKey: ['admin-notifications-page', userId] })
-    queryClient.invalidateQueries({ queryKey: ['admin-unread-notifications', userId] })
-    queryClient.invalidateQueries({ queryKey: ['admin-notifications-list', userId] })
+    queryClient.invalidateQueries({ queryKey: ['admin-header', userId] })
   }
 
   const markAllRead = async () => {
@@ -136,8 +135,7 @@ export default function NotificationsPageClient({
       .eq('user_id', userId)
       .eq('is_read', false)
     queryClient.invalidateQueries({ queryKey: ['admin-notifications-page', userId] })
-    queryClient.invalidateQueries({ queryKey: ['admin-unread-notifications', userId] })
-    queryClient.invalidateQueries({ queryKey: ['admin-notifications-list', userId] })
+    queryClient.invalidateQueries({ queryKey: ['admin-header', userId] })
     setMarking(false)
   }
 

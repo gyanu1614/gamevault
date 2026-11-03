@@ -163,6 +163,24 @@ export async function getRecentApplications(limit: number = 5) {
 /**
  * Get seller applications with filters
  */
+/**
+ * The applications page's tab counts in one database call (was six list queries
+ * with limit 1, each its own request from the browser).
+ */
+export async function getSellerApplicationCounts(): Promise<{
+  total: number
+  pending: number
+  changes: number
+  approved: number
+  rejected: number
+  restricted: number
+}> {
+  await requireAdmin()
+  const { data, error } = await (getServiceClient().rpc as any)('admin_application_counts')
+  if (error) throw new Error(`admin_application_counts: ${error.message}`)
+  return data
+}
+
 export async function getSellerApplications(filters: ApplicationFilters = {}) {
   try {
     await requireAdmin()

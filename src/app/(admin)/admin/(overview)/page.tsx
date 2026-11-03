@@ -9,14 +9,17 @@ export const metadata = { title: 'Dashboard' }
 export default async function AdminDashboardPage() {
   const admin = await requireAdmin()
 
-  // Fetch comprehensive dashboard stats
-  const statsResult = await getDashboardStats()
-  const activityResult = await getRecentActivity()
   // Admin / super-admin only (the card can change the public TrustBox switch).
   const showTrustpilot = admin.role === 'admin' || admin.role === 'super_admin'
-  const trustpilot = showTrustpilot
-    ? await getTrustpilotSummary().catch(() => ({ ok: false as const, error: 'Couldn’t load invite stats.' }))
-    : null
+
+  // Side by side: none of these needs another's answer.
+  const [statsResult, activityResult, trustpilot] = await Promise.all([
+    getDashboardStats(),
+    getRecentActivity(),
+    showTrustpilot
+      ? getTrustpilotSummary().catch(() => ({ ok: false as const, error: 'Couldn’t load invite stats.' }))
+      : null,
+  ])
 
   // Default to empty data if fetch fails
   const stats = statsResult.success && statsResult.stats ? statsResult.stats : {

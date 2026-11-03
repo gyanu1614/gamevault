@@ -18,8 +18,8 @@ export const POLL_MS = {
   navNotifications: 300_000,
   /** Navbar Live Orders; the user's live channel refreshes it on every order change and notification. */
   navActiveOrders: 300_000,
-  /** Admin header queue counts + bell. */
-  adminHeader: 60_000,
+  /** Admin header queue badges + bell (one RPC; the bell also refreshes on the user's live channel). */
+  adminHeader: 180_000,
   /** Admin list pages (notifications, activities). */
   adminPages: 60_000,
   /** /notifications inbox; the navbar's live channel refreshes it on every new notification. */

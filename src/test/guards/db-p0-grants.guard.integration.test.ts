@@ -70,6 +70,9 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   // Admin two-factor (20261103125855): the caller's own staff context, and which
   // senders in a conversation the caller belongs to are staff.
   'admin_context', 'chat_staff_senders',
+  // Admin stats (20261103131903): the header's badges and own notifications;
+  // null unless is_admin (two-factor).
+  'admin_header_snapshot',
 ].sort()
 
 /**

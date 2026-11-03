@@ -22,7 +22,7 @@ describe('client poll intervals', () => {
     expect(POLL_MS.navActiveOrders).toBe(300_000)
     expect(POLL_MS.notificationsPage).toBe(300_000)
     expect(POLL_MS.chatResync).toBe(300_000)
-    expect(POLL_MS.adminHeader).toBe(60_000)
+    expect(POLL_MS.adminHeader).toBe(180_000)
     expect(POLL_MS.sellerPresence).toBe(120_000)
     expect(POLL_MS.recentSales).toBe(120_000)
     expect(POLL_MS.sellerApproval).toBe(60_000)
