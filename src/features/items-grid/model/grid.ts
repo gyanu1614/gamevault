@@ -26,8 +26,6 @@ export interface GridItem {
   name: string
   imageUrl: string | null
   rarityKey: string | null
-  rarityLabel: string | null
-  rarityColor: string | null
   itemType: string | null
   isNew: boolean
   /** Orders out-of-stock items only; never shown. */
@@ -66,15 +64,12 @@ const inPriceRange = (p: number, f: GridFilters) => (f.minPrice == null || p >= 
 export function toGridItems(gameSlug: string, feed: ValuesFeed, categorySlug: string | null = feed.categorySlug): GridItem[] {
   const base = `/${gameSlug}/${categorySlug ?? 'buy-items'}/item/`
   return feed.items.map((i) => {
-    const r = i.rarityKey ? rarityMeta(gameSlug, i.rarityKey) : null
     return {
       key: i.slug,
       slug: i.slug,
       name: i.name,
       imageUrl: i.imageUrl,
       rarityKey: i.rarityKey,
-      rarityLabel: r?.label || null,
-      rarityColor: r?.color ?? null,
       itemType: i.itemType,
       isNew: i.isNew,
       rankValue: i.valueUsd ?? 0,

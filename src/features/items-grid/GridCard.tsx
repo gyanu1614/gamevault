@@ -9,10 +9,11 @@ import { ItemPicture } from './ItemPicture'
 import { NotifyMeButton } from './NotifyMeButton'
 
 /**
- * One catalogue item on the Items page. Picture on top, then rarity, name and
- * price (owner, 2026-11-02, Eldorado's item grid as the reference: two to a
- * row on phones, four on wide screens; 2026-11-03: no row of traits, shorter
- * on phones). The one trait mark left is on a search or trait-filter card, a
+ * One catalogue item on the Items page. Picture on top, then the name centred
+ * and the price (owner, 2026-11-02, Eldorado's item grid as the reference: two
+ * to a row on phones, four on wide screens; 2026-11-03: no row of traits, no
+ * rarity line, it read "Legendary" on every card and the pet page shows it;
+ * shorter on phones). The one trait mark left is on a search or trait-filter card, a
  * small badge on the picture, because that is all that tells "Parrot" FR and
  * "Parrot" NFR apart. The item NAME is the link and stretches over the whole
  * card, so the anchor text crawlers read is the item name; hover lightens in
@@ -43,12 +44,7 @@ export function GridCard({ item, gameSlug }: { item: GridItem; gameSlug: string 
       </div>
 
       <div className="flex flex-1 flex-col px-2.5 pb-2.5 pt-2 sm:px-4 sm:pb-4 sm:pt-3">
-        {item.rarityLabel && (
-          <span className="text-[13px] font-semibold leading-snug sm:text-[14px]" style={{ color: item.rarityColor ?? undefined }}>
-            {item.rarityLabel}
-          </span>
-        )}
-        <h3 className="mt-0.5 line-clamp-2 text-[15px] font-bold leading-snug tracking-[-0.01em] text-text-primary sm:text-[16px]">
+        <h3 className="line-clamp-2 text-center text-[15px] font-bold leading-snug tracking-[-0.01em] text-text-primary sm:text-[16px]">
           <Link
             href={item.href}
             className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-focus-soft"
@@ -59,8 +55,8 @@ export function GridCard({ item, gameSlug }: { item: GridItem; gameSlug: string 
 
         <div className="mt-auto pt-2 sm:pt-3">
           {inStock ? (
-            <div className="flex items-end justify-between gap-2">
-              {/* Phones: "From $54.99" on one line, no offer count, so the card stays short. */}
+            <div className="flex items-end justify-center gap-2 sm:justify-between">
+              {/* Phones: "From $54.99" on one line under the name, no offer count, so the card stays short. */}
               <span className="flex min-w-0 items-baseline gap-1.5 sm:flex-col sm:items-start sm:gap-0">
                 <span className="text-[12px] font-medium text-text-secondary sm:text-[13px]">From</span>
                 <span className="text-[18px] font-bold tabular-nums leading-tight text-text-primary sm:text-[length:var(--fs-price)]">${formatStatPrice(item.minPrice!)}</span>

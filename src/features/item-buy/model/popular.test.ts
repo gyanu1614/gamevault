@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { stockedToGridItems } from './popular'
 
 describe('stockedToGridItems', () => {
-  it('maps a stocked pet to the Items page card: rarity, offers, cheapest price', () => {
+  it('maps a stocked pet to the Items page card: offers, cheapest price', () => {
     const [card] = stockedToGridItems('adopt-me', [
       { slug: 'owl', name: 'Owl', rarity: 'legendary', imageUrl: 'https://x/owl.webp', count: 3, minPriceUsd: 64.99, href: '/adopt-me/buy-items/item/owl' },
     ])
-    expect(card).toMatchObject({ key: 'owl', name: 'Owl', rarityLabel: 'Legendary', offers: 3, minPrice: 64.99, href: '/adopt-me/buy-items/item/owl' })
-    expect(card.rarityColor).toBeTruthy()
+    expect(card).toMatchObject({ key: 'owl', name: 'Owl', rarityKey: 'legendary', offers: 3, minPrice: 64.99, href: '/adopt-me/buy-items/item/owl' })
   })
 
   it('a pet with no picture stays a card', () => {
