@@ -1,8 +1,6 @@
 import Link from '@/components/navigation/AppLink'
 import { IconSparkles } from '@tabler/icons-react'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
-import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
-import { cn } from '@/lib/utils'
 import { TraitMarks } from '@/features/item-buy/TraitMarks'
 import type { GridItem } from './model/grid'
 import { ItemPicture } from './ItemPicture'
@@ -13,20 +11,22 @@ import { NotifyMeButton } from './NotifyMeButton'
  * the name centred and the price (owner, 2026-11-02, Eldorado's item grid as
  * the reference: two to a row on phones, four on wide screens; 2026-11-03: no
  * row of traits, no rarity line, it read "Legendary" on every card and the pet
- * page shows it; shorter on phones). The one trait mark left is on a search or trait-filter card, a
- * small badge on the picture, because that is all that tells "Parrot" FR and
- * "Parrot" NFR apart. The item NAME is the link and stretches over the whole
- * card, so the anchor text crawlers read is the item name; hover lightens in
- * place, nothing moves. Nobody sells it yet: Notify Me (in-stock email) sits
- * above the stretched link.
+ * page shows it; shorter on phones). The one trait mark left is on a search or
+ * trait-filter card, a small badge on the picture, because that is all that
+ * tells "Parrot" FR and "Parrot" NFR apart. Two flat tones from the page's own
+ * family (owner, 2026-11-03: "bg related but a bit distinct"): the house card's
+ * fade ended almost on the page colour, so the lower half melted into the page.
+ * The item NAME is the link and stretches over the whole card, so the anchor
+ * text crawlers read is the item name; hover lightens in place, nothing moves.
+ * Nobody sells it yet: Notify Me (in-stock email) sits above the stretched link.
  */
 export function GridCard({ item, gameSlug }: { item: GridItem; gameSlug: string }) {
   const inStock = item.offers > 0 && item.minPrice != null
 
   return (
-    <article className={cn('group relative flex h-full flex-col overflow-hidden rounded-lg', MARKET_CARD, MARKET_CARD_HOVER)}>
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-lg bg-[#212228] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] transition-colors hover:bg-[#26272D]">
       {/* Edge to edge: the card's own corners clip the picture box. */}
-      <div className="relative grid h-[92px] place-items-center bg-white/[0.04] transition-colors group-hover:bg-white/[0.06] sm:h-[136px]">
+      <div className="relative grid h-[92px] place-items-center bg-[#2E2F36] transition-colors group-hover:bg-[#33343B] sm:h-[136px]">
         <ItemPicture src={item.imageUrl} name={item.name} className="h-[76%] w-[76%] drop-shadow-[0_10px_14px_rgba(0,0,0,0.4)]" />
         {item.isNew && (
           <span className="absolute left-2 top-2 inline-flex h-5 items-center gap-1 rounded bg-lime-tint-bg px-1.5 text-[11px] font-semibold text-lime-text sm:left-2.5 sm:top-2.5 sm:h-6 sm:px-2 sm:text-[11.5px]">
