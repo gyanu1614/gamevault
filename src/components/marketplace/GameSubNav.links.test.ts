@@ -61,7 +61,7 @@ describe('GameSubNav links', () => {
   it('carries the Sell button as a link to the seller sign-up', () => {
     for (const [slug, name] of [['adopt-me', 'Adopt Me'], ['fortnite', 'Fortnite']]) {
       const html = render(slug, name)
-      expect(html).toMatch(/<a[^>]*href="\/founding#src=subnav"[^>]*>.*?Start Selling<\/a>/)
+      expect(html).toMatch(/<a[^>]*href="\/founding#src=subnav"[^>]*>.*?Start Selling/)
     }
   })
 

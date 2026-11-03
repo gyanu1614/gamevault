@@ -8,6 +8,7 @@
  */
 import { rarityMeta, rarityRank } from '@/lib/values/rarity'
 import type { ValuesFeed } from '@/lib/value-listings/feed/types'
+import type { AmLetter } from '@/features/item-buy/model/am-traits'
 
 /** One form of an item in stock, with its own page. */
 export interface GridForm {
@@ -43,6 +44,8 @@ export interface GridItem {
   href: string
   /** Each form in stock, cheapest first (search and the trait filter split the card by these). */
   formsInStock: GridForm[]
+  /** On a one-trait card (search, trait filter): its trait, the only thing telling it from its siblings. */
+  pickedForm?: string
 }
 
 export type GridSort = 'recommended' | 'cheapest' | 'priciest'
@@ -98,7 +101,7 @@ export function splitByForm(items: readonly GridItem[], f: GridFilters): GridIte
     if (i.formsInStock.length === 0) return [i]
     return i.formsInStock
       .filter((x) => (f.forms.length === 0 || f.forms.includes(x.label)) && inPriceRange(x.minPrice, f))
-      .map((x) => ({ ...i, key: `${i.slug}:${x.variant}`, offers: x.count, minPrice: x.minPrice, forms: [x.label], href: x.href, formsInStock: [] }))
+      .map((x) => ({ ...i, key: `${i.slug}:${x.variant}`, offers: x.count, minPrice: x.minPrice, forms: [x.label], href: x.href, formsInStock: [], pickedForm: x.label }))
   })
 }
 
@@ -138,6 +141,28 @@ export function filterGrid(items: readonly GridItem[], f: GridFilters): GridItem
     if (q && !i.name.toLowerCase().includes(q)) return false
     return true
   })
+}
+
+/** Matches no form: ticked letters nothing in stock has must show nothing, not everything. */
+const NO_FORM = '-'
+
+/**
+ * Adopt Me's N / M / F / R ticks on the Items page: every form with ALL the
+ * ticked letters, so "Neon" finds N and NFR pets and Fly + Ride finds FR, NFR
+ * and MFR (browsing a whole catalogue, where an exact match would come up empty;
+ * the pet page's offer filter lands on one form because it is one pet).
+ */
+export function formsForLetters(letters: readonly AmLetter[], available: readonly string[]): string[] {
+  if (letters.length === 0) return []
+  const hits = available.filter((code) => letters.every((l) => code.includes(l)))
+  return hits.length > 0 ? hits : [NO_FORM]
+}
+
+/** Tick or untick one letter; Neon and Mega Neon exclude each other, as in the game. */
+export function toggleGridLetter(letters: readonly AmLetter[], letter: AmLetter): AmLetter[] {
+  if (letters.includes(letter)) return letters.filter((l) => l !== letter)
+  const rival: AmLetter | null = letter === 'N' ? 'M' : letter === 'M' ? 'N' : null
+  return [...letters.filter((l) => l !== rival), letter]
 }
 
 /** Adopt Me forms in the order players read them; other games sort A–Z. */

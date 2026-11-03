@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterGrid, filterOptions, sortGrid, splitByForm, toGridItems, EMPTY_FILTERS, type GridItem } from './grid'
+import { filterGrid, filterOptions, formsForLetters, sortGrid, splitByForm, toGridItems, toggleGridLetter, EMPTY_FILTERS, type GridItem } from './grid'
 import type { FeedItem, ValuesFeed } from '@/lib/value-listings/feed/types'
 
 const item = (slug: string, over: Partial<FeedItem> = {}): FeedItem => ({
@@ -150,7 +150,7 @@ describe('splitByForm (search and the trait filter)', () => {
   it('search: one card per trait in stock, each with its own price, count and trait page', () => {
     const cards = run({ search: 'parr' })
     expect(cards.map((c) => c.key)).toEqual(['parrot:normal', 'parrot:fly-ride', 'parrot:neon-fly-ride'])
-    expect(cards[2]).toMatchObject({ slug: 'parrot', offers: 1, minPrice: 80, forms: ['NFR'], href: '/adopt-me/buy-items/item/parrot/neon-fly-ride' })
+    expect(cards[2]).toMatchObject({ slug: 'parrot', offers: 1, minPrice: 80, forms: ['NFR'], pickedForm: 'NFR', href: '/adopt-me/buy-items/item/parrot/neon-fly-ride' })
   })
 
   it('the trait filter keeps only the picked traits', () => {
@@ -163,5 +163,36 @@ describe('splitByForm (search and the trait filter)', () => {
 
   it('a pet with nothing in stock stays one card (Notify Me)', () => {
     expect(run({ search: 'owl' }).map((c) => c.key)).toEqual(['owl'])
+  })
+})
+
+describe('the Items page trait letters', () => {
+  const inStock = ['N', 'F', 'R', 'FR', 'NFR', 'MFR']
+
+  it('nothing ticked filters nothing', () => {
+    expect(formsForLetters([], inStock)).toEqual([])
+  })
+
+  it('a letter means every form that has it: Neon is N and NFR, Fly is F, FR, NFR and MFR', () => {
+    expect(formsForLetters(['N'], inStock)).toEqual(['N', 'NFR'])
+    expect(formsForLetters(['F'], inStock)).toEqual(['F', 'FR', 'NFR', 'MFR'])
+  })
+
+  it('several letters narrow it: Fly + Ride is FR, NFR and MFR; Neon + Fly + Ride is NFR', () => {
+    expect(formsForLetters(['F', 'R'], inStock)).toEqual(['FR', 'NFR', 'MFR'])
+    expect(formsForLetters(['N', 'F', 'R'], inStock)).toEqual(['NFR'])
+  })
+
+  it('ticked letters no form has show nothing, not everything', () => {
+    const forms = formsForLetters(['M'], ['FR'])
+    expect(forms.length).toBeGreaterThan(0)
+    const items = toGridItems('adopt-me', feed([item('owl')], { owl: [1, 50, ['FR']] }))
+    expect(filterGrid(items, { ...EMPTY_FILTERS, forms })).toEqual([])
+  })
+
+  it('Neon and Mega Neon exclude each other; a second tick takes the letter off', () => {
+    expect(toggleGridLetter(['N', 'F'], 'M')).toEqual(['F', 'M'])
+    expect(toggleGridLetter(['M'], 'N')).toEqual(['N'])
+    expect(toggleGridLetter(['F', 'R'], 'F')).toEqual(['R'])
   })
 })

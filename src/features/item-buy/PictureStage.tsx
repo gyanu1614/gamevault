@@ -1,11 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { ItemPicture } from '@/features/items-grid/ItemPicture'
 import { TraitMarks } from './TraitMarks'
-
-/** Never blow the art up beyond this many times its own pixels (it blurs). */
-const MAX_UPSCALE = 1.5
 
 /**
  * The pet in a plain card (owner, 2026-10-27: "a normal image within a card,
@@ -25,33 +22,20 @@ export function PictureStage({
   /** Adopt Me shorthand of the trait on show ("NFR"), drawn as the game's badges. */
   traitCode: string | null
 }) {
-  const [cap, setCap] = useState<number | null>(null)
   const reduce = useReducedMotion()
 
   return (
     // One step lighter than the house card fill so the picture never melts into the page ground (owner, 2026-11-02).
     <div className="overflow-hidden rounded-lg bg-[linear-gradient(180deg,#2B2C33_0%,#232429_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]">
       <div className="relative grid h-[200px] w-full place-items-center sm:h-[240px] lg:aspect-square lg:h-auto">
-        {imageUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- catalogue art from storage, same as the value pages */
-          <img
-            src={imageUrl}
-            alt={name}
-            width={512}
-            height={512}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            onLoad={(e) => setCap(e.currentTarget.naturalWidth * MAX_UPSCALE)}
-            style={cap ? { maxWidth: cap, maxHeight: cap } : undefined}
-            // Sized against the positioned box, not the grid track: a big source can never spill out.
-            className="absolute inset-0 m-auto h-[74%] w-[74%] object-contain drop-shadow-[0_18px_22px_rgba(0,0,0,0.45)]"
-          />
-        ) : (
-          <span className="font-medium uppercase tracking-[0.14em] text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
-            Picture Coming Soon
-          </span>
-        )}
+        <ItemPicture
+          src={imageUrl}
+          name={name}
+          size={512}
+          priority
+          placeholder="Picture Coming Soon"
+          className="h-[74%] w-[74%] drop-shadow-[0_18px_22px_rgba(0,0,0,0.45)]"
+        />
 
         <AnimatePresence mode="popLayout" initial={false}>
           {traitCode ? (

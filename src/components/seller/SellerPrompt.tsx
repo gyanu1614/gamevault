@@ -185,9 +185,11 @@ export function SellerPromptCard({
 
 /**
  * The desktop sub-navbar's Sell button, right of the content tab. A visitor
- * goes to the seller sign-up, a seller straight to a new listing. Reads only
- * `useAuth()` (no listing count), so it costs nothing on every game page; the
- * static HTML carries the visitor label.
+ * goes to the seller sign-up, a seller straight to a new listing. The value
+ * pages' gold light moves through the words and a slow gold band round the
+ * edge (owner, 2026-11-03: "an animation moving color but subtle"); static
+ * under reduced motion. Reads only `useAuth()` (no listing count), so it costs
+ * nothing on every game page; the static HTML carries the visitor label.
  */
 export function SubnavSellButton({ className = '' }: { className?: string }) {
   const { profile } = useAuth()
@@ -199,10 +201,11 @@ export function SubnavSellButton({ className = '' }: { className?: string }) {
     <Link
       href={cta.href}
       onClick={cta.onClick}
-      className={`inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/[0.07] px-3.5 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${className}`}
+      className={`relative inline-flex h-9 shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-md bg-white/[0.07] px-3.5 text-[14px] font-semibold transition-colors hover:bg-white/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${className}`}
     >
-      <IconBuildingStore aria-hidden className="h-[17px] w-[17px] text-lime-text" stroke={1.9} />
-      {variant === 'seller' ? 'Create Listing' : 'Start Selling'}
+      <ShineBorder duration={7} borderWidth={1} shineColor="rgba(232,189,106,0.75)" />
+      <IconBuildingStore aria-hidden className="h-[17px] w-[17px] text-[#e8bd6a]" stroke={1.9} />
+      <span className="trade-shine">{variant === 'seller' ? 'Create Listing' : 'Start Selling'}</span>
     </Link>
   )
 }
@@ -221,8 +224,10 @@ export function SellerPromptRow({ gameName, categoryLabel, className = '' }: { g
   return (
     <Reveal state={state} className={className}>
       <div className="flex min-h-[56px] items-center gap-3 rounded-lg bg-[#1C1D22] py-2.5 pl-4 pr-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]">
-        <IconBuildingStore aria-hidden className="h-5 w-5 shrink-0 text-lime-text" stroke={1.9} />
-        <p className="m-0 line-clamp-2 min-w-0 flex-1 text-[14px] font-semibold leading-snug text-text-primary">{copy.lead}</p>
+        <IconBuildingStore aria-hidden className="h-5 w-5 shrink-0 text-[#e8bd6a]" stroke={1.9} />
+        <p className="m-0 line-clamp-2 min-w-0 flex-1 text-[14px] font-semibold leading-snug">
+          <span className="trade-shine">{copy.lead}</span>
+        </p>
         <Link
           href={cta.href}
           onClick={cta.onClick}

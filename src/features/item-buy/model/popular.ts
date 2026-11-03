@@ -1,11 +1,9 @@
 /**
  * The pet page's popular carousel reuses the Items page card (GridCard), so
  * a stocked item from the page model becomes the card's GridItem here: the
- * game's rarity label and colour, our offer count and cheapest price, and the
- * forms in stock as their short labels ("FR", "NFR"). Pure.
+ * game's rarity label and colour, our offer count and cheapest price. Pure.
  */
 import type { GridItem } from '@/features/items-grid/model/grid'
-import { variantShortCode } from '@/lib/value-listings/catalogs'
 import type { StockedItem } from '@/lib/value-listings/item-page'
 import { rarityMeta } from '@/lib/values/rarity'
 
@@ -26,7 +24,7 @@ export function stockedToGridItems(gameSlug: string, items: readonly StockedItem
       popularRank: null,
       offers: s.count,
       minPrice: s.minPriceUsd,
-      forms: s.variants.map((v) => variantShortCode(gameSlug, v)).filter((c): c is string => !!c),
+      forms: [],
       href: s.href,
       formsInStock: [],
     }

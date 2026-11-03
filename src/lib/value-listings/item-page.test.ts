@@ -78,7 +78,7 @@ describe('buildItemPage', () => {
     expect(m.similar).toEqual([])
     // Unranked: one offer each, so by name.
     expect(m.related.map((s) => s.slug)).toEqual(['garama', 'la-vacca', 'tralalero'])
-    expect(m.related[0]).toMatchObject({ count: 1, minPriceUsd: 9, href: '/steal-a-brainrot/buy-items/item/garama', variants: ['default'] })
+    expect(m.related[0]).toMatchObject({ count: 1, minPriceUsd: 9, href: '/steal-a-brainrot/buy-items/item/garama' })
 
     const ranked = buildValueCatalog('steal-a-brainrot', {
       items: sab.items.map((i) => ({ ...i, popularRank: i.slug === 'tralalero' ? 1 : i.slug === 'la-vacca' ? 2 : null })),

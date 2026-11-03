@@ -56,8 +56,7 @@ export interface ItemPageModel<T extends ItemPageRow> {
   related: StockedItem[]
 }
 
-/** `variants`: the forms in stock (variant keys), for the card's form chips. */
-export type StockedItem = CatalogItemRow & { count: number; minPriceUsd: number; href: string; variants: string[] }
+export type StockedItem = CatalogItemRow & { count: number; minPriceUsd: number; href: string }
 
 /**
  * Owner, 2026-10-27 (was 5 from 2026-10-10): an item page is indexable from
@@ -98,7 +97,7 @@ export function buildItemPage<T extends ItemPageRow>(input: ItemPageInput<T>): I
   const inStock = itemRows.length > 0
   const stocked = (c: CatalogItemRow): StockedItem => {
     const s = stockMap.get(c.slug)!
-    return { ...c, count: s.total, minPriceUsd: s.minPriceUsd ?? 0, href: itemBuyHref({ gameSlug, categorySlug, itemSlug: c.slug }), variants: Object.keys(s.byVariant) }
+    return { ...c, count: s.total, minPriceUsd: s.minPriceUsd ?? 0, href: itemBuyHref({ gameSlug, categorySlug, itemSlug: c.slug }) }
   }
   const stockCount = (slug: string) => stockMap.get(slug)?.total ?? 0
   const others: StockedItem[] = (

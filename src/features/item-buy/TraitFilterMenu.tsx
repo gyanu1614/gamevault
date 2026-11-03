@@ -1,7 +1,10 @@
 'use client'
 
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { IconCheck, IconChevronDown } from '@tabler/icons-react'
+import { useId } from 'react'
+import * as Popover from '@radix-ui/react-popover'
+import type { LucideIcon } from 'lucide-react'
+import { FILTER_LIST, FILTER_ROW, FILTER_TICK, FilterPanel, FilterTrigger, useFilterDropdown } from '@/components/marketplace/FilterDropdown'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { TraitMarks } from './TraitMarks'
 import type { AmLetter } from './model/am-traits'
@@ -15,96 +18,73 @@ export const TRAIT_LETTERS: Array<{ letter: AmLetter; label: string; color: stri
 ]
 
 /**
- * The offers' trait filter as one dropdown (owner, 2026-11-02, Eldorado's
- * "Traits" menu as the reference, in our design): each row is a tick box,
- * the game's own badge and its name; the menu stays open while you tick. The
- * trigger shows the ticked badges. The letters still land on one form
- * (model/am-traits: N and M exclude each other). The items grid puts it in
- * its filter row (`leading` icon, `className` for the row's button height).
+ * The trait filter (owner, 2026-11-02, Eldorado's "Traits" menu as the
+ * reference, in our design): each row is a tick box, the game's own badge and
+ * its name; the panel stays open while you tick. The button shows the ticked
+ * badges. What the ticks mean is the page's: one form on a pet's offers
+ * (model/am-traits), every form with those letters on the Items page. The
+ * shared FilterDropdown, so it matches the filters beside it.
  */
 export function TraitFilterMenu({
   lit,
   onToggle,
   onClear,
-  leading,
-  className,
+  icon,
 }: {
   lit: ReadonlySet<AmLetter>
   onToggle: (letter: AmLetter) => void
   onClear: () => void
-  leading?: React.ReactNode
-  className?: string
+  icon?: LucideIcon
 }) {
+  const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('start')
+  const baseId = useId()
   const picked = TRAIT_LETTERS.filter((l) => lit.has(l.letter))
   return (
-    <DropdownMenu.Root modal={false}>
-      <DropdownMenu.Trigger
-        className={cn(
-          'flex h-11 items-center gap-2 rounded-md bg-white/[0.05] pl-3.5 pr-2.5 font-semibold text-text-primary transition-colors hover:bg-white/[0.08]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring data-[state=open]:bg-white/[0.08]',
-          className,
-        )}
-        style={{ fontSize: 'var(--fs-body)' }}
-      >
-        {leading}
-        {picked.length > 0 ? 'Traits' : 'Choose Traits'}
-        {picked.length > 0 ? (
-          <span className="flex items-center gap-1">
-            {picked.map((l) => (
-              <TraitMarks key={l.letter} code={l.letter} size={18} />
-            ))}
-          </span>
-        ) : null}
-        <IconChevronDown aria-hidden size={16} stroke={2} className="text-text-tertiary transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="end"
-          sideOffset={8}
-          collisionPadding={12}
-          className={cn(
-            'z-50 min-w-[220px] rounded-lg bg-[#1D1E23] p-1.5',
-            'shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_24px_48px_-16px_rgba(0,0,0,0.8)]',
-            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1',
-          )}
-        >
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <FilterTrigger
+        icon={icon}
+        segment={false}
+        active={picked.length > 0}
+        open={open}
+        buttonRef={triggerRef}
+        label={
+          picked.length > 0 ? (
+            <span className="flex items-center gap-2">
+              Traits
+              <span className="flex items-center gap-1">
+                {picked.map((l) => (
+                  <TraitMarks key={l.letter} code={l.letter} size={18} />
+                ))}
+              </span>
+            </span>
+          ) : (
+            'Choose Traits'
+          )
+        }
+      />
+      <FilterPanel title="Traits" alignOffset={alignOffset} onClear={picked.length > 0 ? onClear : undefined}>
+        <ul className={FILTER_LIST} aria-label="Trait options">
           {TRAIT_LETTERS.map((l) => {
             const on = lit.has(l.letter)
+            const id = `${baseId}-${l.letter}`
             return (
-              <DropdownMenu.CheckboxItem
-                key={l.letter}
-                checked={on}
-                onCheckedChange={() => onToggle(l.letter)}
-                onSelect={(e) => e.preventDefault()}
-                className="flex h-11 cursor-pointer select-none items-center gap-3 rounded-md px-2.5 text-text-primary outline-none transition-colors data-[highlighted]:bg-white/[0.06]"
-                style={{ fontSize: 'var(--fs-body)' }}
-              >
-                <span
-                  aria-hidden
-                  className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded transition-colors"
-                  style={on ? { background: l.color } : { boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.28)' }}
-                >
-                  {on ? <IconCheck size={13} stroke={3} className="text-[#141519]" /> : null}
-                </span>
-                <TraitMarks code={l.letter} size={20} />
-                <span className={cn('font-medium', !on && 'text-text-secondary')}>{l.label}</span>
-              </DropdownMenu.CheckboxItem>
+              <li key={l.letter}>
+                <label htmlFor={id} className={cn(FILTER_ROW, on ? 'text-text-primary' : 'text-text-secondary')}>
+                  <Checkbox
+                    id={id}
+                    checked={on}
+                    onCheckedChange={() => onToggle(l.letter)}
+                    className={FILTER_TICK}
+                    style={on ? { background: l.color, borderColor: l.color } : undefined}
+                  />
+                  <TraitMarks code={l.letter} size={20} />
+                  <span className="min-w-0 truncate">{l.label}</span>
+                </label>
+              </li>
             )
           })}
-          {picked.length > 0 ? (
-            <>
-              <DropdownMenu.Separator className="my-1.5 h-px bg-white/[0.07]" />
-              <DropdownMenu.Item
-                onSelect={onClear}
-                className="flex h-10 cursor-pointer select-none items-center rounded-md px-2.5 font-semibold text-text-secondary outline-none transition-colors data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-text-primary"
-                style={{ fontSize: 'var(--fs-meta)' }}
-              >
-                Show All Traits
-              </DropdownMenu.Item>
-            </>
-          ) : null}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+        </ul>
+      </FilterPanel>
+    </Popover.Root>
   )
 }

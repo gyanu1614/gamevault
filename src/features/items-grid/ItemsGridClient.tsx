@@ -23,9 +23,8 @@ import ItemCard from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard'
 import { MultiSelectFilter, PriceRangeFilter, SingleSelectFilter, iconForFilter } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemFilters'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { TraitFilterMenu } from '@/features/item-buy/TraitFilterMenu'
-import { formLetters, toggleFilterLetter } from '@/features/item-buy/model/am-traits'
-import { variantShortCode } from '@/lib/value-listings/catalogs'
-import { filterGrid, sortGrid, splitByForm, type FilterOption, type GridItem, type GridSort } from './model/grid'
+import type { AmLetter } from '@/features/item-buy/model/am-traits'
+import { filterGrid, formsForLetters, sortGrid, splitByForm, toggleGridLetter, type FilterOption, type GridItem, type GridSort } from './model/grid'
 import { GridCard } from './GridCard'
 import { GridFiltersSheet, type GridFilterControls } from './GridFiltersSheet'
 import { StockAlertsProvider } from './stock-alerts-context'
@@ -61,18 +60,14 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, item
   const isAm = gameSlug === 'adopt-me'
   const [rarities, setRarities] = useState<string[]>([])
   const [types, setTypes] = useState<string[]>([])
-  // Adopt Me: the N / M / F / R letters land on ONE form (the pet page's rule); other games pick forms.
-  const [traitForm, setTraitForm] = useState<string | null>(null)
+  // Adopt Me ticks N / M / F / R letters; other games pick forms by name.
+  const [letters, setLetters] = useState<AmLetter[]>([])
   const [pickedForms, setPickedForms] = useState<string[]>([])
   const [price, setPrice] = useState<[number, number] | null>(null)
   const [sort, setSort] = useState<GridSort>('recommended')
   const [q, setQ] = useState('')
 
-  const forms = useMemo(() => {
-    if (!isAm) return pickedForms
-    const code = traitForm ? variantShortCode(gameSlug, traitForm) : null
-    return code ? [code] : []
-  }, [isAm, pickedForms, traitForm, gameSlug])
+  const forms = useMemo(() => (isAm ? formsForLetters(letters, options.forms.map((f) => f.value)) : pickedForms), [isAm, letters, options.forms, pickedForms])
 
   // A ?search= deep link (old value-page links) seeds the search once.
   const seedFromUrl = useCallback((params: URLSearchParams) => {
@@ -97,7 +92,7 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, item
   const clearFilters = () => {
     setRarities([])
     setTypes([])
-    setTraitForm(null)
+    setLetters([])
     setPickedForms([])
     setPrice(null)
   }
@@ -106,12 +101,12 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, item
     setQ('')
   }
 
-  const lit = useMemo(() => new Set(formLetters(traitForm)), [traitForm])
+  const lit = useMemo(() => new Set(letters), [letters])
   const controls: GridFilterControls = {
     sort: { value: sort, options: SORT_OPTIONS, onChange: setSort },
     rarities: { options: options.rarities, selected: rarities, onChange: setRarities },
     types: { options: options.types, selected: types, onChange: setTypes },
-    letters: isAm && hasTraits ? { lit, onToggle: (l) => setTraitForm((f) => toggleFilterLetter(f, l)) } : null,
+    letters: isAm && hasTraits ? { lit, onToggle: (l) => setLetters((cur) => toggleGridLetter(cur, l)) } : null,
     forms: !isAm && hasTraits ? { options: options.forms, selected: pickedForms, onChange: setPickedForms } : null,
     price: hasPrice ? { bounds: priceBounds, value: price, onChange: setPrice } : null,
     active: (rarities.length > 0 ? 1 : 0) + (types.length > 0 ? 1 : 0) + (forms.length > 0 ? 1 : 0) + (price ? 1 : 0),
@@ -164,9 +159,8 @@ export default function ItemsGridClient({ gameSlug, gameName, gameImageUrl, item
                   <TraitFilterMenu
                     lit={lit}
                     onToggle={controls.letters.onToggle}
-                    onClear={() => setTraitForm(null)}
-                    leading={<TraitIcon aria-hidden className="h-4 w-4 shrink-0 text-text-secondary" />}
-                    className={lit.size > 0 ? 'h-[var(--h-btn-secondary)] bg-white/[0.11] px-3.5' : 'h-[var(--h-btn-secondary)] px-3.5'}
+                    onClear={() => setLetters([])}
+                    icon={TraitIcon}
                   />
                 ) : controls.forms ? (
                   <MultiSelectFilter label="Traits" icon={TraitIcon} options={toTaxonomy(options.forms)} selected={pickedForms} onChange={setPickedForms} />
