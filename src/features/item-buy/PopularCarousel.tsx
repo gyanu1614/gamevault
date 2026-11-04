@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { TITLE_GAP_BELOW } from '@/components/marketplace/page-scale'
 import { ShowAllLink } from '@/components/marketplace/ShowAllLink'
 import { GridCard } from '@/features/items-grid/GridCard'
 import type { GridItem } from '@/features/items-grid/model/grid'
@@ -57,7 +58,7 @@ export function PopularCarousel({
 
   return (
     <section aria-labelledby={id} className={className}>
-      <div className="mb-5 flex items-center justify-between gap-4">
+      <div className={cn('flex items-center justify-between gap-4', TITLE_GAP_BELOW)}>
         <h2 id={id} className={ITEM_H2}>
           {heading}
         </h2>

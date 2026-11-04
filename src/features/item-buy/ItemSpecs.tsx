@@ -37,17 +37,17 @@ export function ItemSpecs(p: ItemSpecsProps) {
   ]
 
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-6 lg:gap-x-4 lg:gap-y-5 xl:gap-x-6">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:gap-x-4 xl:gap-x-6">
       {cells.map(({ label, value, key, Icon }) => (
         <div key={label} className="flex min-w-0 items-center gap-3">
           <span aria-hidden className="hidden h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-primary xl:grid">
             <Icon size={20} weight="duotone" />
           </span>
           <div className="min-w-0">
-            <dt className="text-[length:var(--fs-body)] text-text-tertiary lg:text-[13px] lg:text-text-secondary">
+            <dt className="text-[13px] text-text-secondary">
               {label}
             </dt>
-            <dd className="mt-0.5 truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
+            <dd className="mt-0.5 truncate text-[16px] font-semibold text-text-primary">
               <Fade key={key} animate={hydrated}>
                 {value}
               </Fade>

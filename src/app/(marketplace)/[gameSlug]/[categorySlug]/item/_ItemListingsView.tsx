@@ -12,6 +12,7 @@ import { ItemDetails, ItemFaq } from '@/features/item-buy/ItemAbout'
 import { PopularCarousel } from '@/features/item-buy/PopularCarousel'
 import { stockedToGridItems } from '@/features/item-buy/model/popular'
 import { ITEM_SECTION_GAP } from '@/features/item-buy/layout'
+import { PAGE_END, PAGE_TOP, SECTION_STACK } from '@/components/marketplace/page-scale'
 import { cn } from '@/lib/utils'
 import { hasHubPage } from '@/lib/content/theme'
 import type { ItemAbout } from '@/features/item-buy/model/about'
@@ -38,7 +39,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
   const valueHref = hasHubPage(gameSlug, 'values') && item.hasPage !== false ? `/${gameSlug}/values/${item.slug}` : null
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-7 sm:px-6 md:pt-0 lg:px-8">
+    <main className={cn('mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8', PAGE_TOP, PAGE_END)}>
       {/* Breadcrumbs only for search (JSON-LD in the route); a back button on screen, GameBoost's (owner, 2026-11-03). Phones have theirs in the sub-navbar. */}
       <div className="relative">
         <BackButton
@@ -67,7 +68,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
         />
       </div>
 
-      <div className={cn(ITEM_SECTION_GAP, 'flex flex-col gap-14 sm:gap-20')}>
+      <div className={cn(ITEM_SECTION_GAP, SECTION_STACK)}>
         {offers.length === 0 ? (
           <div>
             <TrackOnMount event={{ event: 'fallback_shown', surface: 'item_buy', game: gameSlug, item: item.slug, variant: model.variant }} />

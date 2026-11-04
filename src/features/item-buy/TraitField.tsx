@@ -61,7 +61,7 @@ export function TraitField({
       </span>
       <span className={cn('flex min-w-0 flex-1 items-center gap-2.5', !filled && 'justify-end')}>
         {current?.short ? <TraitMarks code={current.short} size={22} /> : null}
-        <span className="truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
+        <span className="truncate text-[14px] font-semibold text-text-primary">
           {current ? <TraitName traitKey={current.variant} label={current.label} /> : `Choose a ${noun}`}
         </span>
       </span>

@@ -1,5 +1,6 @@
 import Link from '@/components/navigation/AppLink'
 import { FaqCards } from '@/components/marketplace/FaqCards'
+import { TITLE_GAP } from '@/components/marketplace/page-scale'
 import { JsonLd, faqPage } from '@/lib/seo/jsonld'
 import { cn } from '@/lib/utils'
 import { ITEM_COLUMN, ITEM_H2 } from './layout'
@@ -31,14 +32,14 @@ export function ItemDetails({ about, itemName, valueHref }: { about: ItemAbout; 
         {about.heading}
       </h2>
       {about.intro ? (
-        <p className="mx-auto mt-2 max-w-3xl text-center text-[15px] leading-relaxed text-text-secondary">
+        <p className={cn('mx-auto max-w-3xl text-center text-[14px] leading-relaxed text-text-secondary', TITLE_GAP)}>
           {valueHref && about.intro.startsWith(itemName) ? <IntroWithLink intro={about.intro} itemName={itemName} href={valueHref} /> : about.intro}
         </p>
       ) : null}
       {about.traitGuide ? (
-        <ul className={cn(ITEM_COLUMN, 'grid gap-2 sm:grid-cols-2')}>
+        <ul className={cn(ITEM_COLUMN, 'grid gap-4 sm:grid-cols-2')}>
           {BADGES.map((b) => (
-            <li key={b.code} className="flex items-start gap-3 rounded-lg bg-[#1D1E23] p-3.5 lg:bg-[#24252B]">
+            <li key={b.code} className="flex items-start gap-3 rounded-lg bg-[#1D1E23] p-4 lg:bg-[#24252B]">
               <TraitMarks code={b.code} size={24} className="mt-0.5" />
               <div className="min-w-0">
                 <p className="text-[14px] font-semibold text-text-primary">{b.name}</p>
@@ -72,7 +73,7 @@ export function ItemFaq({ about }: { about: ItemAbout }) {
       <h2 id="item-faq-title" className={cn(ITEM_H2, 'text-center')}>
         {about.faqHeading}
       </h2>
-      <FaqCards raised items={about.faq} className={ITEM_COLUMN} />
+      <FaqCards raised items={about.faq} className={cn(ITEM_COLUMN, 'space-y-3')} />
     </section>
   )
 }

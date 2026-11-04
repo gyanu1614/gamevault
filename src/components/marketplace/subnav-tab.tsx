@@ -69,7 +69,7 @@ export const SUBNAV_TAB = cn(
   'md:h-[52px] md:px-4 md:text-[14px] md:font-medium md:text-white/75 md:hover:text-white',
   'md:hover:bg-[linear-gradient(to_top,rgba(255,255,255,0.07),rgba(255,255,255,0))]',
   // Phone: the compact scroll strip.
-  'max-md:h-10 max-md:rounded-md max-md:px-3 max-md:text-[13.5px]',
+  'max-md:h-10 max-md:rounded-md max-md:px-3 max-md:text-[13px]',
 )
 
 export const SUBNAV_TAB_ACTIVE = 'text-text-primary md:text-white'

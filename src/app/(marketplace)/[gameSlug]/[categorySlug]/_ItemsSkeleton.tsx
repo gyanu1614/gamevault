@@ -93,7 +93,7 @@ function GridCardSkeleton() {
   return (
     <article aria-hidden className="flex flex-col overflow-hidden rounded-lg bg-[#212228]">
       <div className="h-[92px] bg-[#2E2F36] sm:h-[136px]" />
-      <div className="flex flex-col px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-4 sm:pt-3">
+      <div className="flex flex-col p-3 sm:p-4">
         <Block className="mx-auto h-4 w-3/5" />
         <div className="mt-3 flex items-end justify-between gap-2 sm:mt-4">
           <Block className="h-5 w-2/5 sm:h-9" />
@@ -116,8 +116,8 @@ export default function ItemsSkeleton({ grid = false, subnav = true }: { grid?: 
       {/* Title + toolbar — mirrors CategoryHeader and FilterToolbar: one bold line
           and its count, then search + filters + sort (desktop) or search +
           Filters (below lg), all 44px. */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-2 pt-7 sm:px-6 sm:pt-4 lg:px-8">
-        <div className="mb-[17px] flex items-baseline gap-3">
+      <div className="mx-auto w-full max-w-7xl px-4 pb-2 pt-7 sm:px-6 md:pt-4 lg:px-8">
+        <div className="mb-5 flex items-baseline gap-3">
           <Block className="h-[31px] w-56 max-w-[70%] sm:h-[37px] sm:w-72" />
           <Block className="h-4 w-14" />
         </div>
@@ -134,7 +134,7 @@ export default function ItemsSkeleton({ grid = false, subnav = true }: { grid?: 
 
       {/* Results + grid — 1/2/xl-3 col grid, --gap-grid gutter.
           Render 9 cards (enough to fill a typical above-fold view). */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-3 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
         {grid ? (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4" style={{ gap: 'var(--gap-grid)' }}>
             {Array.from({ length: 12 }).map((_, i) => (

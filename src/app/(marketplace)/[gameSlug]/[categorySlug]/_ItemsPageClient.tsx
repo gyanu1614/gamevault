@@ -316,7 +316,7 @@ export default function ItemsPageClient({
       <SearchParamsBridge onParams={paged.onParams} />
       {/* scroll-mt clears the fixed navbar + sub-navbar when a page change scrolls here. */}
       <section ref={paged.topRef} className="scroll-mt-game-chrome">
-        <div className="mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6 sm:pt-4 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6 md:pt-4 lg:px-8">
           <CategoryHeader
             gameName={gameName}
             categoryLabel={categoryLabel}
@@ -347,8 +347,8 @@ export default function ItemsPageClient({
         onClearFilters={clearApplied}
       />
 
-      {/* Results + grid */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-3 sm:px-6 lg:px-8">
+      {/* Results + grid. No bottom padding: the guide below sets the one gap between sections. */}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
 
         {sorted.length === 0 ? (
           <EmptyState

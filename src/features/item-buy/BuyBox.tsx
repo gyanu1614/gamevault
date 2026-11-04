@@ -12,6 +12,7 @@ import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_i
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { cn } from '@/lib/utils'
+import { PAGE_TITLE } from '@/components/marketplace/page-scale'
 import { BuyPromises } from './BuyPromises'
 import { GLASS } from './layout'
 import { PaymentMarks } from './PaymentMarks'
@@ -29,7 +30,7 @@ const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maxi
  */
 export function ItemTitle({ itemName, gameName }: { itemName: string; gameName: string }) {
   return (
-    <h1 id="item-title" className="text-balance text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary lg:text-[32px]">
+    <h1 id="item-title" className={cn('text-balance', PAGE_TITLE)}>
       <span className="sr-only">{gameName} </span>
       {itemName}
     </h1>
@@ -103,7 +104,7 @@ export function BuyBox(p: BuyBoxProps) {
                 />
               ) : null}
             </div>
-            <div ref={p.buyRef} className="mt-5">
+            <div ref={p.buyRef} className="mt-6">
               <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="h-14 w-full text-[16px]" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
                 {p.isOwn ? 'Edit Your Listing' : BUY_CTA_LABEL}
               </BuyButton>
@@ -117,14 +118,14 @@ export function BuyBox(p: BuyBoxProps) {
             <p className="mt-1.5 font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
               No {p.wantedName} for sale right now.
             </p>
-            <NotifyMeButton gameSlug={p.gameSlug} itemSlug={p.itemSlug} itemName={p.wantedName} variant={p.trait} className="mt-4 h-12 w-full justify-center text-[15px]" />
+            <NotifyMeButton gameSlug={p.gameSlug} itemSlug={p.itemSlug} itemName={p.wantedName} variant={p.trait} className="mt-4 h-12 w-full justify-center text-[14px]" />
           </div>
         )}
 
-        <div className="mt-6 lg:mb-6 lg:mt-7">
+        <div className="mt-6 lg:mb-6">
           <BuyPromises />
         </div>
-        <div className="hidden pt-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] lg:block">
+        <div className="hidden pt-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] lg:block">
           <PaymentMarks />
         </div>
       </div>
@@ -150,7 +151,6 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
     <>
       <div className="min-w-0 flex-1">
         <SellerIdentity
-          size={38}
           seller={{ name: sellerDisplayName(s), avatarUrl: s.avatarUrl, verified: s.verified, rating: s.ratingPercent, reviews: s.reviewCount, sales: s.sales, tier: s.tier ?? null }}
         />
       </div>
@@ -160,7 +160,8 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
   )
   const cls = cn(
     'mt-6 flex min-w-0 items-center gap-3 py-3.5 max-lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
-    'lg:col-start-2 lg:mt-0 lg:self-start lg:px-5 lg:py-3.5',
+    // Desktop: its avatar on the buy card's text edge (28px).
+    'lg:col-start-2 lg:mt-0 lg:self-start lg:px-7 lg:py-4',
     GLASS,
   )
   return slug ? (

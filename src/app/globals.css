@@ -2603,14 +2603,14 @@
 
 .buyer-step__num {
   position: absolute;
-  /* left: the sliver showing beside the card, measured off the reference
-     (59px of a 299px card = 20% of card width).
-     top: 40, not 22 — the glyph's INK is 154px tall inside a 173px line box,
-     so the span's own top is not where the ink starts. Centring the ink in
-     a 252px card puts its top at (252-154)/2 = 49, which needs the span at
-     40. At 22 the numeral sat 18px high of the card's centre line. */
-  left: -24px;
-  top: 40px;
+  /* left 0: the numeral starts on the row's edge, so the first one lines up
+     with the page column and the sliver beside the card is the same on all four
+     (owner, 2026-11-04: the row and the band under it did not line up).
+     top: the glyph's INK is 154px tall inside a 173px line box, so the span's own
+     top is not where the ink starts. Centring the ink in a 212px card puts its
+     top at (212-154)/2 = 29, which needs the span at 20. */
+  left: 0;
+  top: 20px;
   z-index: 0;
   /* Roboto Condensed 700 — picked by matching the GLYPH SHAPE, not just the
      bounding box: the reference '1' is a wide angled flag over a thin stem,
@@ -2650,25 +2650,16 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  /* Narrower than the column: the reference's cards do not fill their track
-     edge-to-edge, and the gap is what gives each numeral room to sit
-     alongside without colliding with the neighbouring card. */
-  max-width: 195px;
-  margin-inline: auto;
-  border-radius: 18px;
-  /* Portrait, not landscape: the reference card measures h/w = 1.12.
-     A min-height in aspect terms rather than a fixed px so the card still
-     grows if the copy runs long. */
-  /* Portrait: the reference card measures h/w = 1.12. A fixed min-height
-     per breakpoint rather than aspect-ratio, which would squash the text
-     when the copy runs long, or cqw, which collapses a grid item's width. */
-  /* Height restored to 252: only the WIDTH was meant to come down. */
-  min-height: 252px;
-  height: 252px;
+  border-radius: 10px;
+  /* All four cards are one height, whatever their copy. */
+  height: 100%;
+  min-height: 212px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 26px 20px 24px;
+  /* From the top, not centred: a card with one line less otherwise sits lower
+     than its neighbours (owner, 2026-11-04). Icons and titles share a line. */
+  justify-content: flex-start;
+  padding: 28px 20px;
   text-align: center;
   /* Genuinely translucent, so the numeral shows THROUGH the card rather
      than being covered by it. The blur is what separates the two layers —
@@ -2686,11 +2677,9 @@
 
 .buyer-step__icon {
   display: block;
-  /* 36% of the card's height, measured off the reference (123px icon on a
-     339px card). The previous 62px was roughly half that. */
-  width: 62px;
-  height: 62px;
-  margin: 0 auto 26px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
 }
 
 .buyer-step__title {
@@ -2702,7 +2691,8 @@
 
 .buyer-step__sub {
   margin-top: 8px;
-  font-size: 13px;
+  text-wrap: balance;
+  font-size: 14px;
   line-height: 1.5;
   /* 500 + 78% (was 400 + 55%): at 55% the line sat barely above the glass
      and read as disabled. Still a clear step below the title. */
@@ -2710,20 +2700,20 @@
   color: color-mix(in srgb, var(--foreground) 78%, transparent);
 }
 
-/* Phone (one column): the numeral and its card are one unit, centred on
-   the page. The unit is the card plus the numeral's exposed sliver; the
-   card sits flush right inside it and the numeral starts at its left edge,
-   so the pair centres together instead of the numeral hugging the screen
-   edge. */
+/* Each cell is the numeral's exposed sliver plus the card, the card flush right.
+   So the first numeral starts on the page column's left edge and the last card
+   ends on its right edge, like every other section. */
+.buyer-step {
+  padding-left: 61px;
+}
+
+/* Phone (one column): the same unit, centred on the page. */
 @media (max-width: 639px) {
   .buyer-step {
     width: 100%;
-    max-width: 256px;
+    max-width: 280px;
     margin-inline: auto;
-    padding-left: 61px;
   }
-  .buyer-step__num { left: 0; }
-  .buyer-step__card { margin-inline: 0; }
 }
 
 @media (min-width: 640px) {

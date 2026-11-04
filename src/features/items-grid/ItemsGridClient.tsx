@@ -14,6 +14,8 @@ import { Fragment, useCallback, useMemo, useState } from 'react'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { Pagination } from '@/components/marketplace/Pagination'
 import { CategoryHeader } from '@/components/marketplace/CategoryHeader'
+import { PAGE_TOP, SECTION_GAP, SECTION_TITLE, TITLE_GAP_BELOW } from '@/components/marketplace/page-scale'
+import { cn } from '@/lib/utils'
 import { FilterToolbar, type AppliedFilter } from '@/components/marketplace/FilterToolbar'
 import { SheetChips, SheetPickOne, type FilterSheetSection } from '@/components/marketplace/FiltersSheet'
 import { SellerPromptRow } from '@/components/seller/SellerPrompt'
@@ -137,7 +139,7 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, items, o
         <SearchParamsBridge onParams={paged.onParams} />
         {/* The heading says what people search for: "Adopt Me Pets", not the category's "Items". */}
         <section ref={paged.topRef} className="scroll-mt-game-chrome">
-          <div className="mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6 sm:pt-4 lg:px-8">
+          <div className={cn('mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8', PAGE_TOP)}>
             <CategoryHeader
               gameName={gameName}
               categoryLabel={itemNoun}
@@ -170,7 +172,8 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, items, o
           onClearFilters={clearFilters}
         />
 
-        <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-3 sm:px-6 lg:px-8">
+        {/* No bottom padding: the guide below sets the one gap between sections. */}
+        <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center rounded-lg bg-bg-raised px-6 py-14 text-center">
               <p className="font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
@@ -201,8 +204,8 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, items, o
           )}
 
           {moreListings.length > 0 && (
-            <section aria-labelledby="more-listings" className="mt-14">
-              <h2 id="more-listings" className="mb-4 font-semibold text-text-primary" style={{ fontSize: 'var(--fs-section)' }}>
+            <section aria-labelledby="more-listings" className={SECTION_GAP}>
+              <h2 id="more-listings" className={cn(SECTION_TITLE, TITLE_GAP_BELOW)}>
                 More {gameName} Listings
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>

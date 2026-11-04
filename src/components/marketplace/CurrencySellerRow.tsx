@@ -102,7 +102,7 @@ export function SellerIdentity({
 }) {
   const line = sellerStatLine({ ratingPercent: seller.rating, reviews: seller.reviews, sales: seller.sales, tier: seller.tier })
   const name = (
-    <span className="truncate text-[14px] font-semibold leading-5 text-text-primary sm:text-[15px]">{seller.name}</span>
+    <span className="truncate text-[14px] font-semibold leading-5 text-text-primary">{seller.name}</span>
   )
   return (
     <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -131,7 +131,7 @@ export function SellerIdentity({
 verified={seller.verified}
           hideTier
           className={cn(
-            'text-[12px] leading-4 sm:text-[12.5px]',
+            'text-[12px] leading-4',
             line.kind === 'verified' && 'font-medium text-text-tertiary',
           )}
         />
@@ -186,7 +186,7 @@ export function OfferRowAction({ isOwn, selected = false, onSelect }: { isOwn: b
 function MetricCol({ icon: Icon, label, value, width }: RowMetric) {
   return (
     <div className="shrink-0" style={{ width }}>
-      <div className="flex items-center gap-1.5 text-[14px] font-bold tabular-nums text-text-primary sm:text-[15px]">
+      <div className="flex items-center gap-1.5 text-[14px] font-bold tabular-nums text-text-primary">
         {Icon ? <Icon aria-hidden className="shrink-0 text-text-tertiary" style={{ fontSize: 15 }} /> : null}
         <span className="truncate">{value}</span>
       </div>
@@ -250,7 +250,7 @@ export function CurrencySellerRow(p: CurrencySellerRowProps) {
           ))}
           <span aria-hidden className="h-10 w-px bg-white/[0.07]" />
           <div className="w-[120px] shrink-0">
-            <div className="text-[20px] font-bold leading-none tabular-nums text-text-primary sm:text-[22px]">{p.price}</div>
+            <div className="text-[20px] font-bold leading-none tabular-nums text-text-primary">{p.price}</div>
             {p.priceCaption && <div className="mt-1 truncate text-[12px] text-text-tertiary">{p.priceCaption}</div>}
           </div>
         </div>

@@ -24,6 +24,8 @@ import Link from '@/components/navigation/AppLink'
 import type { ReactNode } from 'react'
 
 import { BuyerSteps } from '@/features/home/components/BuyerSteps'
+import { cn } from '@/lib/utils'
+import { PAGE_END, SECTION_GAP, SECTION_STACK, SECTION_TITLE } from './page-scale'
 import { WhyBuyCard } from './WhyBuyCard'
 import { getCategoryGuide, type GuideBlock, type GuideText } from '@/content/category-guides'
 import { formatStatPrice, type CategoryStats } from '@/lib/seo/page-stats'
@@ -107,12 +109,10 @@ export function CategoryGuide({
   // it can: body at 14px, headings one step up and bold, sections separated
   // by a single line of space, heading-to-text gap nearly zero (the dense
   // Eldorado pattern). Body text is white, not the muted secondary grey.
-  // Three clear levels, not three near-identical ones: the guide title
-  // (28px), section headings (18px, bold) and body (14px). Headings are
-  // pure white; body is a softer white so the headings stand out from it
-  // instead of reading as more of the same text.
-  const title = 'text-heading font-bold tracking-[-0.015em] text-text-primary [text-wrap:balance]'
-  const h2 = 'text-subheading font-bold text-text-primary [text-wrap:balance]'
+  // Three clear levels from the page scale: the guide title (24/20px), section
+  // headings (18px, bold) and body (14px). Headings are pure white; body is a
+  // softer white so the headings stand out from it instead of reading as more
+  // of the same text.
   const h3 = 'text-body-lg font-bold text-text-primary'
   const prose = 'text-body-sm leading-[1.65] text-[rgba(233,237,242,0.8)]'
 
@@ -130,7 +130,7 @@ export function CategoryGuide({
     // One column. The wrapper owns the spacing between the sections and above
     // them (sections carry no margins of their own), and each opts into the
     // standard page measure itself.
-    <div className="mt-12 flex flex-col gap-16 pb-16 sm:mt-16 sm:gap-20 sm:pb-24">
+    <div className={cn(SECTION_GAP, SECTION_STACK, PAGE_END)}>
       {/* ── How to Buy — the homepage's 4-step section, reused ─────────
           Same component as the homepage (numerals behind glass cards,
           rim light), with a game-specific title and one short line per
@@ -159,7 +159,7 @@ export function CategoryGuide({
         <section aria-labelledby="category-guide-title" className="page-measure">
           <article className="space-y-6">
             <div>
-              <h2 id="category-guide-title" className={title}>
+              <h2 id="category-guide-title" className={cn(SECTION_TITLE, '[text-wrap:balance]')}>
                 {guide.title}
               </h2>
               <div className={`mt-3 space-y-2 ${prose}`}>

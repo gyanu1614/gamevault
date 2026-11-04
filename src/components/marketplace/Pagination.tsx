@@ -79,7 +79,7 @@ export function Pagination({
   }
 
   return (
-    <nav aria-label="Pagination" className={cn('mt-9 flex flex-col items-center gap-3', className)}>
+    <nav aria-label="Pagination" className={cn('mt-8 flex flex-col items-center gap-3', className)}>
       <div className="flex flex-wrap items-center justify-center gap-1.5">
         {edge('prev')}
         {pageWindow(page, totalPages).map((slot, i) =>
@@ -97,7 +97,7 @@ export function Pagination({
         )}
         {edge('next')}
       </div>
-      <p className="text-[12.5px] tabular-nums text-text-tertiary">
+      <p className="text-[12px] tabular-nums text-text-tertiary">
         Showing {first}–{last} of {totalItems}
       </p>
     </nav>

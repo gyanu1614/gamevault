@@ -1,5 +1,6 @@
 import { ShieldCheck } from 'lucide-react'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
+import { PAGE_TITLE } from './page-scale'
 
 /**
  * The category page title (owner, 2026-11-03, "Clean Toolbar"): one bold line
@@ -27,10 +28,10 @@ export function CategoryHeader({
 }) {
   const title = categoryLabel.toLowerCase().includes(gameName.toLowerCase()) ? categoryLabel : `${gameName} ${categoryLabel}`
   return (
-    <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <h1 className="text-[28px] font-bold leading-[1.1] tracking-[-0.025em] text-text-primary sm:text-[34px]">{title}</h1>
+    <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <h1 className={PAGE_TITLE}>{title}</h1>
       {count > 0 && (
-        <span className="text-[14px] font-medium capitalize tabular-nums text-text-secondary sm:text-[15px]">
+        <span className="text-[14px] font-medium capitalize tabular-nums text-text-secondary">
           {count.toLocaleString('en-US')} {count === 1 ? countNoun.one : countNoun.many}
         </span>
       )}
