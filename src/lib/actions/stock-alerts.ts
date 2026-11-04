@@ -70,16 +70,19 @@ export async function setStockAlert(gameSlug: string, itemSlug: string, variant:
     if ((open?.length ?? 0) >= MAX_OPEN_ALERTS) return { ok: false, error: 'You have too many alerts. Remove a few first.' }
 
     // Already listed (the page was a moment old): due now, so the email goes out right away.
+    // Past the hourly email budget the alert waits for the next listing, so a loop of
+    // set + clear can't be used to send email.
     const inStock = (live?.length ?? 0) > 0
+    const sendNow = inStock && !(await checkRateLimit('stockAlertEmail', `user:${userId}`)).limited
     const now = new Date().toISOString()
     const { error } = await svc
       .from('stock_alerts')
       .upsert(
-        { user_id: userId, game_id: gameId, item_slug: itemSlug, variant, created_at: now, notified_at: null, due_at: inStock ? now : null },
+        { user_id: userId, game_id: gameId, item_slug: itemSlug, variant, created_at: now, notified_at: null, due_at: sendNow ? now : null },
         { onConflict: 'user_id,game_id,item_slug,variant' },
       )
     if (error) throw new Error(`stock_alerts upsert: ${error.message}`)
-    if (inStock) scheduleStockAlertDispatch()
+    if (sendNow) scheduleStockAlertDispatch()
     return { ok: true }
   } catch (e) {
     console.error('[stock-alerts] set failed', e instanceof Error ? e.message : e)

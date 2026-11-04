@@ -147,6 +147,8 @@ describe('budget boundaries', () => {
       orderReport: { limit: 5, windowSeconds: 60 },
       // Notify Me — set/clear a stock alert, per signed-in user.
       stockAlert: { limit: 20, windowSeconds: 60 },
+      // Notify Me on an item already in stock emails at once.
+      stockAlertEmail: { limit: 5, windowSeconds: 3_600 },
     })
   })
 })

@@ -11,6 +11,7 @@ type Call = { table: string; ops: Array<[string, unknown[]]> }
 const h = vi.hoisted(() => ({
   userId: 'u-1' as string | null,
   limited: false,
+  emailLimited: false,
   catalog: ['frost-dragon'] as string[],
   live: false,
   openCount: 0,
@@ -24,7 +25,9 @@ vi.mock('@/lib/email', () => ({}))
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: h.userId ? { id: h.userId } : null }, error: null }) } }),
 }))
-vi.mock('@/lib/security/rate-limit', () => ({ checkRateLimit: vi.fn(async () => ({ limited: h.limited })) }))
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkRateLimit: vi.fn(async (name: string) => ({ limited: h.limited || (name === 'stockAlertEmail' && h.emailLimited) })),
+}))
 vi.mock('@/lib/value-listings/stock-server', () => ({
   getValueCatalog: vi.fn(async () => ({
     items: h.catalog.map((slug) => ({ slug })),
@@ -55,6 +58,7 @@ vi.mock('@/lib/supabase/service', () => ({
   }),
 }))
 
+import { checkRateLimit } from '@/lib/security/rate-limit'
 import { setStockAlert, clearStockAlert, listMyStockAlerts } from './stock-alerts'
 
 const alertCalls = () => h.calls.filter((c) => c.table === 'stock_alerts')
@@ -66,12 +70,14 @@ const upsertRow = () => alertCalls().flatMap((c) => c.ops).find(([m]) => m === '
 beforeEach(() => {
   h.userId = 'u-1'
   h.limited = false
+  h.emailLimited = false
   h.catalog = ['frost-dragon']
   h.live = false
   h.openCount = 0
   h.openRows = null
   h.calls = []
   h.dispatched = 0
+  vi.mocked(checkRateLimit).mockClear()
 })
 
 describe('setStockAlert', () => {
@@ -110,6 +116,20 @@ describe('setStockAlert', () => {
     const upsert = alertCalls().flatMap((c) => c.ops).find(([m]) => m === 'upsert')!
     expect((upsert[1][0] as { due_at: string | null }).due_at).not.toBeNull()
     expect(h.dispatched).toBe(1)
+  })
+
+  it('past the hourly email budget, an alert on a listed item waits for the next listing and sends nothing now', async () => {
+    h.live = true
+    h.emailLimited = true
+    expect(await setStockAlert('adopt-me', 'frost-dragon')).toEqual({ ok: true })
+    expect(upsertRow()).toMatchObject({ due_at: null, notified_at: null })
+    expect(h.dispatched).toBe(0)
+  })
+
+  it('an alert on an item nobody lists spends none of the email budget', async () => {
+    h.emailLimited = true
+    expect(await setStockAlert('adopt-me', 'frost-dragon')).toEqual({ ok: true })
+    expect(vi.mocked(checkRateLimit).mock.calls.filter(([name]) => (name as string) === 'stockAlertEmail')).toEqual([])
   })
 
   it('caps open alerts per account', async () => {

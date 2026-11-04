@@ -57,6 +57,9 @@ export const RATE_LIMITS = {
   /** Notify Me stock alerts (set / remove): a person taps a handful a minute;
    *  this stops a script filling stock_alerts for one account. */
   stockAlert: { limit: 20, windowSeconds: 60 },
+  /** Notify Me on an item already in stock emails at once, so that path gets its
+   *  own budget: the alert must not work as an email button. */
+  stockAlertEmail: { limit: 5, windowSeconds: 3_600 },
 } as const satisfies Record<string, RateLimitBudget>
 
 export type RateLimitName = keyof typeof RATE_LIMITS
