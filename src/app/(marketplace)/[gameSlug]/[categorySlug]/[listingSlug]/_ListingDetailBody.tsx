@@ -92,6 +92,11 @@ function shapeMini(row: any) {
 /**
  * V15k — Carousel listing card row. Selects N active listings for a
  * given filter (same seller, same category) in a single query.
+ *
+ * The listing on screen is dropped in JS, not with `.neq('id', …)` in the
+ * query: the query is then identical for every listing in the category (or
+ * game), so the Data Cache keeps ONE entry per category instead of one per
+ * listing page (DB read audit 2026-11-02).
  */
 async function getCarouselListings({
   gameId,
@@ -123,14 +128,14 @@ async function getCarouselListings({
       category:game_categories!listings_game_category_id_fkey(slug, name)
     `)
     .eq('status', 'active')
-    .neq('id', excludeListingId)
     .order('updated_at', { ascending: false })
-    .limit(limit)
+    // One extra row covers the listing on screen, filtered out below.
+    .limit(limit + 1)
   if (gameId) query = query.eq('game_id', gameId)
   if (categoryId) query = query.eq('game_category_id', categoryId)
   if (sellerId) query = query.eq('seller_id', sellerId)
   const { data } = await query
-  return (data ?? []) as any[]
+  return ((data ?? []) as any[]).filter((row) => row.id !== excludeListingId).slice(0, limit)
 }
 
 export async function ListingDetailBody({

@@ -103,10 +103,9 @@ export interface Review {
   id: string
   order_id: string
   reviewer_id: string
-  reviewed_user_id: string
+  seller_id: string
   rating: number
   comment?: string
-  review_type: 'buyer_to_seller' | 'seller_to_buyer'
   seller_response?: string
   seller_responded_at?: string
   helpful_count?: number

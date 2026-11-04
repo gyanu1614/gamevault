@@ -61,6 +61,19 @@ const resend = {
       return client.emails.send(payload)
     },
   },
+  batch: {
+    /** Up to 100 emails in ONE Resend request (one unit against the rate
+     *  limit). 'permissive': a bad address fails alone, not the batch. */
+    async send(payload: Parameters<Resend['batch']['send']>[0]) {
+      assertEmailTransportAllowed(process.env, `batch of ${payload.length}`)
+      const client = await getResendClient()
+      if (!client) {
+        console.warn('[email] RESEND_API_KEY not set — skipping batch send.')
+        return { data: null, error: null }
+      }
+      return client.batch.send(payload, { batchValidation: 'permissive' })
+    },
+  },
 }
 
 const FROM_EMAIL = 'DropMarket <noreply@dropmarket.gg>'
@@ -78,6 +91,40 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 export async function sendTransactionalEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   const { data, error } = await resend.emails.send({ from: FROM_EMAIL, replyTo: REPLY_TO, to, subject, html })
   return error ? { success: false as const, error } : { success: true as const, data }
+}
+
+export const RESEND_BATCH_MAX = 100
+
+/**
+ * Many transactional emails in as few Resend requests as possible (chat
+ * digests). Returns one boolean per input email, in order: true = accepted
+ * by Resend. Without RESEND_API_KEY nothing is sent and every entry is
+ * false, so callers retry later instead of recording a send.
+ */
+export async function sendTransactionalBatch(emails: { to: string; subject: string; html: string }[]): Promise<boolean[]> {
+  // Outside the try below: a test run must fail loudly, not "fail to send".
+  assertEmailTransportAllowed(process.env, `batch of ${emails.length}`)
+  const sent: boolean[] = []
+  for (let i = 0; i < emails.length; i += RESEND_BATCH_MAX) {
+    const chunk = emails.slice(i, i + RESEND_BATCH_MAX)
+    const ok = chunk.map(() => false)
+    try {
+      const { data, error } = await resend.batch.send(
+        chunk.map(({ to, subject, html }) => ({ from: FROM_EMAIL, replyTo: REPLY_TO, to, subject, html })),
+      )
+      if (data && !error) {
+        chunk.forEach((_, j) => (ok[j] = true))
+        const failed = (data as { errors?: { index: number }[] }).errors ?? []
+        for (const f of failed) if (f.index >= 0 && f.index < ok.length) ok[f.index] = false
+      } else if (error) {
+        console.error('[email] batch send failed:', error)
+      }
+    } catch (err) {
+      console.error('[email] batch send threw:', err)
+    }
+    sent.push(...ok)
+  }
+  return sent
 }
 
 /** escapeHtml for templates outside this module. */
@@ -767,6 +814,34 @@ export async function sendListingApprovedEmail({
   return error ? { success: false, error } : { success: true, data }
 }
 
+/** Several listings approved in one decision: one email, not one per listing. */
+export async function sendListingsApprovedEmail({
+  to,
+  name,
+  count,
+}: {
+  to: string
+  name: string
+  count: number
+}) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: `${count} of your listings are live`,
+    html: emailShell({
+      preview: `${count} of your listings passed review and are live.`,
+      icon: 'listinglive',
+      heading: 'Your listings are live',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — <strong style="color:${EMAIL_TOKENS.INK};">${count} of your listings</strong> passed review and are now live for buyers.`) +
+        emailButton('View Your Listings', `${APP_URL}/account/listings`),
+    }),
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
 export async function sendListingRejectedEmail({
   to,
   name,
@@ -955,45 +1030,6 @@ export async function sendGuestWelcomeEmail({
         }) +
         emailButton('Track Your Order', `${APP_URL}/account/orders/${orderId}`) +
         emailFooterNote(`Didn't buy anything on DropMarket? Just reply and let us know.`),
-    }),
-  })
-
-  return error ? { success: false, error } : { success: true, data }
-}
-
-export async function sendNewMessageEmail({
-  to,
-  name,
-  senderName,
-  orderNumber,
-  orderId,
-  preview,
-}: {
-  to: string
-  name: string
-  senderName: string
-  orderNumber: string
-  orderId: string
-  /** First ~120 chars of the message body. */
-  preview: string
-}) {
-  const truncated = preview.length > 120 ? `${preview.slice(0, 117)}...` : preview
-  const body =
-    emailText(`Hi ${escapeHtml(name)}, <strong style="color:${EMAIL_TOKENS.INK};">${escapeHtml(senderName)}</strong> just messaged you about order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong>:`) +
-    emailBox({ html: `<span style="font-style:italic;overflow-wrap:anywhere;">&ldquo;${escapeHtml(truncated)}&rdquo;</span>` }) +
-    emailButton('Reply Now', `${APP_URL}/account/orders/${orderId}`) +
-    emailFooterNote(`We only email you for the first unread message in a chat, so replies won't flood your inbox.`)
-
-  const { data, error } = await resend.emails.send({
-    from: FROM_EMAIL,
-    replyTo: REPLY_TO,
-    to,
-    subject: `${senderName} messaged you about order #${orderNumber}`,
-    html: emailShell({
-      preview: `${senderName}: ${truncated}`,
-      icon: 'message',
-      heading: 'You have a new message',
-      body,
     }),
   })
 

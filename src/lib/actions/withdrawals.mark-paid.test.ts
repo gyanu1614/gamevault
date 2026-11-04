@@ -15,8 +15,10 @@ const h = vi.hoisted(() => ({
   createServiceRoleClient: vi.fn(),
   sendWithdrawalProcessedEmail: vi.fn(),
   emailAllowed: vi.fn(),
+  afterResponse: [] as Promise<unknown>[],
 }))
 
+vi.mock('@vercel/functions', () => ({ waitUntil: (p: Promise<unknown>) => h.afterResponse.push(p) }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: h.createClient }))
 vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: h.createServiceRoleClient }))
 vi.mock('@/lib/actions/admin-permissions', () => ({
@@ -57,6 +59,7 @@ const paid = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  h.afterResponse.length = 0
   h.requireAdmin.mockResolvedValue({ userId: ADMIN_ID })
   h.requireRole.mockResolvedValue({ userId: ADMIN_ID, role: 'admin' })
   h.sendWithdrawalProcessedEmail.mockResolvedValue({ success: true })
@@ -85,6 +88,7 @@ describe('markWithdrawalPaid', () => {
     // No TS status write, no TS notification insert — the RPC owns both.
     expect(service.from).not.toHaveBeenCalledWith('withdrawal_requests')
     expect(service.from).not.toHaveBeenCalledWith('notifications')
+    await Promise.all(h.afterResponse)
     expect(h.sendWithdrawalProcessedEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: 's@x.com', status: 'completed', amount: 50, net: 43.5, txReference: '0xabc123' }),
     )
@@ -166,6 +170,7 @@ describe('markWithdrawalPaid', () => {
     const result = await markWithdrawalPaid({ requestId: REQUEST_ID, transactionHash: '0xabc123' })
 
     expect(result).toEqual({ success: true })
+    await Promise.all(h.afterResponse)
     expect(h.emailAllowed).toHaveBeenCalledWith('seller-1', 'payout_processed')
     expect(h.sendWithdrawalProcessedEmail).not.toHaveBeenCalled()
   })

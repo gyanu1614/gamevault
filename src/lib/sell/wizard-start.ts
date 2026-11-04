@@ -1,4 +1,5 @@
 import type { SellGameOption } from '@/lib/actions/sell-wizard'
+import type { AttributeTemplateFull } from '@/lib/actions/new-schema'
 
 /**
  * `/sell/new?game=<slug>&category=<slug>` — the wizard opens on that game's
@@ -9,6 +10,10 @@ import type { SellGameOption } from '@/lib/actions/sell-wizard'
 export interface WizardStart {
   categorySlug: string
   game: SellGameOption
+  /** The category's games the page already read, so the wizard doesn't fetch them again. */
+  games: SellGameOption[]
+  /** The pair's field template when the page could read it (cached); else the wizard fetches it. */
+  template?: AttributeTemplateFull | null
 }
 
 const SLUG = /^[a-z0-9-]{1,80}$/
@@ -27,5 +32,5 @@ export function pickWizardStart(
 ): WizardStart | null {
   if (!categorySlugs.includes(want.categorySlug)) return null
   const game = games.find((g) => g.game_slug === want.gameSlug)
-  return game ? { categorySlug: want.categorySlug, game } : null
+  return game ? { categorySlug: want.categorySlug, game, games: [...games] } : null
 }

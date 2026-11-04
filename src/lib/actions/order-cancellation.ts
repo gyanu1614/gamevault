@@ -9,6 +9,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { getVerifiedAdmin } from '@/lib/admin/context'
+import { afterResponse } from '@/lib/after-response'
 import { revalidatePath } from 'next/cache'
 import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
 // Money seams (CLAUDE.md): a cancellation's status move and the buyer's
@@ -204,27 +206,13 @@ export async function getPendingCancellationRequests(): Promise<{
   error?: { message: string }
 }> {
   try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return { error: { message: 'Unauthorized' } }
-    }
-
-    // Verify admin role (check admin_roles table, not profiles.role)
-    const { data: adminRole } = await supabase
-      .from('admin_roles')
-      .select('role, is_active')
-      .eq('user_id', user.id)
-      .maybeSingle() as any
-
-    if (!adminRole || !(adminRole as any).is_active) {
+    // Active staff with two-factor in this session (lib/admin/context).
+    const admin = await getVerifiedAdmin()
+    if (!admin) {
       return { error: { message: 'Admin access required' } }
     }
+    const user = { id: admin.userId }
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('order_cancellation_requests')
@@ -363,27 +351,13 @@ export async function processCancellationRequest(
   fault: 'buyer' | 'seller' = 'buyer'
 ): Promise<{ data?: CancellationRequest; error?: { message: string } }> {
   try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return { error: { message: 'Unauthorized' } }
-    }
-
-    // Verify admin role (check admin_roles table)
-    const { data: adminRole } = await supabase
-      .from('admin_roles')
-      .select('role, is_active')
-      .eq('user_id', user.id)
-      .maybeSingle() as any
-
-    if (!adminRole || !(adminRole as any).is_active) {
+    // Active staff with two-factor in this session (lib/admin/context).
+    const admin = await getVerifiedAdmin()
+    if (!admin) {
       return { error: { message: 'Admin access required' } }
     }
+    const user = { id: admin.userId }
+    const supabase = await createClient()
 
     // Get the request
     const { data: request, error: fetchError } = await supabase
@@ -512,7 +486,7 @@ export async function processCancellationRequest(
 
       // Buyer refund email — mirrors cancelOrder's comms (wallet-aware copy;
       // the credit above already posted, so pending: false).
-      await (async () => {
+      afterResponse('Cancellation buyer refund email', async () => {
         const service = createServiceRoleClient()
         const orderRef =
           order.order_number || String(request.order_id).slice(0, 8).toUpperCase()
@@ -541,9 +515,7 @@ export async function processCancellationRequest(
             pending: false,
           })
         }
-      })().catch((err) =>
-        console.error('[Cancellation] Buyer refund email failed:', err)
-      )
+      })
     }
 
     // The report follows the decision: cancelled on approve, back to expired

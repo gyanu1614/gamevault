@@ -19,6 +19,7 @@ describe('pickWizardStart', () => {
     expect(pickWizardStart({ gameSlug: 'adopt-me', categorySlug: 'items' }, ['currency', 'items'], [game('mm2'), game('adopt-me')])).toEqual({
       categorySlug: 'items',
       game: game('adopt-me'),
+      games: [game('mm2'), game('adopt-me')],
     })
   })
   it('null when the category or the game is not on offer (wizard starts empty)', () => {

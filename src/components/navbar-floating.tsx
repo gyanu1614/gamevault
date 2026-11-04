@@ -41,6 +41,7 @@ import { NavAccountButton, NavIconButton, NavPanel, NavPanelHeader } from '@/com
 import { ProfileMenu } from '@/components/navbar/ProfileMenu'
 import { useNavWalletBalance, useStoreOfflineMode } from '@/components/navbar/use-profile-menu-data'
 import { OrderStatusPill } from '@/components/account/OrderStatusPill'
+import { useUserChannelEvent, useUserChannelRejoined } from '@/hooks/use-user-channel'
 
 // 5 fixed nav tabs with their DB type keys
 /* Hamburger root on /account/* — the sidebar's destinations, flat.
@@ -497,49 +498,25 @@ export function Navbar({
     ...foregroundPoll(POLL_MS.navNotifications),
   })
 
-  // Workstream E — Realtime bell. Subscribe to INSERTs on the current user's
-  // notifications so a new order (webhook's new_order insert) or a seller's
-  // first order-message flips the bell WITHOUT waiting on the 60s poll. The
-  // notifications table must be in the supabase_realtime publication
-  // (20260715_notifications_realtime.sql) for these events to arrive; the
-  // per-user SELECT RLS policy gates delivery to the owner.
-  useEffect(() => {
+  // Live bell + Live Orders: the user's channel (user:<id>, lib/realtime/
+  // user-channel) carries every new notifications row and every change to an
+  // order I'm party to, so the bell and Live Orders refresh at once and the
+  // polls above are only a slow fallback. It replaced a Postgres Changes
+  // listener on notifications (incident 2026-11-02).
+  const refreshNotifications = () => {
     if (!user?.id) return
-    const userId = user.id
-    let cleanup: (() => void) | null = null
-    let cancelled = false
-    ;(async () => {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      if (cancelled) return
-      const channel = supabase
-        .channel(`notif:${userId}`)
-        .on(
-          'postgres_changes' as any,
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${userId}`,
-          },
-          () => {
-            queryClient.invalidateQueries({ queryKey: ['unread-notifications', userId] })
-            // The /notifications inbox, when open, refreshes on the same event.
-            queryClient.invalidateQueries({ queryKey: ['notifications-page', userId] })
-            // New-order and order-status notices mean Live Orders changed too.
-            queryClient.invalidateQueries({ queryKey: ['active-orders-navbar', userId] })
-          },
-        )
-        .subscribe()
-      // Capture the same client instance for teardown.
-      cleanup = () => { void supabase.removeChannel(channel) }
-      if (cancelled) cleanup()
-    })()
-    return () => {
-      cancelled = true
-      if (cleanup) cleanup()
-    }
-  }, [user?.id, queryClient])
+    const opts = { cancelRefetch: false }
+    void queryClient.invalidateQueries({ queryKey: ['unread-notifications', user.id] }, opts)
+    // The /notifications inbox, when open, refreshes on the same event.
+    void queryClient.invalidateQueries({ queryKey: ['notifications-page', user.id] }, opts)
+    // New-order and order-status notices mean Live Orders changed too.
+    void queryClient.invalidateQueries({ queryKey: ['active-orders-navbar', user.id] }, opts)
+  }
+  useUserChannelEvent(user?.id, 'notification', refreshNotifications)
+  useUserChannelEvent(user?.id, 'order', () => {
+    if (user?.id) void queryClient.invalidateQueries({ queryKey: ['active-orders-navbar', user.id] }, { cancelRefetch: false })
+  })
+  useUserChannelRejoined(user?.id, refreshNotifications)
 
   const unreadNotificationCount = notificationData?.count || 0
   const recentNotifications = notificationData?.items || []

@@ -71,6 +71,36 @@ export async function middleware(request: NextRequest) {
   ]
   const isPublicSellerRoute = publicSellerRoutes.some(route => pathname.startsWith(route))
 
+  // /admin: no auth-server call here. Every admin page and action verifies the
+  // session itself (lib/admin/context), so this check would only repeat it: on
+  // every navigation, server-action POST and hover prefetch, from an edge
+  // location that can be far from the database. getSession reads the cookie and
+  // only goes to the network to refresh an expired token, which is the one job
+  // middleware must do here (server components cannot write cookies).
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    try {
+      const authed = createMiddlewareClient(request)
+      const {
+        data: { session },
+      } = await authed.supabase.auth.getSession()
+      if (!session) {
+        const redirectUrl = new URL('/login', request.url)
+        redirectUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+      const passThrough = NextResponse.next({ request: { headers: requestHeaders } })
+      authed.response.cookies.getAll().forEach((cookie) => {
+        passThrough.cookies.set(cookie)
+      })
+      return passThrough
+    } catch (error) {
+      console.error('Middleware admin session error:', error)
+      const redirectUrl = new URL('/login', request.url)
+      redirectUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
+
   if (isProtectedRoute && !isPublicSellerRoute) {
     try {
       // Edge-safe client built from the request's cookies. The server client
@@ -124,7 +154,16 @@ export async function middleware(request: NextRequest) {
       //   admin                    active admin (may publish, parity with RLS)
       //   applicant                application in the pipeline: wizard + drafts
       //   none                     everyone else
-      if (isSellerOnlyRoute || isListingMutation) {
+      // A server action is a POST to the page's path carrying Next-Action.
+      // It cannot follow a page redirect, and every one that changes data
+      // re-checks sellAccessKind itself (sell-wizard publish / update / bulk /
+      // upload; RLS and the listings trigger check again), so the RPC here
+      // would only add a round trip to every wizard read. A page GET (even
+      // with a forged header) is still gated below, and so is every action on
+      // a seller-only /account route. Speed audit 2026-10-29.
+      const isSellAction = isSellSurface && request.method === 'POST' && request.headers.has('next-action')
+
+      if ((isSellerOnlyRoute || isListingMutation) && !isSellAction) {
         // (cast: the edge client is typed from database.types.ts, which does
         // not carry the Functions map; the RPC is pinned server-side anyway.)
         const { data: kindRaw } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>)(

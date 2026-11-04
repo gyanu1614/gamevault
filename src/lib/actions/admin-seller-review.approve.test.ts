@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   docs: [] as Array<{ document_type: string; verified: boolean; file_path: string }>,
   profileUpdates: [] as Array<Record<string, unknown>>,
   appUpdates: [] as Array<Record<string, unknown>>,
+  appRowsChanged: [{ id: 'app-1' }] as Array<{ id: string }>,
   audits: [] as Array<Record<string, unknown>>,
 }))
 
@@ -42,7 +43,10 @@ function chain(table: string, kind: 'session' | 'service') {
     return b
   }
   b.insert = () => b
-  b.then = (ok: any) => Promise.resolve({ data: table === 'seller_kyc_documents' ? h.docs : null, error: null }).then(ok)
+  b.then = (ok: any) => {
+    const data = table === 'seller_kyc_documents' ? h.docs : table === 'seller_applications' ? h.appRowsChanged : null
+    return Promise.resolve({ data, error: null }).then(ok)
+  }
   void kind
   return b
 }
@@ -51,7 +55,7 @@ vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({ from: (t: strin
 
 import { approveApplication } from '@/lib/actions/admin-seller-review'
 
-beforeEach(() => { h.docs = []; h.profileUpdates = []; h.appUpdates = []; h.audits = [] })
+beforeEach(() => { h.docs = []; h.profileUpdates = []; h.appUpdates = []; h.appRowsChanged = [{ id: 'app-1' }]; h.audits = [] })
 
 describe('approveApplication — identity before role (ACC-02)', () => {
   it('ID + selfie missing → requiresAcknowledgement, nothing granted', async () => {
@@ -85,5 +89,13 @@ describe('approveApplication — identity before role (ACC-02)', () => {
     expect(res.success).toBe(true)
     expect(h.profileUpdates[0]).toMatchObject({ role: 'seller', kyc_status: 'approved' })
     expect(h.appUpdates[0]).toMatchObject({ identity_verified: true })
+  })
+
+  it('row security changes 0 rows with no error → reported as a failure, not as approved', async () => {
+    h.appRowsChanged = []
+    const res = await approveApplication('app-1', undefined, false, { acknowledgeKycGap: true })
+    expect(res.success).toBe(false)
+    expect(res.error).toMatch(/not updated/i)
+    expect(h.audits).toEqual([])
   })
 })

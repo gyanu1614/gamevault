@@ -1,10 +1,13 @@
 /**
  * Steal a Brainrot item data: the row shapes, number formatters and the reads
- * behind /steal-a-brainrot/values/[itemSlug]. Every read goes through the
- * ITEM's read client, so it carries this item's tags (values:<game> +
- * price:<game>:<item>) and a price crawl refreshes exactly these responses.
+ * behind /steal-a-brainrot/values/[itemSlug]. A read about THIS item goes
+ * through the item's read client (tags values:<game> + price:<game>:<item>),
+ * so a price crawl refreshes exactly those responses. A read that is the same
+ * on every item page (the mutation premiums, a rarity's siblings) goes through
+ * the game-shared client: one Data Cache entry per game, not one per item
+ * (DB read audit 2026-11-02: ~10 reads per render, 3 of them game-wide).
  */
-import { createValueItemReadClient } from '@/lib/values/read-client'
+import { createValueGameSharedReadClient, createValueItemReadClient } from '@/lib/values/read-client'
 import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import type { MutationOption } from './_ItemHero'
 
@@ -144,26 +147,32 @@ export async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
   return (data as BrainrotRow | null) ?? null
 }
 
+const MUTATION_PRICE_COLUMNS =
+  'mutation_slug,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready'
+
+/**
+ * Every mutation's market price for one brainrot. getDefaultTradePrice and
+ * getMutations both call this with the SAME query, so Next serves the second
+ * call from the first fetch in the same render (it was two reads).
+ */
+function readMutationPrices(itemSlug: string, brainrotId: string) {
+  const supabase = createValueItemReadClient(SAB_GAME, itemSlug)
+  return (supabase as any).from('sab_price_display').select(MUTATION_PRICE_COLUMNS).eq('brainrot_id', brainrotId)
+}
+
 export async function getDefaultTradePrice(
   itemSlug: string,
   brainrotId: string,
 ): Promise<TradePriceRow | null> {
-  const supabase = createValueItemReadClient(SAB_GAME, itemSlug)
-  const { data, error } = await (supabase as any)
-    .from('sab_price_display')
-    .select(
-      'market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
-    )
-    .eq('brainrot_id', brainrotId)
-    .eq('mutation_slug', 'default')
-    .maybeSingle()
+  const { data, error } = await readMutationPrices(itemSlug, brainrotId)
 
   if (error) {
     console.error('Unable to load default mutation market price:', error)
     return null
   }
 
-  return (data as TradePriceRow | null) ?? null
+  const row = ((data ?? []) as MutationMarketPriceRow[]).find((r) => r.mutation_slug === 'default')
+  return row ?? null
 }
 
 export async function getMutations(itemSlug: string, brainrotId: string): Promise<MutationOption[]> {
@@ -180,13 +189,9 @@ export async function getMutations(itemSlug: string, brainrotId: string): Promis
       )
       .eq('brainrot_id', brainrotId)
       .order('income_multiplier', { ascending: true }),
-    (supabase as any)
-      .from('sab_price_display')
-      .select(
-        'mutation_slug,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
-      )
-      .eq('brainrot_id', brainrotId),
-    (supabase as any)
+    readMutationPrices(itemSlug, brainrotId),
+    // Game-wide premiums, refreshed daily: one cache entry for every item.
+    (createValueGameSharedReadClient(SAB_GAME) as any)
       .from('sab_mutation_price_multipliers')
       .select('mutation_slug,price_multiplier'),
   ])
@@ -311,17 +316,18 @@ export async function getPriceHistory(
 }
 
 export async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<Array<BrainrotRow & { compare_usd?: number | null }>> {
-  // Read on this item's page → this item's tags, never the game list tag.
-  const supabase = createValueItemReadClient(SAB_GAME, brainrot.slug)
+  // The same two reads for every brainrot of this rarity: the game-shared
+  // client caches them once per rarity (the page's own row is dropped in JS,
+  // not with .neq, so the query stays identical across the rarity).
+  const supabase = createValueGameSharedReadClient(SAB_GAME)
   const { data } = await (supabase as any)
     .from('sab_brainrot_market_catalog')
     .select('id,name,slug,rarity,image_url,display_price_usd,display_price_label,base_income_per_second,ingame_cost')
     .eq('rarity', brainrot.rarity)
-    .neq('id', brainrot.id)
     .order('name', { ascending: true })
-    .limit(24)
+    .limit(25)
 
-  const rows = (data ?? []) as BrainrotRow[]
+  const rows = ((data ?? []) as BrainrotRow[]).filter((r) => r.id !== brainrot.id).slice(0, 24)
   if (rows.length === 0) return rows
 
   // display_price_usd only reflects verified trade-ready prices (often null).
@@ -333,7 +339,7 @@ export async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<Array<
     .eq('mutation_slug', 'default')
     .in(
       'brainrot_id',
-      rows.map((r) => r.id),
+      ((data ?? []) as BrainrotRow[]).map((r) => r.id),
     )
 
   const priceRows = (prices ?? []) as Array<{ brainrot_id: string; market_value_usd: number | string | null; average_usd: number | string | null }>

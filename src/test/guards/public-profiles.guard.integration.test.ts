@@ -14,8 +14,8 @@
  * deploy — PART A creates the view (safe under the current code), PART B
  * revokes anon once the new code is live. See the block above the describe()
  * for how the assertions below are gated:
- *   - anon loses `profiles` entirely and reads `public_profiles`, a
- *     security_invoker view of the display-only columns;
+ *   - anon loses `profiles` entirely and reads `public_profiles`, a view of the
+ *     display-only columns (it runs as its owner once DLT-001b ships);
  *   - `authenticated` KEEPS the table grant (seven security_invoker views —
  *     seller_dashboard_stats among them — read profiles as the caller and
  *     break without it) but is constrained by policy to its OWN row plus the
@@ -27,6 +27,8 @@
  * the legitimate paths survive — a shopper still sees a seller's shop, a
  * seller still reads their own full row and their dashboard stats.
  */
+import { readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -206,27 +208,18 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
     })
 
     /**
-     * DLT-001b (known, unchanged, tracked): a SIGNED-IN user can still read a
-     * stranger's full row. The baseline policy was `USING (true)` for every
-     * role, so this migration neither introduces nor widens it — it closes the
-     * anon half, which is the Critical one because the anon key is public.
-     *
-     * Closing this needs column-scoped grants for `authenticated`, and
-     * Postgres column grants are role-wide: adding them makes `SELECT email`
-     * fail for a user's OWN row too, breaking use-auth.tsx:106 (`select('*')`).
-     * The fix is a SECURITY DEFINER `get_my_profile()` RPC first.
-     *
-     * This test asserts the CURRENT state deliberately, so that when DLT-001b
-     * lands it fails loudly and is updated rather than silently passing.
+     * DLT-001b: a signed-in user reads no stranger's row. The migration waits in
+     * supabase/migrations_pending until the code is live, so a local stack may not
+     * have it yet; profile-privacy.guard applies it and tests it in full. Once it has
+     * moved into migrations/, every stack must have it.
      */
-    it('KNOWN GAP (DLT-001b): a signed-in stranger can still read another row', async () => {
+    it('DLT-001b: once shipped, a signed-in stranger cannot read another row', async () => {
       if (!viewReady) return
+      const shipped = readdirSync(join(process.cwd(), 'supabase', 'migrations')).some((f) => f.endsWith('_profiles_own_row_only.sql'))
+      if (!shipped) return
       const { data } = await fx!.buyer.client
         .from('profiles').select('id, email, seller_balance').eq('id', fx!.seller.id)
-      expect(
-        (data ?? []).length,
-        'DLT-001b appears to be FIXED — narrow this test to expect 0 rows and update the migration note',
-      ).toBe(1)
+      expect(data ?? []).toEqual([])
     })
 
     it("the buyer still sees the seller's public card through the view", async () => {

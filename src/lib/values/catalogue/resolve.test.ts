@@ -108,6 +108,77 @@ describe('resolveMarketKey', () => {
   })
 })
 
+/**
+ * 2026-11-02: Eldorado sells "Soda Knife (Summer 2025)" as knife "Soda 2025"
+ * (and Coconut, Striped, Leaves the same way): the season word goes, the year
+ * stays. A season-dated name also answers to "<name> (<year>)", at the year
+ * rule's trust, and never when two rows would claim it.
+ */
+describe('season-dated names', () => {
+  const rows = [
+    e('soda-knife-summer-2025', 'Soda Knife (Summer 2025)', 'knife', { releaseYear: 2025 }),
+    e('soda-gun-summer-2025', 'Soda Gun (Summer 2025)', 'gun', { releaseYear: 2025 }),
+    e('stickers-knife-christmas-2025', 'Stickers Knife (Christmas 2025)', 'knife', { releaseYear: 2025 }),
+    e('stickers-knife-summer-2025', 'Stickers Knife (Summer 2025)', 'knife', { releaseYear: 2025 }),
+    e('soda', 'Soda', 'gun'),
+  ]
+  const idx = buildMarketIndex(rows)
+  const r = (type: string, name: string) => resolveMarketKey(marketKey(type, 'default', name), idx)
+
+  it('drops the season, keeps the year', () => {
+    expect(r('knife', 'Soda 2025')).toMatchObject({ slug: 'soda-knife-summer-2025', via: 'year' })
+    expect(r('gun', 'Soda 2025')).toMatchObject({ slug: 'soda-gun-summer-2025', via: 'year' })
+  })
+
+  it('still answers to the full season name', () => {
+    expect(r('knife', 'Stickers (Christmas 2025)').slug).toBe('stickers-knife-christmas-2025')
+  })
+
+  it('never guesses between two seasons of the same year', () => {
+    expect(r('knife', 'Stickers 2025').slug).toBeNull()
+    expect(idx.ambiguousKeys.has(marketKey('knife', 'default', 'Stickers (2025)'))).toBe(true)
+  })
+
+  it('a plain title keeps its own exact match', () => {
+    expect(r('gun', 'Soda')).toMatchObject({ slug: 'soda', via: 'title' })
+  })
+})
+
+/**
+ * 2026-11-02: the first Halloween 2021 Stickers pair is titled "Stickers
+ * (Knife)" / "Stickers (Gun)" on the wiki, while Eldorado (which sells a
+ * dozen Stickers) names each by its event: "Stickers (Halloween 2021)". A row
+ * whose first source is a dated event or box answers to that name too.
+ */
+describe('event-dated names from the origin', () => {
+  const rows = [
+    e('stickers-knife', 'Stickers (Knife)', 'knife', { releaseYear: 2021, origin: '2021 Halloween Box' }),
+    e('stickers-gun', 'Stickers (Gun)', 'gun', { releaseYear: 2021, origin: 'Halloween Event 2021' }),
+    e('stickers-knife-halloween-2022', 'Stickers Knife (Halloween 2022)', 'knife', { releaseYear: 2022, origin: '2022 Halloween Box' }),
+    e('hearts-2016', 'Hearts (2016)', 'knife', { releaseYear: 2016, origin: 'Valentines Event 2016' }),
+    e('cowboy-knife', 'Cowboy (Knife)', 'knife', { origin: 'Shop' }),
+    e('twin-a', 'Twin (Knife)', 'knife', { releaseYear: 2024, origin: 'Christmas Event 2024' }),
+    e('twin-b', 'Twin Knife (Rare)', 'knife', { displayTitle: 'Twin', releaseYear: 2024, origin: '2024 Christmas Box' }),
+  ]
+  const idx = buildMarketIndex(rows)
+  const r = (type: string, name: string) => resolveMarketKey(marketKey(type, 'default', name), idx)
+
+  it('an item from a dated event or box sells under "<name> (<season> <year>)"', () => {
+    expect(r('knife', 'Stickers (Halloween 2021)')).toMatchObject({ slug: 'stickers-knife', via: 'year' })
+    expect(r('gun', 'Stickers (Halloween 2021)')).toMatchObject({ slug: 'stickers-gun', via: 'year' })
+  })
+
+  it('never for an undated or season-less origin, and never over a real title', () => {
+    expect(r('knife', 'Cowboy (Shop)').slug).toBeNull()
+    expect(r('knife', 'Stickers (Halloween 2022)').slug).toBe('stickers-knife-halloween-2022')
+    expect(r('knife', 'Hearts (2016)')).toMatchObject({ slug: 'hearts-2016', via: 'title' })
+  })
+
+  it('two rows from the same event claiming one name is ambiguous', () => {
+    expect(r('knife', 'Twin (Christmas 2024)').slug).toBeNull()
+  })
+})
+
 describe('suggestForReview', () => {
   it('suggests same-type rows sharing the first word, for the review CSV only', () => {
     expect(suggestForReview('gun|default|rainbow', CATALOGUE)).toEqual(['rainbow-gun', 'rainbow-gun-godly'])

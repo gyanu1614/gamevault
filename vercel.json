@@ -1,4 +1,5 @@
 {
+  "regions": ["pdx1"],
   "crons": [
     { "path": "/api/cron/expire-pending-payments", "schedule": "20 1 * * *" },
     { "path": "/api/cron/not-delivered-sweep", "schedule": "25 1 * * *" },
@@ -16,6 +17,7 @@
     { "path": "/api/cron/seo-gsc", "schedule": "20 6 * * *" },
     { "path": "/api/cron/seo-bing", "schedule": "40 7 * * *" },
     { "path": "/api/cron/values-health", "schedule": "15 9 * * *" },
-    { "path": "/api/cron/stock-alerts", "schedule": "25 9 * * *" }
+    { "path": "/api/cron/stock-alerts", "schedule": "25 9 * * *" },
+    { "path": "/api/cron/chat-email-digest", "schedule": "5 4 * * *" }
   ]
 }

@@ -4,6 +4,7 @@
  * check's alerts, IndexNow delivery, and the value-page data gate. Auth: the
  * (admin) layout; data via admin-guarded actions (lib/actions/admin-seo).
  */
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getSeoHealth, getSeoReport } from '@/lib/actions/admin-seo'
 
 import SeoHealthClient from './_SeoHealthClient'
@@ -11,6 +12,8 @@ import SeoHealthClient from './_SeoHealthClient'
 export const metadata = { title: 'SEO Health' }
 
 export default async function AdminSeoPage() {
+  await requireAdmin()
+
   const [result, report] = await Promise.all([getSeoHealth(), getSeoReport()])
   return (
     <SeoHealthClient

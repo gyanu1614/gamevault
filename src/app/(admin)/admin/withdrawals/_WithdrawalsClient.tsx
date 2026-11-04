@@ -13,7 +13,8 @@
  * in-flight forever, which is why the approved rows get the loud CTA.
  */
 
-import { useMemo, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Copy, HandCoins } from '@phosphor-icons/react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -24,6 +25,8 @@ import {
   PageHeader,
   AdminPanel,
   AdminEmpty,
+  AdminLoadingRows,
+  AdminPagination,
   StatusBadge,
   TABLE,
   adminBtn,
@@ -31,6 +34,7 @@ import {
 } from '../components/kit'
 import {
   getAllWithdrawalRequests,
+  getWithdrawalTotals,
   approveWithdrawalRequest,
   rejectWithdrawalRequest,
   markWithdrawalPaid,
@@ -74,47 +78,57 @@ const FILTERS = ['all', 'pending', 'approved', 'completed', 'rejected', 'cancell
 const usd = (n: number | string | null | undefined) =>
   `$${(Number(n) || 0).toFixed(2)}`
 
-const OPEN_STATUSES = ['pending', 'approved', 'processing']
-
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
 const DIALOG_CLS = 'max-w-[480px] border-0 p-5 sm:p-6'
 
 export default function WithdrawalsClient({
-  initialRequests,
+  initialResult,
+  initialTotals,
 }: {
-  initialRequests: RequestRow[]
+  initialResult?: Awaited<ReturnType<typeof getAllWithdrawalRequests>>
+  initialTotals?: Awaited<ReturnType<typeof getWithdrawalTotals>>['totals']
 }) {
-  const [requests, setRequests] = useState<RequestRow[]>(initialRequests)
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all')
+  const [page, setPage] = useState(1)
   const [dialog, setDialog] = useState<DialogState>(null)
   const [reason, setReason] = useState('')
   const [txRef, setTxRef] = useState('')
   const [notes, setNotes] = useState('')
   const [busy, startTransition] = useTransition()
 
-  const stats = useMemo(() => {
-    const by = (s: string) => requests.filter((r) => r.status === s)
-    const sum = (rows: RequestRow[]) => rows.reduce((t, r) => t + (Number(r.amount) || 0), 0)
-    const open = requests.filter((r) => OPEN_STATUSES.includes(r.status))
-    return {
-      pending: by('pending').length,
-      approved: by('approved').length,
-      approvedSum: sum(by('approved')),
-      paidSum: sum(by('completed')),
-      clearingSum: sum(open),
-    }
-  }, [requests])
+  const listQuery = useQuery({
+    queryKey: ['admin-withdrawals', filter, page],
+    queryFn: async () => {
+      const result = await getAllWithdrawalRequests({ status: filter === 'all' ? undefined : filter, page })
+      if (!result.success) throw new Error(result.error || 'Failed to load withdrawals')
+      return result
+    },
+    initialData: filter === 'all' && page === 1 ? initialResult : undefined,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  })
+  const totalsQuery = useQuery({
+    queryKey: ['admin-withdrawal-totals'],
+    queryFn: async () => {
+      const result = await getWithdrawalTotals()
+      if (!result.success) throw new Error(result.error || 'Failed to load withdrawal numbers')
+      return result.totals
+    },
+    initialData: initialTotals,
+    staleTime: 30_000,
+  })
 
-  const visible = useMemo(
-    () => (filter === 'all' ? requests : requests.filter((r) => r.status === filter)),
-    [requests, filter],
-  )
+  const visible = (listQuery.data?.requests ?? []) as RequestRow[]
+  const totals = totalsQuery.data
+  const counts: Record<string, number> = { all: totals?.total ?? 0, ...totals?.counts }
 
-  const refresh = async () => {
-    const result = await getAllWithdrawalRequests()
-    if (result.success && result.requests) setRequests(result.requests as RequestRow[])
-  }
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawal-totals'] }),
+    ])
 
   const closeDialog = () => {
     setDialog(null)
@@ -140,12 +154,6 @@ export default function WithdrawalsClient({
     navigator.clipboard?.writeText(text)
     toast.success('Copied.')
   }
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { all: requests.length }
-    for (const f of FILTERS) if (f !== 'all') c[f] = requests.filter((r) => r.status === f).length
-    return c
-  }, [requests])
 
   const actions = (row: RequestRow, full?: boolean) => {
     if (row.status === 'pending') {
@@ -205,10 +213,10 @@ export default function WithdrawalsClient({
 
       <StatStrip
         stats={[
-          { label: 'Pending Review', value: stats.pending },
-          { label: 'Awaiting Payout', value: stats.approved, hint: `${usd(stats.approvedSum)} to send` },
-          { label: 'Paid Out', value: usd(stats.paidSum) },
-          { label: 'In Clearing', value: usd(stats.clearingSum), hint: 'Open requests holding funds' },
+          { label: 'Pending Review', value: counts.pending ?? 0 },
+          { label: 'Awaiting Payout', value: counts.approved ?? 0, hint: `${usd(totals?.approved_sum)} to send` },
+          { label: 'Paid Out', value: usd(totals?.paid_sum) },
+          { label: 'In Clearing', value: usd(totals?.clearing_sum), hint: 'Open requests holding funds' },
         ]}
       />
 
@@ -223,12 +231,23 @@ export default function WithdrawalsClient({
           ),
         }))}
         value={filter}
-        onChange={setFilter}
+        onChange={(next) => {
+          setFilter(next)
+          setPage(1)
+        }}
         layoutId="admin-withdrawals-filter"
         ariaLabel="Withdrawal status"
       />
 
-      {visible.length === 0 ? (
+      {listQuery.isError ? (
+        <AdminEmpty
+          icon={HandCoins}
+          title="Could Not Load Withdrawals"
+          hint={(listQuery.error as Error)?.message}
+        />
+      ) : listQuery.isPending ? (
+        <AdminLoadingRows rows={6} />
+      ) : visible.length === 0 ? (
         <AdminEmpty
           icon={HandCoins}
           title={filter === 'all' ? 'No withdrawal requests yet' : `No ${filter} withdrawals`}
@@ -319,6 +338,15 @@ export default function WithdrawalsClient({
               </table>
             </div>
           </AdminPanel>
+
+          <AdminPagination
+            page={page}
+            totalPages={Math.max(1, Math.ceil((listQuery.data?.total ?? 0) / (listQuery.data?.pageSize ?? 1)))}
+            total={listQuery.data?.total ?? 0}
+            limit={listQuery.data?.pageSize ?? 0}
+            onPage={setPage}
+            noun="requests"
+          />
         </>
       )}
 

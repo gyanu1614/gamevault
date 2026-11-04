@@ -7,7 +7,6 @@
  * failures. Server-rendered data; actions refresh the route.
  */
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Warning } from '@phosphor-icons/react'
 
 import { StatStrip } from '@/components/account/AccountSurface'
@@ -43,7 +42,6 @@ export default function SeoHealthClient({
   report: SeoReport | null
   reportError?: string
 }) {
-  const router = useRouter()
   const [pending, start] = useTransition()
   const [message, setMessage] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -72,7 +70,6 @@ export default function SeoHealthClient({
       const r = await fn()
       setMessage(r.ok ? done : `Failed: ${r.error}`)
       setConfirming(false)
-      router.refresh()
     })
 
   const totals = data.sections.reduce(

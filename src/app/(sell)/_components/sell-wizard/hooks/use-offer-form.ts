@@ -10,7 +10,8 @@ import type { OfferForm } from '../offer-form'
  * change identity, so memoised children don't re-render because a parent
  * handed them a new function.
  */
-export function useOfferForm(initial: OfferForm) {
+/** `initial` may be a function: edit mode builds it from the listing once, not on every render. */
+export function useOfferForm(initial: OfferForm | (() => OfferForm)) {
   const [form, setForm] = useState<OfferForm>(initial)
 
   const update = useCallback(<K extends keyof OfferForm>(key: K, value: SetStateAction<OfferForm[K]>) => {

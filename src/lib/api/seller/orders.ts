@@ -61,7 +61,7 @@ export const ordersApi = {
               type
             )
           ),
-          buyer:buyer_id (
+          buyer:public_profiles!orders_buyer_id_fkey (
             id,
             username,
             avatar_url,
@@ -114,7 +114,7 @@ export const ordersApi = {
           game_id,
           images
         ),
-        buyer:buyer_id (
+        buyer:public_profiles!orders_buyer_id_fkey (
           id,
           username,
           avatar_url
@@ -179,7 +179,7 @@ export const buyerOrdersApi = {
               type
             )
           ),
-          seller:seller_id (
+          seller:public_profiles!orders_seller_id_fkey (
             id,
             username,
             avatar_url,
@@ -231,7 +231,7 @@ export const buyerOrdersApi = {
           delivery_method,
           delivery_time
         ),
-        seller:seller_id (
+        seller:public_profiles!orders_seller_id_fkey (
           id,
           username,
           avatar_url,

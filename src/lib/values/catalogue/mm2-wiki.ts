@@ -46,6 +46,8 @@ export interface BoxReward {
   chancePct: number | null
   /** As listed ("0.004%", "<0.2%"). */
   chanceText: string | null
+  /** The table's Type column, when it has one. */
+  itemType: 'knife' | 'gun' | 'pet' | null
 }
 
 export interface BoxPage {
@@ -68,6 +70,21 @@ export interface Mm2CatalogueItem {
   origin: string | null
   obtain: ObtainSource[]
   imageFile: string | null
+  /**
+   * False for a page that exists but is not a tradeable item: an unreleased
+   * design, a default skin, the Classic Knife/Gun every player has. Kept (it
+   * has a values page), but never priced or offered for sale.
+   */
+  tradeable: boolean
+}
+
+/** No rarity, and the page says the item was never released or is a default one. */
+function untradeable(box: Record<string, string>, wikitext: string, title: string, rarity: string | null): boolean {
+  if (rarity) return false
+  if (/\bunreleased\b|^\s*default\b/i.test(stripWiki(box.obtain ?? '')) || /\bdefault\b/i.test(stripWiki(box.rarity ?? ''))) return true
+  const name = title.replace(/\s*\([^)]*\)\s*$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const lead = wikitext.match(new RegExp(`'''${name}'''([^\\n]{0,200})`, 'i'))?.[1] ?? ''
+  return /\bunreleased\b|\bby default\b|\bdefault (?:knife|gun)\b/i.test(lead)
 }
 
 // ── wikitext helpers ─────────────────────────────────────────────────────────
@@ -166,7 +183,8 @@ export function slugifyTitle(title: string): string {
 
 // ── field parsers ────────────────────────────────────────────────────────────
 
-const RARITIES = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Godly', 'Ancient', 'Vintage', 'Unique', 'Chroma', 'Classic'] as const
+// Evo: the gamepass knives that evolve (Reaver, Icecrusher, Gingerscythe, Synthwave); the wiki keeps it in `tier=`.
+const RARITIES = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Godly', 'Ancient', 'Vintage', 'Unique', 'Chroma', 'Classic', 'Evo'] as const
 
 /** Infobox rarity → one canonical tier, or null when the page is ambiguous/N/A. */
 export function parseRarity(raw: string | null | undefined): string | null {
@@ -197,9 +215,36 @@ export function parseItemType(raw: string | null | undefined, categories: string
   return null
 }
 
-/** "Adurite (Knife)" / "Bats Knife (2018)" / "Bat (Pet)" → the type the title states. */
+/**
+ * The type the page's opening sentence states: "'''Sand''' is a common Knife
+ * obtainable…", "'''Chroma Ornament''' is a chroma knife…". It is written for
+ * the page, while the infobox `type=` is often copied from a sibling: on
+ * 2026-11-02 the infobox said Gun on Sand, Tourist, Serpent and Scarytree and
+ * "Godly" on Chroma Ornament, and Eldorado (rightly) sold all five as knives.
+ * Null unless the clause names exactly one type.
+ */
+export function typeFromLead(wikitext: string, title: string): Mm2CatalogueItem['itemType'] {
+  const name = title.replace(/\s*\([^)]*\)\s*$/, '')
+  const text = wikitext.replace(/\[\[(?:[^|\]]*\|)?([^\]]*)\]\]/g, '$1')
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = text.match(new RegExp(`'''${esc}'''\\s+(?:is|was)\\s+an?\\s+([^.\\n]{0,60})`, 'i'))
+  if (!m) return null
+  const types = new Set([...m[1].toLowerCase().matchAll(/\b(knife|knives|gun|guns|pet|pets)\b/g)].map((t) => LEAD_TYPE[t[1]]))
+  return types.size === 1 ? [...types][0] : null
+}
+const LEAD_TYPE: Record<string, 'knife' | 'gun' | 'pet'> = { knife: 'knife', knives: 'knife', gun: 'gun', guns: 'gun', pet: 'pet', pets: 'pet' }
+
+/**
+ * "Adurite (Knife)" / "Bats Knife (2018)" / "Bat (Pet)" / "Embergun" → the type
+ * the title states. A name that ends in its type ("Embergun", "Emberknife",
+ * "Biogun") is the strongest signal there is: on 2026-11-02 the wiki's own
+ * sentence called Embergun "a legendary knife".
+ */
 export function typeFromTitle(title: string): Mm2CatalogueItem['itemType'] {
-  const m = title.match(/\((Knife|Gun|Pet)\)\s*$/i) ?? title.match(/\s(Knife|Gun)\s+\([^)]*\)\s*$/i)
+  const m =
+    title.match(/\((Knife|Gun|Pet)\)\s*$/i) ??
+    title.match(/\s(Knife|Gun)\s+\([^)]*\)\s*$/i) ??
+    title.replace(/\s*\([^)]*\)\s*$/, '').match(/\S(gun|knife)$/i)
   return m ? (m[1].toLowerCase() as 'knife' | 'gun' | 'pet') : null
 }
 
@@ -245,7 +290,9 @@ export function parseObtain(raw: string | null | undefined): ObtainSource[] {
     if (!text || /^trading\b/i.test(text) || /^\w+=/.test(text)) continue
     const linked = firstLinkTarget(rawLine)
     const formerly = FORMERLY_RE.test(text)
-    const year = Number(text.match(YEAR_RE)?.[1] ?? NaN)
+    // "Summer Box '26" is the 2026 box.
+    const shortYear = text.match(/\b(?:Box|Crate)\s+'(\d{2})\b/)?.[1]
+    const year = Number(text.match(YEAR_RE)?.[1] ?? (shortYear ? `20${shortYear}` : NaN))
     const base: Omit<ObtainSource, 'kind' | 'name'> = {
       year: Number.isFinite(year) ? year : null,
       method: null,
@@ -321,16 +368,29 @@ export function parseBoxPage(title: string, wikitext: string): BoxPage {
       const chanceCell = cells.find((c) => /^<?\s*[\d.]+\s*%\**$/.test(stripWiki(c)))
       const chanceText = chanceCell ? stripWiki(chanceCell).replace(/\*+$/, '') : null
       const rarityCell = cells.find((c) => RARITIES.some((r) => stripWiki(c).toLowerCase() === r.toLowerCase()))
+      const typeCell = cells.map((c) => stripWiki(c).toLowerCase()).find((c) => c === 'knife' || c === 'gun' || c === 'pet')
       rewards.push({
         title: target,
         rarity: rarityCell ? stripWiki(rarityCell) : null,
         // "<0.2%" is a bound, not a chance: keep the text, never a number.
         chancePct: chanceText && /^[\d.]+\s*%$/.test(chanceText) ? Number(chanceText.replace('%', '')) : null,
         chanceText,
+        itemType: (typeCell as BoxReward['itemType']) ?? null,
       })
     }
   }
   return { title, purchasable, costs: parseCosts(intro), rewards }
+}
+
+/** The Type column of the box tables that list this item; null when none do, or they disagree. */
+function boxTableType(title: string, obtain: ObtainSource[], boxByTitle: Map<string, BoxPage>): Mm2CatalogueItem['itemType'] {
+  const types = new Set<BoxReward['itemType']>()
+  for (const source of obtain) {
+    if (source.kind !== 'box') continue
+    const reward = boxByTitle.get((source.wiki_page ?? source.name).toLowerCase())?.rewards.find((r) => r.title.toLowerCase() === title.toLowerCase())
+    if (reward?.itemType) types.add(reward.itemType)
+  }
+  return types.size === 1 ? [...types][0] : null
 }
 
 /** `[[Category:X]]` names on a page. */
@@ -361,14 +421,21 @@ export function buildMm2Catalogue(pages: WikiPage[], boxes: BoxPage[] = []): { i
       continue
     }
     const categories = pageCategories(page.wikitext)
-    // A type in the TITLE ("Pop Art (Knife)", "Bats Knife (2018)") beats an
-    // infobox copied from the sibling page with the wrong `type=`.
-    const itemType = typeFromTitle(page.title) ?? parseItemType(box.type, categories)
+    const obtain = parseObtain(box.obtain ?? box.oqbtain)
+    // A type in the TITLE ("Pop Art (Knife)", "Bats Knife (2018)"), then the
+    // infobox and the box table when they agree (Dolphins), then the page's
+    // own opening sentence, beat an infobox copied from the sibling page with
+    // the wrong `type=`.
+    const boxType = boxTableType(page.title, obtain, boxByTitle)
+    const itemType =
+      typeFromTitle(page.title) ??
+      (boxType && boxType === parseItemType(box.type) ? boxType : null) ??
+      typeFromLead(page.wikitext, page.title) ??
+      parseItemType(box.type, categories)
     if (!itemType) {
       skipped.push({ title: page.title, reason: `no item type (${stripWiki(box.type) || 'empty'})` })
       continue
     }
-    const obtain = parseObtain(box.obtain ?? box.oqbtain)
     if (/\(scrapped\)/i.test(page.title) || (obtain.length > 0 && obtain.every((o) => o.kind === 'unobtainable'))) {
       skipped.push({ title: page.title, reason: 'scrapped' })
       continue
@@ -398,22 +465,25 @@ export function buildMm2Catalogue(pages: WikiPage[], boxes: BoxPage[] = []): { i
     const eventYears = categories.map((c) => Number(c.match(EVENT_RE)?.[2] ?? NaN)).filter(Number.isFinite)
     const years = [...obtain.map((o) => o.year).filter((y): y is number => y != null), ...eventYears]
     const firstSource = obtain.find((o) => o.kind !== 'other') ?? obtain[0]
+    // Older pages put the tier in `type=` ("Godly Weapons") or only in
+    // categories; Evo gamepass knives keep it in `tier=`.
+    const rarity = isChroma
+      ? 'Chroma'
+      : parseRarity(box.rarity) ?? parseRarity(box.type) ?? parseRarity(box.tier) ?? rarityFromCategories(categories)
     parsed.push({
       slug,
       name,
       wikiTitle: page.title,
       displayTitle: displayTitle && displayTitle !== page.title ? displayTitle : null,
       itemType,
-      // Older pages put the tier in `type=` ("Godly Weapons") or only in categories.
-      rarity: isChroma
-        ? 'Chroma'
-        : parseRarity(box.rarity) ?? parseRarity(box.type) ?? rarityFromCategories(categories),
+      rarity,
       isChroma,
       baseSlug: null,
       releaseYear: years.length ? Math.min(...years) : null,
       origin: firstSource?.name ?? null,
       obtain,
       imageFile: parseImageFile(box.image),
+      tradeable: !untradeable(box, page.wikitext, page.title, rarity),
       _base: isChroma ? page.title.replace(/^chroma\s+/i, '') : null,
     })
   }

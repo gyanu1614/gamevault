@@ -17,6 +17,7 @@ import {
   parseRarity,
   parseRobuxPrice,
   stripWiki,
+  typeFromLead,
   typeFromTitle,
 } from './mm2-wiki'
 
@@ -188,6 +189,10 @@ describe('parseObtain', () => {
     expect(sources[2].year).toBe(2023)
     expect(sources[7].cost).toEqual({ amount: 75, currency: 'Coins' })
   })
+
+  it("dates a box written with a two-digit year (\"Summer Box '26\")", () => {
+    expect(parseObtain("[[Summer Box '26]]\n[[Trading]]")).toMatchObject([{ kind: 'box', name: "Summer Box '26", year: 2026 }])
+  })
 })
 
 describe('parseBoxPage', () => {
@@ -212,6 +217,11 @@ describe('parseBoxPage', () => {
     const chroma = box.rewards.find((r) => r.title === "Chroma Traveler's Gun")!
     expect(chroma.chancePct).toBeNull()
     expect(chroma.chanceText).toBe('<0.2%')
+  })
+
+  it('reads the Type column when the table has one', () => {
+    expect(parseBoxPage('2023 Halloween Box', HALLOWEEN_BOX_2023).rewards.map((r) => r.itemType)).toEqual(['gun', 'gun'])
+    expect(parseBoxPage('Knife Box 2', KNIFE_BOX_2).rewards.map((r) => r.itemType)).toEqual([null, null, null])
   })
 })
 
@@ -270,5 +280,130 @@ describe('buildMm2Catalogue', () => {
     ])
     applySourceCosts(gp, new Map([['batwing gamepass', { amount: 2499, currency: 'Robux' }]]))
     expect(gp[0].obtain[0]).toMatchObject({ kind: 'gamepass', cost: { amount: 2499, currency: 'Robux' }, still_obtainable: false })
+  })
+})
+
+/**
+ * 2026-11-02: the wiki's infobox said Gun on Sand, Tourist, Serpent and
+ * Scarytree and "Godly" on Chroma Ornament, while each page's own opening
+ * sentence (and Eldorado) says knife. The opening sentence is written for the
+ * page; the infobox is often copied from a sibling.
+ */
+/**
+ * 2026-11-02: the Dolphins page's opening sentence (and category) say gun,
+ * copied from a sibling page, while its infobox, its picture ("Dolphins K
+ * 2025") and the 2025 Summer Box table all say knife, as does Eldorado. The
+ * box table alone is no better: it calls Bells (a knife) a gun. So the infobox
+ * and the box table beat the sentence only when they agree.
+ */
+describe('buildMm2Catalogue: infobox and box table agreeing beat the opening sentence', () => {
+  const box = (rows: Array<[string, string]>) =>
+    parseBoxPage('2025 Summer Box', `{| class="wikitable"\n${rows.map(([t, type]) => `|-\n|[[${t}]]\n|${type}\n|Common\n|70%`).join('\n')}\n|}`)
+  const page = (title: string, type: string, lead: string) => ({
+    title,
+    wikitext: `{{Infobox_Item\n|title=${title}\n|type=[[:Category:Knives|${type}]]\n|rarity=[[Common Weapons|Common]]\n|obtain=[[2025 Summer Box]]\n}}'''${title}''' is a common ${lead} that is obtainable from the [[2025 Summer Box]].`,
+  })
+  const { items } = buildMm2Catalogue(
+    [page('Dolphins', 'Knife', 'gun'), page('Bells', 'Knife', 'knife'), page('Ritual', 'Gun', 'gun'), page('Skyline', 'Gun', 'knife')],
+    [box([['Dolphins', 'Knife'], ['Bells', 'Gun'], ['Ritual', 'Knife'], ['Skyline', 'Knife']])],
+  )
+  const typeOf = (slug: string) => items.find((i) => i.slug === slug)?.itemType
+
+  it('takes the type the infobox and the box table both state', () => {
+    expect(typeOf('dolphins')).toBe('knife')
+  })
+
+  it('keeps the sentence when the box table stands alone', () => {
+    expect(typeOf('bells')).toBe('knife')
+    expect(typeOf('ritual')).toBe('gun')
+    expect(typeOf('skyline')).toBe('knife')
+  })
+})
+
+describe('typeFromLead', () => {
+  it('reads the type the opening sentence states', () => {
+    expect(typeFromLead("{{Infobox_Item\n|title=Sand\n|type=[[:Category:Knives|Gun]]\n}}\n'''Sand''' is a common Knife obtainable from opening the [[Summer Box '26]].", 'Sand')).toBe('knife')
+    expect(typeFromLead("|theme=rare}}'''Serpent''' is a rare knife that is currently obtainable in the [[Halloween Event 2026]].", 'Serpent')).toBe('knife')
+    expect(typeFromLead("'''Chroma Ornament''' is a chroma knife that was obtainable by giving 100 [[Gifts]].", 'Chroma Ornament')).toBe('knife')
+    expect(typeFromLead("'''Sun''' is a rare gun that was originally obtainable during the [[Summer Event 2023]].", 'Sun')).toBe('gun')
+    expect(typeFromLead("'''Bat''' is a godly pet.", 'Bat (Pet)')).toBe('pet')
+  })
+
+  it('says nothing when the sentence is missing or names no single type', () => {
+    expect(typeFromLead('{{Infobox_Item\n|title=X\n}}\nNo lead here.', 'X')).toBeNull()
+    expect(typeFromLead("'''Twins''' is a knife and gun set.", 'Twins')).toBeNull()
+  })
+})
+
+describe('buildMm2Catalogue: the opening sentence beats a copied infobox type', () => {
+  const page = (title: string, type: string, lead: string) => ({
+    title,
+    wikitext: `{{Infobox_Item\n|title=${title}\n|type=${type}\n|rarity=[[Common Weapons|Common]]\n|obtain=[[Summer Event 2026]] - [[Summer Box '26]]\n}}\n'''${title}''' ${lead}`,
+  })
+  const { items } = buildMm2Catalogue([
+    page('Tourist', '[[:Category:Guns|Gun]]', "is a common Knife obtainable from opening the [[Summer Box '26]]."),
+    page('Chroma Ornament', '[[Godly Weapons|Godly]]', 'is a chroma knife that was obtainable by giving 100 Gifts.'),
+    page('Ornament', '[[:Category:Knives|Knife]]', 'is a godly knife.'),
+    page('Harvester', '[[:Category:Guns|Gun]]', 'is an ancient gun.'),
+    page('Pop Art (Knife)', '[[:Category:Guns|Gun]]', 'is a gun.'),
+  ])
+  const bySlug = new Map(items.map((i) => [i.slug, i]))
+
+  it('takes the type from the sentence when the infobox disagrees or has none', () => {
+    expect(bySlug.get('tourist')?.itemType).toBe('knife')
+    expect(bySlug.get('chroma-ornament')?.itemType).toBe('knife')
+    expect(bySlug.get('harvester')?.itemType).toBe('gun')
+  })
+
+  it('a chroma whose type is fixed links to its base again', () => {
+    expect(bySlug.get('chroma-ornament')?.baseSlug).toBe('ornament')
+  })
+
+  it('a type in the title still wins over both', () => {
+    expect(bySlug.get('pop-art-knife')?.itemType).toBe('knife')
+  })
+
+  it('a name that ends in its type wins over a wrong sentence (the wiki calls Embergun a knife)', () => {
+    const { items: [embergun] } = buildMm2Catalogue([page('Embergun', '[[:Category:Guns|Gun]]', 'is a legendary knife that is currently obtainable.')])
+    expect(embergun.itemType).toBe('gun')
+    expect(typeFromTitle('Emberknife')).toBe('knife')
+    expect(typeFromTitle('Biogun')).toBe('gun')
+    expect(typeFromTitle('Gun')).toBeNull()
+  })
+})
+
+/**
+ * 2026-11-02: 12 MM2 rows had no rarity. Four are Evo gamepass knives (the wiki
+ * keeps "Evo" in `tier=`, which was never read); eight can't be traded at all
+ * (unreleased designs, default skins, the Classic Knife/Gun everyone gets),
+ * and were offered for sale and priced like any item.
+ */
+describe('buildMm2Catalogue: Evo tier and items that cannot be traded', () => {
+  const box = (title: string, fields: string, lead: string) => ({
+    title,
+    wikitext: `{{Infobox_Item\n|title=${title}\n|type=[[:Category:Knives|Knife]]\n${fields}\n}}\n'''${title}''' ${lead}`,
+  })
+  const { items } = buildMm2Catalogue([
+    box('Reaver', '|rarity=\n|tier=Evo\n|obtain=[[Reaver Gamepass]] (Offsale)', 'is an Evo knife that was originally obtainable by purchasing the Reaver Gamepass.'),
+    box('Gingerscythe', '|rarity=[[Rare Weapons|<span>Evo</span>]]\n|tier=Evo\n|obtain=[[Gingerscythe Gamepass]]', 'is an Evo knife that was obtainable in the 2023 Christmas Event.'),
+    box('Wrapped Knife (2022)', '|rarity=N/A\n|tier=N/A\n|obtain=Unreleased', 'is an unreleased knife that was designed for the 2022 Christmas Event.'),
+    box('Classic Knife', '|rarity=N/A\n|tier=N/A\n|obtain=Default', 'or Default Knife, was a knife given to players by default upon joining a game.'),
+    box('Twitter', '|rarity=Default\n|tier=N/A\n|obtain=N/A', 'was a Default Knife skin made by didi1147.'),
+    box('Harvester', '|rarity=[[Ancient Weapons|Ancient]]\n|obtain=[[Halloween Event 2021]]', 'is an ancient knife.'),
+  ])
+  const bySlug = new Map(items.map((i) => [i.slug, i]))
+
+  it('reads the Evo tier, from rarity= or tier=', () => {
+    expect(parseRarity('Evo')).toBe('Evo')
+    expect(bySlug.get('reaver')?.rarity).toBe('Evo')
+    expect(bySlug.get('gingerscythe')?.rarity).toBe('Evo')
+  })
+
+  it('marks unreleased designs and default items as not tradeable (kept, never priced or sold)', () => {
+    expect(bySlug.get('wrapped-knife-2022')?.tradeable).toBe(false)
+    expect(bySlug.get('classic-knife')?.tradeable).toBe(false)
+    expect(bySlug.get('twitter')?.tradeable).toBe(false)
+    expect(bySlug.get('harvester')?.tradeable).toBe(true)
+    expect(bySlug.get('reaver')?.tradeable).toBe(true)
   })
 })

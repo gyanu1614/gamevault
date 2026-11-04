@@ -4,6 +4,7 @@
  * the URL so a view can be shared and the back button works; the loader
  * applies them on the server and returns one page.
  */
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getAllSellers } from '@/lib/actions/admin-all-sellers'
 import type { SellerStageFilter, SellerTrustFilter } from '@/lib/admin/all-sellers'
 import AllSellersClient from './_components/AllSellersClient'
@@ -17,6 +18,8 @@ const STAGES: SellerStageFilter[] = ['all', 'in_progress', 'live', 'listed', 'so
 const TRUST: SellerTrustFilter[] = ['all', 'verified', 'new']
 
 export default async function AdminAllSellersPage({ searchParams }: { searchParams: Search }) {
+  await requireAdmin()
+
   const stage = (STAGES.includes(one(searchParams.stage) as SellerStageFilter) ? one(searchParams.stage) : 'all') as SellerStageFilter
   const trust = (TRUST.includes(one(searchParams.trust) as SellerTrustFilter) ? one(searchParams.trust) : 'all') as SellerTrustFilter
   const filters = {

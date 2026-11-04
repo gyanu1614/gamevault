@@ -225,20 +225,34 @@ async function main() {
   // mark them ended rather than deleting, so a vanished offer stops setting the
   // price but its history survives. Only touch pet+source pairs we actually
   // observed — never retire a source this run didn't cover.
+  //
+  // One request per source per RETIRE_CHUNK pets (was one per pet+source: 795
+  // requests in 90 s on 2026-11-02). Same rows: each request still names only
+  // pets crawled from that source this run.
   let retired = 0
   const cutoff = runStartedAt // everything this run wrote carries runStartedAt
+  const RETIRE_CHUNK = 100 // ~3.7 KB of uuids per URL
+  const petsBySource = new Map()
   for (const petSource of seenPetSource) {
     const [petId, source] = petSource.split('|')
-    const { data, error } = await sb
-      .from('adopt_me_market_raw_listings')
-      .update({ listing_status: 'ended', ended_at: new Date().toISOString() })
-      .eq('pet_id', petId)
-      .eq('source', source)
-      .eq('listing_status', 'active')
-      .lt('collected_at', cutoff)
-      .select('id')
-    if (error) console.error(`  retire ${petSource}: ${error.message}`)
-    else retired += data?.length ?? 0
+    if (!petsBySource.has(source)) petsBySource.set(source, [])
+    petsBySource.get(source).push(petId)
+  }
+  const endedAt = new Date().toISOString()
+  for (const [source, petIds] of petsBySource) {
+    for (let i = 0; i < petIds.length; i += RETIRE_CHUNK) {
+      const chunk = petIds.slice(i, i + RETIRE_CHUNK)
+      const { data, error } = await sb
+        .from('adopt_me_market_raw_listings')
+        .update({ listing_status: 'ended', ended_at: endedAt })
+        .in('pet_id', chunk)
+        .eq('source', source)
+        .eq('listing_status', 'active')
+        .lt('collected_at', cutoff)
+        .select('id')
+      if (error) console.error(`  retire ${source} pets ${i + 1}-${i + chunk.length}: ${error.message}`)
+      else retired += data?.length ?? 0
+    }
   }
 
   console.log(

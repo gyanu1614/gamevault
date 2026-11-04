@@ -25,6 +25,7 @@
  * Every action: moderator gate → service-role write → notification + email
  * → admin activity log → revalidate the listing surfaces.
  */
+import { afterResponse } from '@/lib/after-response'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
@@ -101,12 +102,11 @@ export async function issueStrike(input: { sellerId: string; kind: StrikeKind; r
   if (data?.escalated) await revalidate([], [input.sellerId])
 
   const seller = await sellerContact(service, input.sellerId)
-  if (seller?.email) {
-    try {
-      await sendSellerStrikeEmail({ to: seller.email, name: displayName(seller), reason, count })
-    } catch (err) {
-      console.error('[ModerationTools] strike email failed:', err)
-    }
+  const strikeEmail = seller?.email
+  if (strikeEmail) {
+    afterResponse('ModerationTools strike email', () =>
+      sendSellerStrikeEmail({ to: strikeEmail, name: displayName(seller), reason, count }),
+    )
   }
   await createNotification({
     userId: input.sellerId,
@@ -167,12 +167,11 @@ export async function takedownListing(input: { listingId: string; reason: string
 
   const seller = await sellerContact(service, listing.seller_id)
   await createNotification({ userId: listing.seller_id, type: 'listing_taken_down', title: 'A listing was removed', message: `${listing.title}: ${reason}`, link: '/account/listings' })
-  if (seller?.email) {
-    try {
-      await sendListingTakenDownEmail({ to: seller.email, name: displayName(seller), listingTitle: listing.title, reason })
-    } catch (err) {
-      console.error('[ModerationTools] takedown email failed:', err)
-    }
+  const takedownEmail = seller?.email
+  if (takedownEmail) {
+    afterResponse('ModerationTools takedown email', () =>
+      sendListingTakenDownEmail({ to: takedownEmail, name: displayName(seller), listingTitle: listing.title, reason }),
+    )
   }
   await safeLog({ action: 'listing.takedown', actionCategory: 'moderation', resourceType: 'listing', resourceId: input.listingId, resourceName: listing.title, notes: reason, previousState: { status: listing.status }, newState: { status: 'suspended' } })
   if (input.strike !== false) {
@@ -229,12 +228,11 @@ export async function removeListingImage(input: { listingId: string; imageUrl: s
     }
   }
   const seller = await sellerContact(service, listing.seller_id)
-  if (seller?.email) {
-    try {
-      await sendImageRemovedEmail({ to: seller.email, name: displayName(seller), what: 'listing image', reason })
-    } catch (err) {
-      console.error('[ModerationTools] image email failed:', err)
-    }
+  const imageEmail = seller?.email
+  if (imageEmail) {
+    afterResponse('ModerationTools image email', () =>
+      sendImageRemovedEmail({ to: imageEmail, name: displayName(seller), what: 'listing image', reason }),
+    )
   }
   await createNotification({ userId: listing.seller_id, type: 'listing_image_removed', title: 'An image was removed', message: `${listing.title}: ${reason}`, link: `/sell/edit/${input.listingId}` })
   await safeLog({ action: 'listing.image_removed', actionCategory: 'moderation', resourceType: 'listing', resourceId: input.listingId, resourceName: listing.title, notes: reason, metadata: { imageUrl: input.imageUrl } })
@@ -273,12 +271,11 @@ export async function resetSellerAvatar(input: { userId: string; reason: string;
   } catch (err) {
     console.error('[ModerationTools] avatar delete failed:', err)
   }
-  if (seller.email) {
-    try {
-      await sendImageRemovedEmail({ to: seller.email, name: displayName(seller), what: 'profile picture', reason, locked: lock })
-    } catch (err) {
-      console.error('[ModerationTools] avatar email failed:', err)
-    }
+  const avatarEmail = seller.email
+  if (avatarEmail) {
+    afterResponse('ModerationTools avatar email', () =>
+      sendImageRemovedEmail({ to: avatarEmail, name: displayName(seller), what: 'profile picture', reason, locked: lock }),
+    )
   }
   await createNotification({ userId: input.userId, type: 'avatar_reset', title: 'Your profile picture was reset', message: reason, link: '/account/settings' })
   await safeLog({ action: 'user.avatar_reset', actionCategory: 'user', resourceType: 'user', resourceId: input.userId, notes: reason, metadata: { locked: lock } })
@@ -375,12 +372,11 @@ export async function resolveReport(input: { reportId: string; verdict: 'upheld'
         await service.from('listings').update({ moderation_notes: `Taken down: ${reason}` }).eq('id', listing.id)
         await issueStrike({ sellerId: listing.seller_id, kind: 'report_upheld', reason: `Reports upheld on ${listing.title}. ${reason}`, listingId: listing.id })
         const seller = await sellerContact(service, listing.seller_id)
-        if (seller?.email) {
-          try {
-            await sendListingTakenDownEmail({ to: seller.email, name: displayName(seller), listingTitle: listing.title, reason })
-          } catch (err) {
-            console.error('[ModerationTools] takedown email failed:', err)
-          }
+        const upheldEmail = seller?.email
+        if (upheldEmail) {
+          afterResponse('ModerationTools takedown email', () =>
+            sendListingTakenDownEmail({ to: upheldEmail, name: displayName(seller), listingTitle: listing.title, reason }),
+          )
         }
       } else {
         await takedownListing({ listingId: listing.id, reason, strike: true })

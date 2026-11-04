@@ -1,9 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { redirect } from 'next/navigation'
 import type { AdminRole, AdminUser } from '@/lib/admin/permissions-constants'
+import { getAdminGate, getVerifiedAdmin } from '@/lib/admin/context'
 
 export type { AdminRole, AdminUser }
 
@@ -12,62 +11,16 @@ export type { AdminRole, AdminUser }
 // ============================================
 
 /**
- * Check if user is authenticated and is an admin
- * Redirects to login or home if not authorized
+ * Check if user is authenticated, is active staff AND passed two-factor in this
+ * session. Redirects to login, home or the two-factor page otherwise. Answered
+ * once per request (lib/admin/context), so calling it repeatedly costs nothing.
  */
 export async function requireAdmin(): Promise<AdminUser> {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Check admin_roles table (NOT profiles.role)
-  const { data: adminRole, error } = await supabase
-    .from('admin_roles')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single() as any
-
-  if (error || !adminRole) {
-    redirect('/')
-  }
-
-  // Get permissions for this role
-  const { data: permissions } = await supabase
-    .from('role_permissions')
-    .select('permission')
-    .eq('role', adminRole.role) as any
-
-  // Fetch profile data for additional user info
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username, full_name, avatar_url')
-    .eq('id', user.id)
-    .single() as any
-
-  // Update last active timestamp. AUTH-030: admin_roles has no user write
-  // policy any more — touch it as the backend, scoped to the verified user.
-  await (createServiceRoleClient()
-    .from('admin_roles')
-    .update as any)({ last_active_at: new Date().toISOString() })
-    .eq('user_id', user.id)
-
-  return {
-    userId: user.id,
-    email: user.email || '',
-    role: adminRole.role as AdminRole,
-    isActive: adminRole.is_active,
-    permissions: permissions?.map((p: any) => p.permission) || [],
-    lastActiveAt: adminRole.last_active_at,
-    // Add profile fields for UI components
-    username: profile?.username || null,
-    full_name: profile?.full_name || null,
-    avatar_url: profile?.avatar_url || null,
-  } as any
+  const gate = await getAdminGate()
+  if (gate.status === 'signed_out') redirect('/login')
+  if (gate.status === 'not_admin') redirect('/')
+  if (gate.status === 'needs_mfa') redirect('/admin/mfa')
+  return gate.admin
 }
 
 /**
@@ -97,49 +50,11 @@ export async function requireRole(roles: AdminRole[]): Promise<AdminUser> {
 }
 
 /**
- * Get admin user without redirect (for client-side checks)
+ * Get admin user without redirect (for client-side checks). Null unless active
+ * staff with two-factor in this session.
  */
 export async function getAdminUser(): Promise<AdminUser | null> {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return null
-
-  const { data: adminRole } = await supabase
-    .from('admin_roles')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single() as any
-
-  if (!adminRole) return null
-
-  const { data: permissions } = await supabase
-    .from('role_permissions')
-    .select('permission')
-    .eq('role', adminRole.role) as any
-
-  // Fetch profile data for additional user info
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username, full_name, avatar_url')
-    .eq('id', user.id)
-    .single() as any
-
-  return {
-    userId: user.id,
-    email: user.email || '',
-    role: adminRole.role as AdminRole,
-    isActive: adminRole.is_active,
-    permissions: permissions?.map((p: any) => p.permission) || [],
-    lastActiveAt: adminRole.last_active_at,
-    // Add profile fields for UI components
-    username: profile?.username || null,
-    full_name: profile?.full_name || null,
-    avatar_url: profile?.avatar_url || null,
-    badges: [], // Default empty array for badges
-  } as any
+  return getVerifiedAdmin()
 }
 
 /**

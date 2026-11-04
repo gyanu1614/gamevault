@@ -162,7 +162,7 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
         status,
         created_at,
         quantity,
-        buyer:profiles!buyer_id(username),
+        buyer:public_profiles!orders_buyer_id_fkey(username),
         listing:listing_id (
           title,
           images,

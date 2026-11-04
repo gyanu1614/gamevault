@@ -12,8 +12,8 @@
  *  - Sending… → Sent → Read; a failure stays as "Not sent · Retry";
  *  - live: the private broadcast topic chat:<conversation id> (a DB trigger
  *    sends every new message, read receipt and reaction; only the two
- *    parties and admins may join), merged by id, plus a quiet re-sync on
- *    (re)subscribe, tab focus and a 60 s poll;
+ *    parties and admins may join), merged by id, plus a quiet re-sync of
+ *    the newest messages on (re)subscribe, tab focus and a 5 min poll;
  *  - replies (reply_to_id) and one emoji reaction per person per message
  *    (useChatReactions);
  *  - the other party's messages are stamped read only once seen (tab
@@ -26,6 +26,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { unreadMessagesQueryKey } from '@/hooks/use-unread-messages'
+import { markInboxRead } from '@/lib/chat/inbox-cache'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { attachmentOnlyLabel, uploadChatAttachment } from '@/lib/chat/attachments'
@@ -39,6 +41,7 @@ import {
   markLocalStatus,
   markReadLocally,
   mergeServer,
+  mergeServerTail,
   optimisticMessage,
   patchMessage,
   unreadFromOthers,
@@ -51,6 +54,9 @@ import { POLL_MS } from '@/lib/polling/intervals'
 
 /** Triggers closer together than this share one thread read. */
 const RESYNC_MIN_GAP_MS = 2_000
+/** The background re-sync reads only this many newest messages: realtime
+ *  delivers new ones, so the re-sync only has to catch a recent miss. */
+export const RESYNC_TAIL = 50
 
 export const ATTACH_NOT_ALLOWED = 'Files can only be sent in an active order chat.'
 
@@ -137,7 +143,7 @@ export function useChatThread({
   // Declared before the thread read below so a conversation switch clears
   // its reactions before the new read lands.
   const reactions = useChatReactions({ conversationId, conversationRef, currentUserId, supabase })
-  const { replace: replaceReactions, apply: applyReaction } = reactions
+  const { replace: replaceReactions, replaceFor: replaceReactionsFor, apply: applyReaction } = reactions
 
   // The message being replied to; a different conversation starts fresh.
   const [replyToId, setReplyToId] = useState<string | null>(null)
@@ -186,6 +192,21 @@ export function useChatThread({
     [supabase],
   )
 
+  // The newest RESYNC_TAIL messages only (index: conversation_id, created_at).
+  const fetchTail = useCallback(
+    async (convId: string): Promise<{ rows: ChatRow[]; reactions: ReactionRow[] }> => {
+      const { data, error: fetchError } = await supabase
+        .from('messages')
+        .select(THREAD_SELECT)
+        .eq('conversation_id', convId)
+        .order('created_at', { ascending: false })
+        .limit(RESYNC_TAIL)
+      if (fetchError) throw fetchError
+      return splitThreadRows(data)
+    },
+    [supabase],
+  )
+
   // Initial fetch. Unsent messages of this conversation (still sending, or
   // failed) come back with it, so switching away and back loses nothing.
   useEffect(() => {
@@ -219,9 +240,10 @@ export function useChatThread({
     }
   }, [conversationId, fetchThread, replaceReactions])
 
-  // Quiet re-sync with the server. mergeServer keeps pending/failed sends
-  // and returns the same array when nothing changed, so it never flickers.
-  // One read per burst of triggers: returning to the tab fires
+  // Quiet re-sync with the server: the newest RESYNC_TAIL messages, merged
+  // in place (older history is untouched). mergeServerTail keeps pending /
+  // failed sends and returns the same array when nothing changed, so it never
+  // flickers. One read per burst of triggers: returning to the tab fires
   // visibilitychange AND focus (and sometimes online) together.
   const lastResyncRef = useRef(0)
   const resync = useCallback(async () => {
@@ -231,21 +253,26 @@ export function useChatThread({
     if (now - lastResyncRef.current < RESYNC_MIN_GAP_MS) return
     lastResyncRef.current = now
     try {
-      const { rows, reactions: found } = await fetchThread(convId)
-      applyFor(convId, (prev) => mergeServer(prev, rows))
-      replaceReactions(convId, found)
+      const { rows, reactions: found } = await fetchTail(convId)
+      applyFor(convId, (prev) => mergeServerTail(prev, rows))
+      replaceReactionsFor(
+        convId,
+        rows.map((r) => r.id),
+        found,
+      )
     } catch {
       // A failed background re-sync is retried by the next trigger.
     }
-  }, [fetchThread, applyFor, replaceReactions])
+  }, [fetchTail, applyFor, replaceReactionsFor])
   const resyncRef = useRef(resync)
   resyncRef.current = resync
 
   // Safety net for the live channel: re-sync whenever this tab comes back
   // into view (the other party may have written while it was in the
-  // background) and once a minute while it is visible (was every 20 s, each
-  // a full-thread read; 2026-10-20 usage audit). Realtime delivers new
-  // messages; this only covers a silently deaf channel.
+  // background) and every 5 min while it is visible (was every 20 s, then
+  // 60 s, each a full-thread read; usage audit 2026-10-20, incident
+  // 2026-11-02). Realtime delivers new messages; this only covers a silently
+  // deaf channel, and reads only the newest messages.
   useEffect(() => {
     if (!conversationId) return
     const onVisible = () => {
@@ -263,13 +290,17 @@ export function useChatThread({
     }
   }, [conversationId])
 
-  const invalidateUnread = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['unread-messages', currentUserId] })
-    queryClient.invalidateQueries({ queryKey: ['unread-messages'] })
-    queryClient.invalidateQueries({ queryKey: ['seller', 'messages', 'conversations'] })
-  }, [queryClient, currentUserId])
-  const invalidateUnreadRef = useRef(invalidateUnread)
-  invalidateUnreadRef.current = invalidateUnread
+  // After I mark messages read: my badge drops (one RPC, joined if one is
+  // already in flight) and the inbox row clears in the cache — no inbox
+  // refetch. New messages need nothing here: the badge and the inbox hear
+  // them on the user's live channel (user:<id>).
+  const afterMarkedRead = useCallback(
+    (convId: string) => {
+      void queryClient.invalidateQueries({ queryKey: unreadMessagesQueryKey(currentUserId) }, { cancelRefetch: false })
+      markInboxRead(queryClient, convId)
+    },
+    [queryClient, currentUserId],
+  )
 
   // Live channel: the private topic chat:<conversation id>. A DB trigger
   // broadcasts each messages INSERT/UPDATE and message_reactions change
@@ -303,7 +334,6 @@ export function useChatThread({
           if (event.op !== 'INSERT' || row.sender_id === currentUserId) return
           const { visible, atBottom: seesNewest } = seenRef.current
           onIncomingRef.current?.(row, visible && seesNewest)
-          if (row.sender_id) invalidateUnreadRef.current()
         })
         .on('broadcast', { event: 'reaction' }, (msg) => {
           const event = parseChatBroadcast(msg)
@@ -345,12 +375,12 @@ export function useChatThread({
         .is('read_at', null)
       if (cancelled || readError) return
       setMessages((prev) => markReadLocally(prev, ids, readAt))
-      invalidateUnread()
+      afterMarkedRead(conversationId)
     })()
     return () => {
       cancelled = true
     }
-  }, [unreadKey, isVisible, atBottom, isLoading, conversationId, currentUserId, supabase, invalidateUnread])
+  }, [unreadKey, isVisible, atBottom, isLoading, conversationId, currentUserId, supabase, afterMarkedRead])
 
   /** Store one queued message. Idempotent: the row id is minted on the
    *  client, so a retry after a lost response cannot create a second row. */
@@ -388,7 +418,6 @@ export function useChatThread({
 
         pendingRef.current.delete(id)
         applyFor(convId, (prev) => upsertRow(prev, stored))
-        invalidateUnread()
         onDeliveredRef.current?.(stored)
       } catch (err) {
         console.error('Error sending message:', err)
@@ -401,7 +430,7 @@ export function useChatThread({
         }
       }
     },
-    [currentUserId, supabase, invalidateUnread, applyFor],
+    [currentUserId, supabase, applyFor],
   )
 
   const retry = useCallback((id: string) => void deliver(id), [deliver])

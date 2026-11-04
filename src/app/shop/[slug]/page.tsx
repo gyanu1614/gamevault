@@ -191,8 +191,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-// ISR Configuration - Revalidate every 60 seconds
-export const revalidate = 60
+// ISR safety net: 10 minutes (was 60 s — five reads per render, every minute
+// per visited shop; DB read audit 2026-11-02). Listing, price, pause and
+// banner changes already revalidate this path the moment they happen
+// (revalidateListingSurfaces, store-banner); the window only bounds reviews
+// and profile edits.
+export const revalidate = 600
 
 /**
  * Seller storefronts are an open-ended, constantly growing set, so none are

@@ -58,6 +58,7 @@ export function parseMm2Page(page: WikiPage, boxes: BoxPage[], checkedAt: string
       displayTitle: item.displayTitle,
       releaseYear: item.releaseYear,
       obtain: item.obtain,
+      tradeable: item.tradeable,
     },
   }
 }
@@ -98,9 +99,14 @@ export const murderMystery2: CatalogueAdapter = {
   gameSlug: 'murder-mystery-2',
   label: 'items',
   wikiHost: HOST,
+  // The infobox listing catches item pages nobody put in Category:Weapons:
+  // on 2026-11-02 Bones (2016), Pool Knife (Summer 2025), Stickers
+  // (Thanksgiving 2025), Floral (2026) and Sunset (2026) were sold on Eldorado
+  // and never read. Non-item infobox pages (effects, emotes, misc) parse to null.
   listQueries: [
     { list: 'categorymembers', title: 'Category:Weapons' },
     { list: 'categorymembers', title: 'Category:Pets' },
+    { list: 'embeddedin', title: 'Template:Infobox Item' },
   ],
 
   /** Box pages (about 40, two requests): each new box item's odds and prices. */
@@ -159,7 +165,8 @@ export const murderMystery2: CatalogueAdapter = {
         how_to_get: item.howToGet,
         image_url: copied ? publicImageUrl(db, BUCKET, path) : null,
         image_attribution: copied && item.imageFile ? attribution(item.imageFile) : null,
-        is_priced: true,
+        // An unreleased design or default skin keeps its page but is never priced or sold.
+        is_priced: item.extra.tradeable !== false,
         is_enabled: true,
         sort_order: order++,
       })

@@ -7,6 +7,7 @@
  * slugs / 'custom:<name>' entries). Auth is enforced by the (admin) layout.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getEarlySellerSignups } from '@/lib/actions/early-seller'
 import { getAllGames } from '@/lib/utils/games'
 import { GAME_ICONS } from '@/features/home/lib/game-icons'
@@ -15,6 +16,8 @@ import EarlySellersClient, { type GameMeta } from './_EarlySellersClient'
 export const metadata = { title: 'Founding Sellers' }
 
 export default async function AdminEarlySellersPage() {
+  await requireAdmin()
+
   const [result, games] = await Promise.all([getEarlySellerSignups(), getAllGames()])
 
   // slug → {name, icon} for rendering game chips. Only slugs with a real logo

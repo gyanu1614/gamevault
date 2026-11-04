@@ -5,12 +5,15 @@
  * server so the page arrives rendered, then hands them to the client component
  * as initial data (same pattern as /admin/games).
  */
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { fetchImportBatches, fetchImportableGames, fetchStoreSellers } from '@/lib/actions/admin-imports'
 import ImportsPageClient from './_components/ImportsPageClient'
 
 export const metadata = { title: 'Bulk Import' }
 
 export default async function AdminImportsPage() {
+  await requireAdmin()
+
   const [batches, games, sellers] = await Promise.all([
     fetchImportBatches(),
     fetchImportableGames(),

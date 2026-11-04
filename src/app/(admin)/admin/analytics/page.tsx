@@ -5,21 +5,20 @@
  */
 
 import { getAnalyticsData } from '@/lib/actions/admin-analytics'
-import { getAdminUser } from '@/lib/actions/admin-permissions'
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { redirect } from 'next/navigation'
 import AnalyticsClient from './AnalyticsClient'
 
 export const metadata = { title: 'Analytics' }
 
 export default async function AdminAnalyticsPage() {
-  // Pre-check admin status without redirect
-  const admin = await getAdminUser()
-
-  if (!admin || !admin.isActive) {
-    redirect('/')
+  // Support and moderators don't see this page in the sidebar; send a direct
+  // visit back to the dashboard rather than an error.
+  const admin = await requireAdmin()
+  if (admin.role !== 'admin' && admin.role !== 'super_admin') {
+    redirect('/admin')
   }
 
-  // Fetch analytics data
   const result = await getAnalyticsData()
 
   return (

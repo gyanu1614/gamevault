@@ -32,7 +32,6 @@ export default function ReportsClient({ tab, rows, error }: { tab: 'open' | 'res
       if (!r.success) return setFailed(r.error)
       setUphold(null)
       setReason('')
-      router.refresh()
     })
   }
 

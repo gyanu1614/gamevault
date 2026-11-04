@@ -294,7 +294,10 @@ export async function getValueItem(
  */
 export async function getValueItemFacts(gameSlug: string, itemSlug: string): Promise<ItemFacts> {
   const supabase = createValuesReadClient({ gameSlug, itemSlug })
-  const gameId = await gameIdFor(supabase, gameSlug)
+  // The game id through the game-shared client: the same request getValueItems
+  // makes, so it is one cache entry per game (it was a games read cached per
+  // item; DB read audit 2026-11-02).
+  const gameId = await gameIdFor(createValueGameSharedReadClient(gameSlug), gameSlug)
   if (!gameId) return NO_FACTS
   const { data, error } = await (supabase as any)
     .from('values_items')

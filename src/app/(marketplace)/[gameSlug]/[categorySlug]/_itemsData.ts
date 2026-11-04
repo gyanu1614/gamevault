@@ -16,7 +16,7 @@ import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/se
 import 'server-only'
 import type { ItemOffer, ItemsTaxonomy, TaxonomyOption } from './_itemsTypes'
 import { buildItemSlug } from '@/lib/utils/item-seo-slug'
-import { getAttributeTemplateByGameAndCategory } from '@/lib/actions/new-schema'
+import { getItemsFilterTemplate } from '@/lib/sell/template-read'
 
 /* ──────────────────────────────────────────────────────────────────────────
    Hue table — keeps category badges visually consistent across requests.
@@ -73,11 +73,12 @@ export async function loadItemsTaxonomy(
   gameId: string,
   globalCategorySlug = 'items',
 ): Promise<ItemsTaxonomy> {
-  const res = await getAttributeTemplateByGameAndCategory(gameId, globalCategorySlug)
   const empty: ItemsTaxonomy = { filters: [], categories: [], mutations: [] }
-  if (!res.success || !res.data) return empty
+  // Cached under SELL_TEMPLATE_TAG, so an admin edit or a sell-form sync reaches the filters at once.
+  const template = await getItemsFilterTemplate(gameId, globalCategorySlug).catch(() => null)
+  if (!template) return empty
 
-  const attrs = (res.data.attributes ?? []).filter(
+  const attrs = (template.attributes ?? []).filter(
     (a) => a.type === 'select' || a.type === 'multiselect' || a.type === 'image_select',
   )
   if (attrs.length === 0) return empty

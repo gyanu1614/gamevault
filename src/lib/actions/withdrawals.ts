@@ -1,8 +1,10 @@
 'use server'
 
+import { afterResponse } from '@/lib/after-response'
+import { timed } from '@/lib/admin/timing'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
 import { emailAllowed } from '@/lib/email/preferences'
 import { revealPayoutSecret } from '@/lib/crypto/payout-encryption'
 
@@ -316,17 +318,39 @@ export async function cancelWithdrawalRequest(requestId: string): Promise<{
 
 // ADMIN FUNCTIONS
 
-// 6. Get all withdrawal requests (admin)
+// 6. One page of withdrawal requests (admin)
+const WITHDRAWALS_PAGE_SIZE = 50
+
 export async function getAllWithdrawalRequests(filters?: {
   status?: string
   method?: string
+  page?: number
 }): Promise<{
   success: boolean
   requests?: any[]
+  total?: number
+  page?: number
+  pageSize?: number
+  error?: string
+}> {
+  return timed('getAllWithdrawalRequests', () => readWithdrawalRequests(filters))
+}
+
+async function readWithdrawalRequests(filters?: { status?: string; method?: string; page?: number }): Promise<{
+  success: boolean
+  requests?: any[]
+  total?: number
+  page?: number
+  pageSize?: number
   error?: string
 }> {
   try {
+    // Decrypted payout destinations: the same roles that can decide on them.
+    await requireRole(['admin', 'super_admin'])
     const supabase = await createClient()
+
+    const page = Math.max(1, filters?.page ?? 1)
+    const from = (page - 1) * WITHDRAWALS_PAGE_SIZE
 
     let query = supabase
       .from('withdrawal_requests' as any)
@@ -334,8 +358,9 @@ export async function getAllWithdrawalRequests(filters?: {
         *,
         user:profiles!withdrawal_requests_user_id_fkey(username, email, avatar_url),
         method:withdrawal_methods(display_name, icon_name)
-      `)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false })
+      .range(from, from + WITHDRAWALS_PAGE_SIZE - 1)
 
     if (filters?.status) {
       query = query.eq('status', filters.status)
@@ -345,23 +370,56 @@ export async function getAllWithdrawalRequests(filters?: {
       query = query.eq('method_name', filters.method)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query
 
     if (error) throw error
 
     // PR 7: risk snapshot per row (account age, completed sales, open disputes,
-    // refund rate, recent payout-detail change) from ONE SQL function.
-    const service = createServiceRoleClient()
+    // refund rate, recent payout-detail change), one call for the page.
     const rows = (data ?? []) as any[]
     const sellerIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
     const snapshots = new Map<string, any>()
-    await Promise.all(sellerIds.map(async (id) => {
-      const { data: snap } = await (service.rpc as any)('withdrawal_risk_snapshot', { p_seller_id: id })
-      if (snap) snapshots.set(id, snap)
-    }))
+    if (sellerIds.length > 0) {
+      const { data: risks, error: riskError } = await (createServiceRoleClient().rpc as any)('withdrawal_risk_snapshots', { p_seller_ids: sellerIds })
+      if (riskError) throw riskError
+      for (const r of risks ?? []) snapshots.set(r.seller_id, r.snapshot)
+    }
     const requests = rows.map((r) => ({ ...r, payment_details: revealPaymentDetails(r.payment_details), risk: snapshots.get(r.user_id) ?? null }))
 
-    return { success: true, requests }
+    return { success: true, requests, total: count ?? 0, page, pageSize: WITHDRAWALS_PAGE_SIZE }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/** The queue's numbers and tab counts, over every request. */
+export async function getWithdrawalTotals(): Promise<{
+  success: boolean
+  totals?: {
+    total: number
+    counts: Record<string, number>
+    approved_sum: number
+    paid_sum: number
+    clearing_sum: number
+  }
+  error?: string
+}> {
+  try {
+    await requireRole(['admin', 'super_admin'])
+    const { data, error } = await (createServiceRoleClient().rpc as any)('admin_withdrawal_totals', {
+      p_open_statuses: ['pending', 'approved', 'processing'],
+    })
+    if (error) throw error
+    return {
+      success: true,
+      totals: {
+        total: Number(data.total ?? 0),
+        counts: data.counts ?? {},
+        approved_sum: Number(data.approved_sum ?? 0),
+        paid_sum: Number(data.paid_sum ?? 0),
+        clearing_sum: Number(data.clearing_sum ?? 0),
+      },
+    }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
@@ -377,9 +435,9 @@ export async function approveWithdrawalRequest(params: {
   error?: string
 }> {
   try {
-    // SECURITY: admin-only. Gate on admin_roles BEFORE switching to the
-    // RLS-bypassing service-role client.
-    const admin = await requireAdmin()
+    // SECURITY: the money roles only (admin / super_admin, like mark-paid and
+    // the sidebar). Gate BEFORE switching to the RLS-bypassing service-role client.
+    const admin = await requireRole(['admin', 'super_admin'])
 
     // Ledger note: the funds were already moved into payout_clearing when
     // the request was created (withdrawal_request). Approval flips status only;
@@ -393,7 +451,7 @@ export async function approveWithdrawalRequest(params: {
     if (error) throw error
     if (!approved?.changed) return { success: true }
 
-    await (async () => {
+    afterResponse('Withdrawals approval comms', async () => {
       const { data: profile } = await serviceClient
         .from('profiles').select('email, username, full_name').eq('id', approved.user_id).single() as any
       if (profile?.email) {
@@ -407,7 +465,7 @@ export async function approveWithdrawalRequest(params: {
           status: 'approved',
         })
       }
-    })().catch((err) => console.error('[Withdrawals] Approval comms failed:', err))
+    })
 
     return { success: true }
   } catch (error: any) {
@@ -428,9 +486,9 @@ export async function markWithdrawalPaid(params: {
   error?: string
 }> {
   try {
-    // SECURITY: settles real money movement, so this is tighter than
-    // approve/reject — support/moderator roles pass requireAdmin but must not
-    // be able to record payouts. Checked BEFORE any service-role work.
+    // SECURITY: settles real money movement; support/moderator roles pass
+    // requireAdmin but must not be able to record payouts. Checked BEFORE any
+    // service-role work.
     const admin = await requireRole(['admin', 'super_admin'])
 
     const reference = (params.reference ?? params.transactionHash ?? '').trim()
@@ -456,7 +514,7 @@ export async function markWithdrawalPaid(params: {
       return { success: false, error: `Only an approved withdrawal can be marked paid — this one is ${paid?.status ?? 'unknown'}.` }
     }
 
-    await (async () => {
+    afterResponse('Withdrawals paid comms', async () => {
       const { data: profile } = await serviceClient
         .from('profiles').select('email, username, full_name').eq('id', paid.user_id).single() as any
       // Settings → Notifications → Payout Processed (the paid email only;
@@ -473,7 +531,7 @@ export async function markWithdrawalPaid(params: {
           txReference: paid.reference,
         })
       }
-    })().catch((err) => console.error('[Withdrawals] Paid comms failed:', err))
+    })
 
     return { success: true }
   } catch (error: any) {
@@ -490,10 +548,11 @@ export async function rejectWithdrawalRequest(params: {
   error?: string
 }> {
   try {
-    // SECURITY: admin-only. Gate on admin_roles BEFORE switching to the
-    // RLS-bypassing service-role client. Previously this only checked
-    // "is logged in", letting any user grief others' pending withdrawals.
-    const admin = await requireAdmin()
+    // SECURITY: the money roles only (admin / super_admin, like mark-paid and
+    // the sidebar). Gate BEFORE switching to the RLS-bypassing service-role
+    // client. Previously this only checked "is logged in", letting any user
+    // grief others' pending withdrawals.
+    const admin = await requireRole(['admin', 'super_admin'])
 
     // DB-015: reversal FIRST, then the status flip — in ONE DB transaction
     // (withdrawal_reject RPC). A refused reversal (hold already paid out)
@@ -514,10 +573,10 @@ export async function rejectWithdrawalRequest(params: {
       : []
 
     // Tell the user their withdrawal was declined (in-app + email).
-    // Awaited but isolated: comms failures must never fail the decision.
+    // After the response: comms failures must never fail the decision.
     const request = updatedRows?.[0]
     if (request) {
-      await (async () => {
+      afterResponse('Withdrawals rejection comms', async () => {
         const [{ data: profile }, { data: method }] = await Promise.all([
           serviceClient
             .from('profiles')
@@ -546,7 +605,7 @@ export async function rejectWithdrawalRequest(params: {
             reason: params.reason,
           })
         }
-      })().catch((err) => console.error('[Withdrawals] Rejection comms failed:', err))
+      })
     }
 
     return { success: true }

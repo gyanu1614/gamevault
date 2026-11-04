@@ -40,14 +40,11 @@ export async function fetchAdminGames() {
 
   if (error || !gamesData) return []
 
-  const { data: counts } = await supabase
-    .from('listings')
-    .select('game_id')
-    .eq('status', 'active')
+  const { data: counts } = await (supabase.rpc as any)('admin_game_listing_counts')
 
   const countMap: Record<string, number> = {}
-  counts?.forEach((l: any) => {
-    countMap[l.game_id] = (countMap[l.game_id] || 0) + 1
+  counts?.forEach((c: any) => {
+    countMap[c.game_id] = Number(c.active_listings)
   })
 
   return gamesData.map((g: any) => ({ ...g, listing_count: countMap[g.id] || 0 }))

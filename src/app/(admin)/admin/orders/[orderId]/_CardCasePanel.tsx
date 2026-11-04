@@ -13,7 +13,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { CircleNotch } from '@phosphor-icons/react'
 import { adminSettleCardCase, adminSubmitCardDisputeEvidence, adminUnblockBuyer } from '@/lib/actions/admin-card-cases'
@@ -54,7 +53,6 @@ export function CardCasePanel({
   /** The seller's delivery photos (10-minute links), offered with Submit Evidence. */
   proofPhotos: Array<{ path: string; url: string }>
 }) {
-  const router = useRouter()
   const [pending, setPending] = useState<Pending>(null)
   const [chosen, setChosen] = useState<Set<string>>(new Set())
   const [busy, start] = useTransition()
@@ -83,7 +81,6 @@ export function CardCasePanel({
       if (!r.success) return void toast.error(r.error)
       toast.success(r.message)
       setPending(null)
-      router.refresh()
     })
   }
 

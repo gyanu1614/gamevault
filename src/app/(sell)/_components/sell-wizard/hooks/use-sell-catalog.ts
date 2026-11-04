@@ -15,6 +15,7 @@ import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import type { AttributeTemplateFull, GlobalCategory } from '@/lib/actions/new-schema'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import type { WizardPrefill } from '@/lib/sell/wizard-prefill'
+import type { WizardStart } from '@/lib/sell/wizard-start'
 import { safeLocal } from '@/lib/safe-storage'
 import { sellTemplateQuery } from '@/lib/sell/template-client'
 
@@ -38,10 +39,12 @@ export function useSellCatalog(input: {
   platform: string
   isEditMode: boolean
   prefill: WizardPrefill | null
+  /** `?game=&category=`: the page already read the category's games (and maybe the template). */
+  start?: WizardStart | null
 }) {
-  const { category, game, bundleId, region, platform, isEditMode, prefill } = input
+  const { category, game, bundleId, region, platform, isEditMode, prefill, start = null } = input
 
-  const [games, setGames] = useState<SellGameOption[]>(prefill?.games ?? [])
+  const [games, setGames] = useState<SellGameOption[]>(prefill?.games ?? start?.games ?? [])
   const [gamesLoading, setGamesLoading] = useState(false)
   const [currencyConfig, setCurrencyConfig] = useState<CurrencyConfig | null>(prefill?.currencyConfig ?? null)
   const [currencyConfigLoading, setCurrencyConfigLoading] = useState(false)
@@ -50,7 +53,7 @@ export function useSellCatalog(input: {
 
   // What the prefill already loaded, so the first effect run skips its fetch.
   const loaded = useRef({
-    gamesFor: prefill ? prefill.listing.category_slug : null,
+    gamesFor: prefill ? prefill.listing.category_slug : start?.categorySlug ?? null,
     configFor: prefill ? prefill.game.game_id : null,
   })
 
@@ -92,11 +95,13 @@ export function useSellCatalog(input: {
   // prefetched on step 2, seeded from the edit/duplicate prefill. The game
   // option already carries its game_category_id, so nothing is re-resolved.
   const templateId = category && game ? game.game_category_id : null
-  const prefillTemplateId = prefill?.game.game_category_id ?? null
+  const seeded = prefill
+    ? { id: prefill.game.game_category_id, template: prefill.template }
+    : start && start.template !== undefined ? { id: start.game.game_category_id, template: start.template } : null
   const templateQuery = useQuery({
     ...sellTemplateQuery(templateId ?? ''),
     enabled: !!templateId,
-    initialData: templateId && templateId === prefillTemplateId ? prefill?.template ?? null : undefined,
+    initialData: templateId && seeded && templateId === seeded.id ? seeded.template ?? null : undefined,
   })
   const template: AttributeTemplateFull | null = templateId ? templateQuery.data ?? null : null
   const templateLoading = !!templateId && templateQuery.isPending

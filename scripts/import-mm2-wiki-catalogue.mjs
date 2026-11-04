@@ -131,7 +131,7 @@ async function discoverPages(itemPages, feedPath) {
   const config = eldoradoStructuredConfig(GAME)
   const feed = JSON.parse(await readFile(feedPath, 'utf8'))
   const { items } = buildMm2Catalogue(itemPages)
-  const entries = items.map((i) => ({ slug: i.slug, title: i.wikiTitle, displayTitle: i.displayTitle, itemType: i.itemType, isChroma: i.isChroma, releaseYear: i.releaseYear }))
+  const entries = items.map((i) => ({ slug: i.slug, title: i.wikiTitle, displayTitle: i.displayTitle, itemType: i.itemType, isChroma: i.isChroma, releaseYear: i.releaseYear, origin: i.origin }))
   const index = buildMarketIndex(entries)
   const known = new Set(itemPages.map((p) => p.title))
   const word = { knife: 'Knife', gun: 'Gun', pet: 'Pet', misc: 'Misc' }
@@ -169,7 +169,7 @@ async function aliasReview(items, feedPath) {
   const config = eldoradoStructuredConfig(GAME)
   const feed = JSON.parse(await readFile(feedPath, 'utf8'))
   const aliases = fs.existsSync(ALIASES) ? JSON.parse(fs.readFileSync(ALIASES, 'utf8')) : {}
-  const entries = items.map((i) => ({ slug: i.slug, title: i.wikiTitle, displayTitle: i.displayTitle, itemType: i.itemType, isChroma: i.isChroma, releaseYear: i.releaseYear }))
+  const entries = items.map((i) => ({ slug: i.slug, title: i.wikiTitle, displayTitle: i.displayTitle, itemType: i.itemType, isChroma: i.isChroma, releaseYear: i.releaseYear, origin: i.origin }))
   const index = buildMarketIndex(entries, Object.entries(aliases).map(([key, slug]) => ({ key, slug })))
   const unmatched = new Map()
   let ok = 0
@@ -246,7 +246,7 @@ async function write(items) {
     origin: i.origin,
     obtain: i.obtain,
     wiki_title: i.wikiTitle,
-    is_priced: true,
+    is_priced: i.tradeable !== false,
     is_enabled: true,
     sort_order: startOrder + n,
   }))

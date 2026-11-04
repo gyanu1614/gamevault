@@ -10,6 +10,8 @@
  * their data for display.
  */
 
+import { timed } from '@/lib/admin/timing'
+import { sellsGames } from '@/lib/founding/onboarding'
 import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
@@ -252,7 +254,96 @@ function latestIso(...values: (string | null | undefined)[]): string | null {
 
 // ─── Read ────────────────────────────────────────────────────────────────────
 
+const RECENT_LISTINGS = 8
+const RECENT_ORDERS = 10
+
+/** The signed agreements (service role; the bucket is private, so the signature image is a 10-minute signed URL). */
+async function readSellerAgreements(service: any, userId: string): Promise<SellerAgreementRow[]> {
+  try {
+    const { data: rows } = await service
+      .from('seller_agreements')
+      .select('id, agreement_version, signed_at, typed_name, ip, user_agent, agreement_sha256, signature_path')
+      .eq('user_id', userId)
+      .order('signed_at', { ascending: false })
+      .limit(10)
+    const agreements = (rows ?? []) as any[]
+    const paths = agreements.map((a) => a.signature_path).filter(Boolean) as string[]
+    const signed = paths.length > 0 ? (await service.storage.from('seller-signatures').createSignedUrls(paths, 600)).data : []
+    const urlByPath = new Map<string, string | null>((signed ?? []).map((u: any) => [u.path, u.signedUrl ?? null]))
+    return agreements.map((a) => ({
+      id: a.id,
+      version: a.agreement_version,
+      signed_at: a.signed_at,
+      typed_name: a.typed_name,
+      ip: a.ip ? String(a.ip) : null,
+      user_agent: a.user_agent ?? null,
+      sha256: a.agreement_sha256,
+      signature_url: a.signature_path ? urlByPath.get(a.signature_path) ?? null : null,
+    }))
+  } catch (err) {
+    console.error('seller_agreements read failed:', err)
+    return []
+  }
+}
+
+/** Open seller signup answers (country, Discord, games they sell). */
+async function readSellerOnboarding(service: any, userId: string): Promise<SellerDetail['onboarding']> {
+  try {
+    const { data: ob } = await service
+      .from('seller_onboarding')
+      .select('country, discord, sells, current_step, created_at, completed_at, source, full_name, address_line, city, expected_volume')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (!ob) return null
+    return {
+      country: ob.country ?? null,
+      discord: ob.discord ?? null,
+      full_name: ob.full_name ?? null,
+      address_line: ob.address_line ?? null,
+      city: ob.city ?? null,
+      expected_volume: ob.expected_volume ?? null,
+      sells: sellsGames(ob.sells),
+      current_step: ob.current_step ?? null,
+      started_at: ob.created_at,
+      completed_at: ob.completed_at ?? null,
+      source: ob.source ?? null,
+    }
+  } catch (err) {
+    console.error('seller_onboarding read failed:', err)
+    return null
+  }
+}
+
+/** Moderation: strikes, avatar lock, open buyer reports on their listings. */
+async function readSellerModeration(service: any, userId: string): Promise<SellerDetail['moderation']> {
+  try {
+    const [{ data: strikes }, { data: lockRow }, { data: reportRows }] = await Promise.all([
+      service.from('seller_strikes').select('id, kind, reason, listing_id, created_at, revoked_at').eq('seller_id', userId).order('created_at', { ascending: false }).limit(50),
+      service.from('profiles').select('avatar_locked_at').eq('id', userId).maybeSingle(),
+      service.from('listing_reports').select('id, listing:listings!inner(seller_id)').eq('status', 'open').eq('listing.seller_id', userId).limit(100),
+    ])
+    const rows = (strikes ?? []) as SellerStrikeRow[]
+    return {
+      strikes: rows,
+      activeStrikes: rows.filter((r) => !r.revoked_at).length,
+      avatarLockedAt: lockRow?.avatar_locked_at ?? null,
+      openReports: Array.isArray(reportRows) ? reportRows.length : 0,
+    }
+  } catch (err) {
+    console.error('seller moderation read failed:', err)
+    return { strikes: [], activeStrikes: 0, avatarLockedAt: null, openReports: 0 }
+  }
+}
+
 export async function getSellerDetail(userId: string): Promise<{
+  success: boolean
+  detail?: SellerDetail
+  error?: string
+}> {
+  return timed('getSellerDetail', () => readSellerDetail(userId))
+}
+
+async function readSellerDetail(userId: string): Promise<{
   success: boolean
   detail?: SellerDetail
   error?: string
@@ -278,6 +369,10 @@ export async function getSellerDetail(userId: string): Promise<{
       reviewsRes,
       applicationRes,
       authUserRes,
+      numbersRes,
+      agreements,
+      onboarding,
+      moderation,
     ] = await Promise.all([
       service
         .from('profiles')
@@ -295,12 +390,14 @@ export async function getSellerDetail(userId: string): Promise<{
         .from('listings')
         .select('id, title, price, status, created_at, images, moderation_notes, game:games!listings_game_id_fkey(name)')
         .eq('seller_id', userId)
-        .order('created_at', { ascending: false }) as any,
+        .order('created_at', { ascending: false })
+        .limit(RECENT_LISTINGS) as any,
       service
         .from('orders')
         .select('id, order_number, total_amount, seller_payout, status, created_at')
         .eq('seller_id', userId)
-        .order('created_at', { ascending: false }) as any,
+        .order('created_at', { ascending: false })
+        .limit(RECENT_ORDERS) as any,
       Promise.all(
         BALANCE_CURRENCIES.map(async (currency) => {
           const { data, error } = await (service.rpc as any)('seller_available_balance', {
@@ -389,6 +486,10 @@ export async function getSellerDetail(userId: string): Promise<{
       service.auth.admin
         .getUserById(userId)
         .catch(() => ({ data: { user: null }, error: null })) as any,
+      (service.rpc as any)('admin_seller_detail_numbers', { p_seller_id: userId }),
+      readSellerAgreements(service, userId),
+      readSellerOnboarding(service, userId),
+      readSellerModeration(service, userId),
     ])
 
     const profile = profileRes.data
@@ -396,101 +497,20 @@ export async function getSellerDetail(userId: string): Promise<{
       return { success: false, error: 'Seller not found' }
     }
 
-    // Listings: fold counts by status, keep the 8 most recent.
+    if (numbersRes.error) {
+      return { success: false, error: numbersRes.error.message }
+    }
+    const numbers = numbersRes.data
     const listingRows: any[] = listingsRes.data ?? []
-    const countsByStatus: Record<string, number> = {}
-    for (const l of listingRows) {
-      countsByStatus[l.status] = (countsByStatus[l.status] ?? 0) + 1
-    }
-
-    // Orders: revenue / GMV / completion rate (seller-tiers.ts formula —
-    // completed / non-(cancelled|refunded), 100% with no orders).
     const orderRows: any[] = ordersRes.data ?? []
-    let completedCount = 0
-    let revenue = 0
-    let gmv = 0
-    let countable = 0
-    for (const o of orderRows) {
-      if (o.status === 'completed') {
-        completedCount++
-        revenue += Number(o.seller_payout ?? 0)
-        gmv += Number(o.total_amount ?? 0)
-      }
-      if (o.status !== 'cancelled' && o.status !== 'refunded') countable++
-    }
-    const completionRate =
-      countable === 0 ? 100 : Math.round((completedCount / countable) * 1000) / 10
-
-    // Open seller signup: the signed agreements (service role; the bucket is private
-    // so the signature image is a 10-minute signed URL).
-    const agreements: SellerAgreementRow[] = []
-    try {
-      const { data: agRows } = await (service as any)
-        .from('seller_agreements')
-        .select('id, agreement_version, signed_at, typed_name, ip, user_agent, agreement_sha256, signature_path')
-        .eq('user_id', userId)
-        .order('signed_at', { ascending: false })
-        .limit(10)
-      for (const a of (agRows ?? []) as any[]) {
-        let signature_url: string | null = null
-        if (a.signature_path) {
-          const { data: signed } = await (service as any).storage.from('seller-signatures').createSignedUrl(a.signature_path, 600)
-          signature_url = signed?.signedUrl ?? null
-        }
-        agreements.push({
-          id: a.id, version: a.agreement_version, signed_at: a.signed_at, typed_name: a.typed_name,
-          ip: a.ip ? String(a.ip) : null, user_agent: a.user_agent ?? null, sha256: a.agreement_sha256, signature_url,
-        })
-      }
-    } catch (err) {
-      console.error('seller_agreements read failed:', err)
-    }
-
-    // Open seller signup answers (country, Discord, games they sell).
-    let onboarding: SellerDetail['onboarding'] = null
-    try {
-      const { data: ob } = await (service as any)
-        .from('seller_onboarding')
-        .select('country, discord, sells, current_step, created_at, completed_at, source, full_name, address_line, city, expected_volume')
-        .eq('user_id', userId)
-        .maybeSingle()
-      if (ob) {
-        onboarding = {
-          country: ob.country ?? null,
-          discord: ob.discord ?? null,
-          full_name: ob.full_name ?? null,
-          address_line: ob.address_line ?? null,
-          city: ob.city ?? null,
-          expected_volume: ob.expected_volume ?? null,
-          sells: Array.isArray(ob.sells) ? ob.sells.map((x: any) => (typeof x === 'string' ? x : x?.name ?? x?.slug)).filter(Boolean) : [],
-          current_step: ob.current_step ?? null,
-          started_at: ob.created_at,
-          completed_at: ob.completed_at ?? null,
-          source: ob.source ?? null,
-        }
-      }
-    } catch (err) {
-      console.error('seller_onboarding read failed:', err)
-    }
-
-    // Moderation: strikes, avatar lock, open buyer reports on their listings.
-    let moderation: SellerDetail['moderation'] = { strikes: [], activeStrikes: 0, avatarLockedAt: null, openReports: 0 }
-    try {
-      const [{ data: strikes }, { data: lockRow }, { data: reportRows }] = await Promise.all([
-        (service as any).from('seller_strikes').select('id, kind, reason, listing_id, created_at, revoked_at').eq('seller_id', userId).order('created_at', { ascending: false }).limit(50),
-        (service as any).from('profiles').select('avatar_locked_at').eq('id', userId).maybeSingle(),
-        (service as any).from('listing_reports').select('id, listing:listings!inner(seller_id)').eq('status', 'open').eq('listing.seller_id', userId).limit(100),
-      ])
-      const rows = (strikes ?? []) as SellerStrikeRow[]
-      moderation = {
-        strikes: rows,
-        activeStrikes: rows.filter((r) => !r.revoked_at).length,
-        avatarLockedAt: lockRow?.avatar_locked_at ?? null,
-        openReports: Array.isArray(reportRows) ? reportRows.length : 0,
-      }
-    } catch (err) {
-      console.error('seller moderation read failed:', err)
-    }
+    const countsByStatus: Record<string, number> = numbers.listing_counts ?? {}
+    // Completion rate (seller-tiers.ts formula): completed / non-(cancelled|refunded),
+    // 100% with no orders.
+    const completedCount = Number(numbers.completed_orders ?? 0)
+    const countable = Number(numbers.countable_orders ?? 0)
+    const completionRate = countable === 0 ? 100 : Math.round((completedCount / countable) * 1000) / 10
+    const revenue = Number(numbers.revenue ?? 0)
+    const gmv = Number(numbers.gmv ?? 0)
 
     const detail: SellerDetail = {
       moderation,
@@ -528,7 +548,7 @@ export async function getSellerDetail(userId: string): Promise<{
       },
       listings: {
         countsByStatus,
-        recent: listingRows.slice(0, 8).map((l) => ({
+        recent: listingRows.map((l) => ({
           id: l.id,
           title: l.title,
           price: Number(l.price ?? 0),
@@ -540,12 +560,12 @@ export async function getSellerDetail(userId: string): Promise<{
         })),
       },
       orders: {
-        totalOrders: orderRows.length,
+        totalOrders: Number(numbers.total_orders ?? 0),
         completedCount,
         revenue,
         gmv,
         completionRate,
-        recent: orderRows.slice(0, 10).map((o) => ({
+        recent: orderRows.map((o) => ({
           id: o.id,
           order_number: o.order_number ?? null,
           total_amount: Number(o.total_amount ?? 0),

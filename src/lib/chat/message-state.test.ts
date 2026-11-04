@@ -6,6 +6,7 @@ import {
   markLocalStatus,
   markReadLocally,
   mergeServer,
+  mergeServerTail,
   optimisticMessage,
   patchMessage,
   statusLabel,
@@ -228,5 +229,27 @@ describe('optimisticMessage (instant send, both chat surfaces)', () => {
       ['1', undefined],
       ['x1', 'failed'],
     ])
+  })
+})
+
+describe('mergeServerTail (the newest-slice re-sync)', () => {
+  it('merges the slice in place and keeps older history untouched', () => {
+    const list = mergeServer([], [row('1'), row('2'), row('3')])
+    const next = mergeServerTail(list, [row('3', { is_read: true, read_at: '2026-10-04T10:01:00.000Z' }), row('4', { sender_id: THEM })])
+    expect(next.map((m) => m.id)).toEqual(['1', '2', '3', '4'])
+    expect(next[0]).toBe(list[0])
+    expect(next[2].is_read).toBe(true)
+  })
+
+  it('returns the SAME array when the slice changes nothing', () => {
+    const list = mergeServer([], [row('1'), row('2')])
+    expect(mergeServerTail(list, [row('2')])).toBe(list)
+  })
+
+  it('keeps my pending messages after the confirmed ones', () => {
+    const pending = optimisticMessage({ id: 'x9', conversationId: 'c1', senderId: ME, content: 'sending…' })
+    const list = addOptimistic(mergeServer([], [row('1')]), pending)
+    const next = mergeServerTail(list, [row('2', { sender_id: THEM })])
+    expect(next.map((m) => m.id)).toEqual(['1', '2', 'x9'])
   })
 })

@@ -13,7 +13,8 @@
  * relative times gate on useNow() (hydration-safe).
  */
 
-import React, { useMemo, useState, useTransition } from 'react'
+import React, { useEffect, useState, useTransition } from 'react'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -33,12 +34,12 @@ import { cn } from '@/lib/utils'
 import { finiteOrNull, money } from '@/lib/seller/format-amount'
 import { useNow } from '@/hooks/use-now'
 import { useActiveSellers, useSellerStats, type SellerStatsSummary } from '@/hooks/use-active-sellers'
-import type { ActiveSeller, ActiveSellerSort } from '@/lib/actions/admin-active-sellers'
+import { exportActiveSellers, type ActiveSeller, type ActiveSellerSort, type ActiveSellersFilters, type ActiveSellersPage } from '@/lib/actions/admin-active-sellers'
 import { setFoundingSeller } from '@/lib/actions/admin-sellers'
 import { TIERS, TIER_KEYS, type SellerTier } from '@/lib/seller/tiers'
 import { StatStrip } from '@/components/account/AccountSurface'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AdminEmpty, AdminLoadingRows, FilterChip, PageHeader, adminBtn, adminFieldCls, adminSelectCls } from '../../components/kit'
+import { AdminEmpty, AdminLoadingRows, AdminPagination, FilterChip, PageHeader, adminBtn, adminFieldCls, adminSelectCls } from '../../components/kit'
 import { GameTile } from '../../components/GameTile'
 import { TierChip } from '../../components/TierChip'
 
@@ -77,8 +78,8 @@ export default function ActiveSellersPageClient({
   initialSellers,
   initialStats,
 }: {
-  /** Server-fetched seller list (unfiltered); undefined if the server fetch failed. */
-  initialSellers?: ActiveSeller[]
+  /** Server-fetched first page (no filters); undefined if the server fetch failed. */
+  initialSellers?: ActiveSellersPage
   /** Server-fetched stats overview; undefined if the server fetch failed. */
   initialStats?: SellerStatsSummary
 }) {
@@ -93,10 +94,35 @@ export default function ActiveSellersPageClient({
   const [sortBy, setSortBy] = useState<ActiveSellerSort>('listings')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  const sellersQuery = useActiveSellers(undefined, { initialData: initialSellers })
+  const [page, setPage] = useState(1)
+  const search = useDebouncedValue(searchQuery.trim())
+
+  // Search, filters, sort and page run in the database (admin_active_sellers_page).
+  const filters: ActiveSellersFilters = {
+    searchQuery: search || undefined,
+    status: filterStatus === 'all' ? undefined : filterStatus,
+    tier: filterTier === 'all' ? undefined : filterTier,
+    verified: filterVerified === 'all' ? undefined : filterVerified === 'verified',
+    pausedOnly: pausedOnly || undefined,
+    sortBy,
+    sortOrder,
+    page,
+  }
+  const isDefaultView =
+    !search && filterStatus === 'all' && filterTier === 'all' && filterVerified === 'all' && !pausedOnly &&
+    sortBy === 'listings' && sortOrder === 'desc' && page === 1
+
+  const sellersQuery = useActiveSellers(filters, { initialData: isDefaultView ? initialSellers : undefined })
   const { data: statsData } = useSellerStats({ initialData: initialStats })
 
-  const sellers = useMemo(() => sellersQuery.data ?? [], [sellersQuery.data])
+  const sellers = sellersQuery.data?.sellers ?? []
+  const totalSellers = sellersQuery.data?.total ?? 0
+  const pageSize = sellersQuery.data?.pageSize ?? sellers.length
+
+  // A new search or filter starts from the first page.
+  useEffect(() => {
+    setPage(1)
+  }, [search, filterStatus, filterTier, filterVerified, pausedOnly, sortBy, sortOrder])
 
   // ── Founding-seller toggle (grants/revokes the locked commission) ──
   const queryClient = useQueryClient()
@@ -118,58 +144,13 @@ export default function ActiveSellersPageClient({
     })
   }
 
-  // ── Filter + sort (client-side over the unfiltered fetch) ──
-  const filteredSellers = useMemo(() => {
-    let filtered = sellers
-
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter((s) => s.seller_status === filterStatus)
+  // ── CSV export of every row the filters match ──
+  async function handleExport() {
+    const result = await exportActiveSellers({ ...filters, page: undefined })
+    if (!result.success) {
+      window.alert(`Couldn't export sellers: ${result.error ?? 'unknown error'}`)
+      return
     }
-    if (filterTier !== 'all') {
-      filtered = filtered.filter((s) => s.seller_tier === filterTier)
-    }
-    if (filterVerified !== 'all') {
-      filtered = filtered.filter((s) => (filterVerified === 'verified' ? s.is_verified : !s.is_verified))
-    }
-    if (pausedOnly) {
-      filtered = filtered.filter((s) => s.store_paused)
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase()
-      filtered = filtered.filter(
-        (s) =>
-          s.username.toLowerCase().includes(q) ||
-          (s.full_name || '').toLowerCase().includes(q) ||
-          (s.shop_name || '').toLowerCase().includes(q) ||
-          s.email.toLowerCase().includes(q),
-      )
-    }
-
-    const value = (s: ActiveSeller): number => {
-      switch (sortBy) {
-        case 'sales':
-          return s.stats.completed_sales
-        case 'revenue':
-          return s.stats.revenue
-        case 'joined':
-          return new Date(s.created_at).getTime()
-        case 'last_active':
-          return s.last_active_at ? new Date(s.last_active_at).getTime() : 0
-        case 'approved':
-          return s.approved_at ? new Date(s.approved_at).getTime() : 0
-        case 'recent_listing':
-          return s.latest_listing_at ? new Date(s.latest_listing_at).getTime() : 0
-        case 'listings':
-        default:
-          return s.stats.active_listings
-      }
-    }
-    const dir = sortOrder === 'asc' ? 1 : -1
-    return [...filtered].sort((a, b) => (value(a) - value(b)) * dir)
-  }, [sellers, filterStatus, filterTier, filterVerified, pausedOnly, searchQuery, sortBy, sortOrder])
-
-  // ── CSV export of the filtered rows ──
-  function handleExport() {
     const header = [
       'Shop Name',
       'Username',
@@ -191,7 +172,7 @@ export default function ActiveSellersPageClient({
     }
     const lines = [
       header.join(','),
-      ...filteredSellers.map((s) =>
+      ...(result.sellers ?? []).map((s) =>
         [
           s.shop_name || '',
           s.username,
@@ -380,7 +361,7 @@ export default function ActiveSellersPageClient({
         />
       ) : sellersQuery.isPending ? (
         <AdminLoadingRows rows={8} />
-      ) : filteredSellers.length === 0 ? (
+      ) : sellers.length === 0 ? (
         <AdminEmpty
           icon={Storefront}
           title="No sellers found"
@@ -389,10 +370,10 @@ export default function ActiveSellersPageClient({
       ) : (
         <div className="space-y-2">
           <p className="px-1 text-[12.5px] text-text-tertiary">
-            Showing {filteredSellers.length} of {sellers.length} sellers
+            Showing {sellers.length} of {totalSellers} sellers
           </p>
           <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-bg-raised">
-            {filteredSellers.map((seller) => (
+            {sellers.map((seller) => (
               <SellerRow
                 key={seller.id}
                 seller={seller}
@@ -403,6 +384,14 @@ export default function ActiveSellersPageClient({
               />
             ))}
           </ul>
+          <AdminPagination
+            page={page}
+            totalPages={Math.max(1, Math.ceil(totalSellers / (pageSize || 1)))}
+            total={totalSellers}
+            limit={pageSize}
+            onPage={setPage}
+            noun="sellers"
+          />
         </div>
       )}
     </div>

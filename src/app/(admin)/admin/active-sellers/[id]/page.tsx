@@ -6,6 +6,7 @@
  */
 
 import { notFound } from 'next/navigation'
+import { isActionResponseRender } from '@/lib/admin/action-render'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getSellerDetail } from '@/lib/actions/admin-seller-detail'
 import SellerDetailClient from './SellerDetailClient'
@@ -20,6 +21,8 @@ interface Props {
 
 export default async function SellerDetailPage({ params }: Props) {
   await requireAdmin()
+
+  if (isActionResponseRender()) return <SellerDetailClient userId={params.id} />
 
   const result = await getSellerDetail(params.id)
   if (!result.success || !result.detail) {
