@@ -15,14 +15,13 @@ const BADGES = [
 ]
 
 /**
- * The server-rendered end of the pet page. About and the buyer questions share
- * one layout (owner, 2026-11-03: compact but readable, not loose text): the title
- * centred on top, the content in a centred column below. The badge guide is
- * four small tiles with the game's real badges. Everything is in the
- * first HTML for search. The pet's name in the first sentence links its value
- * page as plain text — an internal link for search, never a button or a "see
- * the value" pitch (owner, 2026-11-02: buyers are not sent from the market to
- * values).
+ * The server-rendered end of the pet page, the title centred on top and the
+ * content in a centred column below (owner, 2026-11-03: compact but readable).
+ * Adopt Me: one title over four tiles with the game's real badges. Other games:
+ * About with one sentence, whose item name links its value page as plain text —
+ * an internal link for search, never a button or a "see the value" pitch (owner,
+ * 2026-11-02: buyers are not sent from the market to values). Everything is in
+ * the first HTML for search.
  */
 export function ItemDetails({ about, itemName, valueHref }: { about: ItemAbout; itemName: string; valueHref: string | null }) {
   if (about.intro == null && !about.traitGuide) return null
@@ -31,29 +30,24 @@ export function ItemDetails({ about, itemName, valueHref }: { about: ItemAbout; 
       <h2 id="item-about" className={cn(ITEM_H2, 'text-center')}>
         {about.heading}
       </h2>
-      <div className={cn(ITEM_COLUMN, 'space-y-5')}>
-        {about.intro ? (
-          <p className="text-center text-[15px] leading-relaxed text-text-secondary">
-            {valueHref && about.intro.startsWith(itemName) ? <IntroWithLink intro={about.intro} itemName={itemName} href={valueHref} /> : about.intro}
-          </p>
-        ) : null}
-        {about.traitGuide ? (
-          <div>
-            <h3 className="mb-2.5 text-center text-[15px] font-semibold text-text-primary">What The Badges Mean</h3>
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {BADGES.map((b) => (
-                <li key={b.code} className="flex items-start gap-3 rounded-lg bg-[#1D1E23] p-3.5">
-                  <TraitMarks code={b.code} size={24} className="mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-semibold text-text-primary">{b.name}</p>
-                    <p className="mt-0.5 text-[13px] leading-snug text-text-secondary">{b.line}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
+      {about.intro ? (
+        <p className="mx-auto mt-2 max-w-3xl text-center text-[15px] leading-relaxed text-text-secondary">
+          {valueHref && about.intro.startsWith(itemName) ? <IntroWithLink intro={about.intro} itemName={itemName} href={valueHref} /> : about.intro}
+        </p>
+      ) : null}
+      {about.traitGuide ? (
+        <ul className={cn(ITEM_COLUMN, 'grid gap-2 sm:grid-cols-2')}>
+          {BADGES.map((b) => (
+            <li key={b.code} className="flex items-start gap-3 rounded-lg bg-[#1D1E23] p-3.5">
+              <TraitMarks code={b.code} size={24} className="mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[14px] font-semibold text-text-primary">{b.name}</p>
+                <p className="mt-0.5 text-[13px] leading-snug text-text-secondary">{b.line}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   )
 }
@@ -70,13 +64,13 @@ function IntroWithLink({ intro, itemName, href }: { intro: string; itemName: str
 }
 
 /** Buyer questions: the same layout as About, with the house FAQ rows. */
-export function ItemFaq({ title, about }: { title: string; about: ItemAbout }) {
+export function ItemFaq({ about }: { about: ItemAbout }) {
   if (about.faq.length === 0) return null
   return (
     <section aria-labelledby="item-faq-title">
       <JsonLd data={faqPage(about.faq)} />
       <h2 id="item-faq-title" className={cn(ITEM_H2, 'text-center')}>
-        {title}
+        {about.faqHeading}
       </h2>
       <FaqCards items={about.faq} className={ITEM_COLUMN} />
     </section>

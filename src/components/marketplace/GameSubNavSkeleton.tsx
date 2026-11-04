@@ -18,13 +18,21 @@ function TabBone({ label = 'w-14' }: { label?: string }) {
 /**
  * The GameSubNav strip while a game page loads: same slot, strip and row
  * classes (subnav-tab.tsx), so nothing moves when the real bar swaps in.
- * `tabs` is the category count the page usually shows.
+ * `tabs` is the category count the page usually shows; `phoneBack` draws the
+ * back row phones get inside a listing.
  */
-export default function GameSubNavSkeleton({ tabs = 2 }: { tabs?: number }) {
+export default function GameSubNavSkeleton({ tabs = 2, phoneBack = false }: { tabs?: number; phoneBack?: boolean }) {
   return (
     <div aria-hidden className={SUBNAV_SLOT}>
-      <div className={SUBNAV_STRIP} style={{ backgroundColor: SUBNAV_BG }}>
-        <div className={SUBNAV_ROW}>
+      <div className={cn(SUBNAV_STRIP, phoneBack && 'max-md:fixed max-md:top-[var(--subnav-top)] max-md:!bg-[#1C1D22] max-md:shadow-none')} style={{ backgroundColor: SUBNAV_BG }}>
+        {phoneBack ? (
+          <div className="flex w-full items-center md:hidden">
+            <Bone className="h-11 w-11 shrink-0" />
+            <Bone className="mx-auto h-4 w-24" />
+            <span className="w-11 shrink-0" />
+          </div>
+        ) : null}
+        <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>
           <div className="flex shrink-0 items-center gap-2.5 justify-self-start px-2.5 py-2 md:gap-3 md:px-0 max-md:gap-1.5 max-md:px-1.5 max-md:py-1">
             <Bone className={SUBNAV_LOGO} />
             <Bone className="h-3.5 w-20 md:h-5 md:w-28" />
@@ -35,8 +43,9 @@ export default function GameSubNavSkeleton({ tabs = 2 }: { tabs?: number }) {
               <TabBone key={i} />
             ))}
           </div>
-          <div className="hidden justify-self-end md:flex">
+          <div className="hidden items-center gap-3 justify-self-end md:flex">
             <TabBone label="w-28" />
+            <Bone className="h-9 w-[132px] max-lg:hidden" />
           </div>
         </div>
       </div>

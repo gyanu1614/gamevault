@@ -316,7 +316,7 @@ export default function ItemsPageClient({
       <SearchParamsBridge onParams={paged.onParams} />
       {/* scroll-mt clears the fixed navbar + sub-navbar when a page change scrolls here. */}
       <section ref={paged.topRef} className="scroll-mt-game-chrome">
-        <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6 sm:pt-4 lg:px-8">
           <CategoryHeader
             gameName={gameName}
             categoryLabel={categoryLabel}

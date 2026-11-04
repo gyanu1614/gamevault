@@ -1,9 +1,10 @@
 /**
  * The words under the pet page (owner, 2026-10-27; plain About text like
- * Eldorado's, 2026-10-29): one paragraph on the pet (rarity, release, where
- * it came from), what the trait letters mean, a few real buyer questions and
- * the heading of the pet-to-pet links. Built from data only: a fact the
- * database doesn't have is left out, never guessed. Policy answers come from
+ * Eldorado's, 2026-10-29): a few real buyer questions, the heading of the
+ * pet-to-pet links, and either what the trait letters mean (Adopt Me: that title
+ * alone, owner 2026-11-03) or one sentence on the item (rarity, release, where it
+ * came from). Built from data only: a fact the database doesn't have is left out,
+ * never guessed. Policy answers come from
  * the help centre (HELP_FAQ) so the refund rules live in one place.
  */
 import { HELP_FAQ } from '@/lib/support/help-content'
@@ -22,10 +23,12 @@ export interface AboutInput {
 
 export interface ItemAbout {
   heading: string
-  /** "Parrot is a Legendary pet in Adopt Me, released in 2019. It came from the Jungle Egg." */
+  /** "Garama is a Secret brainrot in Steal a Brainrot, released in 2025." Not on Adopt Me, which has the traits guide. */
   intro: string | null
   /** Adopt Me: explain the F / R / N / M badges. */
   traitGuide: boolean
+  /** "Adopt Me Parrot FAQ". */
+  faqHeading: string
   faq: { q: string; a: string }[]
   relatedHeading: string
 }
@@ -41,12 +44,17 @@ function releasedPhrase(released: string): string {
   return `released ${/^\d{4}$/.test(released) ? 'in' : 'on'} ${released}`
 }
 
+/** Whether the page shows the sentence built from the item's facts; Adopt Me doesn't, so it skips that read. */
+export function usesItemFacts(gameSlug: string): boolean {
+  return gameSlug !== 'adopt-me'
+}
+
 export function itemAbout(input: AboutInput): ItemAbout {
   const { gameSlug, gameName, itemName, rarity, facts } = input
   const noun = itemNoun(gameSlug)
   const isAdoptMe = gameSlug === 'adopt-me'
 
-  const known = rarity != null || facts.released != null || facts.origin != null
+  const known = usesItemFacts(gameSlug) && (rarity != null || facts.released != null || facts.origin != null)
   const intro = known
     ? [
         `${itemName} is ${withArticle(rarity ? `${rarity} ${noun.one}` : noun.one)} in ${gameName}${facts.released ? `, ${releasedPhrase(facts.released)}` : ''}.`,
@@ -56,7 +64,7 @@ export function itemAbout(input: AboutInput): ItemAbout {
 
   const faq = [
     {
-      q: `Is it safe to buy ${itemName} on DropMarket?`,
+      q: `Is it safe to buy ${withArticle(itemName)} on DropMarket?`,
       a: `Yes. Every order is covered by SafeDrop Protection at no extra cost. If your ${itemName} does not arrive, or it is not what the listing described, you get your money back in full.`,
     },
     {
@@ -75,9 +83,10 @@ export function itemAbout(input: AboutInput): ItemAbout {
   ]
 
   return {
-    heading: `About ${gameName} ${itemName}`,
+    heading: isAdoptMe ? `${gameName} Traits Explained` : `About ${gameName} ${itemName}`,
     intro,
     traitGuide: isAdoptMe,
+    faqHeading: `${gameName} ${itemName} FAQ`,
     faq,
     relatedHeading: `Popular ${gameName} ${noun.many}`,
   }

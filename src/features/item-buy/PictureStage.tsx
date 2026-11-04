@@ -27,8 +27,9 @@ export function PictureStage({
   return (
     // Phones: one step lighter than the house card fill so the picture never melts into the page ground (owner,
     // 2026-11-02). Desktop: no tile, the pet floats on the glass panel, no box in a box (owner, 2026-11-03).
-    <div className="overflow-hidden rounded-lg bg-[linear-gradient(180deg,#2B2C33_0%,#232429_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] lg:overflow-visible lg:bg-none lg:shadow-none">
-      <div className="relative grid h-[200px] w-full place-items-center sm:h-[240px] lg:aspect-square lg:h-auto">
+    // The box fills the panel's column up to a cap, so opening the instructions doesn't move the picture or the picker.
+    <div className="overflow-hidden rounded-lg bg-[linear-gradient(180deg,#2B2C33_0%,#232429_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] lg:relative lg:max-h-[349px] lg:min-h-[280px] lg:flex-1 lg:overflow-visible lg:bg-none lg:shadow-none">
+      <div className="relative grid h-[200px] w-full place-items-center sm:h-[240px] lg:absolute lg:inset-0 lg:h-auto">
         <ItemPicture
           src={imageUrl}
           name={name}

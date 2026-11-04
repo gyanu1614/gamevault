@@ -37,7 +37,7 @@ export function ItemSpecs(p: ItemSpecsProps) {
   ]
 
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-5 lg:gap-x-4 xl:gap-x-6">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-6 lg:gap-x-4 lg:gap-y-5 xl:gap-x-6">
       {cells.map(({ label, value, key, Icon }) => (
         <div key={label} className="flex min-w-0 items-center gap-3">
           <span aria-hidden className="hidden h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-primary xl:grid">

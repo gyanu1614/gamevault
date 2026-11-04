@@ -2221,6 +2221,44 @@
 }
 
 /* ─── Utility Classes ────────────────────────────────────────── */
+/* Glass panel, desktop only (pet page; owner, 2026-11-03). A dark fill close to the
+   page colour, low enough for the game art's colour to come through; the blur is
+   heavy, so the picture behind can't be read. It reads as glass because of the
+   edge: a hairline that catches light top-left and bottom-right, and a soft sheen
+   from the top. A lighter fill reads as a grey box on this dark page (GameBoost's
+   panel is dark for the same reason). Plain CSS: the "liquid glass" libraries use
+   SVG filters Safari doesn't support. Solid where blur isn't available or wanted. */
+@media (min-width: 1024px) {
+  .glass-panel {
+    --glass-fill: rgba(13, 14, 18, 0.24);
+    --glass-sheen: rgba(255, 255, 255, 0.08);
+    position: relative;
+    background: linear-gradient(160deg, var(--glass-sheen) 0%, transparent 42%), var(--glass-fill);
+    -webkit-backdrop-filter: blur(28px) saturate(240%);
+    backdrop-filter: blur(28px) saturate(240%);
+    box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.85);
+  }
+  .glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 32%, rgba(255, 255, 255, 0.04) 68%, rgba(255, 255, 255, 0.14) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-panel { background: #17181C; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-panel { background: #17181C; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+}
+
 /* The sub-navbar scrolls with the page: on desktop, no rubber band that would
    pull it away from the fixed navbar. Phones keep theirs (pull to refresh). */
 @media (min-width: 768px) {

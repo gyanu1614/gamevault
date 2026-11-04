@@ -5,13 +5,13 @@ import { socialTitle } from '@/lib/seo/title'
 import { formatUsd } from '@/lib/value-listings/format'
 import { loadItemListingsPage } from '../_valueItemOffers'
 import { ItemListingsView } from './_ItemListingsView'
-import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import GameSubNav from '@/components/marketplace/GameSubNav'
 import { getSubnavCategories } from '@/lib/categories/subnav-categories'
 import { hubNavExtras } from '../../values/_HubNavExtras'
 import { getItemFacts } from '@/lib/values/item-facts-data'
 import { rarityMeta } from '@/lib/values/rarity'
-import { itemAbout } from '@/features/item-buy/model/about'
+import { itemAbout, usesItemFacts } from '@/features/item-buy/model/about'
+import { NO_FACTS } from '@/lib/values/item-facts'
 
 /**
  * Shared by /{game}/{category}/item/{item} and …/item/{item}/{variant}.
@@ -51,13 +51,14 @@ export async function itemRouteMetadata(p: ItemRouteParams): Promise<Metadata> {
   }
 }
 
+/** The page body. The hero, the 404 checks and the loading skeleton are in this folder's layouts and loading files. */
 export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
   const data = await loadItemListingsPage(params.gameSlug, params.categorySlug, params.itemSlug, params.variant ?? null)
   if (!data) notFound()
   const { model, pair } = data
   // The game's tabs, Items active (GameBoost keeps them on an item page): one cached entry per game.
-  // Facts: one row under the item's tags; a miss means no details, never a broken page.
-  const [categories, facts] = await Promise.all([getSubnavCategories(pair.gameId), getItemFacts(params.gameSlug, model.item.slug)])
+  // Facts: one row under the item's tags, only where the page shows them; a miss means no details, never a broken page.
+  const [categories, facts] = await Promise.all([getSubnavCategories(pair.gameId), usesItemFacts(params.gameSlug) ? getItemFacts(params.gameSlug, model.item.slug) : NO_FACTS])
   const about = itemAbout({
     gameSlug: params.gameSlug,
     gameName: pair.gameName,
@@ -76,7 +77,7 @@ export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
     offerPrices: model.itemRows.map((r) => Number(r.price)),
   })
   return (
-    <GameHeroBackdrop gameSlug={params.gameSlug} size="market">
+    <>
       {productLd ? <JsonLd data={productLd} /> : null}
       <JsonLd
         data={breadcrumbList([
@@ -96,6 +97,6 @@ export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
         phoneBack={{ href: `/${params.gameSlug}/${data.pair.categorySlug}` }}
       />
       <ItemListingsView gameSlug={params.gameSlug} data={data} about={about} />
-    </GameHeroBackdrop>
+    </>
   )
 }

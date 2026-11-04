@@ -61,7 +61,7 @@ export function PaymentMarks() {
           )
         })}
         {MORE > 0 ? (
-          <li className="shrink-0 whitespace-nowrap font-semibold text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
+          <li className="shrink-0 whitespace-nowrap font-semibold text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>
             +{MORE} More
           </li>
         ) : null}

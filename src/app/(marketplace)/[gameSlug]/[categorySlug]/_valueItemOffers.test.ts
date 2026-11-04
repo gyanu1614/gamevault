@@ -29,7 +29,7 @@ vi.mock('./_itemsData', () => ({
   listingToOffer: (r: { id: string; price: number }) => ({ id: r.id, pricePerUnit: Number(r.price) }),
 }))
 
-import { getValueItemBuyData, loadItemListingsPage } from './_valueItemOffers'
+import { getValueItemBuyData, loadItemListingsPage, resolveItemRoute } from './_valueItemOffers'
 
 const row = (id: string, item: string, variant: string | null, price: number) => ({ id, value_item_slug: item, value_variant: variant, price, seller_id: 's' })
 
@@ -48,9 +48,16 @@ describe('loadItemListingsPage', () => {
     ['unknown item', 'adopt-me', 'buy-items', 'nope', null],
     ['unknown variant', 'adopt-me', 'buy-items', 'bat-dragon', 'diamond'],
   ])('404s an %s without reading listings', async (_label, game, cat, item, variant) => {
+    expect(await resolveItemRoute(game, cat, item, variant)).toBeNull()
     expect(await loadItemListingsPage(game, cat, item, variant)).toBeNull()
     expect(getValueListings).not.toHaveBeenCalled()
     expect(getValueItemDescriptions).not.toHaveBeenCalled()
+  })
+
+  // The route awaits this ahead of its Suspense boundary (skeleton), so it must stay cheap.
+  it('an existing pet and trait pass the route check without reading listings', async () => {
+    expect(await resolveItemRoute('adopt-me', 'buy-items', 'bat-dragon', 'neon')).toMatchObject({ pair: { categorySlug: 'buy-items' } })
+    expect(getValueListings).not.toHaveBeenCalled()
   })
 
   it('returns every offer of the item (no other item), cheapest first, with its trait', async () => {

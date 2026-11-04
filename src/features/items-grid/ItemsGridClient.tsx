@@ -137,7 +137,7 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, items, o
         <SearchParamsBridge onParams={paged.onParams} />
         {/* The heading says what people search for: "Adopt Me Pets", not the category's "Items". */}
         <section ref={paged.topRef} className="scroll-mt-game-chrome">
-          <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8">
+          <div className="mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6 sm:pt-4 lg:px-8">
             <CategoryHeader
               gameName={gameName}
               categoryLabel={itemNoun}

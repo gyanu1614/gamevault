@@ -30,6 +30,7 @@ import {
 import { getAllEnabledCategoryPairs } from '@/lib/seo/category-pairs'
 import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
 import RouteSkeleton from './_RouteSkeleton'
+import ItemsSkeleton from './_ItemsSkeleton'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 // PERF-004 — the three page variants below are mutually exclusive: a category
 // resolves to exactly one of them at render time. Statically importing all
@@ -897,7 +898,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         />
         {/* The client reads ?attr_<slug>= / ?search= deep links through
             SearchParamsBridge, so it stays in the static HTML. */}
-        <Suspense fallback={null}>
+        <Suspense fallback={<ItemsSkeleton grid={!!gridItems} subnav={false} />}>
           {gridItems ? (
             <ItemsGridClient
               gameSlug={gameSlug}

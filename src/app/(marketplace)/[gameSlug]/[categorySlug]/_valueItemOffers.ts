@@ -28,17 +28,27 @@ const toOffers = async (gameId: string, rows: readonly ValueListingRow[]): Promi
 }
 
 /**
- * The item listings page: every offer of the item with its trait and seller
- * description. Null = 404, decided from the game, pair and catalogue BEFORE
- * any listing is read.
+ * Does this item page exist? Null = 404, decided from the game, pair and
+ * catalogue BEFORE any listing is read. The route awaits it ahead of its
+ * Suspense boundary, so an unknown pet or trait is a real 404, not a 200.
  */
-export const loadItemListingsPage = cache(
+export const resolveItemRoute = cache(
   async (gameSlug: string, categorySlug: string, itemSlug: string, variant: string | null) => {
     const pair = await getItemsPair(gameSlug)
     if (!pair || pair.categorySlug !== categorySlug) return null
     const catalog = await getValueCatalog(gameSlug)
     if (!catalog || !catalog.items.some((i) => i.slug === itemSlug)) return null
     if (variant && !isKnownVariant(catalog, variant)) return null
+    return { pair, catalog }
+  },
+)
+
+/** The item listings page: every offer of the item with its trait and seller description. Null = 404. */
+export const loadItemListingsPage = cache(
+  async (gameSlug: string, categorySlug: string, itemSlug: string, variant: string | null) => {
+    const route = await resolveItemRoute(gameSlug, categorySlug, itemSlug, variant)
+    if (!route) return null
+    const { pair, catalog } = route
 
     const [listings, descriptions] = await Promise.all([getValueListings(gameSlug), getValueItemDescriptions(gameSlug, itemSlug)])
     const model = buildItemPage({ gameSlug, categorySlug, catalog, itemSlug, variant, rows: listings?.rows ?? [] })

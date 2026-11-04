@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { ItemRoutePage, itemRouteMetadata } from '../_itemRoute'
+import { ItemRoutePage, itemRouteMetadata } from '../../_itemRoute'
 import { seoMeta } from '@/lib/seo/fit'
 
 // ISR (static-first rule): rendered on first visit, cached, refreshed by the

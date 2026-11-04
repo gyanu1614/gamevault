@@ -13,7 +13,7 @@ import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { cn } from '@/lib/utils'
 import { BuyPromises } from './BuyPromises'
-import { GLASS, GlassPanel } from './GlassPanel'
+import { GLASS } from './layout'
 import { PaymentMarks } from './PaymentMarks'
 import { TraitField } from './TraitField'
 import { maxQtyOf } from './money'
@@ -57,11 +57,12 @@ export interface BuyBoxProps {
 /**
  * The buy column (owner, 2026-10-27/28, 2026-11-02; StockX's buy box and
  * Eldorado's phone page as references): the price (rolling when the trait
- * changes) with the quantity, Buy, the three promises as plain rows, then the
- * ways to pay; the seller under it. Desktop frames it in glass with room to
- * breathe (owner, 2026-11-03: too bold, too packed) and has the trait picker
- * under the picture instead; on phones it floats on the page with the picker on
- * top. A trait nobody sells gets Notify Me instead.
+ * changes) with the quantity, Buy, the three promises, then the ways to pay; the
+ * seller under it. Desktop frames it in glass with room to breathe (owner,
+ * 2026-11-03: too bold, too packed) and has the trait picker under the picture
+ * instead; on phones it floats on the page with the picker on top, the promises
+ * in one sliding row and the ways to pay under the seller. A trait nobody sells
+ * gets Notify Me instead.
  */
 export function BuyBox(p: BuyBoxProps) {
   const { offer } = p
@@ -71,7 +72,7 @@ export function BuyBox(p: BuyBoxProps) {
   return (
     // Phones: lands under the navbar and the back row, both fixed there.
     <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)] lg:contents">
-      <GlassPanel className="lg:flex lg:flex-col lg:p-7">
+      <div className={cn(GLASS, 'lg:p-7')}>
         {p.traits.length > 0 ? (
           <div className="lg:hidden">
             <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
@@ -102,7 +103,7 @@ export function BuyBox(p: BuyBoxProps) {
                 />
               ) : null}
             </div>
-            <div ref={p.buyRef} className="mt-4 lg:mt-5">
+            <div ref={p.buyRef} className="mt-5">
               <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="h-14 w-full text-[16px]" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
                 {p.isOwn ? 'Edit Your Listing' : BUY_CTA_LABEL}
               </BuyButton>
@@ -120,16 +121,19 @@ export function BuyBox(p: BuyBoxProps) {
           </div>
         )}
 
-        <div className="mt-5 lg:mb-6 lg:mt-7">
+        <div className="mt-6 lg:mb-6 lg:mt-7">
           <BuyPromises />
         </div>
-        {/* Desktop: pinned to the bottom of the card, which matches the pet panel's height. */}
-        <div className="mt-5 lg:mt-auto lg:pt-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <div className="hidden pt-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] lg:block">
           <PaymentMarks />
         </div>
-      </GlassPanel>
+      </div>
 
       {offer ? <SellerCard offer={offer} isOwn={p.isOwn} /> : null}
+      {/* Phones and tablets: under the seller (owner, 2026-11-03). */}
+      <div className="mt-6 lg:hidden">
+        <PaymentMarks />
+      </div>
     </section>
   )
 }
@@ -155,7 +159,7 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
     </>
   )
   const cls = cn(
-    'mt-5 flex min-w-0 items-center gap-3 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
+    'mt-6 flex min-w-0 items-center gap-3 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
     'lg:col-start-2 lg:mt-0 lg:self-start lg:px-5 lg:py-3.5',
     GLASS,
   )
@@ -163,7 +167,7 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
     <SmartLink
       href={`/shop/${slug}`}
       aria-label={`${sellerDisplayName(s)}'s shop`}
-      className={cn(cls, 'transition-colors duration-200 lg:hover:bg-[rgba(38,39,46,0.72)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
+      className={cn(cls, 'transition-colors duration-200 lg:hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
     >
       {body}
     </SmartLink>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HELP_FAQ } from '@/lib/support/help-content'
 import { NO_FACTS } from '@/lib/values/item-facts'
-import { itemAbout } from './about'
+import { itemAbout, usesItemFacts } from './about'
 
 const parrot = {
   gameSlug: 'adopt-me',
@@ -12,13 +12,14 @@ const parrot = {
 }
 
 describe('itemAbout', () => {
-  it('Adopt Me pet: one paragraph from data, the badge guide and four questions', () => {
+  it('Adopt Me pet: one title over the traits guide, no sentence, a real FAQ title and four questions', () => {
     const a = itemAbout(parrot)
-    expect(a.heading).toBe('About Adopt Me Parrot')
-    expect(a.intro).toBe('Parrot is a Legendary pet in Adopt Me, released in 2019. It came from the Jungle Egg.')
+    expect(a.heading).toBe('Adopt Me Traits Explained')
+    expect(a.intro).toBeNull()
     expect(a.traitGuide).toBe(true)
+    expect(a.faqHeading).toBe('Adopt Me Parrot FAQ')
     expect(a.faq.map((f) => f.q)).toEqual([
-      'Is it safe to buy Parrot on DropMarket?',
+      'Is it safe to buy a Parrot on DropMarket?',
       'How do I get my Parrot after paying?',
       'What if the seller doesn’t deliver?',
       'What do F, R, N and M mean on a Parrot?',
@@ -31,28 +32,40 @@ describe('itemAbout', () => {
     expect(itemAbout(parrot).faq[2].a).toBe(late.a)
   })
 
-  it('a full release date reads "released on"; "an" before a vowel', () => {
-    const a = itemAbout({ ...parrot, itemName: 'Owl', rarity: 'Ultra-Rare', facts: { ...parrot.facts, released: '27 October 2022', origin: null } })
-    expect(a.intro).toBe('Owl is an Ultra-Rare pet in Adopt Me, released on 27 October 2022.')
+  it('"an" before a vowel in the questions', () => {
+    const a = itemAbout({ ...parrot, itemName: 'Owl' })
+    expect(a.faq[0].q).toBe('Is it safe to buy an Owl on DropMarket?')
     expect(a.faq[3].q).toBe('What do F, R, N and M mean on an Owl?')
   })
 
+  // Adopt Me shows no sentence, so it needs no facts read: one query saved per page.
+  it('only games that show the sentence read the item facts', () => {
+    expect(usesItemFacts('adopt-me')).toBe(false)
+    expect(usesItemFacts('murder-mystery-2')).toBe(true)
+  })
+
+  const sab = { gameSlug: 'steal-a-brainrot', gameName: 'Steal a Brainrot', itemName: 'Garama', rarity: 'Secret', facts: NO_FACTS }
+
+  it('other games: no traits guide, their own noun, About with one sentence', () => {
+    const a = itemAbout(sab)
+    expect(a.traitGuide).toBe(false)
+    expect(a.faq).toHaveLength(3)
+    expect(a.heading).toBe('About Steal a Brainrot Garama')
+    expect(a.intro).toBe('Garama is a Secret brainrot in Steal a Brainrot.')
+    expect(a.faqHeading).toBe('Steal a Brainrot Garama FAQ')
+    expect(a.relatedHeading).toBe('Popular Steal a Brainrot Brainrots')
+  })
+
+  it('a full release date reads "released on"; "an" before a vowel', () => {
+    const a = itemAbout({ ...sab, rarity: 'Ultra-Rare', facts: { ...NO_FACTS, released: '27 October 2022' } })
+    expect(a.intro).toBe('Garama is an Ultra-Rare brainrot in Steal a Brainrot, released on 27 October 2022.')
+  })
+
   it('missing facts are left out, never guessed', () => {
-    const a = itemAbout({ ...parrot, rarity: null, facts: NO_FACTS })
-    expect(a.intro).toBeNull()
-    expect(a.relatedHeading).toBe('Popular Adopt Me Pets')
+    expect(itemAbout({ ...sab, rarity: null }).intro).toBeNull()
   })
 
   it('no rarity but an origin: says what is known', () => {
-    const a = itemAbout({ ...parrot, rarity: null, facts: { ...NO_FACTS, origin: 'Admin Abuse events' } })
-    expect(a.intro).toBe('Parrot is a pet in Adopt Me. It came from Admin Abuse events.')
-  })
-
-  it('other games: no badge guide, their own noun', () => {
-    const a = itemAbout({ gameSlug: 'steal-a-brainrot', gameName: 'Steal a Brainrot', itemName: 'Garama', rarity: 'Secret', facts: NO_FACTS })
-    expect(a.traitGuide).toBe(false)
-    expect(a.faq).toHaveLength(3)
-    expect(a.intro).toBe('Garama is a Secret brainrot in Steal a Brainrot.')
-    expect(a.relatedHeading).toBe('Popular Steal a Brainrot Brainrots')
+    expect(itemAbout({ ...sab, rarity: null, facts: { ...NO_FACTS, origin: 'Admin Abuse events' } }).intro).toBe('Garama is a brainrot in Steal a Brainrot. It came from Admin Abuse events.')
   })
 })

@@ -38,12 +38,12 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
   const valueHref = hasHubPage(gameSlug, 'values') && item.hasPage !== false ? `/${gameSlug}/values/${item.slug}` : null
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pt-0 lg:px-8">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-7 sm:px-6 md:pt-0 lg:px-8">
       {/* Breadcrumbs only for search (JSON-LD in the route); a back button on screen, GameBoost's (owner, 2026-11-03). Phones have theirs in the sub-navbar. */}
       <div className="relative">
         <BackButton
           href={browseHref}
-          className="mb-4 bg-[rgba(28,29,35,0.66)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-xl hover:bg-[rgba(46,47,54,0.8)] max-md:hidden min-[1400px]:absolute min-[1400px]:-left-[60px] min-[1400px]:top-0 min-[1400px]:mb-0"
+          className="mb-4 bg-[rgba(13,14,18,0.24)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] backdrop-blur-[28px] backdrop-saturate-[2.4] hover:bg-[rgba(255,255,255,0.08)] max-md:hidden min-[1400px]:absolute min-[1400px]:-left-[60px] min-[1400px]:top-0 min-[1400px]:mb-0"
         >
           <ArrowLeftIcon aria-hidden size={18} weight="bold" />
         </BackButton>
@@ -86,7 +86,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
         ) : null}
 
         <PopularCarousel id="related-items" heading={about.relatedHeading} items={stockedToGridItems(gameSlug, model.related)} gameSlug={gameSlug} />
-        <ItemFaq title={`Questions About Buying ${item.name}`} about={about} />
+        <ItemFaq about={about} />
         <ItemDetails about={about} itemName={item.name} valueHref={valueHref} />
       </div>
     </main>
