@@ -91,10 +91,16 @@ async function readOverview(dayKey: string): Promise<AdminOverviewStats> {
 
 /**
  * Call only after requireAdmin / requireRole / requirePermission. Today (UTC) is
- * part of the cache key: a new day never serves yesterday's "today".
+ * part of the cache key: a new day never serves yesterday's "today". So is the
+ * current cache window: once an entry goes stale unstable_cache still returns it and
+ * refreshes behind it, so after a quiet afternoon the first view showed the morning's
+ * numbers. A new window is a new key, so an old entry is never read.
  */
 export function getAdminOverviewStats(now: Date = new Date()): Promise<AdminOverviewStats> {
-  return unstable_cache(readOverview, ['admin-overview-stats-v1'], {
-    revalidate: ADMIN_OVERVIEW_CACHE_SECONDS,
-  })(now.toISOString().slice(0, 10))
+  const cacheWindow = Math.floor(now.getTime() / (ADMIN_OVERVIEW_CACHE_SECONDS * 1000))
+  return unstable_cache(
+    (dayKey: string, _cacheWindow: number) => readOverview(dayKey),
+    ['admin-overview-stats-v1'],
+    { revalidate: ADMIN_OVERVIEW_CACHE_SECONDS },
+  )(now.toISOString().slice(0, 10), cacheWindow)
 }

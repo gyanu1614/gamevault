@@ -19,6 +19,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import type { SellerApplication } from '@/lib/actions/admin-sellers'
 import { rejectApplication } from '@/lib/actions/admin-sellers'
 // approve comes from the CANONICAL review module — it promotes the profile
@@ -189,6 +190,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     setShowApproveModal(false)
     setKycGap(null)
   }
+  // The list and its tab counts stay cached for 60 s; a decision here changes both.
+  const queryClient = useQueryClient()
+  const markListsStale = () => {
+    queryClient.invalidateQueries({ queryKey: ['application-counts'] })
+    queryClient.invalidateQueries({ queryKey: ['seller-applications'] })
+  }
   const handleApprove = async (asFounding = false, acknowledgeKycGap = false) => {
     setIsProcessing(true)
     setPendingFounding(asFounding)
@@ -207,6 +214,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
           ? 'Approved as a founding seller'
           : 'Application approved successfully',
       )
+      markListsStale()
       router.push('/admin/sellers?status=approved')
     } else {
       toast.error(result.error || 'Failed to approve application')
@@ -236,6 +244,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     if (result.success) {
       setShowRejectModal(false)
       toast.success('Application rejected successfully')
+      markListsStale()
       router.push('/admin/sellers?status=rejected')
     } else {
       toast.error(result.error || 'Failed to reject application')
@@ -256,6 +265,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     if (result.success) {
       setShowChangesModal(false)
       toast.success('Change request sent to the applicant')
+      markListsStale()
       setIsProcessing(false)
     } else {
       toast.error(result.error || 'Failed to request changes')

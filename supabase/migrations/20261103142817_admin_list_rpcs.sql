@@ -280,6 +280,56 @@ CREATE OR REPLACE FUNCTION public.admin_seller_released_counts(p_seller_ids uuid
   GROUP BY l.seller_id;
 $$;
 
+-- ── Moderation history order ────────────────────────────────────────────────
+-- History's "Everything" view sorts by updated_at, but only request_listing_changes
+-- stamped it, so a listing approved a minute ago sat below older ones. Both functions
+-- also lacked the search_path pin every SECURITY DEFINER function must have.
+CREATE OR REPLACE FUNCTION public.approve_listing(listing_id uuid, admin_id uuid)
+  RETURNS void
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public
+AS $$
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  PERFORM public.assert_moderator();
+
+  UPDATE public.listings
+  SET
+    status = 'active',
+    approved_by = admin_id,
+    approved_at = now(),
+    rejected_by = NULL,
+    rejected_at = NULL,
+    rejection_reason = NULL,
+    updated_at = now()
+  WHERE id = listing_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reject_listing(listing_id uuid, admin_id uuid, reason text)
+  RETURNS void
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public
+AS $$
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  PERFORM public.assert_moderator();
+
+  UPDATE public.listings
+  SET
+    status = 'rejected',
+    rejected_by = admin_id,
+    rejected_at = now(),
+    rejection_reason = reason,
+    approved_by = NULL,
+    approved_at = NULL,
+    updated_at = now()
+  WHERE id = listing_id;
+END;
+$$;
+
 -- ── Reviews + games ─────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.admin_review_stats() RETURNS jsonb
   LANGUAGE sql STABLE SET search_path = public AS $$
@@ -287,7 +337,9 @@ CREATE OR REPLACE FUNCTION public.admin_review_stats() RETURNS jsonb
     'total_reviews', count(*),
     'flagged_reviews', count(*) FILTER (WHERE flagged_for_moderation),
     'hidden_reviews', count(*) FILTER (WHERE is_visible IS NOT TRUE),
-    'avg_rating', COALESCE(avg(rating), 0)
+    'avg_rating', COALESCE(avg(rating), 0),
+    'positive_reviews', count(*) FILTER (WHERE rating >= 4),
+    'negative_reviews', count(*) FILTER (WHERE rating <= 2)
   )
   FROM public.reviews;
 $$;

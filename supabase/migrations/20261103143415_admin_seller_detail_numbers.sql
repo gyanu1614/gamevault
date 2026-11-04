@@ -7,7 +7,10 @@ CREATE OR REPLACE FUNCTION public.admin_seller_detail_numbers(p_seller_id uuid) 
   SELECT jsonb_build_object(
     'listing_counts', COALESCE(
       (SELECT jsonb_object_agg(status, n) FROM (
-        SELECT status, count(*) AS n FROM public.listings WHERE seller_id = p_seller_id GROUP BY status
+        -- status is nullable and jsonb_object_agg raises on a NULL key.
+        SELECT status, count(*) AS n FROM public.listings
+        WHERE seller_id = p_seller_id AND status IS NOT NULL
+        GROUP BY status
       ) by_status),
       '{}'::jsonb
     ),

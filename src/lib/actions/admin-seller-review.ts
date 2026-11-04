@@ -36,6 +36,11 @@ function getServiceClient() {
   })
 }
 
+/** Row security refuses an update by changing 0 rows with no error, so "no error" is not "saved". */
+function assertApplicationChanged(rows: unknown[] | null) {
+  if (!rows || rows.length === 0) throw new Error('The application was not updated. Check your review permission.')
+}
+
 // Types
 export interface ApplicationFilters {
   status?: string[]
@@ -756,7 +761,7 @@ export async function approveApplication(
 
     // Status update LAST — this is the event the client's reactive effect
     // keys off; by now the profiles identity update has already been sent.
-    const { error } = await (supabase
+    const { data: approvedRows, error } = await (supabase
       .from('seller_applications')
       .update as any)({
         status: 'approved',
@@ -769,8 +774,10 @@ export async function approveApplication(
         tax_verified,
       })
       .eq('id', applicationId)
+      .select('id')
 
     if (error) throw error
+    assertApplicationChanged(approvedRows)
 
     // Send email notification
     const userEmail = (application.profiles as any)?.email || application.alternate_email
@@ -910,7 +917,7 @@ export async function rejectApplication(applicationId: string, reason: string, n
       .eq('id', applicationId)
       .single() as any
 
-    const { error } = await (supabase
+    const { data: rejectedRows, error } = await (supabase
       .from('seller_applications')
       .update as any)({
         status: 'rejected',
@@ -920,8 +927,10 @@ export async function rejectApplication(applicationId: string, reason: string, n
         admin_notes: notes,
       })
       .eq('id', applicationId)
+      .select('id')
 
     if (error) throw error
+    assertApplicationChanged(rejectedRows)
 
     // Send email notification
     if (application) {
@@ -1009,15 +1018,17 @@ export async function requestMoreInfo(applicationId: string, message: string) {
       .eq('id', applicationId)
       .single() as any
 
-    const { error } = await (supabase
+    const { data: requestedRows, error } = await (supabase
       .from('seller_applications')
       .update as any)({
         status: 'info_requested',
         admin_notes: message,
       })
       .eq('id', applicationId)
+      .select('id')
 
     if (error) throw error
+    assertApplicationChanged(requestedRows)
 
     // Send email notification
     if (application) {

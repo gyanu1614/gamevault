@@ -163,6 +163,23 @@ describe.skipIf(!hasEnv)('moderation actions (integration)', () => {
     expect(state.submits).toBe(1)
   })
 
+  it('every decision stamps updated_at, which History "Everything" sorts by', async () => {
+    const stampOf = async (id: string) => {
+      const { data } = await (fx!.svc.from('listings') as any).select('updated_at').eq('id', id).single()
+      return new Date(data.updated_at).getTime()
+    }
+
+    const approved = await pendingListing()
+    const beforeApprove = await stampOf(approved)
+    await approveListing(approved)
+    expect(await stampOf(approved)).toBeGreaterThan(beforeApprove)
+
+    const rejected = await pendingListing()
+    const beforeReject = await stampOf(rejected)
+    await rejectListing(rejected, 'not allowed')
+    expect(await stampOf(rejected)).toBeGreaterThan(beforeReject)
+  })
+
   it('reject: decided before the response, seller told after it', async () => {
     const id = await pendingListing()
     const release = holdEmails()

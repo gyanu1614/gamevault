@@ -201,8 +201,6 @@ export async function login(formData: { email: string; password: string }) {
 
     const supabase = await createClient()
 
-    console.log('🔍 Attempting login for:', formData.email)
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email: formData.email,
       password: formData.password,
@@ -220,8 +218,6 @@ export async function login(formData: { email: string; password: string }) {
       }
       return { error: `Login failed: ${error.message}` }
     }
-
-    console.log('✅ Login successful:', data.user?.id)
 
     // No revalidation — see signup(). Auth-dependent chrome is client-side.
     return { data, error: null }

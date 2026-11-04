@@ -233,6 +233,9 @@ describe.skipIf(!hasEnv)('admin list RPCs (integration)', () => {
     const { data: stats, error } = await fx!.svc.rpc('admin_review_stats')
     expect(error).toBeNull()
     expect(stats.total_reviews).toBe(await countOf(fx!.svc.from('reviews').select('id', { count: 'exact' }).limit(1)))
+    // The page divides by these: a missing key shows "Positive Rate NaN%".
+    expect(stats.positive_reviews).toBe(await countOf(fx!.svc.from('reviews').select('id', { count: 'exact' }).gte('rating', 4).limit(1)))
+    expect(stats.negative_reviews).toBe(await countOf(fx!.svc.from('reviews').select('id', { count: 'exact' }).lte('rating', 2).limit(1)))
 
     const { data: counts, error: countsError } = await fx!.svc.rpc('admin_game_listing_counts')
     expect(countsError).toBeNull()
