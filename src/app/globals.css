@@ -80,10 +80,10 @@
 
   /* Navbar surface vars — used by navbar-floating.tsx inline styles.
      Owner, 2026-10-26: "a bit transparent yet bold, not just grey" — the
-     navbar is a deep frosted near-black; the game sub-navbar under it is one
-     step lighter (GameSubNav), so the two bars read as two layers. */
+     navbar is a deep frosted near-black. The game sub-navbar is the same surface
+     (owner, 2026-11-03: "both look different"), so the two read as one header. */
   --navbar-bg:               rgba(12, 13, 16, 0.76);
-  --subnav-bg:               rgba(26, 27, 32, 0.74);
+  --subnav-bg:               var(--navbar-bg);
   --navbar-mobile-bg:        #16171B;
   --navbar-dropdown-bg:      #1D1E23;
 
@@ -2221,41 +2221,36 @@
 }
 
 /* ─── Utility Classes ────────────────────────────────────────── */
-/* Glass panel, desktop only (pet page; owner, 2026-11-03). A dark fill close to the
-   page colour, low enough for the game art's colour to come through; the blur is
-   heavy, so the picture behind can't be read. It reads as glass because of the
-   edge: a hairline that catches light top-left and bottom-right, and a soft sheen
-   from the top. A lighter fill reads as a grey box on this dark page (GameBoost's
-   panel is dark for the same reason). Plain CSS: the "liquid glass" libraries use
-   SVG filters Safari doesn't support. Solid where blur isn't available or wanted. */
+/* Glass panel, desktop only (pet page; owner, 2026-11-03: "too much on top and too
+   less on bottom"). One thin flat tint with a plain hairline: no sheen, no gradient,
+   so it reads the same from top to bottom and is always one step lighter than
+   whatever is behind it. The art itself stays exactly as on the Items page (owner:
+   no blur on the hero), so the panel does the blurring. The page with these panels
+   sits on a ground one step lighter, with no darkening towards the bottom of the
+   screen ("premium and dark, but not so dark"). Plain CSS: the "liquid glass"
+   libraries use SVG filters Safari doesn't support. Solid where blur isn't available
+   or wanted. */
 @media (min-width: 1024px) {
-  .glass-panel {
-    --glass-fill: rgba(13, 14, 18, 0.24);
-    --glass-sheen: rgba(255, 255, 255, 0.08);
-    position: relative;
-    background: linear-gradient(160deg, var(--glass-sheen) 0%, transparent 42%), var(--glass-fill);
-    -webkit-backdrop-filter: blur(28px) saturate(240%);
-    backdrop-filter: blur(28px) saturate(240%);
-    box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.85);
+  html:has(.glass-panel) body {
+    background-color: #1C1D22;
+    background-image: none;
   }
-  .glass-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border-radius: inherit;
-    padding: 1px;
-    pointer-events: none;
-    background: linear-gradient(140deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 32%, rgba(255, 255, 255, 0.04) 68%, rgba(255, 255, 255, 0.14) 100%);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  .glass-panel {
+    /* Fills inside it (a seller with no picture) stay one step above the glass. */
+    --color-bg-overlay: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    backdrop-filter: blur(32px) saturate(180%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 18px 50px -24px rgba(0, 0, 0, 0.5);
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .glass-panel { background: #17181C; }
+    .glass-panel { background: #2A2C32; }
   }
   @media (prefers-reduced-transparency: reduce) {
-    .glass-panel { background: #17181C; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .glass-panel { background: #2A2C32; -webkit-backdrop-filter: none; backdrop-filter: none; }
   }
 }
 

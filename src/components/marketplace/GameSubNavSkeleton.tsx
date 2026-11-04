@@ -35,7 +35,7 @@ export default function GameSubNavSkeleton({ tabs = 2, phoneBack = false }: { ta
         <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>
           <div className="flex shrink-0 items-center gap-2.5 justify-self-start px-2.5 py-2 md:gap-3 md:px-0 max-md:gap-1.5 max-md:px-1.5 max-md:py-1">
             <Bone className={SUBNAV_LOGO} />
-            <Bone className="h-3.5 w-20 md:h-5 md:w-28" />
+            <Bone className="h-3.5 w-20 md:h-4 md:w-20" />
           </div>
           <div className="mx-1 h-4 w-px shrink-0 bg-white/[0.12] md:hidden" />
           <div className="flex min-w-0 items-center overflow-hidden max-md:flex-1 max-md:gap-1 md:justify-self-center">

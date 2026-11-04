@@ -17,8 +17,9 @@ import type { TraitOption } from './model/offers'
  * "Trait", the picked trait and a chevron. It opens a list of every trait with its cheapest price; a trait
  * nobody sells says Notify Me. Desktop: a dropdown under the field (Radix
  * Popover). Phones: a sheet that slides up from the bottom (vaul). `filled`
- * (desktop, under the picture; owner, 2026-11-03): a filled control one tone off
- * the panel, so it never reads as a box of the same colour inside a box.
+ * (desktop, under the picture; owner, 2026-11-03): a filled control one tone above
+ * the glass panel whatever colour the panel picks up, so it never reads as a box of
+ * the same colour inside a box.
  */
 export function TraitField({
   noun,
@@ -52,7 +53,7 @@ export function TraitField({
       className={cn(
         'flex h-12 items-center gap-3 text-left transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-        filled ? cn('w-full rounded-lg px-3.5', open ? 'bg-[#3A3B43]' : 'bg-[#2E2F36] hover:bg-[#33343B]') : cn('-mx-3 w-[calc(100%+1.5rem)] rounded-md px-3', open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'),
+        filled ? cn('w-full rounded-lg px-3.5', open ? 'bg-white/[0.14]' : 'bg-white/[0.08] hover:bg-white/[0.11]') : cn('-mx-3 w-[calc(100%+1.5rem)] rounded-md px-3', open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'),
       )}
     >
       <span id={labelId} className={cn('shrink-0 text-text-tertiary', filled && 'sr-only')} style={{ fontSize: 'var(--fs-body)' }}>

@@ -14,7 +14,16 @@ export const ITEM_COLUMN = 'mx-auto mt-5 max-w-3xl'
 
 /**
  * The pet page's desktop surface, `.glass-panel` in globals.css (owner,
- * 2026-11-03: transparent glass, no hover, not a grey box). Desktop only: on phones
- * the content floats on the page.
+ * 2026-11-03: transparent glass, even from top to bottom, no hover). Desktop only: on
+ * phones the content floats on the page.
  */
 export const GLASS = 'glass-panel lg:rounded-lg'
+
+/**
+ * An offer row on the page's lighter desktop ground (globals.css, with
+ * `.glass-panel`): one step above it, top to bottom. The house
+ * card's lower half would be darker than this ground and look sunk. A seller with
+ * no picture keeps a visible circle on it.
+ */
+export const OFFER_ROW =
+  'lg:bg-[linear-gradient(180deg,#27282E_0%,#24252B_100%)] lg:hover:bg-[linear-gradient(180deg,#2D2E35_0%,#2A2B31_100%)] lg:[--color-bg-overlay:rgba(255,255,255,0.1)]'

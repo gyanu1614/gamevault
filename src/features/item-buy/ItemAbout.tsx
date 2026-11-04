@@ -38,7 +38,7 @@ export function ItemDetails({ about, itemName, valueHref }: { about: ItemAbout; 
       {about.traitGuide ? (
         <ul className={cn(ITEM_COLUMN, 'grid gap-2 sm:grid-cols-2')}>
           {BADGES.map((b) => (
-            <li key={b.code} className="flex items-start gap-3 rounded-lg bg-[#1D1E23] p-3.5">
+            <li key={b.code} className="flex items-start gap-3 rounded-lg bg-[#1D1E23] p-3.5 lg:bg-[#24252B]">
               <TraitMarks code={b.code} size={24} className="mt-0.5" />
               <div className="min-w-0">
                 <p className="text-[14px] font-semibold text-text-primary">{b.name}</p>
@@ -72,7 +72,7 @@ export function ItemFaq({ about }: { about: ItemAbout }) {
       <h2 id="item-faq-title" className={cn(ITEM_H2, 'text-center')}>
         {about.faqHeading}
       </h2>
-      <FaqCards items={about.faq} className={ITEM_COLUMN} />
+      <FaqCards raised items={about.faq} className={ITEM_COLUMN} />
     </section>
   )
 }

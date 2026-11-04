@@ -43,7 +43,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
       <div className="relative">
         <BackButton
           href={browseHref}
-          className="mb-4 bg-[rgba(13,14,18,0.24)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] backdrop-blur-[28px] backdrop-saturate-[2.4] hover:bg-[rgba(255,255,255,0.08)] max-md:hidden min-[1400px]:absolute min-[1400px]:-left-[60px] min-[1400px]:top-0 min-[1400px]:mb-0"
+          className="mb-4 bg-white/[0.06] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)] backdrop-blur-[32px] backdrop-saturate-[1.8] hover:bg-white/[0.1] max-md:hidden min-[1400px]:absolute min-[1400px]:-left-[60px] min-[1400px]:top-0 min-[1400px]:mb-0"
         >
           <ArrowLeftIcon aria-hidden size={18} weight="bold" />
         </BackButton>

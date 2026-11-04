@@ -9,7 +9,7 @@ import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_i
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import { cn } from '@/lib/utils'
-import { ITEM_H2 } from './layout'
+import { ITEM_H2, OFFER_ROW } from './layout'
 import { TraitFilterMenu } from './TraitFilterMenu'
 import { TraitMarks } from './TraitMarks'
 import { TraitName } from './TraitName'
@@ -124,6 +124,7 @@ export function OffersSection({
                     isOwn={!!viewerId && o.sellerId === viewerId}
                     selected={o.id === selectedId}
                     onSelect={() => onSelectOffer(o)}
+                    surfaceClassName={OFFER_ROW}
                   />
                 </motion.li>
               )

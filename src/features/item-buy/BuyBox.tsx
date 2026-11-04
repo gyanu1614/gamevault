@@ -98,7 +98,7 @@ export function BuyBox(p: BuyBoxProps) {
                   onChange={(v) => p.onQty(Math.max(1, Math.min(max, v || 1)))}
                   minValue={1}
                   maxValue={max}
-                  className="h-11 w-[124px] shrink-0 lg:border-transparent lg:bg-[#2E2F36] lg:[&>button]:border-transparent"
+                  className="h-11 w-[124px] shrink-0 lg:border-transparent lg:bg-white/[0.08] lg:[&>button]:border-transparent"
                   ariaLabel="Quantity"
                 />
               ) : null}
@@ -159,7 +159,7 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
     </>
   )
   const cls = cn(
-    'mt-6 flex min-w-0 items-center gap-3 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
+    'mt-6 flex min-w-0 items-center gap-3 py-3.5 max-lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
     'lg:col-start-2 lg:mt-0 lg:self-start lg:px-5 lg:py-3.5',
     GLASS,
   )

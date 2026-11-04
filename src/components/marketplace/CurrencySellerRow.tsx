@@ -219,6 +219,8 @@ export interface CurrencySellerRowProps {
   /** The offer already on show (pet page): trust-blue edge and "Selected" in place of Select. */
   selected?: boolean
   onSelect: () => void
+  /** Overrides the card fill, for a page whose ground isn't the house one (pet page). */
+  surfaceClassName?: string
   /** When given, the row toggles this panel open/closed. */
   details?: ReactNode
 }
@@ -273,7 +275,7 @@ export function CurrencySellerRow(p: CurrencySellerRowProps) {
 
   if (!expandable) {
     return (
-      <article className={cn(ROW_SURFACE, ROW_IDLE)} style={p.selected ? { boxShadow: PICKED_EDGE } : undefined}>
+      <article className={cn(ROW_SURFACE, ROW_IDLE, p.surfaceClassName)} style={p.selected ? { boxShadow: PICKED_EDGE } : undefined}>
         <div className="relative">{content}</div>
       </article>
     )
@@ -281,7 +283,7 @@ export function CurrencySellerRow(p: CurrencySellerRowProps) {
 
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen} asChild>
-      <article className={cn(ROW_SURFACE, open ? ROW_OPEN : ROW_IDLE)}>
+      <article className={cn(ROW_SURFACE, open ? ROW_OPEN : ROW_IDLE, p.surfaceClassName)}>
         <div className="relative">
           {/* The whole row is the toggle: a transparent button behind the
               content (content is pointer-events-none; Select / the name link
