@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import type { ReferralEarning } from '@/types/database'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -59,8 +60,9 @@ export async function validateReferralCode(code: string): Promise<{
 }> {
   if (!code?.trim()) return { valid: false }
 
-  const supabase = await createClient()
-  const { data } = await supabase
+  // Service role: referral_code is on someone else's row, and this returns only
+  // their id and public username.
+  const { data } = await createServiceRoleClient()
     .from('profiles')
     .select('id, username')
     .eq('referral_code', code.trim().toUpperCase())
@@ -92,10 +94,11 @@ export async function getReferralStats(): Promise<{
     return { success: false, error: codeResult.error }
   }
 
-  // Count total unique users referred
-  const { count: totalReferrals } = await supabase
+  // Count total unique users referred. Service role: these are other people's rows,
+  // and only the count leaves here.
+  const { count: totalReferrals } = await createServiceRoleClient()
     .from('profiles')
-    .select('*', { count: 'exact' })
+    .select('id', { count: 'exact' })
     .eq('referred_by', user.id).limit(1)
 
   // Earnings aggregates

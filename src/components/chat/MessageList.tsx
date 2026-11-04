@@ -154,7 +154,7 @@ export default function MessageList({
 
       // Fetch profile info for admins
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('id, username, avatar_url')
         .in('id', adminUserIds) as any
 

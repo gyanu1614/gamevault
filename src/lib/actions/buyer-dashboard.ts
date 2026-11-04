@@ -54,7 +54,7 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
       supabase
         .from('orders')
         .select(
-          'id, status, total_amount, created_at, completed_at, listing:listings!orders_listing_id_fkey(title, game:game_id(name)), seller:profiles!seller_id(username, shop_name)',
+          'id, status, total_amount, created_at, completed_at, listing:listings!orders_listing_id_fkey(title, game:game_id(name)), seller:public_profiles!orders_seller_id_fkey(username, shop_name)',
         )
         .eq('buyer_id', user.id)
         .order('created_at', { ascending: false })

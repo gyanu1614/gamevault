@@ -26,7 +26,7 @@ export const reviewsApi = {
       .from('reviews')
       .select(`
         *,
-        reviewer:reviewer_id (
+        reviewer:public_profiles!reviews_reviewer_id_fkey (
           id,
           username,
           avatar_url

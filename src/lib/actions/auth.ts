@@ -61,7 +61,7 @@ export async function signup(formData: {
     // Check if username is already taken
     console.log('🔍 Checking if username exists:', formData.username)
     const { data: existingProfile, error: profileCheckError } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('username')
       .eq('username', formData.username)
       .single()
@@ -330,7 +330,7 @@ export async function updateProfile(formData: {
   // If updating username, check if it's available
   if (formData.username) {
     const { data: existingProfile } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('username, id')
       .eq('username', formData.username)
       .single() as any
@@ -483,7 +483,7 @@ export async function checkUsernameAvailability(username: string) {
     const supabase = await createClient()
 
     const { data, error } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('username')
       .eq('username', username)
       .maybeSingle()

@@ -315,7 +315,9 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(error).toBeNull()
       const p = data as any
       expect(p.default_acl_grants_anon_or_authenticated).toBe(false)
-      expect(p.views_without_security_invoker).toEqual([])
+      // public_profiles reads past the row rules on purpose once the DLT-001b migration
+      // runs: its column list is the boundary (public-profiles.guard pins it).
+      expect(p.views_without_security_invoker.filter((view: string) => view !== 'public_profiles')).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
       for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY, ...OPEN_SIGNUP_SERVICE_ONLY]) {

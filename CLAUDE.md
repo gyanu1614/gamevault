@@ -42,7 +42,7 @@
 
 ## Database functions & grants (from migration 20260913100000)
 - **Every migration that adds a function in `public` locks it itself:** `revoke all on function … from public, anon, authenticated` then `grant execute … to service_role`. The default-privileges change removed the anon/authenticated grants, but Postgres's built-in `EXECUTE` for `PUBLIC` remains on a new function (checked 2026-11-03), so anon can call it until revoked. A function the browser or a session client must call grants `authenticated` (or `anon`) instead **and** gets an entry in the allow-list in `src/test/guards/db-p0-grants.guard.integration.test.ts` — the posture test fails otherwise.
-- Every `SECURITY DEFINER` function pins `SET search_path = public`. Views are created `WITH (security_invoker = true)`.
+- Every `SECURITY DEFINER` function pins `SET search_path = public`. Views are created `WITH (security_invoker = true)`. The one exception is `public_profiles`, once the DLT-001b migration runs: its column list is the boundary.
 - Cron/admin routes must call RPCs through `createServiceRoleClient()`; the session client has no cookies on a Vercel cron request and runs as anon.
 - Why: on 2026-09-11 the audit found 39 definer functions and 10 views open to the anon key (tax ids, delivery codes, order state) because the baseline granted `EXECUTE` by default.
 
@@ -99,6 +99,12 @@
 - **New = `isNewItem`** (released ≤14 days, else added ≤14 days; `src/lib/values/new-item.ts`), computed on the server; list rows carry `isNew` only when true. The Google rule `isNewIndexable` (30 days + How To Get + release info) runs before the per-game "needs a price" rules.
 - **`/[game]/sell` shows no fee** — not in the title, description, rows or FAQ (owner: "showing them fee upfront is the worst way"). Sections render only with their data (`sell/_sellData.ts` → `_SellSections.tsx`); copy comes from `src/lib/sell/sell-copy.ts`, whose test fails on any `%` or "fee". Value rows reuse the values list loaders (same tagged reads); player numbers come from the anon-callable `public_game_players` RPC (the trend radar tables stay service-role only).
 - **Marketplace names never break a price silently.** After exact matching, every price job runs what's left through the match log (`market_name_matches`; `scripts/lib/market-names.mjs` + `name-match.mjs`): saved decisions first, then a close match only when it is near-identical, has a clear lead, the numbers agree and the item has no exact match this run (saved as `auto`), else `unmatched` with suggestions. Admins confirm / reject / link in Admin → Games → Values ("Names On Eldorado"); the values-health cron alerts on unmatched names with listings. Adopt Me and MM2 run it today; a new crawl-based game must call it too — never add a hard-coded alias map instead.
+
+## Profiles: your own row only (DLT-001b, 2026-11-03)
+- A session client reads **its own** row from `profiles`, and staff with two-factor read any row. Everyone else's display details come from `public_profiles` (`seller:public_profiles!orders_seller_id_fkey(username)`), which has no private columns. A `buyer:buyer_id(...)` or `profiles!…` embed in non-staff code comes back **null, with no error**; `profile-privacy.guard.integration.test.ts` fails on a new one.
+- A lookup across other people's rows on a private column (referral code, `referred_by`, email) goes through the service role after the caller is checked, and returns only what the caller may see.
+- Adding a column to `public_profiles` makes it readable by anyone, signed in or not.
+- The migration is held in `supabase/migrations_pending/` until the code is live; see the README there.
 
 ## Admin speed (plan 1, 2026-11-03)
 - **One staff check per request:** `getAdminGate` (`src/lib/admin/context.ts`), memoized on the request. Every staff power needs two-factor (`staff_session_ok()`, migration 20261103125855). Never read `admin_roles` or `profiles.role` for a staff decision.

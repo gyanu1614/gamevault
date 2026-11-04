@@ -113,7 +113,7 @@ export const earningsApi = {
         total_amount,
         status,
         created_at,
-        buyer:profiles!buyer_id(username),
+        buyer:public_profiles!orders_buyer_id_fkey(username),
         listing:listings!listing_id(title)
       `)
       .eq('seller_id', user.id)
