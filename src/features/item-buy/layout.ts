@@ -6,8 +6,8 @@
  */
 export const ITEM_SECTION_GAP = 'mt-14 sm:mt-20'
 
-/** Section headings on the pet page: left-aligned, one size (owner, 2026-11-02). */
+/** Section headings on the pet page: one size (owner, 2026-11-02). */
 export const ITEM_H2 = 'text-[20px] font-bold leading-tight tracking-[-0.01em] text-text-primary sm:text-[24px]'
 
-/** About and the buyer questions: heading left, content right on desktop; stacked on phones. */
-export const ITEM_SPLIT = 'lg:grid lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)] lg:gap-x-12'
+/** About and the buyer questions: the title centred on top, their content in this centred column below (owner, 2026-11-03). */
+export const ITEM_COLUMN = 'mx-auto mt-5 max-w-3xl'

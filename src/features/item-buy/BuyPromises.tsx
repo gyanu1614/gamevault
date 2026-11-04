@@ -16,17 +16,19 @@ const ROWS: Array<{ Icon: PhosphorIcon; label: string; sub: string }> = [
  * The three promises as plain rows right under Buy (owner, 2026-11-02, with
  * Eldorado's rows as the reference): a trust-blue icon, the promise, and a
  * short muted line, floating on the page with no box around them. They sit
- * where the buyer decides, instead of a separate strip lower down. Desktop
- * stacks the two lines in a lighter weight (owner, 2026-11-03: too bold, packed).
+ * where the buyer decides, instead of a separate strip lower down. The promise
+ * and its line stack, in a lighter weight, on every screen (owner, 2026-11-03:
+ * too bold, too packed).
  */
 export function BuyPromises() {
   return (
-    <ul aria-label="Our Promises" className="grid gap-3 lg:gap-4">
+    <ul aria-label="Our Promises" className="grid gap-4">
       {ROWS.map(({ Icon, label, sub }) => (
         <li key={label} className="flex items-start gap-3" style={{ fontSize: 'var(--fs-body)' }}>
           <Icon aria-hidden size={20} weight="fill" color={TRUST_BLUE} className="mt-px shrink-0" />
           <p className="min-w-0 leading-snug">
-            <span className="font-semibold text-text-primary lg:block lg:font-medium">{label}</span> <span className="text-text-tertiary lg:mt-0.5 lg:block lg:text-[13px]">{sub}</span>
+            <span className="block font-medium text-text-primary">{label}</span>
+            <span className="mt-0.5 block text-[13px] text-text-tertiary">{sub}</span>
           </p>
         </li>
       ))}

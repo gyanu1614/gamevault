@@ -70,8 +70,8 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     // Phones: lands under the navbar and the back row, both fixed there.
-    <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)]">
-      <GlassPanel className="lg:p-7">
+    <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)] lg:contents">
+      <GlassPanel className="lg:flex lg:flex-col lg:p-7">
         {p.traits.length > 0 ? (
           <div className="lg:hidden">
             <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
@@ -120,10 +120,11 @@ export function BuyBox(p: BuyBoxProps) {
           </div>
         )}
 
-        <div className="mt-5 lg:mt-7">
+        <div className="mt-5 lg:mb-6 lg:mt-7">
           <BuyPromises />
         </div>
-        <div className="mt-5 lg:mt-6 lg:pt-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+        {/* Desktop: pinned to the bottom of the card, which matches the pet panel's height. */}
+        <div className="mt-5 lg:mt-auto lg:pt-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
           <PaymentMarks />
         </div>
       </GlassPanel>
@@ -155,7 +156,7 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
   )
   const cls = cn(
     'mt-5 flex min-w-0 items-center gap-3 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
-    'lg:mt-3 lg:px-5 lg:py-3.5',
+    'lg:col-start-2 lg:mt-0 lg:self-start lg:px-5 lg:py-3.5',
     GLASS,
   )
   return slug ? (
