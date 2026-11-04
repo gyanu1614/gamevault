@@ -1,5 +1,6 @@
 import Link from '@/components/navigation/AppLink'
-import { IconChevronRight } from '@tabler/icons-react'
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
+import { BackButton } from '@/components/marketplace/BackButton'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
 import { TrustRow } from '@/features/item-buy/TrustRow'
@@ -19,15 +20,13 @@ import type { loadItemListingsPage } from '../_valueItemOffers'
 type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
 
 /**
- * The pet page body (owner, 2026-10-26/27/28, Eldorado as the reference):
- * the picture and its spec card with the delivery instructions under them on
- * the left; on the right the buy panel (name, trait picker, price, quantity,
- * Buy or Notify Me, ways to pay) and a small seller card. Then the three
- * promises, every offer as a full-width row, the details and the FAQ.
- * Filtered on the server, so the first HTML holds this pet's offers only. A
- * pet nobody sells still renders: Notify Me, then similar pets that have
- * offers, then a way to sell one. Under it, for every pet: its details, the
- * badge guide, buyer questions and links to related pets (all server HTML).
+ * The pet page body (owner, 2026-10-26 to 11-03; Eldorado and GameBoost as the
+ * references): a back button, the frosted panel with the pet, its facts and
+ * delivery instructions, the buy column beside it, then every offer as a
+ * full-width row, more pets, the buyer questions and About. Filtered on the
+ * server, so the first HTML holds this pet's offers only. A pet nobody sells
+ * still renders: Notify Me, then similar pets that have offers, then a way to
+ * sell one (all server HTML).
  */
 export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; data: Data; about: ItemAbout }) {
   const { pair, catalog, model, offers, offerVariants } = data
@@ -40,48 +39,33 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-4 sm:px-6 md:pt-0 lg:px-8">
-      {/* Phones get the back bar in the sub-navbar instead (owner, 2026-11-02); the breadcrumb JSON-LD stays for search. */}
-      <nav aria-label="Breadcrumb" className="mb-6 text-text-tertiary max-md:hidden" style={{ fontSize: 'var(--fs-meta)' }}>
-        <ol className="flex flex-wrap items-center gap-1">
-          <li>
-            <Link href={`/${gameSlug}`} className="transition-colors hover:text-text-primary">
-              {pair.gameName}
-            </Link>
-          </li>
-          <li aria-hidden>
-            <IconChevronRight size={14} stroke={2} />
-          </li>
-          <li>
-            <Link href={browseHref} className="transition-colors hover:text-text-primary">
-              Buy Items
-            </Link>
-          </li>
-          <li aria-hidden>
-            <IconChevronRight size={14} stroke={2} />
-          </li>
-          <li className="text-text-secondary" aria-current="page">
-            {item.name}
-          </li>
-        </ol>
-      </nav>
+      {/* Breadcrumbs only for search (JSON-LD in the route); a back button on screen, GameBoost's (owner, 2026-11-03). Phones have theirs in the sub-navbar. */}
+      <div className="relative">
+        <BackButton
+          href={browseHref}
+          className="mb-4 bg-[rgba(28,29,35,0.66)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-xl hover:bg-[rgba(46,47,54,0.8)] max-md:hidden min-[1400px]:absolute min-[1400px]:-left-[60px] min-[1400px]:top-0 min-[1400px]:mb-0"
+        >
+          <ArrowLeftIcon aria-hidden size={18} weight="bold" />
+        </BackButton>
 
-      <ItemBuyClient
-        gameSlug={gameSlug}
-        gameName={pair.gameName}
-        itemSlug={item.slug}
-        itemName={item.name}
-        imageUrl={item.imageUrl ?? null}
-        noun={traitNoun(gameSlug)}
-        traits={traits}
-        offers={offers}
-        offerVariants={offerVariants}
-        urlVariant={model.variant}
-        basePath={model.canonicalPath}
-        rarity={rarity ? { label: rarity.label, color: rarity.color } : null}
-        deliveryMethod={deliveryMethodLabel(gameSlug)}
-        deliveryFallback={defaultDeliveryNote(gameSlug, pair.gameName)}
-        trust={<TrustRow />}
-      />
+        <ItemBuyClient
+          gameSlug={gameSlug}
+          gameName={pair.gameName}
+          itemSlug={item.slug}
+          itemName={item.name}
+          imageUrl={item.imageUrl ?? null}
+          noun={traitNoun(gameSlug)}
+          traits={traits}
+          offers={offers}
+          offerVariants={offerVariants}
+          urlVariant={model.variant}
+          basePath={model.canonicalPath}
+          rarity={rarity ? { label: rarity.label, color: rarity.color } : null}
+          deliveryMethod={deliveryMethodLabel(gameSlug)}
+          deliveryFallback={defaultDeliveryNote(gameSlug, pair.gameName)}
+          trust={<TrustRow />}
+        />
+      </div>
 
       <div className={cn(ITEM_SECTION_GAP, 'flex flex-col gap-14 sm:gap-20')}>
         {offers.length === 0 ? (
@@ -101,9 +85,9 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
           </div>
         ) : null}
 
-        <ItemDetails about={about} itemName={item.name} valueHref={valueHref} />
-        <ItemFaq title={`Questions About Buying ${item.name}`} about={about} />
         <PopularCarousel id="related-items" heading={about.relatedHeading} items={stockedToGridItems(gameSlug, model.related)} gameSlug={gameSlug} />
+        <ItemFaq title={`Questions About Buying ${item.name}`} about={about} />
+        <ItemDetails about={about} itemName={item.name} valueHref={valueHref} />
       </div>
     </main>
   )

@@ -1,7 +1,7 @@
 /**
  * Category Browse Page — /{gameSlug}/{categorySlug}
  *
- * Layout: sticky GameSubNav → centered header → CategoryPageLayout (filter toggle)
+ * Layout: GameSubNav → centered header → CategoryPageLayout (filter toggle)
  * Apple/Spotify-inspired minimal dark theme with game vibe.
  */
 

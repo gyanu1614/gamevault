@@ -16,18 +16,22 @@ import type { TraitOption } from './model/offers'
  * reference; 2026-11-02: a plain row, not a box inside the buy box): the word
  * "Trait", the picked trait and a chevron. It opens a list of every trait with its cheapest price; a trait
  * nobody sells says Notify Me. Desktop: a dropdown under the field (Radix
- * Popover). Phones: a sheet that slides up from the bottom (vaul).
+ * Popover). Phones: a sheet that slides up from the bottom (vaul). `filled`
+ * (desktop, under the picture; owner, 2026-11-03): a filled control one tone off
+ * the panel, so it never reads as a box of the same colour inside a box.
  */
 export function TraitField({
   noun,
   options,
   value,
   onChange,
+  filled = false,
 }: {
   noun: string
   options: TraitOption[]
   value: string | null
   onChange: (variant: string) => void
+  filled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const desktop = useMediaQuery('(min-width: 1024px)')
@@ -46,15 +50,15 @@ export function TraitField({
       aria-expanded={open}
       aria-labelledby={labelId}
       className={cn(
-        '-mx-3 flex h-12 w-[calc(100%+1.5rem)] items-center gap-3 rounded-md px-3 text-left transition-colors',
+        'flex h-12 items-center gap-3 text-left transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-        open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]',
+        filled ? cn('w-full rounded-lg px-3.5', open ? 'bg-[#3A3B43]' : 'bg-[#2E2F36] hover:bg-[#33343B]') : cn('-mx-3 w-[calc(100%+1.5rem)] rounded-md px-3', open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'),
       )}
     >
-      <span id={labelId} className="shrink-0 text-text-tertiary" style={{ fontSize: 'var(--fs-body)' }}>
+      <span id={labelId} className={cn('shrink-0 text-text-tertiary', filled && 'sr-only')} style={{ fontSize: 'var(--fs-body)' }}>
         {noun}
       </span>
-      <span className="flex min-w-0 flex-1 items-center justify-end gap-2.5">
+      <span className={cn('flex min-w-0 flex-1 items-center gap-2.5', !filled && 'justify-end')}>
         {current?.short ? <TraitMarks code={current.short} size={22} /> : null}
         <span className="truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-card-title)' }}>
           {current ? <TraitName traitKey={current.variant} label={current.label} /> : `Choose a ${noun}`}
@@ -75,10 +79,12 @@ export function TraitField({
             side="bottom"
             align="start"
             sideOffset={8}
+            // Always below the field, like every filter dropdown (owner, 2026-10-01): flipped up it covered the navbar. A short window scrolls the list.
+            avoidCollisions={false}
             collisionPadding={12}
             className={cn(
-              'z-50 w-[var(--radix-popover-trigger-width)] max-h-[min(460px,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain rounded-lg bg-[#1D1E23] py-1.5',
-              'shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_24px_48px_-16px_rgba(0,0,0,0.8)]',
+              'z-50 w-[max(var(--radix-popover-trigger-width),340px)] max-h-[min(460px,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain rounded-lg bg-[#2A2B31] py-1.5',
+              'shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_24px_48px_-16px_rgba(0,0,0,0.8)]',
               'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1',
             )}
           >
@@ -123,9 +129,9 @@ function TraitList({ options, value, onPick, labelId }: { options: TraitOption[]
             <button
               type="button"
               onClick={() => onPick(o.variant)}
-              className={cn('flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-white/[0.04]', selected && 'bg-white/[0.035]')}
+              className={cn('flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-white/[0.04] lg:min-h-[44px]', selected && 'bg-white/[0.035]')}
             >
-              <span className="w-[62px] shrink-0">{o.short ? <TraitMarks code={o.short} className={cn(o.count === 0 && 'opacity-40')} /> : null}</span>
+              <span className="flex w-[62px] shrink-0 items-center">{o.short ? <TraitMarks code={o.short} className={cn(o.count === 0 && 'opacity-40')} /> : null}</span>
               <span className={cn('min-w-0 flex-1 truncate', selected ? 'font-semibold' : 'font-medium', o.count === 0 && 'text-text-secondary')} style={{ fontSize: 'var(--fs-body)' }}>
                 <TraitName traitKey={o.count > 0 ? o.variant : null} label={o.label} />
               </span>

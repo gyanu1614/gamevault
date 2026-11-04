@@ -5,10 +5,12 @@ import { StockAlertsProvider } from '@/features/items-grid/stock-alerts-context'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { BuyBox, ItemTitle } from './BuyBox'
 import { DeliveryNotes } from './DeliveryNotes'
+import { GlassPanel } from './GlassPanel'
 import { ItemSpecs } from './ItemSpecs'
 import { OffersSection } from './OffersSection'
 import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
+import { TraitField } from './TraitField'
 import { defaultTrait, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
 import { useBuyOffer } from './use-buy-offer'
 import { ITEM_SECTION_GAP } from './layout'
@@ -40,15 +42,16 @@ export interface ItemBuyClientProps {
  * The pet page (owner, 2026-10-27; layout 2026-10-28, Eldorado's item page
  * as the reference; StockX's trait field and buy box).
  *
- * Desktop (owner, 2026-11-02, Eldorado's item page as the reference): a
- * square picture tile with the title and the facts beside it, the delivery
- * instructions under them; the buy column on the right (buy box with the
- * promises, seller) stays in view while the left column scrolls. Under that block, every offer as a
- * full-width row with the trait filter. Phones and tablets (Eldorado's phone
- * page as the reference, no box in a box): title, picture, the facts floating
- * 2 × 2, the buy box on the page, instructions, and a Buy bar docks at the
- * bottom once the box scrolls away. One DOM order serves both: the buy column
- * is `display: contents` on phones so its pieces take their own `order`.
+ * Desktop (owner, 2026-11-03, a mix of GameBoost's panel and Eldorado's facts):
+ * one frosted panel over the game art, the picture with the trait picker under
+ * it on the left, the title, four facts with icons and the delivery
+ * instructions on the right; the buy column beside it (buy box with the
+ * promises, seller). Under that block, every offer as a full-width row with the trait filter. Phones and tablets
+ * (Eldorado's phone page as the reference, no box in a box): title, picture, the
+ * facts floating 2 × 2, the buy box with the trait picker on the page,
+ * instructions, and a Buy bar docks at the bottom once the box scrolls away. One
+ * DOM order serves both: the panel and its grid are `display: contents` on phones
+ * so their pieces take their own `order`.
  *
  * The page opens on the URL's trait, else the cheapest offer's. Picking a
  * trait shows its cheapest offer; picking a row shows that offer and its
@@ -125,21 +128,31 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-12 lg:gap-y-10 lg:[grid-template-areas:'hero_buy'_'notes_buy'] xl:grid-cols-[minmax(0,1fr)_420px]">
-        {/* Phones: title, picture, facts in that order (display: contents). Desktop: a square picture tile with the title and facts beside it. */}
-        <div className="contents lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-8 lg:[grid-area:hero] lg:[grid-template-areas:'pic_title'_'pic_facts']">
-          <div className="order-1 min-w-0 lg:[grid-area:title]">
-            <ItemTitle itemName={p.itemName} gameName={p.gameName} />
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <GlassPanel className="contents lg:block lg:p-7">
+          <div className="contents lg:grid lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:gap-x-8 lg:[grid-template-areas:'pic_title'_'pic_facts'_'pic_notes']">
+            <div className="order-1 min-w-0 lg:[grid-area:title]">
+              <ItemTitle itemName={p.itemName} gameName={p.gameName} />
+            </div>
+            <div className="order-2 min-w-0 lg:[grid-area:pic]">
+              <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
+              {options.length > 0 ? (
+                <div className="mt-4 hidden lg:block">
+                  <TraitField filled noun={p.noun} options={options} value={trait} onChange={onTrait} />
+                </div>
+              ) : null}
+            </div>
+            <div className="order-3 min-w-0 lg:mt-6 lg:[grid-area:facts]">
+              <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
+            </div>
+            <div className="order-5 min-w-0 pt-2 lg:mt-6 lg:pt-0 lg:[grid-area:notes]">
+              {offer ? <DeliveryNotes text={offer.description ?? null} fallback={p.deliveryFallback} resetKey={offer.id} /> : null}
+              {p.trust}
+            </div>
           </div>
-          <div className="order-2 min-w-0 lg:[grid-area:pic]">
-            <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
-          </div>
-          <div className="order-3 min-w-0 lg:mt-6 lg:[grid-area:facts]">
-            <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
-          </div>
-        </div>
+        </GlassPanel>
 
-        <div className="order-4 min-w-0 pt-1 lg:sticky lg:top-[calc(var(--game-chrome-bottom)+20px)] lg:self-start lg:pt-0 lg:[grid-area:buy]">
+        <div className="order-4 min-w-0 pt-1 lg:pt-0">
           <BuyBox
             gameSlug={p.gameSlug}
             itemSlug={p.itemSlug}
@@ -156,11 +169,6 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
             isOwn={isOwn}
             buyRef={buyRef}
           />
-        </div>
-
-        <div className="order-5 min-w-0 pt-2 lg:order-none lg:self-start lg:pt-0 lg:[grid-area:notes]">
-          {offer ? <DeliveryNotes text={offer.description ?? null} fallback={p.deliveryFallback} resetKey={offer.id} /> : null}
-          {p.trust}
         </div>
       </div>
 

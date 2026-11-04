@@ -8,8 +8,9 @@
  * (icon + label, full bar height), the content tab right. Phones keep the
  * scrollable strip under the 60px app bar — except inside a listing
  * (`phoneBack`): there phones get a back button and the game name in the
- * navbar's own colour, so the two bars read as one (owner, 2026-11-02,
- * Eldorado's phone item page as the reference).
+ * navbar's own colour, fixed under it, so the two bars read as one section and
+ * never come apart (owner, 2026-11-02/03, Eldorado's phone item page as the
+ * reference).
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react'
@@ -19,6 +20,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { SubnavSellButton } from '@/components/seller/SellerPrompt'
+import { BackButton } from './BackButton'
 import {
   SUBNAV_BG,
   SUBNAV_LOGO,
@@ -114,19 +116,6 @@ export default function GameSubNav({
     })
   }
 
-  // Back to the page the buyer came from when it is ours, else to the category.
-  const goBack = () => {
-    if (!phoneBack) return
-    let fromUs = false
-    try {
-      fromUs = window.history.length > 1 && !!document.referrer && new URL(document.referrer).origin === window.location.origin
-    } catch {
-      fromUs = false
-    }
-    if (fromUs) router.back()
-    else router.push(phoneBack.href)
-  }
-
   // Keep the game lockup present even when a database row has no artwork yet.
   // The shared registry mirrors the homepage fallback icons and avoids a
   // broken/empty left edge in the compact mobile subnavbar.
@@ -148,19 +137,14 @@ export default function GameSubNav({
        and only the navbar stays. */
     <nav aria-label={`${gameName} categories`} className={SUBNAV_SLOT}>
       <div
-        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:!bg-[#1C1D22] max-md:shadow-none')}
+        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:fixed max-md:top-[var(--subnav-top)] max-md:!bg-[#1C1D22] max-md:shadow-none')}
         style={{ backgroundColor: SUBNAV_BG }}
       >
         {phoneBack ? (
           <div className="flex w-full items-center md:hidden">
-            <button
-              type="button"
-              onClick={goBack}
-              aria-label="Back"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-primary transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
+            <BackButton href={phoneBack.href} className="bg-white/[0.06] hover:bg-white/[0.1]">
               <ChevronLeft aria-hidden className="h-5 w-5" />
-            </button>
+            </BackButton>
             <Link href={`/${gameSlug}`} className="min-w-0 flex-1 truncate px-2 text-center text-[15px] font-bold text-text-primary">
               {gameName}
             </Link>

@@ -13,15 +13,13 @@ import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { cn } from '@/lib/utils'
 import { BuyPromises } from './BuyPromises'
+import { GLASS, GlassPanel } from './GlassPanel'
 import { PaymentMarks } from './PaymentMarks'
 import { TraitField } from './TraitField'
 import { maxQtyOf } from './money'
 import type { TraitOption } from './model/offers'
 
 const USD = { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 } as const
-
-/** Desktop only: the buy box and seller sit in cards; phones keep everything on the page (owner, 2026-11-02). */
-const LG_CARD = 'lg:rounded-lg lg:bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] lg:shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]'
 
 /**
  * The pet's name. Its own piece so phones show it first (over the picture, as
@@ -31,7 +29,7 @@ const LG_CARD = 'lg:rounded-lg lg:bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_
  */
 export function ItemTitle({ itemName, gameName }: { itemName: string; gameName: string }) {
   return (
-    <h1 id="item-title" className="text-balance text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary lg:text-[28px]">
+    <h1 id="item-title" className="text-balance text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary lg:text-[32px]">
       <span className="sr-only">{gameName} </span>
       {itemName}
     </h1>
@@ -58,12 +56,12 @@ export interface BuyBoxProps {
 
 /**
  * The buy column (owner, 2026-10-27/28, 2026-11-02; StockX's buy box and
- * Eldorado's phone page as references): the trait dropdown (owner,
- * 2026-11-02: one field, not five buttons), a divider, the price
- * (rolling when the trait changes) with the quantity, Buy, the three promises
- * as plain rows, then the ways to pay; the seller under it. Desktop frames it
- * in a card; on phones it floats on the page. A trait nobody sells gets
- * Notify Me instead.
+ * Eldorado's phone page as references): the price (rolling when the trait
+ * changes) with the quantity, Buy, the three promises as plain rows, then the
+ * ways to pay; the seller under it. Desktop frames it in glass with room to
+ * breathe (owner, 2026-11-03: too bold, too packed) and has the trait picker
+ * under the picture instead; on phones it floats on the page with the picker on
+ * top. A trait nobody sells gets Notify Me instead.
  */
 export function BuyBox(p: BuyBoxProps) {
   const { offer } = p
@@ -71,13 +69,14 @@ export function BuyBox(p: BuyBoxProps) {
   const off = offer?.originalPrice && offer.originalPrice > offer.pricePerUnit ? Math.round((1 - offer.pricePerUnit / offer.originalPrice) * 100) : 0
 
   return (
-    <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome">
-      <div className={cn('lg:p-6', LG_CARD)}>
+    // Phones: lands under the navbar and the back row, both fixed there.
+    <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)]">
+      <GlassPanel className="lg:p-7">
         {p.traits.length > 0 ? (
-          <>
+          <div className="lg:hidden">
             <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
             <div aria-hidden className="my-5 h-px bg-white/[0.08]" />
-          </>
+          </div>
         ) : null}
 
         {offer ? (
@@ -87,7 +86,7 @@ export function BuyBox(p: BuyBoxProps) {
                 <NumberFlow
                   value={offer.pricePerUnit * p.qty}
                   format={USD}
-                  className="font-bold tabular-nums text-text-primary"
+                  className="font-bold tabular-nums text-text-primary lg:font-semibold"
                   style={{ fontSize: 'clamp(26px, 22px + 0.6vw, 30px)', letterSpacing: '-0.025em', lineHeight: 1 }}
                 />
                 {off > 0 ? <span className="rounded bg-lime-tint-bg px-1.5 py-0.5 text-[12px] font-bold text-lime-text">-{off}%</span> : null}
@@ -98,12 +97,12 @@ export function BuyBox(p: BuyBoxProps) {
                   onChange={(v) => p.onQty(Math.max(1, Math.min(max, v || 1)))}
                   minValue={1}
                   maxValue={max}
-                  className="h-11 w-[124px] shrink-0"
+                  className="h-11 w-[124px] shrink-0 lg:border-transparent lg:bg-[#2E2F36] lg:[&>button]:border-transparent"
                   ariaLabel="Quantity"
                 />
               ) : null}
             </div>
-            <div ref={p.buyRef} className="mt-4">
+            <div ref={p.buyRef} className="mt-4 lg:mt-5">
               <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="h-14 w-full text-[16px]" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
                 {p.isOwn ? 'Edit Your Listing' : BUY_CTA_LABEL}
               </BuyButton>
@@ -121,13 +120,13 @@ export function BuyBox(p: BuyBoxProps) {
           </div>
         )}
 
-        <div className="mt-5">
+        <div className="mt-5 lg:mt-7">
           <BuyPromises />
         </div>
-        <div className="mt-5">
+        <div className="mt-5 lg:mt-6 lg:pt-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
           <PaymentMarks />
         </div>
-      </div>
+      </GlassPanel>
 
       {offer ? <SellerCard offer={offer} isOwn={p.isOwn} /> : null}
     </section>
@@ -156,14 +155,14 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
   )
   const cls = cn(
     'mt-5 flex min-w-0 items-center gap-3 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
-    'lg:mt-3 lg:px-4 lg:py-3',
-    LG_CARD,
+    'lg:mt-3 lg:px-5 lg:py-3.5',
+    GLASS,
   )
   return slug ? (
     <SmartLink
       href={`/shop/${slug}`}
       aria-label={`${sellerDisplayName(s)}'s shop`}
-      className={cn(cls, 'transition-[background-image] duration-200 lg:hover:bg-[linear-gradient(180deg,#27282F_0%,#1E1F25_100%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
+      className={cn(cls, 'transition-colors duration-200 lg:hover:bg-[rgba(38,39,46,0.72)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
     >
       {body}
     </SmartLink>

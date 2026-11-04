@@ -37,6 +37,8 @@ export const SUBNAV_STRIP = cn(
   'pointer-events-auto absolute inset-x-0 top-0 z-[45] w-full backdrop-blur-2xl backdrop-saturate-150',
   'md:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.9)]',
   'h-[52px] max-md:flex max-md:items-center max-md:px-2 max-md:!bg-[#0b0f0c] max-md:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.85)]',
+  // Phones: pulling the page down past the top would open a gap under the fixed navbar; this fills it in the navbar's colour.
+  "max-md:before:absolute max-md:before:inset-x-0 max-md:before:bottom-full max-md:before:h-40 max-md:before:bg-[#1C1D22] max-md:before:content-['']",
 )
 
 export const SUBNAV_BG = 'var(--subnav-bg, rgba(24, 25, 30, 0.74))'

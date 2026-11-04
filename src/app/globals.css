@@ -2221,6 +2221,12 @@
 }
 
 /* ─── Utility Classes ────────────────────────────────────────── */
+/* The sub-navbar scrolls with the page: on desktop, no rubber band that would
+   pull it away from the fixed navbar. Phones keep theirs (pull to refresh). */
+@media (min-width: 768px) {
+  html[data-subnav] { overscroll-behavior-y: none; }
+}
+
 @layer utilities {
   /* A scroll target on a game page lands just under the fixed navbar, not under it. */
   .scroll-mt-game-chrome {
