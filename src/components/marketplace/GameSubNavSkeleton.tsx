@@ -24,7 +24,7 @@ function TabBone({ label = 'w-14' }: { label?: string }) {
 export default function GameSubNavSkeleton({ tabs = 2, phoneBack = false }: { tabs?: number; phoneBack?: boolean }) {
   return (
     <div aria-hidden className={SUBNAV_SLOT}>
-      <div className={cn(SUBNAV_STRIP, phoneBack && 'max-md:fixed max-md:top-[var(--subnav-top)] max-md:!bg-[#1C1D22] max-md:shadow-none')} style={{ backgroundColor: SUBNAV_BG }}>
+      <div className={cn(SUBNAV_STRIP, phoneBack && 'max-md:shadow-none')} style={{ backgroundColor: SUBNAV_BG }}>
         {phoneBack ? (
           <div className="flex w-full items-center md:hidden">
             <Bone className="h-11 w-11 shrink-0" />

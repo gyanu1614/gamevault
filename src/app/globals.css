@@ -64,9 +64,9 @@
      navbar's visible bar. Below lg that is the 60px app bar; at lg the bar
      is 64px (lg:h-16 in navbar-floating) inside an 84px spacer. */
   --subnav-top: calc(60px + var(--chrome-top));
-  /* Bottom of the fixed chrome on a game page: only the navbar, the sub-navbar
-     scrolls away. What scroll targets and sticky columns there must clear. */
-  --game-chrome-bottom: var(--subnav-top);
+  /* Bottom of the fixed chrome on a game page (navbar + 52px sub-navbar):
+     what scroll targets and sticky columns there must clear. */
+  --game-chrome-bottom: calc(var(--subnav-top) + 52px);
 
   /* iPhone status-bar area (0 everywhere else). The root viewport is
      viewport-fit=cover (layout.tsx), so the page runs under the status bar:
@@ -2254,14 +2254,14 @@
   }
 }
 
-/* The sub-navbar scrolls with the page: on desktop, no rubber band that would
-   pull it away from the fixed navbar. Phones keep theirs (pull to refresh). */
+/* Desktop: no rubber band that would pull the page out from under the fixed
+   navbar + sub-navbar. Phones keep theirs (pull to refresh). */
 @media (min-width: 768px) {
   html[data-subnav] { overscroll-behavior-y: none; }
 }
 
 @layer utilities {
-  /* A scroll target on a game page lands just under the fixed navbar, not under it. */
+  /* A scroll target on a game page lands just under the fixed navbar + sub-navbar, not under them. */
   .scroll-mt-game-chrome {
     scroll-margin-top: calc(var(--game-chrome-bottom) + 16px);
   }

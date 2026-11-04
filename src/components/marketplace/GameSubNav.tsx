@@ -8,9 +8,9 @@
  * (icon + label, full bar height), the content tab right. Phones keep the
  * scrollable strip under the 60px app bar — except inside a listing
  * (`phoneBack`): there phones get a back button and the game name in the
- * navbar's own colour, fixed under it, so the two bars read as one section and
- * never come apart (owner, 2026-11-02/03, Eldorado's phone item page as the
- * reference).
+ * navbar's own colour, so the two bars read as one section (owner, 2026-11-02/03,
+ * Eldorado's phone item page as the reference). Fixed under the navbar on every
+ * page and width (owner, 2026-11-04).
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react'
@@ -133,11 +133,10 @@ export default function GameSubNav({
   }, [])
 
   return (
-    /* A full-width strip flush under the navbar, in the page: it scrolls away
-       and only the navbar stays. */
+    /* A full-width strip fixed flush under the navbar; the slot holds its place in the page. */
     <nav aria-label={`${gameName} categories`} className={SUBNAV_SLOT}>
       <div
-        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:fixed max-md:top-[var(--subnav-top)] max-md:!bg-[#1C1D22] max-md:shadow-none')}
+        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:shadow-none')}
         style={{ backgroundColor: SUBNAV_BG }}
       >
         {phoneBack ? (

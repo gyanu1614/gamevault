@@ -21,7 +21,7 @@ import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 const EDGE = 12 // panels keep this far from the screen edges
 const PANEL_WIDTH = 260
-const TOP_CLEARANCE = 80 // the fixed navbar (≤64px) + a little air
+const TOP_CLEARANCE = 136 // the fixed navbar (≤64px) + sub-navbar (52px) + a little air
 const ROOM_WANTED = 360 // header + search + about six rows
 
 /** One option row in any filter's list. */

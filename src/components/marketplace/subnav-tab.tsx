@@ -14,13 +14,12 @@ import { cn } from '@/lib/utils'
  * The bar's layout, shared with GameSubNavSkeleton so the loading state draws
  * the same strip.
  *
- * The strip sits flush under the navbar and scrolls away with the page: only
- * the navbar stays on screen (owner, 2026-11-03, reversing the fixed bar of
- * 2026-10-26).
+ * The strip is fixed flush under the navbar at --subnav-top (globals.css), so
+ * the two bars stay on screen together on every game page and width (owner,
+ * 2026-11-04, reversing 2026-11-03). The filters still scroll with the page.
  *
- * Slot (the <nav>): the strip's place in the flow, flush under the navbar on
- * every width. lg:-mt-5 lifts it out of the navbar spacer (84px at lg, the bar
- * itself 64px).
+ * Slot (the <nav>): reserves the strip's height in the flow. lg:-mt-5 lifts it
+ * out of the navbar spacer (84px at lg, the bar itself 64px).
  *
  * 52px tall everywhere (owner, 2026-10-27: thinner, GameBoost).
  * `!z-40` beats `.has-backdrop > *` (z-index 1), which would otherwise paint
@@ -34,16 +33,14 @@ export const SUBNAV_SLOT =
  * same colour as the page under it and blended in, and "navbar and subnavbar look
  * different"). Full width, the navbar's own surface (`--subnav-bg`) and its own side
  * edges, with a faint line closing the header; the page sits clearly lighter
- * underneath. Between the rows, the brand's green as a thin light that fades out both
- * ways (owner, "more professional and unique"; it picks up the active tab's green).
- * Tablets: the navbar is solid there, so the bar matches that. Phones: a solid strip.
+ * underneath. Nothing between the rows: no line and no change of colour (owner,
+ * 2026-11-04). Below lg the navbar is solid #1C1D22, so the bar matches that.
  */
 export const SUBNAV_STRIP = cn(
-  'pointer-events-auto absolute inset-x-0 top-0 z-[45] w-full backdrop-blur-2xl backdrop-saturate-150',
+  'pointer-events-auto fixed inset-x-0 top-[var(--subnav-top)] z-[45] w-full backdrop-blur-2xl backdrop-saturate-150',
   'md:shadow-[inset_0_-1px_0_rgba(255,255,255,0.08),0_16px_28px_-20px_rgba(0,0,0,0.8)]',
-  "md:after:pointer-events-none md:after:absolute md:after:inset-x-0 md:after:top-0 md:after:h-px md:after:bg-[linear-gradient(90deg,transparent_14%,rgba(57,227,122,0.5)_50%,transparent_86%)] md:after:content-['']",
-  'md:max-lg:!bg-[#1C1D22]',
-  'h-[52px] max-md:flex max-md:items-center max-md:px-2 max-md:!bg-[#0b0f0c] max-md:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.85)]',
+  'max-lg:!bg-[#1C1D22]',
+  'h-[52px] max-md:flex max-md:items-center max-md:px-2 max-md:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.85)]',
   // Phones: pulling the page down past the top would open a gap under the fixed navbar; this fills it in the navbar's colour.
   "max-md:before:absolute max-md:before:inset-x-0 max-md:before:bottom-full max-md:before:h-40 max-md:before:bg-[#1C1D22] max-md:before:content-['']",
 )
