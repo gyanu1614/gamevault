@@ -44,7 +44,7 @@ Rule: ✅ done · 🔨 code written, not yet checked · ⏳ waits for the owner 
 
 ## G. Ship (owner's word only)
 - [x] G1 Commits (local): d8b778af step 3 · 2f47b806 step 4 · 5b387603 step 5 · 57fc4d4e merged origin/main (card + wallet logos; game home now uses the live PaymentsStrip and "rated sellers" wording, as main did for the old hub).
-- [ ] G2 PRs on "merge"; release on "RELEASE" (db push first: 20261025014756, 20261026233836).
+- [ ] G2 PRs on "merge"; release on "RELEASE" (db push first: 20261104130856, 20261104130857).
 - [ ] G3 Stop the server + `pnpm db:down` when done.
 
 ## Later

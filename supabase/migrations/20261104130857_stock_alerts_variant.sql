@@ -5,7 +5,7 @@
 -- variant null  = any trait (the items grid's Notify Me, an item with no stock)
 -- variant 'x'   = only a live listing whose value_variant is 'x'
 --
--- Ships with 20261025014756_stock_alerts (neither is released yet).
+-- Ships with 20261104130856_stock_alerts (neither is released yet).
 
 alter table public.stock_alerts
   add column variant text check (variant ~ '^[a-z0-9][a-z0-9-]{0,63}$');

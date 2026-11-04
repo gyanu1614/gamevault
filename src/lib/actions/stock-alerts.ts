@@ -2,14 +2,14 @@
 
 /**
  * Notify Me (owner, 2026-10-24): the signed-in visitor's in-stock alerts.
- * stock_alerts is service-role only (migration 20261025014756): the session
+ * stock_alerts is service-role only (migration 20261104130856): the session
  * proves WHO the user is, then the service role writes rows scoped to that
  * user id. Inputs are slugs, validated before any write; the item (and the
  * trait, when one is given) must exist in the game's value catalogue.
  * Rate-limited per user. Async exports only (a 'use server' module).
  *
  * `variant` null = any trait of the item (the items grid); a variant key =
- * only that trait (the pet page's trait picker, migration 20261026233836).
+ * only that trait (the pet page's trait picker, migration 20261104130857).
  */
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'

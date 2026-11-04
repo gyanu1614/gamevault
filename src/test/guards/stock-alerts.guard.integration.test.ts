@@ -1,5 +1,5 @@
 /**
- * Notify Me (migrations 20261025014756 + 20261026233836): stock_alerts is
+ * Notify Me (migrations 20261104130856 + 20261104130857): stock_alerts is
  * service-role only, the listings trigger marks an item's open alerts due when
  * a listing of it goes live — an any-trait alert for every listing, a trait
  * alert only for a listing of that trait — and stock_alerts_claim_due hands
