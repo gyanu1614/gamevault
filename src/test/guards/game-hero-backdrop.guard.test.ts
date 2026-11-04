@@ -49,6 +49,16 @@ function localImports(file: string): string[] {
   return out
 }
 
+/** The layouts above a page, up to the game's root. A hero there covers the page. */
+function ancestorLayouts(page: string): string[] {
+  const out: string[] = []
+  for (let dir = dirname(page); dir.startsWith(GAME_ROUTES); dir = dirname(dir)) {
+    const layout = join(dir, 'layout.tsx')
+    if (existsSync(layout)) out.push(layout)
+  }
+  return out
+}
+
 const RENDERS = /<GameHeroBackdrop\b/
 /** Blog pages draw the shared blog wallpaper instead (see the header). */
 const BLOG_PAGES = ['blog/page.tsx', 'blog/[slug]/page.tsx']
@@ -57,14 +67,14 @@ const isBlogPage = (p: string) => BLOG_PAGES.includes(relative(GAME_ROUTES, p))
 const pages = walk(GAME_ROUTES).filter((f) => /\/page\.tsx$/.test(f) && !isBlogPage(f))
 
 /**
- * The modules that render each surface (pages, or the module a page hands
- * the whole render to). Each must draw the backdrop itself.
+ * The modules that render each surface (pages, the module a page hands the
+ * whole render to, or the layout above it). Each must draw the backdrop itself.
  */
 const RENDER_MODULES = [
   'page.tsx', // game landing (hub + SAB landing branches)
   '[categorySlug]/page.tsx', // items, currency, bundles, accounts, boosting, generic
   '[categorySlug]/[listingSlug]/page.tsx',
-  '[categorySlug]/item/_itemRoute.tsx', // item + item/variant pages
+  '[categorySlug]/item/[itemSlug]/layout.tsx', // item + item/variant pages: above loading.tsx, so the hero ships with the skeleton
   'values/page.tsx',
   'values/_AdoptMeValuesPage.tsx',
   'values/[itemSlug]/_SabItemPage.tsx', // the Brainrot item page (the route dispatches per game)
@@ -100,8 +110,8 @@ describe('game pages render GameHeroBackdrop', () => {
     expect(read(file)).toMatch(RENDERS)
   })
 
-  it.each(pages.map((p) => [rel(p), p] as const))('%s renders it (itself or through its render module)', (_r, page) => {
-    const candidates = [page, ...localImports(page)]
+  it.each(pages.map((p) => [rel(p), p] as const))('%s renders it (itself, through its render module or a layout above it)', (_r, page) => {
+    const candidates = [page, ...localImports(page), ...ancestorLayouts(page)]
     const hit = candidates.some((f) => RENDERS.test(read(f)))
     expect(hit, `${rel(page)} renders no <GameHeroBackdrop>: wrap the page body in it`).toBe(true)
   })

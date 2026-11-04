@@ -32,21 +32,34 @@ export function aggregateStock(rows: readonly MatchedListingRow[]): Map<string, 
   return map
 }
 
-export function otherVariants(
-  stock: ItemStock,
-  chosen: string | null,
-): Array<{ variant: string } & VariantStock> {
-  return Object.entries(stock.byVariant)
-    .filter(([variant, v]) => variant !== chosen && v.count > 0)
-    .map(([variant, v]) => ({ variant, ...v }))
-    .sort((a, b) => a.minPriceUsd - b.minPriceUsd)
-}
-
 export interface SimilarCandidate {
   slug: string
   name: string
   rarity?: string | null
   valueUsd?: number | null
+  popularRank?: number | null
+}
+
+/**
+ * Up to `limit` items with stock, most popular first (owner, 2026-11-02:
+ * the row under a pet page is what buyers actually want, not "same rarity"):
+ * the popularity rank, then how many offers we have, then the name.
+ */
+export function pickPopularItems<T extends SimilarCandidate>(
+  targetSlug: string,
+  catalog: readonly T[],
+  stockCount: (slug: string) => number,
+  limit: number,
+): T[] {
+  return catalog
+    .filter((c) => c.slug !== targetSlug && stockCount(c.slug) > 0)
+    .sort(
+      (a, b) =>
+        (a.popularRank ?? Number.POSITIVE_INFINITY) - (b.popularRank ?? Number.POSITIVE_INFINITY) ||
+        stockCount(b.slug) - stockCount(a.slug) ||
+        a.name.localeCompare(b.name),
+    )
+    .slice(0, limit)
 }
 
 /**

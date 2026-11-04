@@ -4,13 +4,13 @@
  *
  * Every wrapper className matches _ItemsPageClient.tsx so the swap
  * is geometric-free. Source-of-truth references:
- *   • Filter band wrapper   → _ItemsPageClient.tsx :: return() top <section>
- *   • Page header block     → _ItemsPageClient.tsx :: "<game> Items" row
- *   • Filter pills + sort   → _ItemsPageClient.tsx :: Filter row grid
- *   • Search field          → _ItemsPageClient.tsx :: Search input wrapper
+ *   • Page title            → CategoryHeader.tsx
+ *   • Search + filters      → FilterToolbar.tsx
  *   • Results grid          → _ItemsPageClient.tsx :: grid-cols-1/2/xl-3
  *   • Item card             → _ItemCard.tsx :: <article> landscape card
  */
+
+import GameSubNavSkeleton from '@/components/marketplace/GameSubNavSkeleton'
 
 /** Shared placeholder block — also used by the listing detail skeleton. */
 export function Block({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
@@ -88,68 +88,66 @@ export function ItemCardSkeleton() {
   )
 }
 
-export default function ItemsSkeleton() {
+/** A values game's item card (GridCard): picture box on top, the name centred, price + arrow. */
+function GridCardSkeleton() {
+  return (
+    <article aria-hidden className="flex flex-col overflow-hidden rounded-lg bg-[#212228]">
+      <div className="h-[92px] bg-[#2E2F36] sm:h-[136px]" />
+      <div className="flex flex-col px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-4 sm:pt-3">
+        <Block className="mx-auto h-4 w-3/5" />
+        <div className="mt-3 flex items-end justify-between gap-2 sm:mt-4">
+          <Block className="h-5 w-2/5 sm:h-9" />
+          <Block className="h-7 w-7 shrink-0 sm:h-9 sm:w-9" />
+        </div>
+      </div>
+    </article>
+  )
+}
+
+/**
+ * `grid`: a values game's Items page (picture-top cards, 2 / 3 / 4 to a row); else
+ * the listings view. `subnav` off: the real sub-navbar is already on screen.
+ */
+export default function ItemsSkeleton({ grid = false, subnav = true }: { grid?: boolean; subnav?: boolean }) {
   return (
     <main className="min-h-screen" aria-busy>
-      {/* GameSubNav skeleton — wrapper and pill classes copied from the live
-          GameSubNav (measured 2026-09-30 at 1024px: pill 56px, 15px under the
-          navbar, 20px below; 58px fixed bar on phones). Keep in lockstep. */}
-      <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:-mt-3 md:pb-5 md:pt-0 max-md:h-[58px] max-md:px-0 max-md:py-0">
-        <div
-          className="pointer-events-auto flex w-full max-w-fit items-center gap-0.5 rounded-full border border-white/[0.1] px-2 py-1 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:px-2.5 sm:py-2 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]"
-          style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(29, 30, 35, 0.72))' }}
-        >
-          {/* Game lockup, divider, then text-only category tabs (40px). */}
-          <div className="flex h-10 flex-shrink-0 items-center gap-2 px-2.5 sm:px-3.5">
-            <Block className="h-5 w-5 rounded-md sm:h-[26px] sm:w-[26px]" />
-            <Block className="h-3.5 w-20 sm:w-24" />
-          </div>
-          <div className="mx-1 h-4 w-px flex-shrink-0 bg-white/[0.12] sm:mx-1.5 sm:h-5" aria-hidden />
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex h-10 items-center px-3 sm:px-3.5">
-              <Block className="h-3.5 w-14 sm:w-16" />
-            </div>
+      {subnav ? <GameSubNavSkeleton tabs={2} /> : null}
+
+      {/* Title + toolbar — mirrors CategoryHeader and FilterToolbar: one bold line
+          and its count, then search + filters + sort (desktop) or search +
+          Filters (below lg), all 44px. */}
+      <div className="mx-auto w-full max-w-7xl px-4 pb-2 pt-7 sm:px-6 sm:pt-4 lg:px-8">
+        <div className="mb-[17px] flex items-baseline gap-3">
+          <Block className="h-[31px] w-56 max-w-[70%] sm:h-[37px] sm:w-72" />
+          <Block className="h-4 w-14" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Block className="h-11 min-w-0 flex-1 rounded-lg" />
+          {[108, 100, 96].map((w, i) => (
+            <Block key={i} className="hidden h-11 shrink-0 lg:block" style={{ width: w }} />
           ))}
+          <span aria-hidden className="mx-1 hidden h-6 w-px bg-white/[0.12] lg:block" />
+          <Block className="hidden h-11 w-[214px] shrink-0 lg:block" />
+          <Block className="h-11 w-[108px] shrink-0 rounded-lg lg:hidden" />
         </div>
       </div>
 
-      {/* Filter band — mirrors _ItemsPageClient.tsx top <section>:
-          transparent, bottom hairline only (the real band dropped its
-          background), same wrapper padding. */}
-      <section className="relative overflow-hidden border-b border-border-subtle">
-        <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
-          {/* Page header — logo left (64px, 72px from sm), then the small
-              uppercase game name over the big category title. */}
-          <div className="mb-5 flex items-center gap-3.5 sm:mb-6 sm:gap-5">
-            <Block className="h-16 w-16 shrink-0 rounded-lg sm:h-[72px] sm:w-[72px]" />
-            <div className="min-w-0 flex-1">
-              <Block className="h-3.5 w-28 sm:h-4" />
-              <Block
-                className="mt-1.5 w-48 max-w-full"
-                style={{ height: 'calc(var(--fs-page-title) * var(--lh-page-title))' }}
-              />
-            </div>
-          </div>
-
-          {/* Filters: phones = one framed bar of 34px segments (Messages
-              tab bar look); sm+ = loose 42px pills. Then the search row. */}
-          <div className="flex items-center overflow-hidden max-sm:w-full max-sm:gap-0.5 max-sm:rounded-lg max-sm:border max-sm:border-white/[0.08] max-sm:bg-bg-well max-sm:p-0.5 sm:flex-wrap sm:gap-2">
-            {[145, 109, 113, 171, 180].map((w, i) => (
-              <Block key={i} className="h-[34px] shrink-0 rounded-md max-sm:opacity-60 sm:h-[42px]" style={{ width: w }} />
-            ))}
-          </div>
-          <Block className="mt-2.5 h-10 w-full rounded-lg sm:h-[42px]" />
-        </div>
-      </section>
-
       {/* Results + grid — 1/2/xl-3 col grid, --gap-grid gutter.
           Render 9 cards (enough to fill a typical above-fold view). */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>
-          {Array.from({ length: 9 }).map((_, i) => (
-            <ItemCardSkeleton key={i} />
-          ))}
-        </div>
+      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-3 sm:px-6 lg:px-8">
+        {grid ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4" style={{ gap: 'var(--gap-grid)' }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <GridCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>
+            {Array.from({ length: 9 }).map((_, i) => (
+              <ItemCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
       </div>
     </main>
   )

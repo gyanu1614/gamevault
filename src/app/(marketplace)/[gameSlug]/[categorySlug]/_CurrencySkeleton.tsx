@@ -16,6 +16,7 @@
  */
 
 import { MARKET_CARD } from '@/lib/ui/surfaces'
+import GameSubNavSkeleton from '@/components/marketplace/GameSubNavSkeleton'
 
 function Block({ className = '' }: { className?: string }) {
   return (
@@ -188,24 +189,8 @@ function SellerRowSkeleton() {
 
 export default function CurrencySkeleton() {
   return (
-    <main className="min-h-screen pb-24 pt-3 sm:pt-4">
-      {/* GameSubNav skeleton — classNames copy-pasted from
-          src/components/marketplace/GameSubNav.tsx so width/padding
-          match the real pill exactly. */}
-      <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:-mt-3 md:pb-5 md:pt-0 max-md:h-[42px] max-md:px-0 max-md:py-0">
-        <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-1.5 sm:px-2.5 sm:py-2 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-40 max-md:h-[42px] max-md:max-w-none max-md:overflow-hidden max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:!bg-[rgba(14,22,17,0.94)]" style={{ backgroundColor: 'rgba(29, 30, 35, 0.72)' }}>
-          {/* V21/P7.q — One block per slot (game + each category). */}
-          <div className="flex flex-shrink-0 items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
-            <Block className="h-3.5 w-20 sm:w-24" />
-          </div>
-          <div className="mx-1 h-4 w-px bg-white/[0.12] flex-shrink-0 sm:mx-1.5 sm:h-5" aria-hidden />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
-              <Block className="h-3.5 w-14 sm:w-16" />
-            </div>
-          ))}
-        </div>
-      </div>
+    <main className="min-h-screen pb-24">
+      <GameSubNavSkeleton tabs={5} />
 
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* SectionHeader — V21/P7.i — now has a 48px logo tile before

@@ -17,6 +17,9 @@
  *   square   the content hubs: the marketplace card gradient (MARKET_CARD).
  *   glass    the homepage: blurred translucent surface (`.faq-glass` in
  *            globals.css) with the rotating chevron.
+ *   raised   the pet page, whose desktop ground is one step lighter: default on
+ *            phones; on desktop the glass panels' material (thin tint + hairline),
+ *            and the open question gets a stronger edge and a green close button.
  *
  * Answers open and close with the shared framer-motion Expand. Content is
  * force-mounted, so every answer stays in the server HTML for search, and the
@@ -45,6 +48,7 @@ export function FaqCards({
   className,
   square = false,
   glass = false,
+  raised = false,
 }: {
   items: FaqItem[]
   /** Index opened initially; -1 for all closed. */
@@ -54,6 +58,8 @@ export function FaqCards({
   square?: boolean
   /** Homepage variant: glassmorphic surface, rotating chevron. */
   glass?: boolean
+  /** Pet page variant: stands off the lighter desktop ground. */
+  raised?: boolean
 }) {
   const [value, setValue] = useState<string>(defaultOpen >= 0 ? String(defaultOpen) : '')
   return (
@@ -82,6 +88,10 @@ export function FaqCards({
                       open
                         ? 'bg-[#24252B]'
                         : 'bg-[#1D1E23] hover:bg-[#212228]',
+                      raised &&
+                        (open
+                          ? 'lg:bg-white/[0.07] lg:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.13)]'
+                          : 'lg:bg-white/[0.04] lg:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)] lg:hover:bg-white/[0.06]'),
                     ),
             )}
           >
@@ -117,6 +127,8 @@ export function FaqCards({
                       : cn(
                           'h-7 w-7 rounded-md',
                           open ? 'bg-white/[0.09] text-text-primary' : 'bg-white/[0.05] text-text-secondary group-hover:text-text-primary',
+                          raised && open && 'lg:bg-[rgba(57,227,122,0.14)] lg:text-lime-text',
+                          raised && !open && 'lg:bg-white/[0.08]',
                         ),
                   )}
                 >

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aggregateStock, otherVariants, pickSimilarItems } from './stock'
+import { aggregateStock, pickSimilarItems } from './stock'
 
 describe('aggregateStock', () => {
   it('groups live listings by item and variant with the cheapest unit price', () => {
@@ -21,20 +21,6 @@ describe('aggregateStock', () => {
   it('ignores rows without a usable price', () => {
     const map = aggregateStock([{ itemSlug: 'x', variant: null, unitPriceUsd: Number.NaN }])
     expect(map.get('x')).toBeUndefined()
-  })
-})
-
-describe('otherVariants', () => {
-  it('lists the listed variants except the chosen one, cheapest first', () => {
-    const stock = aggregateStock([
-      { itemSlug: 'd', variant: 'gold', unitPriceUsd: 5 },
-      { itemSlug: 'd', variant: 'default', unitPriceUsd: 1 },
-      { itemSlug: 'd', variant: 'diamond', unitPriceUsd: 9 },
-    ]).get('d')!
-    expect(otherVariants(stock, 'diamond')).toEqual([
-      { variant: 'default', count: 1, minPriceUsd: 1 },
-      { variant: 'gold', count: 1, minPriceUsd: 5 },
-    ])
   })
 })
 

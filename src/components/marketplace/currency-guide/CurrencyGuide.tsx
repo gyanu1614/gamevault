@@ -121,8 +121,8 @@ function Block({
       aria-labelledby={id}
       className={
         band
-          ? 'relative isolate mt-16 scroll-mt-24 px-1 py-12 sm:mt-20 sm:py-16'
-          : 'mt-12 scroll-mt-24 px-1 py-4 sm:mt-16 sm:py-6'
+          ? 'relative isolate mt-16 scroll-mt-game-chrome px-1 py-12 sm:mt-20 sm:py-16'
+          : 'mt-12 scroll-mt-game-chrome px-1 py-4 sm:mt-16 sm:py-6'
       }
     >
       {band && <BandGround />}

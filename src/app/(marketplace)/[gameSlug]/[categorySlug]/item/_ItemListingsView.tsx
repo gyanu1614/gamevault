@@ -1,195 +1,94 @@
-import Link from 'next/link'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import { cn } from '@/lib/utils'
-import { ValueOfferGrid } from '@/components/value-listings/ValueOfferGrid'
+import Link from '@/components/navigation/AppLink'
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
+import { BackButton } from '@/components/marketplace/BackButton'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
-import { formatUsd } from '@/lib/value-listings/format'
+import { ItemBuyClient } from '@/features/item-buy/ItemBuyClient'
+import { TrustRow } from '@/features/item-buy/TrustRow'
+import { traitNoun } from '@/features/item-buy/model/offers'
+import { defaultDeliveryNote, deliveryMethodLabel } from '@/features/item-buy/model/item-kind'
+import { rarityMeta } from '@/lib/values/rarity'
+import { traitDefs } from '@/features/item-buy/model/traits'
+import { ItemDetails, ItemFaq } from '@/features/item-buy/ItemAbout'
+import { PopularCarousel } from '@/features/item-buy/PopularCarousel'
+import { stockedToGridItems } from '@/features/item-buy/model/popular'
+import { ITEM_SECTION_GAP } from '@/features/item-buy/layout'
+import { cn } from '@/lib/utils'
+import { hasHubPage } from '@/lib/content/theme'
+import type { ItemAbout } from '@/features/item-buy/model/about'
 import type { loadItemListingsPage } from '../_valueItemOffers'
 
 type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
 
 /**
- * Item listings page body (Bundle 2): filtered on the server, so the first
- * HTML already shows only this item (and variant). With nothing to show it
- * never renders an empty page: one line, then other variants, then similar
- * items, then the sell / browse actions.
+ * The pet page body (owner, 2026-10-26 to 11-03; Eldorado and GameBoost as the
+ * references): a back button, the frosted panel with the pet, its facts and
+ * delivery instructions, the buy column beside it, then every offer as a
+ * full-width row, more pets, the buyer questions and About. Filtered on the
+ * server, so the first HTML holds this pet's offers only. A pet nobody sells
+ * still renders: Notify Me, then similar pets that have offers, then a way to
+ * sell one (all server HTML).
  */
-export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: Data }) {
-  const { pair, catalog, model, offers, otherOffers } = data
-  const { item, fullName, fallback } = model
+export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; data: Data; about: ItemAbout }) {
+  const { pair, catalog, model, offers, offerVariants } = data
+  const { item } = model
+  const traits = traitDefs(gameSlug, catalog)
   const browseHref = `/${gameSlug}/${pair.categorySlug}`
-  const sellHref = `/${gameSlug}/sell?src=item-buy-page`
-  const valueHref = item.hasPage === false ? null : `/${gameSlug}/values/${item.slug}`
-  const showVariantChips = model.variantsInStock.length > 0 && catalog.catalog.variants.length > 0
+  const rarity = item.rarity ? rarityMeta(gameSlug, item.rarity) : null
+  // A quiet internal link from the About sentence (never a button): only when the item has a public value page.
+  const valueHref = hasHubPage(gameSlug, 'values') && item.hasPage !== false ? `/${gameSlug}/values/${item.slug}` : null
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
-      <nav aria-label="Breadcrumb" className="mb-4 text-text-tertiary" style={{ fontSize: 'var(--fs-meta)' }}>
-        <ol className="flex flex-wrap items-center gap-1.5">
-          <li>
-            <Link href={`/${gameSlug}`} className="hover:text-text-primary">{pair.gameName}</Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href={browseHref} className="hover:text-text-primary">Buy Items</Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li className="text-text-secondary" aria-current="page">{fullName}</li>
-        </ol>
-      </nav>
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-7 sm:px-6 md:pt-0 lg:px-8">
+      {/* Breadcrumbs only for search (JSON-LD in the route); a back button on screen, GameBoost's (owner, 2026-11-03). Phones have theirs in the sub-navbar. */}
+      <div className="relative">
+        <BackButton
+          href={browseHref}
+          className="mb-4 bg-white/[0.06] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)] backdrop-blur-[32px] backdrop-saturate-[1.8] hover:bg-white/[0.1] max-md:hidden min-[1400px]:absolute min-[1400px]:-left-[60px] min-[1400px]:top-0 min-[1400px]:mb-0"
+        >
+          <ArrowLeftIcon aria-hidden size={18} weight="bold" />
+        </BackButton>
 
-      <header className="mb-6 flex items-center gap-3.5 sm:gap-5">
-        {item.imageUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- catalogue art from storage, same as the value pages */
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            width={72}
-            height={72}
-            loading="eager"
-            className="h-16 w-16 shrink-0 rounded-lg bg-bg-raised object-contain sm:h-[72px] sm:w-[72px]"
-          />
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <h1
-            className="text-balance break-words text-text-primary"
-            style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.05, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
-          >
-            Buy {fullName}
-          </h1>
-          <p className="mt-2 text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>
-            {model.results.length > 0 ? (
-              <>
-                {model.results.length} {model.results.length === 1 ? 'listing' : 'listings'} from{' '}
-                <span className="font-semibold text-text-primary tabular-nums">{formatUsd(model.minPriceUsd!)}</span>. Every order covered by SafeDrop Protection.
-              </>
-            ) : (
-              <>No {fullName} listed right now.</>
-            )}
-          </p>
-          {valueHref ? (
-            <Link href={valueHref} className="mt-1.5 inline-flex items-center gap-1 font-semibold text-lime-text hover:underline" style={{ fontSize: 'var(--fs-meta)' }}>
-              See {item.name} Value
-              <ArrowForwardIcon sx={{ fontSize: 15 }} />
-            </Link>
-          ) : null}
-        </div>
-      </header>
-
-      {showVariantChips ? (
-        <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0" role="navigation" aria-label="Variants">
-          <ul className="flex gap-2">
-            <li>
-              <Chip href={model.canonicalPath} active={!model.variant} label="All" />
-            </li>
-            {model.variantsInStock.map((v) => (
-              <li key={v.variant}>
-                <Chip href={v.href} active={model.variant === v.variant} label={v.label} price={formatUsd(v.minPriceUsd)} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {model.results.length > 0 ? (
-        <ValueOfferGrid
-          offers={offers}
+        <ItemBuyClient
           gameSlug={gameSlug}
           gameName={pair.gameName}
-          surface="item_buy"
           itemSlug={item.slug}
-          variant={model.variant}
+          itemName={item.name}
+          imageUrl={item.imageUrl ?? null}
+          noun={traitNoun(gameSlug)}
+          traits={traits}
+          offers={offers}
+          offerVariants={offerVariants}
+          urlVariant={model.variant}
+          basePath={model.canonicalPath}
+          rarity={rarity ? { label: rarity.label, color: rarity.color } : null}
+          deliveryMethod={deliveryMethodLabel(gameSlug)}
+          deliveryFallback={defaultDeliveryNote(gameSlug, pair.gameName)}
+          trust={<TrustRow />}
         />
-      ) : fallback ? (
-        <div className="space-y-10">
-          <TrackOnMount event={{ event: 'fallback_shown', surface: 'item_buy', game: gameSlug, item: item.slug, variant: model.variant }} />
+      </div>
 
-          {fallback.otherVariants.length > 0 ? (
-            <section aria-labelledby="other-variants">
-              <h2 id="other-variants" className="mb-4 font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)' }}>
-                Other Variants
-              </h2>
-              <ValueOfferGrid
-                offers={otherOffers}
-                gameSlug={gameSlug}
-                gameName={pair.gameName}
-                surface="item_buy"
-                itemSlug={item.slug}
-                variant={null}
-              />
-              {model.stock && model.stock.total > otherOffers.length ? (
-                <Link href={model.canonicalPath} className="mt-4 inline-flex items-center gap-1 font-semibold text-text-primary hover:underline" style={{ fontSize: 'var(--fs-meta)' }}>
-                  View All {model.stock.total}
-                  <ArrowForwardIcon sx={{ fontSize: 15 }} />
-                </Link>
-              ) : null}
-            </section>
-          ) : null}
-
-          {fallback.similar.length > 0 ? (
-            <section aria-labelledby="similar-items">
-              <h2 id="similar-items" className="mb-4 font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)' }}>
-                Similar Items
-              </h2>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 'var(--gap-grid)' }}>
-                {fallback.similar.map((s) => (
-                  <li key={s.slug}>
-                    <Link
-                      href={s.href}
-                      className="flex h-full items-center gap-3 rounded-lg bg-bg-raised p-3 transition-colors hover:bg-bg-raised-hover active:scale-[0.99]"
-                    >
-                      {s.imageUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element -- catalogue art */
-                        <img src={s.imageUrl} alt={s.name} aria-hidden width={48} height={48} loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-contain" />
-                      ) : null}
-                      <span className="min-w-0">
-                        <span className="block truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-meta)' }}>{s.name}</span>
-                        <span className="block text-text-secondary tabular-nums" style={{ fontSize: 'var(--fs-meta)' }}>
-                          {s.count} listed, from {formatUsd(s.minPriceUsd)}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={sellHref}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-lime px-5 font-bold text-text-inverse transition-colors hover:bg-lime-hover active:bg-lime-pressed"
-              style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
-            >
-              Sell Yours For Cash
-              <ArrowForwardIcon sx={{ fontSize: 16 }} />
-            </Link>
-            <Link
-              href={browseHref}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white/[0.07] px-5 font-semibold text-text-primary transition-colors hover:bg-white/[0.11]"
-              style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
-            >
-              Browse All {pair.gameName} Items
-            </Link>
+      <div className={cn(ITEM_SECTION_GAP, 'flex flex-col gap-14 sm:gap-20')}>
+        {offers.length === 0 ? (
+          <div>
+            <TrackOnMount event={{ event: 'fallback_shown', surface: 'item_buy', game: gameSlug, item: item.slug, variant: model.variant }} />
+            <PopularCarousel id="similar-items" heading="Similar Items For Sale" items={stockedToGridItems(gameSlug, model.similar)} gameSlug={gameSlug} />
+            <p className="mt-6 text-text-secondary" style={{ fontSize: 'var(--fs-body)' }}>
+              Have a {item.name}?{' '}
+              <Link href={`/${gameSlug}/sell?src=item-buy-page`} className="font-semibold text-lime-text hover:underline">
+                Sell it on DropMarket
+              </Link>
+              <span aria-hidden className="mx-2 text-text-tertiary">·</span>
+              <Link href={browseHref} className="font-semibold text-text-primary hover:underline">
+                Browse All {pair.gameName} Items
+              </Link>
+            </p>
           </div>
-        </div>
-      ) : null}
-    </main>
-  )
-}
+        ) : null}
 
-function Chip({ href, active, label, price }: { href: string; active: boolean; label: string; price?: string }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors',
-        active ? 'bg-lime text-text-inverse' : 'bg-bg-raised-hover text-text-secondary hover:bg-white/[0.12] hover:text-text-primary',
-      )}
-    >
-      {label}
-      {price ? <span className={cn('tabular-nums', active ? 'opacity-80' : 'text-text-tertiary')}>{price}</span> : null}
-    </Link>
+        <PopularCarousel id="related-items" heading={about.relatedHeading} items={stockedToGridItems(gameSlug, model.related)} gameSlug={gameSlug} />
+        <ItemFaq about={about} />
+        <ItemDetails about={about} itemName={item.name} valueHref={valueHref} />
+      </div>
+    </main>
   )
 }

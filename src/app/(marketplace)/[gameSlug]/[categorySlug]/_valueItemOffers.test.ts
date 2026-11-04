@@ -1,7 +1,8 @@
 /**
  * Item listings page data: 404 is decided from the game, pair and catalogue
  * BEFORE any listing is read (CLAUDE.md "404 before the DB"), and the page is
- * filtered on the server (the first HTML holds only this item / variant).
+ * filtered on the server (the first HTML holds only this item's offers, each
+ * with its trait, so the trait picker works without another request).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { buildValueCatalog } from '@/lib/value-listings/catalogs'
@@ -11,6 +12,7 @@ vi.mock('server-only', () => ({}))
 vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <T,>(fn: T) => fn }))
 const getValueListings = vi.fn()
 const getValueItemListings = vi.fn()
+const getValueItemDescriptions = vi.fn(async () => ({ b: 'Fast trade, message me first.' }))
 vi.mock('@/lib/value-listings/stock-server', () => ({
   getItemsPair: vi.fn(async (game: string) =>
     game === 'adopt-me' ? { gameId: 'g1', gameName: 'Adopt Me', gameImageUrl: null, pairId: 'p1', categorySlug: 'buy-items' } : null,
@@ -19,6 +21,7 @@ vi.mock('@/lib/value-listings/stock-server', () => ({
     buildValueCatalog('adopt-me', { items: [{ slug: 'bat-dragon', name: 'Bat Dragon' }, { slug: 'owl', name: 'Owl' }] }),
   ),
   getValueListings: (...a: unknown[]) => getValueListings(...a),
+  getValueItemDescriptions: (...a: unknown[]) => getValueItemDescriptions(...(a as [])),
   getValueItemListings: (...a: unknown[]) => getValueItemListings(...a),
 }))
 vi.mock('./_itemsData', () => ({
@@ -26,7 +29,7 @@ vi.mock('./_itemsData', () => ({
   listingToOffer: (r: { id: string; price: number }) => ({ id: r.id, pricePerUnit: Number(r.price) }),
 }))
 
-import { getValueItemBuyData, loadItemListingsPage } from './_valueItemOffers'
+import { getValueItemBuyData, loadItemListingsPage, resolveItemRoute } from './_valueItemOffers'
 
 const row = (id: string, item: string, variant: string | null, price: number) => ({ id, value_item_slug: item, value_variant: variant, price, seller_id: 's' })
 
@@ -45,20 +48,31 @@ describe('loadItemListingsPage', () => {
     ['unknown item', 'adopt-me', 'buy-items', 'nope', null],
     ['unknown variant', 'adopt-me', 'buy-items', 'bat-dragon', 'diamond'],
   ])('404s an %s without reading listings', async (_label, game, cat, item, variant) => {
+    expect(await resolveItemRoute(game, cat, item, variant)).toBeNull()
     expect(await loadItemListingsPage(game, cat, item, variant)).toBeNull()
+    expect(getValueListings).not.toHaveBeenCalled()
+    expect(getValueItemDescriptions).not.toHaveBeenCalled()
+  })
+
+  // The route awaits this ahead of its Suspense boundary (skeleton), so it must stay cheap.
+  it('an existing pet and trait pass the route check without reading listings', async () => {
+    expect(await resolveItemRoute('adopt-me', 'buy-items', 'bat-dragon', 'neon')).toMatchObject({ pair: { categorySlug: 'buy-items' } })
     expect(getValueListings).not.toHaveBeenCalled()
   })
 
-  it('returns only the requested item and variant', async () => {
+  it('returns every offer of the item (no other item), cheapest first, with its trait', async () => {
     const data = await loadItemListingsPage('adopt-me', 'buy-items', 'bat-dragon', 'neon')
-    expect(data!.offers.map((o) => o.id)).toEqual(['b'])
+    expect(data!.offers.map((o) => o.id)).toEqual(['a', 'b'])
+    expect(data!.offerVariants).toEqual({ a: 'fly-ride', b: 'neon' })
+    expect(data!.offers.map((o) => o.description)).toEqual([null, 'Fast trade, message me first.'])
+    expect(data!.model.results.map((r) => r.id)).toEqual(['b'])
     expect(data!.model.canonicalPath).toBe('/adopt-me/buy-items/item/bat-dragon')
   })
 
-  it('falls back to other variants when the variant has none', async () => {
+  it('a trait nobody sells still loads the item’s other offers', async () => {
     const data = await loadItemListingsPage('adopt-me', 'buy-items', 'bat-dragon', 'mega-neon')
-    expect(data!.offers).toEqual([])
-    expect(data!.otherOffers.map((o) => o.id)).toEqual(['a', 'b'])
+    expect(data!.model.results).toEqual([])
+    expect(data!.offers.map((o) => o.id)).toEqual(['a', 'b'])
   })
 })
 

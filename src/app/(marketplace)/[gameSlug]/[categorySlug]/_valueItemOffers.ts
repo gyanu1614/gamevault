@@ -3,6 +3,7 @@ import { cache } from 'react'
 import {
   getItemsPair,
   getValueCatalog,
+  getValueItemDescriptions,
   getValueItemListings,
   getValueListings,
   type ValueListingRow,
@@ -27,25 +28,36 @@ const toOffers = async (gameId: string, rows: readonly ValueListingRow[]): Promi
 }
 
 /**
- * The item listings page. Null = 404, decided from the game, pair and
- * catalogue BEFORE any listing is read.
+ * Does this item page exist? Null = 404, decided from the game, pair and
+ * catalogue BEFORE any listing is read. The route awaits it ahead of its
+ * Suspense boundary, so an unknown pet or trait is a real 404, not a 200.
  */
-export const loadItemListingsPage = cache(
+export const resolveItemRoute = cache(
   async (gameSlug: string, categorySlug: string, itemSlug: string, variant: string | null) => {
     const pair = await getItemsPair(gameSlug)
     if (!pair || pair.categorySlug !== categorySlug) return null
     const catalog = await getValueCatalog(gameSlug)
     if (!catalog || !catalog.items.some((i) => i.slug === itemSlug)) return null
     if (variant && !isKnownVariant(catalog, variant)) return null
+    return { pair, catalog }
+  },
+)
 
-    const listings = await getValueListings(gameSlug)
+/** The item listings page: every offer of the item with its trait and seller description. Null = 404. */
+export const loadItemListingsPage = cache(
+  async (gameSlug: string, categorySlug: string, itemSlug: string, variant: string | null) => {
+    const route = await resolveItemRoute(gameSlug, categorySlug, itemSlug, variant)
+    if (!route) return null
+    const { pair, catalog } = route
+
+    const [listings, descriptions] = await Promise.all([getValueListings(gameSlug), getValueItemDescriptions(gameSlug, itemSlug)])
     const model = buildItemPage({ gameSlug, categorySlug, catalog, itemSlug, variant, rows: listings?.rows ?? [] })
     if (!model) return null
-    const [offers, otherOffers] = await Promise.all([
-      toOffers(pair.gameId, model.results),
-      toOffers(pair.gameId, model.fallback?.otherVariantRows ?? []),
-    ])
-    return { pair, catalog, model, offers, otherOffers }
+    // The seller's own words for the buy panel (a separate, item-scoped read).
+    const offers = (await toOffers(pair.gameId, model.itemRows)).map((o) => ({ ...o, description: descriptions[o.id] ?? null }))
+    // Trait per offer: the pet page's trait picker works on the client.
+    const offerVariants: Record<string, string | null> = Object.fromEntries(model.itemRows.map((r) => [r.id, r.value_variant]))
+    return { pair, catalog, model, offers, offerVariants }
   },
 )
 

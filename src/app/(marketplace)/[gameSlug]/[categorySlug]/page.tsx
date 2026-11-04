@@ -1,7 +1,7 @@
 /**
  * Category Browse Page — /{gameSlug}/{categorySlug}
  *
- * Layout: sticky GameSubNav → centered header → CategoryPageLayout (filter toggle)
+ * Layout: GameSubNav → centered header → CategoryPageLayout (filter toggle)
  * Apple/Spotify-inspired minimal dark theme with game vibe.
  */
 
@@ -15,9 +15,9 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
-import { withCurrencyNavLabel } from '@/lib/categories/currency-nav-label'
 import Image from 'next/image'
-import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
+import GameSubNav from '@/components/marketplace/GameSubNav'
+import { getSubnavCategories } from '@/lib/categories/subnav-categories'
 import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { getCurrencyShell as getCurrencyShellUncached, listingToOffer } from './_currencyData'
 import GenericListingsClient, { type GenericGridListing } from './_GenericListingsClient'
@@ -29,9 +29,8 @@ import {
 } from './_routeGate'
 import { getAllEnabledCategoryPairs } from '@/lib/seo/category-pairs'
 import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
-import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
-import { unstable_cache } from 'next/cache'
 import RouteSkeleton from './_RouteSkeleton'
+import ItemsSkeleton from './_ItemsSkeleton'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 // PERF-004 — the three page variants below are mutually exclusive: a category
 // resolves to exactly one of them at render time. Statically importing all
@@ -84,7 +83,12 @@ function formatBundleDelivery(raw: string | null | undefined): string {
 // V15 — Items page dispatch + SEO slug resolver.
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
+import { VALUE_CATALOG_GAMES } from '@/lib/value-listings/catalogs'
+import { getValuesFeed } from '@/lib/value-listings/feed'
+import { filterOptions, toGridItems } from '@/features/items-grid/model/grid'
+import { itemNoun } from '@/features/game-home/model/item-noun'
 const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
+const ItemsGridClient = dynamic(() => import('@/features/items-grid/ItemsGridClient'))
 import { resolveItemBySlug } from './_itemResolver'
 import { hubNavExtras } from '../values/_HubNavExtras'
 import { seoMeta } from '@/lib/seo/fit'
@@ -259,7 +263,10 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const subj = categorySubject({
     gameName: game.name,
     gameSlug,
-    categoryName: category.name,
+    // A values game's item grid goes by its item word, as players search it:
+    // "Adopt Me Pets", not the category's "Items" (GSC 2026-11: every query
+    // the page shows for says "pets"). Same rule as the grid's heading.
+    categoryName: category.type === 'items' && VALUE_CATALOG_GAMES.includes(gameSlug) ? itemNoun(gameSlug) : category.name,
     isCurrency,
     unitLabel: currencyCfg?.unit_label,
     regionOptions: regionField?.enabled ? normalizePlatformOptions(regionField.options).map((o) => o.value) : [],
@@ -316,35 +323,8 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
 // gate costs no extra queries.
 const getCurrencyShell = cache(getCurrencyShellUncached)
 
-// Step 7b — per game, not per page: a game's sub-nav tabs are identical on
-// every one of its category pages, so this is one tagged cache entry per game
-// per build/hour (GAME_DIRECTORY_TAG, like the footer directory).
-const getAllGameCategories = unstable_cache(
-  async (gameId: string): Promise<GameCategory[]> => {
-    const supabase = createAnonClient()
-    const [{ data }, { data: currencyCfg }] = await Promise.all([
-      supabase
-        .from('game_categories')
-        .select('id, name, slug, type')
-        .eq('game_id', gameId)
-        .eq('is_enabled', true)
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true }) as any,
-      supabase
-        .from('category_configs')
-        .select('config')
-        .eq('game_id', gameId)
-        .eq('category_type', 'currency')
-        .maybeSingle() as any,
-    ])
-    // The currency tab reads like its page title ("Gems", not "Currency").
-    return withCurrencyNavLabel((data || []) as GameCategory[], currencyCfg?.config?.unit_label)
-  },
-  ['game-categories-nav'],
-  // Admin category edits revalidate GAME_DIRECTORY_TAG; daily is the backstop
-  // (hourly capped every category page at one hour).
-  { tags: [GAME_DIRECTORY_TAG], revalidate: 86400 },
-)
+// Step 7b: the sub-nav tabs are one cached entry per game (shared with the pet page).
+const getAllGameCategories = getSubnavCategories
 
 // V21/P7.ae — Apply an "exclude offline sellers" filter to a listings
 // query. Sellers in Offline Mode have all their offers hidden from
@@ -850,7 +830,9 @@ async function CategoryBrowsePage({ params }: PageProps) {
       if (categoryType === 'top_up') return 'top-up'
       return 'items'
     })()
-    const [allCategories, taxonomy, listingsRaw, stats] = await Promise.all([
+    // Values games' items: one card per catalogue item (owner, 2026-10-24).
+    const isValuesGrid = categoryType === 'items' && VALUE_CATALOG_GAMES.includes(gameSlug)
+    const [allCategories, taxonomy, listingsRaw, stats, feed] = await Promise.all([
       getAllGameCategories(game.id),
       loadItemsTaxonomy(game.id, taxonomySlug),
       (async () => {
@@ -859,7 +841,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .from('listings')
           .select(`
             id, slug, title, price, original_price, delivery_time,
-            quantity, is_unlimited, images, template_data, status,
+            quantity, is_unlimited, images, template_data, status, value_item_slug,
             seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
@@ -876,10 +858,12 @@ async function CategoryBrowsePage({ params }: PageProps) {
         return (data ?? []) as any[]
       })(),
       getCategoryStats(game.id, category.id),
+      isValuesGrid ? getValuesFeed(gameSlug) : Promise.resolve(null),
     ])
 
     const offers = listingsRaw.map((l) => listingToItemOffer(l, taxonomy))
     const introLine = buildIntroLine(stats, game.name, category.name)
+    const gridItems = feed ? toGridItems(gameSlug, feed, category.slug) : null
 
     return (
       <>
@@ -893,8 +877,9 @@ async function CategoryBrowsePage({ params }: PageProps) {
         {stats.count > 0 && stats.lowPrice != null && stats.highPrice != null && (
           <JsonLd
             data={productAggregate({
-              name: `${game.name} ${category.name}`,
-              description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
+              // Named like the heading: "Adopt Me Pets" on a values game's grid.
+              name: `${game.name} ${gridItems ? itemNoun(gameSlug) : category.name}`,
+              description: `Buy ${game.name} ${gridItems ? itemNoun(gameSlug) : category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
               brand: game.name,
               lowPrice: stats.lowPrice,
               highPrice: stats.highPrice,
@@ -913,21 +898,34 @@ async function CategoryBrowsePage({ params }: PageProps) {
         />
         {/* The client reads ?attr_<slug>= / ?search= deep links through
             SearchParamsBridge, so it stays in the static HTML. */}
-        <Suspense fallback={null}>
-          <ItemsPageClient
-            gameSlug={gameSlug}
-            gameName={game.name}
-            gameImageUrl={(game as any).image_url ?? null}
-            categoryLabel={category.name}
-            tagline={
-              (category as any).description ||
-              `Browse verified ${game.name} listings — every order covered by SafeDrop Protection.`
-            }
-            offers={offers}
-            taxonomy={taxonomy}
-            introLine={introLine}
-            stats={stats}
-          />
+        <Suspense fallback={<ItemsSkeleton grid={!!gridItems} subnav={false} />}>
+          {gridItems ? (
+            <ItemsGridClient
+              gameSlug={gameSlug}
+              gameName={game.name}
+              itemNoun={itemNoun(gameSlug)}
+              items={gridItems}
+              options={filterOptions(gameSlug, gridItems)}
+              stats={stats}
+              introLine={introLine}
+              // Listings not linked to a catalogue item (bundles, odd titles) still sell here.
+              moreListings={offers.filter((_, i) => !listingsRaw[i]?.value_item_slug)}
+            />
+          ) : (
+            <ItemsPageClient
+              gameSlug={gameSlug}
+              gameName={game.name}
+              categoryLabel={category.name}
+              tagline={
+                (category as any).description ||
+                `Browse verified ${game.name} listings — every order covered by SafeDrop Protection.`
+              }
+              offers={offers}
+              taxonomy={taxonomy}
+              introLine={introLine}
+              stats={stats}
+            />
+          )}
         </Suspense>
         {/* Editorial SEO guide after the listings end. Reuses `stats`
             (request-memoised) so its live numbers match the header and
@@ -936,7 +934,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           gameSlug={gameSlug}
           categorySlug={categorySlug}
           gameName={game.name}
-          categoryName={category.name}
+          categoryName={gridItems ? itemNoun(gameSlug) : category.name}
           stats={stats}
         />
       </>

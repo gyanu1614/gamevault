@@ -172,6 +172,40 @@ export async function getValueItemListings(
   return { pair, rows }
 }
 
+/**
+ * The seller descriptions of ONE item's live listings (listing id →
+ * description), for the pet page's buy panel. Kept out of
+ * VALUE_LISTING_SELECT so the per-game cache entry stays small; cached and
+ * tagged like getValueItemListings (the item's own stock tag).
+ */
+export async function getValueItemDescriptions(gameSlug: string, itemSlug: string): Promise<Record<string, string>> {
+  const pair = await getItemsPair(gameSlug)
+  if (!pair) return {}
+  return unstable_cache(
+    async (): Promise<Record<string, string>> => {
+      const { data, error } = await (createAnonClient() as any)
+        .from('listings')
+        .select('id, description')
+        .eq('game_id', pair.gameId)
+        .eq('status', 'active')
+        .eq('value_item_slug', itemSlug)
+        .limit(500)
+      if (error) {
+        console.error('[value-listings] descriptions read failed', error.message)
+        return {}
+      }
+      const out: Record<string, string> = {}
+      for (const r of (data ?? []) as Array<{ id: string; description: string | null }>) {
+        const text = r.description?.trim()
+        if (text) out[r.id] = text
+      }
+      return out
+    },
+    ['value-item-descriptions', gameSlug, pair.pairId, itemSlug],
+    { revalidate: 86400, tags: [valueItemStockTag(gameSlug, itemSlug), valuesTag(gameSlug)] },
+  )()
+}
+
 export function unitPrice(row: Pick<ValueListingRow, 'price'>): number {
   return Number(row.price)
 }

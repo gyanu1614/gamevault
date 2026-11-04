@@ -13,7 +13,8 @@
  *
  * It still can't read params (it stayed a client component), so we read the
  * URL on the client and pick the right skeleton by category slug:
- *   • items / buy-items / metadata.type=items → ItemsSkeleton (filter band + landscape card grid)
+ *   • buy-items on a values game               → ItemsSkeleton grid (picture-top item cards)
+ *   • other items / accounts / the rest        → ItemsSkeleton (landscape listing cards)
  *   • everything else                          → CurrencySkeleton (hero card + seller rows)
  *
  * The skeleton renders immediately on first paint; the client-side
@@ -25,6 +26,7 @@ import { usePathname } from 'next/navigation'
 import CurrencySkeleton from './_CurrencySkeleton'
 import BundleCurrencySkeleton from './_BundleCurrencySkeleton'
 import ItemsSkeleton from './_ItemsSkeleton'
+import { VALUE_CATALOG_GAMES } from '@/lib/value-listings/catalogs'
 
 /**
  * V19/P24/P7.d — Bundle currencies have a different page geometry
@@ -71,6 +73,7 @@ export default function CategoryRouteSkeleton() {
   ) {
     return <CurrencySkeleton />
   }
-  // Everything else (items / accounts / boosting / top-up / future).
-  return <ItemsSkeleton />
+  // Everything else (items / accounts / boosting / top-up / future). A values
+  // game's Items page shows one picture-top card per item (ItemsGridClient).
+  return <ItemsSkeleton grid={categorySlug === 'buy-items' && VALUE_CATALOG_GAMES.includes(segments[0] ?? '')} />
 }

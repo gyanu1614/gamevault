@@ -47,7 +47,7 @@ const fmtPrice = (n: number) => {
 }
 
 /** Plain seller avatar (image or initial fallback). */
-function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size?: number }) {
+export function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size?: number }) {
   const initial = sellerInitial(seller)
   if (seller.avatarUrl) {
     return (

@@ -1,26 +1,46 @@
 'use client'
 
 /**
- * GameSubNav — floating pill sub-navbar, same shape as the main navbar.
+ * GameSubNav — the game's second bar under the main navbar.
  *
- * Centered below the main navbar with a small gap.
- * Sticky so it stays visible while scrolling the category page.
- * Active tab gets a subtle highlight; Framer Motion animates between them.
+ * Desktop (owner, 2026-10-26, GameBoost as the reference): a full-width strip
+ * one step lighter than the navbar — game lockup left, category tabs centred
+ * (icon + label, full bar height), the content tab right. Phones keep the
+ * scrollable strip under the 60px app bar — except inside a listing
+ * (`phoneBack`): there phones get a back button and the game name in the
+ * navbar's own colour, fixed under it, so the two bars read as one section and
+ * never come apart (owner, 2026-11-02/03, Eldorado's phone item page as the
+ * reference).
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import Link from '@/components/navigation/AppLink'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameIcon } from '@/features/home/lib/game-icons'
-import { useScrollDirection } from '@/hooks/useScrollDirection'
+import { SubnavSellButton } from '@/components/seller/SellerPrompt'
+import { BackButton } from './BackButton'
+import {
+  SUBNAV_BG,
+  SUBNAV_LOGO,
+  SUBNAV_NAME,
+  SUBNAV_ROW,
+  SUBNAV_SLOT,
+  SUBNAV_STRIP,
+  SUBNAV_TAB,
+  SUBNAV_TAB_ACTIVE,
+  SubnavActiveBar,
+  categoryIcon,
+  subnavIconClass,
+} from './subnav-tab'
 
 export interface GameCategory {
   id: string
   name: string
   slug: string
+  /** game_categories.type (currency|items|account|…): picks the tab icon. */
+  type?: string | null
   icon_emoji?: string | null
   icon_url?: string | null
   icon_type?: 'emoji' | 'image' | 'svg' | null
@@ -40,6 +60,12 @@ interface GameSubNavProps {
    * game-agnostic.
    */
   extraTabs?: React.ReactNode
+  /**
+   * Inside a listing (the pet page): phones swap the tab strip for a back
+   * button + the game name. `href` is where Back goes when there is no
+   * earlier page of ours to return to (opened from a search result).
+   */
+  phoneBack?: { href: string }
 }
 
 export default function GameSubNav({
@@ -49,12 +75,9 @@ export default function GameSubNav({
   currentCategorySlug,
   categories,
   extraTabs,
+  phoneBack,
 }: GameSubNavProps) {
   const router = useRouter()
-  // Hide-on-scroll: slides up with the primary navbar (shared signal).
-  // `hideBelow: 768` matches this bar's own `max-md:fixed` treatment — above
-  // `md` it sits in normal flow and must stay put.
-  const { hidden: scrollHidden } = useScrollDirection({ revealAt: 40, hideBelow: 768 })
   // V14m — Track which tab is mid-navigation so we can show a small spinner
   // on it (instead of the whole UI sitting silent until the new page paints).
   const [isPendingNav, startNavTransition] = useTransition()
@@ -99,7 +122,8 @@ export default function GameSubNav({
   const resolvedGameImage = gameImageUrl || getGameIcon(gameSlug)
 
   // Tell the navbar a sub-navbar is mounted, so it drops its bottom hairline
-  // and the two bars read as one block (any route: hub, category, listing).
+  // and edge line and the two bars read as one block (any route: hub,
+  // category, listing).
   useEffect(() => {
     const root = document.documentElement
     root.dataset.subnav = '1'
@@ -109,160 +133,119 @@ export default function GameSubNav({
   }, [])
 
   return (
-    /* Desktop: a full-width strip under the navbar. On phones this same
-       component becomes the page-local subnavbar: the outer slot reserves
-       the fixed bar's real height (58px measured) so content below never
-       overlaps, while the inner row stays attached directly beneath the
-       fixed 60px primary header. */
-    <nav
-      aria-label={`${gameName} categories`}
-      /* Desktop: pulled up under the navbar (owner, 2026-09-30: "reduce the
-         space between navbar and subnavbar"): the page spacer already leaves
-         27px below the bar, so no top padding and a -12px nudge → ~15px gap.
-         IMPORTANT: `.has-backdrop > *` in globals.css forces every direct
-         child (this <nav> AND the page <main>) to `z-index: 1`. With equal
-         z, DOM order wins and page content paints over the fixed sub-nav.
-         `!z-40` (z-index !important) beats that global rule so the sub-nav
-         always sits above page content. */
-      className="relative !z-40 flex justify-center pointer-events-none md:-mt-[27px] md:mb-5 max-md:h-[58px]"
-    >
-      <motion.div
-        initial={false}
-        /* Slide up in lockstep with the primary navbar so the two bars read
-           as ONE unit: travel the sub-nav's own height PLUS the navbar above
-           it, so it fully clears the top on scroll-down. Mobile only — and
-           enforced by `hideBelow` on the hook above, NOT by `position`: a
-           transform still moves the element visually even in normal flow, so
-           without that gate this bar visibly jumped on desktop too.
-
-           The 120px overshoots the navbar's 60px on purpose: with a banner
-           mounted this bar starts lower, and framer can't interpolate a
-           calc() containing var(--navbar-bottom). Overshooting is invisible
-           (it's off-screen either way) and guarantees a full clear. */
-        animate={{ y: scrollHidden ? 'calc(-100% - 120px)' : '0%' }}
-        transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
-        className={cn(
-          'pointer-events-auto w-full',
-          // Owner, 2026-10-06: the floating rounded pill matched nothing else
-          // on desktop. Desktop now does what the phone bar already did: a
-          // full-width strip that joins the navbar as its second row (same
-          // frosted surface, no outline, no hairline between them — the
-          // navbar drops its own via [data-subnav]). Content aligns to the
-          // page column.
-          'backdrop-blur-2xl backdrop-saturate-150',
-          'md:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.9)]',
-          'max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]',
-        )}
-        style={{ backgroundColor: 'var(--navbar-bg, rgba(29, 30, 35, 0.78))' }}
+    /* A full-width strip flush under the navbar, in the page: it scrolls away
+       and only the navbar stays. */
+    <nav aria-label={`${gameName} categories`} className={SUBNAV_SLOT}>
+      <div
+        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:fixed max-md:top-[var(--subnav-top)] max-md:!bg-[#1C1D22] max-md:shadow-none')}
+        style={{ backgroundColor: SUBNAV_BG }}
       >
-        <div className="flex w-full items-center gap-0.5 max-md:px-0 md:mx-auto md:max-w-7xl md:px-6 md:py-1.5 lg:px-8">
-        {/* ── Game name / logo ───────────────────────────────────────── */}
-        <Link
-          href={`/${gameSlug}`}
-          className="group flex flex-shrink-0 items-center gap-2 rounded-full px-2.5 py-2 transition-colors hover:bg-bg-raised-hover sm:px-3.5 sm:py-1.5 md:pl-0 md:hover:bg-transparent max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
-        >
-          <img
-            src={resolvedGameImage}
-            alt={gameName}
-            className="h-5 w-5 rounded-md object-contain opacity-95 sm:h-[26px] sm:w-[26px]"
-          />
-          <span className="truncate text-[13px] font-bold tracking-tight text-gray-200 transition-colors group-hover:text-text-primary sm:text-[14.5px]">
-            {gameName}
-          </span>
-        </Link>
-
-        {/* ── Divider ────────────────────────────────────────────────── */}
-        <div className="h-4 w-px shrink-0 bg-white/[0.12] sm:mx-1.5 sm:h-5 max-md:mx-1" />
-
-        {/* ── Category tabs ──────────────────────────────────────────── */}
-        {categories.length === 0 ? (
-          <Link
-            href="/"
-            className="flex items-center gap-1 rounded-full px-2.5 py-2.5 sm:px-3 sm:py-1.5 text-xs sm:text-sm text-text-secondary hover:text-text-primary hover:bg-bg-raised-hover transition-colors"
-          >
-            <ChevronLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            Marketplace
-          </Link>
-        ) : (
-          /* Mobile-audit — relative wrapper so a right-edge fade can sit
-             over the scrollable tab strip, signalling more tabs off-screen
-             on phones (the scrollbar is hidden). */
-          <div className="relative min-w-0 max-md:flex-1">
-            <div
-              className="flex items-center gap-0.5 overflow-x-auto max-md:gap-1"
-              style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
-            >
-            {categories.map((cat) => {
-              const isActive = cat.slug === currentCategorySlug
-              // V17g — Slug is the slug; no alias indirection anymore.
-              const isPending = pendingSlug === cat.slug
-              // V14s — Only swap to the spinner / lime tint after the
-              // 150ms grace period. Sub-150ms navs stay clean — no flash.
-              const showLoading = isPending && spinnerVisible
-
-              return (
-                // A real link, not a button (crawl audit 2026-10-23): this strip
-                // is on every game landing, category and listing page, and a
-                // <button> gave crawlers no path to the category pages. A plain
-                // click keeps the transition + delayed spinner below; new-tab
-                // and modifier clicks are left to the browser.
-                <Link
-                  key={cat.id}
-                  href={`/${gameSlug}/${cat.slug}`}
-                  onClick={(e) => {
-                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-                    e.preventDefault()
-                    if (!isPending) goToCategory(cat.slug)
-                  }}
-                  aria-disabled={isPending || undefined}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    // Underline style — no pill. Chunkier on mobile (py-2.5,
-                    // 13px) so the strip doesn't read thin; desktop keeps its
-                    // tighter rhythm.
-                    'relative flex-shrink-0 flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-colors sm:px-3.5 sm:py-2 sm:text-[13.5px] max-md:px-3 max-md:py-2.5',
-                    isActive
-                      ? 'text-white'
-                      : 'text-text-secondary hover:text-gray-100',
-                    isPending && 'cursor-wait'
-                  )}
-                >
-                  {(isActive || showLoading) && (
-                    <motion.span
-                      layoutId="activeCategory"
-                      className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-white/85"
-                      /* Snappy tween instead of a springy slide — the old
-                         spring read as a slow/wacky swipe when the sub-nav
-                         re-mounts on each category navigation. */
-                      transition={{ type: 'tween', duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                    />
-                  )}
-                  {/* Text-only tabs (owner, 2026-09-30: no category icons).
-                      A slow navigation (>350ms, V14s) shows a small neutral
-                      spinner before the label. */}
-                  {showLoading && <Loader2 className="relative z-10 h-3.5 w-3.5 animate-spin text-white/70" />}
-                  <span className="relative z-10">{cat.name}</span>
-                </Link>
-              )
-            })}
-            {/* Extra tool tabs (Values / Calculator on the SAB landing),
-                separated from the categories by a hairline. */}
-            {extraTabs && (
-              <>
-                <div className="mx-1 h-4 w-px shrink-0 bg-white/[0.12] sm:mx-1.5 sm:h-5" />
-                {extraTabs}
-              </>
-            )}
-            </div>
-            {/* Right-edge fade — overflow affordance, phones only */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-y-0 right-0 w-5 rounded-r-full bg-gradient-to-l from-black/35 to-transparent sm:hidden"
-            />
+        {phoneBack ? (
+          <div className="flex w-full items-center md:hidden">
+            <BackButton href={phoneBack.href} className="bg-white/[0.06] hover:bg-white/[0.1]">
+              <ChevronLeft aria-hidden className="h-5 w-5" />
+            </BackButton>
+            <Link href={`/${gameSlug}`} className="min-w-0 flex-1 truncate px-2 text-center text-[15px] font-bold text-text-primary">
+              {gameName}
+            </Link>
+            <span aria-hidden className="w-11 shrink-0" />
           </div>
-        )}
+        ) : null}
+        <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>
+          {/* ── Game name / logo ───────────────────────────────────────── */}
+          <Link
+            href={`/${gameSlug}`}
+            className="group flex min-w-0 flex-shrink-0 items-center gap-2.5 justify-self-start rounded-md px-2.5 py-2 transition-colors hover:bg-bg-raised-hover md:gap-3 md:px-0 md:hover:bg-transparent max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
+          >
+            <img
+              src={resolvedGameImage}
+              alt={gameName}
+              className={cn(SUBNAV_LOGO, 'object-contain opacity-95')}
+            />
+            <span className={cn(SUBNAV_NAME, 'truncate text-gray-100 transition-colors group-hover:text-text-primary')}>
+              {gameName}
+            </span>
+          </Link>
+
+          {/* ── Divider (phones only: desktop centres the tabs instead) ── */}
+          <div className="mx-1 h-4 w-px shrink-0 bg-white/[0.12] md:hidden" />
+
+          {/* ── Category tabs ──────────────────────────────────────────── */}
+          {categories.length === 0 ? (
+            <Link
+              href="/"
+              className="flex items-center gap-1 justify-self-center rounded-md px-3 py-2.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Marketplace
+            </Link>
+          ) : (
+            /* Relative wrapper so a right-edge fade can sit over the
+               scrollable strip on phones (the scrollbar is hidden). */
+            <div className="relative min-w-0 max-md:flex-1 md:justify-self-center">
+              <div
+                className="flex items-center overflow-x-auto max-md:gap-1 md:overflow-visible"
+                style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+              >
+                {categories.map((cat) => {
+                  const isActive = cat.slug === currentCategorySlug
+                  const isPending = pendingSlug === cat.slug
+                  // V14s — the spinner only after the grace period.
+                  const showLoading = isPending && spinnerVisible
+                  const Icon = categoryIcon(cat)
+
+                  return (
+                    // A real link, not a button (crawl audit 2026-10-23): this
+                    // strip is on every game landing, category and listing page.
+                    // A plain click keeps the transition + delayed spinner;
+                    // new-tab and modifier clicks are left to the browser.
+                    <Link
+                      key={cat.id}
+                      href={`/${gameSlug}/${cat.slug}`}
+                      onClick={(e) => {
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+                        e.preventDefault()
+                        if (!isPending) goToCategory(cat.slug)
+                      }}
+                      aria-disabled={isPending || undefined}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={cn(SUBNAV_TAB, isActive && SUBNAV_TAB_ACTIVE, isPending && 'cursor-wait')}
+                    >
+                      {isActive && <SubnavActiveBar />}
+                      {showLoading ? (
+                        <Loader2 aria-hidden className="relative z-10 h-[17px] w-[17px] animate-spin text-white/70" />
+                      ) : (
+                        <Icon aria-hidden stroke={1.9} className={subnavIconClass(isActive)} />
+                      )}
+                      <span className="relative z-10">{cat.name}</span>
+                    </Link>
+                  )
+                })}
+                {/* Phones: the content tab joins the strip behind a hairline. */}
+                {extraTabs && (
+                  <span className="contents md:hidden">
+                    <span className="mx-1 h-4 w-px shrink-0 bg-white/[0.12]" />
+                    {extraTabs}
+                  </span>
+                )}
+              </div>
+              {/* Right-edge fade — overflow affordance, phones only */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-black/35 to-transparent md:hidden"
+              />
+            </div>
+          )}
+
+          {/* ── Content tab + Sell (desktop: right column). Sell from lg up:
+                 below that the strip is full, and listings carry a Sell row
+                 in their grid instead. ─────────────────────────────────── */}
+          <div className="hidden items-center gap-3 justify-self-end md:flex">
+            {extraTabs}
+            <SubnavSellButton className="max-lg:hidden" />
+          </div>
         </div>
-      </motion.div>
+      </div>
     </nav>
   )
 }

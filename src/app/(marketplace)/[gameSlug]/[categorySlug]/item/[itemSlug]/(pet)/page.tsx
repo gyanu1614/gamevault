@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { ItemRoutePage, itemRouteMetadata } from '../_itemRoute'
+import { ItemRoutePage, itemRouteMetadata } from '../../_itemRoute'
 import { seoMeta } from '@/lib/seo/fit'
 
 // ISR (static-first rule): rendered on first visit, cached, refreshed by the
@@ -8,7 +8,11 @@ import { seoMeta } from '@/lib/seo/fit'
 export const revalidate = 86400
 export const dynamicParams = true
 
-/** Not prerendered: the set is open and out of the sitemap for now. */
+/**
+ * Not prerendered: the set is open (pets come and go with their offers). The
+ * sitemap lists the pages that have offers; each renders on its first visit
+ * into the ISR cache.
+ */
 export async function generateStaticParams() {
   return []
 }

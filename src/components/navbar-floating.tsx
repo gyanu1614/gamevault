@@ -879,6 +879,9 @@ export function Navbar({
               'transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out',
               // App-shell mobile bar: fixed 60px, square, edge-to-edge.
               'max-lg:h-[60px] max-lg:py-0',
+              // Desktop: 64px (owner, 2026-10-27: "a bit taller", GameBoost);
+              // --subnav-top in globals.css follows this height.
+              'lg:h-16 lg:py-0',
               // Transparent over the homepage hero film until Popular Games
               // reaches the bar, so the art reads behind the chrome. A scrim
               // below keeps the logo and icons legible on bright art.
@@ -892,15 +895,20 @@ export function Navbar({
                 ? 'border-b border-b-transparent bg-transparent shadow-none max-sm:backdrop-blur-0'
                 : cn(
                     'border-b backdrop-blur-2xl backdrop-saturate-150',
-                    // Pages with a sub-navbar drop the hairline so navbar +
-                    // sub-nav read as one block with a single bottom edge.
-                    hasSubNav ? 'border-b-transparent' : 'border-b-[rgba(255,255,255,0.08)] [[data-subnav]_&]:border-b-transparent',
+                    // Pages with a sub-navbar drop the hairline and the white
+                    // edge line (owner, 2026-10-26: "no outer white line"), so
+                    // navbar + sub-nav read as one block.
+                    hasSubNav
+                      ? 'border-b-transparent shadow-none'
+                      : cn(
+                          'border-b-[rgba(255,255,255,0.08)] shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]',
+                          '[[data-subnav]_&]:border-b-transparent [[data-subnav]_&]:shadow-none',
+                        ),
                     'bg-[var(--navbar-bg,rgba(29,30,35,0.78))]',
                     // Solid on phones (owner, 2026-10-12): the iOS 26 Safari
                     // status-bar strip then matches the bar. Its blur stays: it
                     // is the containing block of the phone sheets (see above).
                     'max-lg:bg-[#1C1D22]',
-                    'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]',
                   ),
             )}
           >

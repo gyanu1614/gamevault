@@ -60,6 +60,13 @@
      the navbar as soon as such a bar is mounted. */
   --navbar-bottom: calc(60px + var(--chrome-top));
   --navbar-height: 60px;
+  /* Where the fixed game sub-navbar sits (GameSubNav): flush under the
+     navbar's visible bar. Below lg that is the 60px app bar; at lg the bar
+     is 64px (lg:h-16 in navbar-floating) inside an 84px spacer. */
+  --subnav-top: calc(60px + var(--chrome-top));
+  /* Bottom of the fixed chrome on a game page: only the navbar, the sub-navbar
+     scrolls away. What scroll targets and sticky columns there must clear. */
+  --game-chrome-bottom: var(--subnav-top);
 
   /* iPhone status-bar area (0 everywhere else). The root viewport is
      viewport-fit=cover (layout.tsx), so the page runs under the status bar:
@@ -71,8 +78,12 @@
      announcement bar while it's on screen (its offset counts the status bar). */
   --chrome-top: max(var(--safe-top), var(--beta-banner-offset, 0px));
 
-  /* Navbar surface vars — used by navbar-floating.tsx inline styles */
-  --navbar-bg:               rgba(29, 30, 35, 0.78);
+  /* Navbar surface vars — used by navbar-floating.tsx inline styles.
+     Owner, 2026-10-26: "a bit transparent yet bold, not just grey" — the
+     navbar is a deep frosted near-black. The game sub-navbar is the same surface
+     (owner, 2026-11-03: "both look different"), so the two read as one header. */
+  --navbar-bg:               rgba(12, 13, 16, 0.76);
+  --subnav-bg:               var(--navbar-bg);
   --navbar-mobile-bg:        #16171B;
   --navbar-dropdown-bg:      #1D1E23;
 
@@ -2210,7 +2221,51 @@
 }
 
 /* ─── Utility Classes ────────────────────────────────────────── */
+/* Glass panel, desktop only (pet page; owner, 2026-11-03: "too much on top and too
+   less on bottom"). One thin flat tint with a plain hairline: no sheen, no gradient,
+   so it reads the same from top to bottom and is always one step lighter than
+   whatever is behind it. The art itself stays exactly as on the Items page (owner:
+   no blur on the hero), so the panel does the blurring. The page with these panels
+   sits on a ground one step lighter, with no darkening towards the bottom of the
+   screen ("premium and dark, but not so dark"). Plain CSS: the "liquid glass"
+   libraries use SVG filters Safari doesn't support. Solid where blur isn't available
+   or wanted. */
+@media (min-width: 1024px) {
+  html:has(.glass-panel) body {
+    background-color: #1C1D22;
+    background-image: none;
+  }
+  .glass-panel {
+    /* Fills inside it (a seller with no picture) stay one step above the glass. */
+    --color-bg-overlay: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    backdrop-filter: blur(32px) saturate(180%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 18px 50px -24px rgba(0, 0, 0, 0.5);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-panel { background: #2A2C32; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-panel { background: #2A2C32; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+}
+
+/* The sub-navbar scrolls with the page: on desktop, no rubber band that would
+   pull it away from the fixed navbar. Phones keep theirs (pull to refresh). */
+@media (min-width: 768px) {
+  html[data-subnav] { overscroll-behavior-y: none; }
+}
+
 @layer utilities {
+  /* A scroll target on a game page lands just under the fixed navbar, not under it. */
+  .scroll-mt-game-chrome {
+    scroll-margin-top: calc(var(--game-chrome-bottom) + 16px);
+  }
+
   /* Skeleton shimmer — apply to skeleton elements */
   .skeleton {
     /* V22 — Neutral white shimmer (was off-brand violet) so .skeleton loaders
@@ -2460,6 +2515,7 @@
   :root {
     --navbar-bottom: calc(84px + var(--chrome-top));
     --navbar-height: 84px;
+    --subnav-top: calc(64px + var(--chrome-top));
   }
 }
 

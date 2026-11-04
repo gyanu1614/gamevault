@@ -1,0 +1,68 @@
+import { ShieldCheck } from 'lucide-react'
+import { formatStatPrice } from '@/lib/seo/page-stats-format'
+
+/**
+ * The category page title (owner, 2026-11-03, "Clean Toolbar"): one bold line
+ * that says what the page sells ("Adopt Me Pets") and how many, no logo tile or
+ * small game line, since the sub-navbar right above already shows both. The
+ * price and delivery facts and the intro stay in the HTML for search engines but
+ * are not shown. Shared by the listings view (ItemsPageClient) and the values
+ * games' item grid, so the two never drift.
+ */
+export function CategoryHeader({
+  gameName,
+  categoryLabel,
+  count,
+  countNoun,
+  stats,
+  introLine,
+}: {
+  gameName: string
+  categoryLabel: string
+  /** What the page lists (listings, or items on a values game's grid). */
+  count: number
+  countNoun: { one: string; many: string }
+  stats?: { lowPrice: number | null; avgDeliveryLabel: string | null } | null
+  introLine?: string | null
+}) {
+  const title = categoryLabel.toLowerCase().includes(gameName.toLowerCase()) ? categoryLabel : `${gameName} ${categoryLabel}`
+  return (
+    <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <h1 className="text-[28px] font-bold leading-[1.1] tracking-[-0.025em] text-text-primary sm:text-[34px]">{title}</h1>
+      {count > 0 && (
+        <span className="text-[14px] font-medium capitalize tabular-nums text-text-secondary sm:text-[15px]">
+          {count.toLocaleString('en-US')} {count === 1 ? countNoun.one : countNoun.many}
+        </span>
+      )}
+      <div className="sr-only" style={{ fontSize: 'var(--fs-meta)' }}>
+        {stats?.lowPrice != null && (
+          <>
+            <span>
+              from <span className="font-bold tabular-nums text-text-primary">${formatStatPrice(stats.lowPrice)}</span>
+            </span>
+            <Dot />
+          </>
+        )}
+        {stats?.avgDeliveryLabel && (
+          <>
+            <span>~{stats.avgDeliveryLabel} delivery</span>
+            <Dot />
+          </>
+        )}
+        <span className="inline-flex items-center gap-1 font-semibold text-[#7ec98f]">
+          <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
+          SafeDrop Protected
+        </span>
+      </div>
+      {introLine && <p className="sr-only">{introLine}</p>}
+    </div>
+  )
+}
+
+function Dot() {
+  return (
+    <span aria-hidden className="text-text-disabled">
+      ·
+    </span>
+  )
+}

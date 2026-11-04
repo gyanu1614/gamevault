@@ -327,6 +327,13 @@ jobs:
       - name: Import raw listings to Supabase
         run: pnpm adoptme:cash:import data/adopt-me-feeds/eldorado-cash-latest.json
 
+      # Popular order (demand_rank = distinct sellers per pet), from the rows
+      # just imported, before the reprice so its list refresh shows the new
+      # order. Non-fatal, like SAB's "Refresh Popular ranking".
+      - name: Refresh Popular ranking
+        continue-on-error: true
+        run: pnpm adoptme:popularity --write
+
       # NOT continue-on-error: a failed reprice or publish must fail the job.
       - name: Reprice Adopt Me and publish changed prices
         run: pnpm reprice --game=adopt-me ${{ env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}
