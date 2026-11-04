@@ -2,7 +2,6 @@
 
 import Link from '@/components/navigation/AppLink'
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { CaretDown, CaretLeft, CircleNotch, Image as ImageIcon, Newspaper, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
 import {
   type AdminBlogPost,
@@ -44,7 +43,6 @@ export function BlogListClient({
    *  appears here automatically with a zero count. */
   games: BlogGameOption[]
 }) {
-  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [busyId, setBusyId] = useState<string | null>(null)
   // null = games overview; 'all' | 'general' | a game slug = posts view
@@ -73,7 +71,6 @@ export function BlogListClient({
     startTransition(async () => {
       await setBlogPostStatus(post.id, next)
       setBusyId(null)
-      router.refresh()
     })
   }
 
@@ -83,7 +80,6 @@ export function BlogListClient({
     startTransition(async () => {
       await deleteBlogPost(post.id)
       setBusyId(null)
-      router.refresh()
     })
   }
 

@@ -14,7 +14,7 @@ export default async function SellerRestrictionsPage() {
   // Get seller profile with restriction info
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*, restricted_by:seller_restricted_by(username, email)')
+    .select('*')
     .eq('id', user.id)
     .single()
 
@@ -25,7 +25,7 @@ export default async function SellerRestrictionsPage() {
   // Get restriction history
   const { data: restrictions } = await supabase
     .from('seller_restrictions')
-    .select('*, admin:restricted_by(username, email)')
+    .select('*')
     .eq('seller_id', user.id)
     .order('created_at', { ascending: false })
     .limit(10)

@@ -11,7 +11,11 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture, activateFixtureListing } from './throwaway'
 
-vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
+vi.mock('next/cache', () => ({
+  revalidatePath: () => undefined,
+  revalidateTag: () => undefined,
+  unstable_cache: (fn: any) => fn,
+}))
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()
@@ -24,7 +28,7 @@ vi.mock('@/lib/actions/admin-permissions', () => ({
 vi.mock('@/lib/admin/activity-log', () => ({ logAdminActivity: async () => undefined }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => fx!.admin.client }))
 
-import { getDisputes, getDisputeStats } from '@/lib/actions/admin-disputes'
+import { getDisputeById, getDisputes, getDisputeStats } from '@/lib/actions/admin-disputes'
 
 const CUR = 'USD'
 const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
@@ -126,6 +130,16 @@ describe.skipIf(!hasEnv)('admin disputes: search + stats (integration)', () => {
       expect(res.success, term).toBe(true)
       expect((res.disputes as any[]).map((d) => d.id), term).not.toContain(disputeId)
     }
+  })
+
+  it('the dispute page reads its order and chat in one call', async () => {
+    const res = await getDisputeById(disputeId) as any
+    expect(res.success).toBe(true)
+    expect(res.dispute.id).toBe(disputeId)
+    expect(res.order.order_number).toBe(orderNumber)
+    expect(res.order.seller.id).toBe(fx!.seller.id)
+    expect(res.order.buyer.id).toBe(fx!.buyer.id)
+    expect(res.conversationId === null || typeof res.conversationId === 'string').toBe(true)
   })
 
   it('stats: Resolved (7d) counts by resolved_at; every figure matches SQL', async () => {

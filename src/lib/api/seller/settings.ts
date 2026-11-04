@@ -49,7 +49,7 @@ export const settingsApi = {
       // row is excluded, so changing only the casing of your own handle
       // is still allowed.
       const { data: clash } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('id')
         .ilike('username', username)
         .neq('id', user.id)

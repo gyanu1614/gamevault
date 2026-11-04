@@ -23,19 +23,24 @@ import { hasEnv, makeFixture, type Fixture } from './throwaway'
 
 const state = vi.hoisted(() => ({ client: null as any, admin: true }))
 
-vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
+vi.mock('next/cache', () => ({
+  revalidatePath: () => undefined,
+  revalidateTag: () => undefined,
+  unstable_cache: (fn: any) => fn,
+}))
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()
   return Object.fromEntries(Object.keys(real).map((k) => [k, async () => undefined]))
 })
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => state.client }))
-vi.mock('@/lib/actions/admin-permissions', () => ({
-  requireAdmin: async () => {
+vi.mock('@/lib/actions/admin-permissions', () => {
+  const gate = async () => {
     if (!state.admin) throw new Error('NEXT_REDIRECT')
     return { userId: 'admin' }
-  },
-}))
+  }
+  return { requireAdmin: gate, requireRole: gate }
+})
 
 import { getDashboardStats } from '@/lib/actions/admin-dashboard'
 import { getAnalyticsData } from '@/lib/actions/admin-analytics'

@@ -12,7 +12,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { getSellerApplications } from '@/lib/actions/admin-seller-review'
+import { getSellerApplicationCounts, getSellerApplications } from '@/lib/actions/admin-seller-review'
 import ApplicationsTable from '../ApplicationsTable'
 import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
 import { AdminLoadingRows, AdminPagination, PageHeader } from '../../components/kit'
@@ -95,40 +95,12 @@ export default function SellersPageClient({
 
   const applications = data?.applications || []
 
-  // Fetch global stats (all statuses)
+  // Tab counts (all statuses): one call, seeded by the server.
   const { data: statsData } = useQuery({
-    queryKey: ['seller-stats'],
-    queryFn: async () => {
-      const [
-        allResult,
-        pendingResult,
-        changesResult,
-        approvedResult,
-        rejectedResult,
-        restrictedResult,
-      ] = await Promise.all([
-        getSellerApplications({ page: 1, limit: 1 }),
-        getSellerApplications({ page: 1, limit: 1, status: ['pending'] }),
-        getSellerApplications({ page: 1, limit: 1, status: ['info_requested'] }),
-        getSellerApplications({ page: 1, limit: 1, status: ['approved'] }),
-        getSellerApplications({ page: 1, limit: 1, status: ['rejected'] }),
-        getSellerApplications({ page: 1, limit: 1, status: ['restricted'] }),
-      ])
-      return {
-        total: allResult.pagination?.total || 0,
-        pending: pendingResult.pagination?.total || 0,
-        changes: changesResult.pagination?.total || 0,
-        approved: approvedResult.pagination?.total || 0,
-        rejected: rejectedResult.pagination?.total || 0,
-        restricted: restrictedResult.pagination?.total || 0,
-      }
-    },
-    // V54 — Server-seeded so the tab counts paint immediately. No
-    // staleTime override on purpose: the ['seller-stats'] key is shared
-    // with useSellerStats() (different payload shape) on
-    // /admin/active-sellers, and the mount refetch here is what corrects
-    // the cache after cross-page navigation — same as before seeding.
+    queryKey: ['application-counts'],
+    queryFn: () => getSellerApplicationCounts(),
     initialData: initialStats,
+    staleTime: 60_000,
   })
 
   const handleStatusFilter = (status: StatusFilter) => {

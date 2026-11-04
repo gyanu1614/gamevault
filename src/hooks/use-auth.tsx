@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { POLL_MS, isTabVisible, shouldPollSellerApproval } from '@/lib/polling/intervals'
+import { subscribeUserChannel } from '@/lib/realtime/user-channel'
 import { uploadProfileAvatar } from '@/lib/actions/auth'
 import { readPendingSignupAvatar, clearPendingSignupAvatar } from '@/lib/auth/pending-avatar'
 import { shouldReloadProfile, type ProfileLoad } from '@/lib/auth/profile-reload'
@@ -518,16 +519,15 @@ function useAuthState(): AuthContextValue {
   // menu and the identity card swaps username→shop_name the instant an admin
   // approves — no page reload, no redirect loop.
   //
-  // Primary path: a realtime channel with two postgres_changes listeners
-  //   (a) seller_applications UPDATE  → new sellerApplicationStatus (pending/
+  // Primary path: the user's live channel (user:<id>), two events
+  //   (a) seller_application → new sellerApplicationStatus (pending/
   //       under_review/info_requested/approved/…)
-  //   (b) profiles UPDATE             → delivers role='seller' AND the fresh
-  //       shop_name/shop_slug together, so approval propagates atomically.
-  // Requires those tables in the supabase_realtime publication (see
-  // supabase/migrations/*_realtime_seller_lifecycle.sql). If the publication
-  // change is skipped the channel silently receives nothing, so a
-  // visibilitychange + 60s poll fallback re-fetches the profile as a safety net
-  // — only while an application is in flight, and never in a hidden tab.
+  //   (b) profile            → role='seller' AND the fresh shop_name /
+  //       shop_slug together, so approval propagates atomically.
+  // Sent by DB triggers (migration 20261102161908_user_channel_broadcast).
+  // A dropped socket receives nothing, so a visibilitychange + 60s poll
+  // fallback re-fetches the profile as a safety net — only while an
+  // application is in flight, and never in a hidden tab.
   //
   // Scope: only authenticated, not-yet-approved users, and it tears down the
   // moment approval lands — no permanent extra websocket per anonymous visitor.
@@ -585,41 +585,16 @@ function useAuthState(): AuthContextValue {
       })
     }
 
-    const channel = supabase
-      .channel(`seller-app:${userId}`)
-      // A buyer who applies in this tab: the INSERT marks the application in
-      // flight, which is what switches the profile poll fallback on.
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'seller_applications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => applyAppStatus((payload.new as any)?.status ?? null)
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'seller_applications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => applyAppStatus((payload.new as any)?.status ?? null)
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${userId}`,
-        },
-        (payload) => mergeProfilePayload(payload.new as Record<string, unknown>)
-      )
-      .subscribe()
+    // The user's live channel (user:<id>, lib/realtime/user-channel): a DB
+    // trigger sends 'seller_application' when my application is filed or
+    // changes status, and 'profile' with my role / shop / seller fields when
+    // they change. One shared private channel per tab; it replaced three
+    // Postgres Changes listeners every signed-in buyer held for the whole
+    // session (incident 2026-11-02).
+    const offApplication = subscribeUserChannel(userId, 'seller_application', (payload) =>
+      applyAppStatus(typeof payload.status === 'string' ? payload.status : null),
+    )
+    const offProfile = subscribeUserChannel(userId, 'profile', (payload) => mergeProfilePayload(payload))
 
     // Fallback: re-fetch the profile on tab focus + a slow poll, so a missed
     // realtime window (publication not enabled / websocket dropped) still
@@ -644,7 +619,8 @@ function useAuthState(): AuthContextValue {
       active = false
       document.removeEventListener('visibilitychange', onVisible)
       clearInterval(pollId)
-      channel.unsubscribe()
+      offApplication()
+      offProfile()
     }
     // Deliberately NOT keyed on isApprovedSeller: the channel updates it via
     // the setUser callback, so re-subscribing on its change would tear the

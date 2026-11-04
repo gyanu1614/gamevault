@@ -10,7 +10,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowCounterClockwise, CheckCircle, CircleNotch, Warning } from '@phosphor-icons/react'
 import { adminOpenOrderDispute, resolveDispute } from '@/lib/actions/admin-disputes'
@@ -34,7 +33,6 @@ export function AdminOrderActions({
   sellerPayout: number
   openDisputeId: string | null
 }) {
-  const router = useRouter()
   const [mode, setMode] = useState<Mode>(null)
   const [reason, setReason] = useState('')
   const [amount, setAmount] = useState('')
@@ -69,7 +67,6 @@ export function AdminOrderActions({
         : 'Refund credited to the buyer’s wallet.',
       )
       close()
-      router.refresh()
     })
   }
 

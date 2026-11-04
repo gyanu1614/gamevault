@@ -13,6 +13,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { getVerifiedAdmin } from '@/lib/admin/context'
 import { revalidatePath } from 'next/cache'
 import type { PromoCode } from '@/types/database'
 import { promoRefusalMessage } from '@/lib/checkout/promo'
@@ -154,22 +155,12 @@ export async function recordPromoUsage(params: {
 // ── Admin: CRUD for promo codes ───────────────────────────────────────────────
 
 async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  // Check admin_roles table (NOT profiles.role)
-  const { data: adminRole } = await supabase
-    .from('admin_roles')
-    .select('role, is_active')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single() as any
-
-  if (!adminRole || !['admin', 'super_admin'].includes(adminRole.role)) {
+  const admin = await getVerifiedAdmin()
+  if (!admin) throw new Error('Not authenticated')
+  if (!['admin', 'super_admin'].includes(admin.role)) {
     throw new Error('Admin access required')
   }
-  return { supabase, userId: user.id }
+  return { supabase: await createClient(), userId: admin.userId }
 }
 
 export interface CreatePromoData {

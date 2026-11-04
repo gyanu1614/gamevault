@@ -64,6 +64,16 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   // order fields (seller_id / buyer_id = auth.uid()); the payout sum behind
   // seller_dashboard_stats keeps the invoker view's row scope.
   'orders_buyer_private', 'orders_seller_private', 'seller_completed_payout_sum',
+  // Chat load (20261102161043): the inbox page and the Messages badge, each
+  // pinned to auth.uid() and returning only the caller's own conversations.
+  'my_inbox', 'my_unread_message_count',
+  // Admin two-factor (20261103125855): the caller's own staff context, and which
+  // senders in a conversation the caller belongs to are staff.
+  'admin_context', 'chat_staff_senders',
+  // Admin stats (20261103131903): the header's badges and own notifications;
+  // null unless is_admin (two-factor).
+  'admin_header_snapshot',
+  'admin_quick_search',
 ].sort()
 
 /**
@@ -305,7 +315,9 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(error).toBeNull()
       const p = data as any
       expect(p.default_acl_grants_anon_or_authenticated).toBe(false)
-      expect(p.views_without_security_invoker).toEqual([])
+      // public_profiles reads past the row rules on purpose once the DLT-001b migration
+      // runs: its column list is the boundary (public-profiles.guard pins it).
+      expect(p.views_without_security_invoker.filter((view: string) => view !== 'public_profiles')).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
       for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY, ...OPEN_SIGNUP_SERVICE_ONLY]) {

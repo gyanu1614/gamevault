@@ -50,6 +50,13 @@ export function upsertReaction(rows: ReactionRow[], row: ReactionRow): ReactionR
   return [...rest, row]
 }
 
+/** Replace the reactions of some messages (a re-sync of the newest slice);
+ *  reactions on other messages are kept. */
+export function replaceReactionsFor(rows: ReactionRow[], messageIds: string[], fresh: ReactionRow[]): ReactionRow[] {
+  const ids = new Set(messageIds)
+  return [...rows.filter((r) => !ids.has(r.message_id)), ...fresh]
+}
+
 export function removeReaction(rows: ReactionRow[], messageId: string, userId: string): ReactionRow[] {
   return rows.filter((r) => !(r.message_id === messageId && r.user_id === userId))
 }

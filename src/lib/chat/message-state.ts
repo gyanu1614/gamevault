@@ -156,6 +156,18 @@ export function removeMessage(list: ChatMessage[], id: string): ChatMessage[] {
 }
 
 /**
+ * Reconcile with the NEWEST slice of the thread (the background re-sync reads
+ * only the latest messages, not the whole history). Each row is merged in
+ * place like a realtime row; messages older than the slice are kept as they
+ * are. Returns the SAME array when nothing changed.
+ */
+export function mergeServerTail(list: ChatMessage[], rows: ChatRow[]): ChatMessage[] {
+  let next = list
+  for (const row of rows.slice().sort(byCreatedAt)) next = upsertRow(next, row)
+  return next
+}
+
+/**
  * Reconcile with a full refetch (initial load, channel (re)subscribed, tab
  * visible again, safety poll). The server rows are the truth, in created_at
  * order; local previews carry over by id; optimistic messages the server

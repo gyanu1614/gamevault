@@ -22,19 +22,22 @@
  */
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from '@/components/navigation/AppLink'
 import { ArrowSquareOut, CaretLeft } from '@phosphor-icons/react'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { AdminEmpty, adminBtn } from '../../components/kit'
 import { GameTile } from '../../components/GameTile'
 import GameWizard from './GameWizard'
-import { CurrencyConfigForm } from './CurrencyConfigForm'
-import { AccountConfigForm } from './AccountConfigForm'
-import { BoostingConfigForm } from './BoostingConfigForm'
-import { SeoOverrideForm } from './SeoOverrideForm'
-import { FeesTab } from './FeesTab'
-import { ValuesTab } from './ValuesTab'
 import { hasHubPage } from '@/lib/content/theme'
+
+// Setup is the tab that opens: the others load when someone picks them.
+const CurrencyConfigForm = dynamic(() => import('./CurrencyConfigForm').then((m) => m.CurrencyConfigForm))
+const AccountConfigForm = dynamic(() => import('./AccountConfigForm').then((m) => m.AccountConfigForm))
+const BoostingConfigForm = dynamic(() => import('./BoostingConfigForm').then((m) => m.BoostingConfigForm))
+const SeoOverrideForm = dynamic(() => import('./SeoOverrideForm').then((m) => m.SeoOverrideForm))
+const FeesTab = dynamic(() => import('./FeesTab').then((m) => m.FeesTab))
+const ValuesTab = dynamic(() => import('./ValuesTab').then((m) => m.ValuesTab))
 
 type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'fees' | 'seo' | 'values'
 

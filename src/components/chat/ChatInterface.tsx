@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { notifyNewMessage } from '@/lib/actions/message-notify'
+import { notifySellerFirstReply } from '@/lib/actions/message-notify'
 import { toast } from 'sonner'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
@@ -13,7 +13,7 @@ import { useChatThread } from '@/hooks/use-chat-thread'
 import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
 import { replySnippet, senderLabel } from '@/lib/chat/reply'
 import { AlertCircle } from 'lucide-react'
-import type { ChatRow } from '@/lib/chat/message-state'
+import type { ChatMessage, ChatRow } from '@/lib/chat/message-state'
 
 interface ChatInterfaceProps {
   conversationId: string
@@ -147,18 +147,28 @@ export default function ChatInterface({
     })
   }, [])
 
-  const handleDelivered = useCallback(async () => {
-    // Comms (first-unread-only): notify + email the other participant.
-    // The server action never throws and does all awaiting server-side;
-    // client-side we deliberately don't block the chat on it.
-    notifyNewMessage(conversationId).catch(() => {})
+  // The thread as of the last render (read by handleDelivered, which the
+  // hook calls after a send settles).
+  const messagesRef = useRef<ChatMessage[]>([])
+  const firstReplySentRef = useRef(false)
+
+  const handleDelivered = useCallback(async (row: ChatRow) => {
+    // Chat emails are batched by the database (one per quiet burst). The only
+    // per-message comms left is the buyer's bell for the SELLER'S FIRST reply
+    // on an order: call it once, when the thread has no earlier message from
+    // me. The server action re-checks and never throws.
+    const ord = orderRef.current
+    if (ord?.seller?.id === currentUserId && !firstReplySentRef.current) {
+      const earlier = messagesRef.current.some((m) => m.sender_id === currentUserId && m.id !== row.id && !m.local_status)
+      firstReplySentRef.current = true
+      if (!earlier) notifySellerFirstReply(conversationId).catch(() => {})
+    }
 
     // V21/P4.e — If this message is the seller speaking on a 'paid'
     // order, flip status to 'delivering' atomically server-side. The
     // server action is guarded so it's a no-op for buyers or for
     // orders already past 'paid'. Fire-and-forget — failure here
     // never blocks the chat.
-    const ord = orderRef.current
     if (ord && ord.status === 'paid' && ord.seller?.id === currentUserId) {
       const { notifySellerActivity } = await import('@/lib/actions/orders')
       void notifySellerActivity(ord.id)
@@ -184,8 +194,9 @@ export default function ChatInterface({
     canMarkRead: isParticipant,
     attachOrderId: canAttach && order?.id ? order.id : null,
     onIncoming: handleIncoming,
-    onDelivered: () => void handleDelivered(),
+    onDelivered: (row) => void handleDelivered(row),
   })
+  messagesRef.current = messages
 
   // React / Reply: the two parties while the chat is open; admins always
   // (they already write in dispute chats). Copy is offered to everyone.

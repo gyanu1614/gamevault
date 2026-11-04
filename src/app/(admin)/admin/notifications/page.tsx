@@ -8,12 +8,15 @@
  * switches, mark-as-read, and the 15s polling refetch work unchanged.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { createClient } from '@/lib/supabase/server'
 import NotificationsPageClient from './_components/NotificationsPageClient'
 
 export const metadata = { title: 'Notifications' }
 
 export default async function AdminNotificationsPage() {
+  await requireAdmin()
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

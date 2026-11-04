@@ -25,7 +25,11 @@ import { hasEnv, makeFixture, URL, ANON, type Fixture } from './throwaway'
 
 const state = vi.hoisted(() => ({ client: null as any, adminId: '' }))
 
-vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
+vi.mock('next/cache', () => ({
+  revalidatePath: () => undefined,
+  revalidateTag: () => undefined,
+  unstable_cache: (fn: any) => fn,
+}))
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()

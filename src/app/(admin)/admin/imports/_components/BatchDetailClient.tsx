@@ -12,7 +12,6 @@
  */
 import { useMemo, useState, useTransition } from 'react'
 import Link from '@/components/navigation/AppLink'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowLeft, Download, Pause, Play, Archive, Rocket, Wand2, ImageOff, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -85,7 +84,6 @@ function RowThumb({ url }: { url: string | null }) {
 }
 
 export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
-  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [progress, setProgress] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'matched' | 'review' | 'rejected'>('all')
@@ -124,7 +122,6 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
       }
       setProgress(null)
       toast.success(`${created} created, ${updated} updated${failed ? `, ${failed} failed` : ''}`)
-      router.refresh()
     })
   }
 
@@ -136,7 +133,6 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
         return
       }
       toast.success(`${verb} ${res.data.affected} listing${res.data.affected === 1 ? '' : 's'}`)
-      router.refresh()
     })
   }
 
@@ -148,7 +144,6 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
         return
       }
       toast.success(`"${res.data.alias}" will match from now on — re-preview to pick it up`)
-      router.refresh()
     })
   }
 

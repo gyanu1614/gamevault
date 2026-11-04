@@ -5,7 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { ilikeContains } from '@/lib/db/ilike'
-import { COLLECTED_ORDER_STATUSES, IN_PROGRESS_ORDER_STATUSES } from '@/lib/admin/status-sets'
+import { getAdminOverviewStats } from '@/lib/admin/overview-stats'
 
 // The orders_status_check / orders_escrow_status_check values.
 export type OrderStatus =
@@ -212,56 +212,18 @@ export async function getOrders(filters: OrderFilters = {}) {
 export async function getOrderStats() {
   await requireAdmin()
   try {
-    // Fees are a private order column (orders column grant): service role,
-    // only after requireAdmin above.
-    const supabase = createServiceRoleClient()
-
-    // Bounded GET counts (never head:true — see never-head-count-hot-path).
-    const countWhere = async (statuses?: readonly OrderStatus[]) => {
-      let q = supabase.from('orders').select('id', { count: 'exact' }).limit(1)
-      if (statuses) q = q.in('status', statuses)
-      const { count, error } = await q
-      if (error) throw error
-      return count || 0
-    }
-
-    const [totalOrders, completedOrders, pendingOrders, disputedOrders] = await Promise.all([
-      countWhere(),
-      countWhere(['completed']),
-      countWhere(IN_PROGRESS_ORDER_STATUSES),
-      countWhere(['disputed']),
-    ])
-
-    // Revenue + fees over every collected order. PostgREST caps a response
-    // at max_rows (1000), so page through by id rather than summing the
-    // first page only.
-    let totalRevenue = 0
-    let totalFees = 0
-    const PAGE = 1000
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await (supabase
-        .from('orders')
-        .select('id, total_amount, platform_fee')
-        .in('status', COLLECTED_ORDER_STATUSES)
-        .order('id', { ascending: true })
-        .range(from, from + PAGE - 1) as any)
-      if (error) throw error
-      for (const o of data ?? []) {
-        totalRevenue += Number(o.total_amount) || 0
-        totalFees += Number(o.platform_fee) || 0
-      }
-      if (!data || data.length < PAGE) break
-    }
-
+    // One cached call shared with the dashboard (lib/admin/overview-stats). Was
+    // four counts plus a walk of every collected order.
+    const { orders } = await getAdminOverviewStats()
     return {
       success: true,
       stats: {
-        totalOrders: totalOrders || 0,
-        completedOrders: completedOrders || 0,
-        pendingOrders: pendingOrders || 0,
-        disputedOrders: disputedOrders || 0,
-        totalRevenue,
-        totalFees,
+        totalOrders: orders.total,
+        completedOrders: orders.completed,
+        pendingOrders: orders.in_progress,
+        disputedOrders: orders.disputed,
+        totalRevenue: orders.revenue_total,
+        totalFees: orders.fees_total,
       },
     }
   } catch (error: any) {

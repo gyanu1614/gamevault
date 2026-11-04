@@ -15,6 +15,8 @@ import {
 } from '@/lib/email'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { logAudit } from '@/lib/audit'
+import { orIlike } from '@/lib/db/ilike'
+import { afterResponse } from '@/lib/after-response'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
 import { assessIdentityForApproval, type IdentityAssessment } from '@/lib/utils/seller-verification'
@@ -32,6 +34,11 @@ function getServiceClient() {
       persistSession: false
     }
   })
+}
+
+/** Row security refuses an update by changing 0 rows with no error, so "no error" is not "saved". */
+function assertApplicationChanged(rows: unknown[] | null) {
+  if (!rows || rows.length === 0) throw new Error('The application was not updated. Check your review permission.')
 }
 
 // Types
@@ -163,6 +170,24 @@ export async function getRecentApplications(limit: number = 5) {
 /**
  * Get seller applications with filters
  */
+/**
+ * The applications page's tab counts in one database call (was six list queries
+ * with limit 1, each its own request from the browser).
+ */
+export async function getSellerApplicationCounts(): Promise<{
+  total: number
+  pending: number
+  changes: number
+  approved: number
+  rejected: number
+  restricted: number
+}> {
+  await requireAdmin()
+  const { data, error } = await (getServiceClient().rpc as any)('admin_application_counts')
+  if (error) throw new Error(`admin_application_counts: ${error.message}`)
+  return data
+}
+
 export async function getSellerApplications(filters: ApplicationFilters = {}) {
   try {
     await requireAdmin()
@@ -198,9 +223,7 @@ export async function getSellerApplications(filters: ApplicationFilters = {}) {
     }
 
     if (filters.searchQuery) {
-      query = query.or(
-        `display_name.ilike.%${filters.searchQuery}%,full_legal_name.ilike.%${filters.searchQuery}%,phone_number.ilike.%${filters.searchQuery}%`
-      )
+      query = query.or(orIlike(['display_name', 'full_legal_name', 'phone_number'], filters.searchQuery))
     }
 
     // Sorting
@@ -515,14 +538,11 @@ export async function markApplicationUnderReview(
       console.error('[markApplicationUnderReview] notification failed:', notifyErr)
     }
 
-    // Best-effort email
-    try {
-      const userEmail = (application.profiles as any)?.email || application.alternate_email
-      if (userEmail) {
-        await sendApplicationInReviewEmail({ to: userEmail, name })
-      }
-    } catch (emailErr) {
-      console.error('[markApplicationUnderReview] email failed:', emailErr)
+    const inReviewEmail = (application.profiles as any)?.email || application.alternate_email
+    if (inReviewEmail) {
+      afterResponse('markApplicationUnderReview email', () =>
+        sendApplicationInReviewEmail({ to: inReviewEmail, name }),
+      )
     }
 
     return { success: true, changed: true }
@@ -741,7 +761,7 @@ export async function approveApplication(
 
     // Status update LAST — this is the event the client's reactive effect
     // keys off; by now the profiles identity update has already been sent.
-    const { error } = await (supabase
+    const { data: approvedRows, error } = await (supabase
       .from('seller_applications')
       .update as any)({
         status: 'approved',
@@ -754,18 +774,22 @@ export async function approveApplication(
         tax_verified,
       })
       .eq('id', applicationId)
+      .select('id')
 
     if (error) throw error
+    assertApplicationChanged(approvedRows)
 
     // Send email notification
     const userEmail = (application.profiles as any)?.email || application.alternate_email
     const sellerName = application.full_legal_name || (application.profiles as any)?.full_name || 'Seller'
     if (userEmail) {
-      await sendApplicationApprovedEmail({
-        to: userEmail,
-        name: sellerName,
-        displayName: application.display_name,
-      })
+      afterResponse('approveApplication email', () =>
+        sendApplicationApprovedEmail({
+          to: userEmail,
+          name: sellerName,
+          displayName: application.display_name,
+        }),
+      )
     }
 
     // GRO-08 — the drafts built during review go out now, through the normal
@@ -775,12 +799,14 @@ export async function approveApplication(
     try {
       const drafts = await submitApplicantDrafts(serviceClient as never, application.user_id)
       if (userEmail && drafts.submitted.length + drafts.skipped.length > 0) {
-        await sendApplicantDraftsSubmittedEmail({
-          to: userEmail,
-          name: sellerName,
-          submitted: drafts.submitted,
-          skipped: drafts.skipped,
-        })
+        afterResponse('approveApplication drafts email', () =>
+          sendApplicantDraftsSubmittedEmail({
+            to: userEmail,
+            name: sellerName,
+            submitted: drafts.submitted,
+            skipped: drafts.skipped,
+          }),
+        )
       }
     } catch (draftErr) {
       console.error('[approveApplication] applicant drafts submission failed:', draftErr)
@@ -891,7 +917,7 @@ export async function rejectApplication(applicationId: string, reason: string, n
       .eq('id', applicationId)
       .single() as any
 
-    const { error } = await (supabase
+    const { data: rejectedRows, error } = await (supabase
       .from('seller_applications')
       .update as any)({
         status: 'rejected',
@@ -901,19 +927,23 @@ export async function rejectApplication(applicationId: string, reason: string, n
         admin_notes: notes,
       })
       .eq('id', applicationId)
+      .select('id')
 
     if (error) throw error
+    assertApplicationChanged(rejectedRows)
 
     // Send email notification
     if (application) {
       const userEmail = (application.profiles as any)?.email || application.alternate_email
       if (userEmail) {
-        await sendApplicationRejectedEmail({
-          to: userEmail,
-          name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
-          displayName: application.display_name,
-          reason: reason,
-        })
+        afterResponse('rejectApplication email', () =>
+          sendApplicationRejectedEmail({
+            to: userEmail,
+            name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
+            displayName: application.display_name,
+            reason: reason,
+          }),
+        )
       }
     }
 
@@ -988,26 +1018,30 @@ export async function requestMoreInfo(applicationId: string, message: string) {
       .eq('id', applicationId)
       .single() as any
 
-    const { error } = await (supabase
+    const { data: requestedRows, error } = await (supabase
       .from('seller_applications')
       .update as any)({
         status: 'info_requested',
         admin_notes: message,
       })
       .eq('id', applicationId)
+      .select('id')
 
     if (error) throw error
+    assertApplicationChanged(requestedRows)
 
     // Send email notification
     if (application) {
       const userEmail = (application.profiles as any)?.email || application.alternate_email
       if (userEmail) {
-        await sendInfoRequestedEmail({
-          to: userEmail,
-          name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
-          displayName: application.display_name,
-          message: message,
-        })
+        afterResponse('requestMoreInfo email', () =>
+          sendInfoRequestedEmail({
+            to: userEmail,
+            name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
+            displayName: application.display_name,
+            message: message,
+          }),
+        )
       }
     }
 

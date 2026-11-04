@@ -12,6 +12,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import {
   getAdminReviews,
   getReviewStats,
@@ -89,12 +90,12 @@ export default function ReviewsPageClient({
   // V54 — State is seeded from the server wrapper; the initial render
   // shows real data (isLoading starts false, no mount fetch).
   const [reviews, setReviews] = useState<any[]>(initialReviews)
-  const [filteredReviews, setFilteredReviews] = useState<any[]>(initialReviews)
   const [stats, setStats] = useState<any>(initialStats)
   const [pagination, setPagination] = useState<Pagination | null>(initialPagination)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const search = useDebouncedValue(searchQuery.trim())
   const [selectedReview, setSelectedReview] = useState<any>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
@@ -118,34 +119,17 @@ export default function ReviewsPageClient({
     setPage(1)
     loadData(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, ratingFilter])
-
-  useEffect(() => {
-    // Filter reviews based on search
-    if (searchQuery) {
-      const filtered = reviews.filter(
-        (review) =>
-          review.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          review.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          review.buyer?.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          review.seller?.username.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      setFilteredReviews(filtered)
-    } else {
-      setFilteredReviews(reviews)
-    }
-  }, [searchQuery, reviews])
+  }, [statusFilter, ratingFilter, search])
 
   const loadData = async (nextPage = page) => {
     setIsLoading(true)
     const [reviewsResult, statsResult] = await Promise.all([
-      getAdminReviews({ status: statusFilter, rating: ratingFilter, page: nextPage }),
+      getAdminReviews({ status: statusFilter, rating: ratingFilter, search: search || undefined, page: nextPage }),
       getReviewStats(),
     ])
 
     if (reviewsResult.success) {
       setReviews(reviewsResult.reviews || [])
-      setFilteredReviews(reviewsResult.reviews || [])
       setPagination(reviewsResult.pagination ?? null)
     }
 
@@ -326,7 +310,7 @@ export default function ReviewsPageClient({
       {/* Reviews list */}
       {isLoading ? (
         <AdminLoadingRows rows={5} />
-      ) : filteredReviews.length === 0 ? (
+      ) : reviews.length === 0 ? (
         <AdminEmpty
           icon={ChatText}
           title="No Reviews Found"
@@ -335,7 +319,7 @@ export default function ReviewsPageClient({
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-            {filteredReviews.map((review) => (
+            {reviews.map((review) => (
               <ReviewCard
                 key={review.id}
                 review={review}
@@ -360,7 +344,7 @@ export default function ReviewsPageClient({
               />
             ))}
           </div>
-          {pagination && !searchQuery && (
+          {pagination && (
             <AdminPagination
               page={pagination.page}
               totalPages={pagination.totalPages}

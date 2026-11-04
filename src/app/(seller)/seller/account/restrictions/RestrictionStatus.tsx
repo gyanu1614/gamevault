@@ -242,12 +242,6 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
                   {restriction.reason && (
                     <p className="text-sm text-text-secondary mb-2">{restriction.reason}</p>
                   )}
-
-                  {restriction.admin && (
-                    <p className="text-xs text-text-tertiary">
-                      By: {restriction.admin.username || restriction.admin.email}
-                    </p>
-                  )}
                 </div>
               ))}
             </div>

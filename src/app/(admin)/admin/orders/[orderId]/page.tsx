@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import React from 'react'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -54,6 +55,8 @@ function adminOrderMoney(order: any) {
 }
 
 export default async function AdminOrderDetailPage({ params }: PageProps) {
+  await requireAdmin()
+
   const { orderId } = await params
   const supabase = await createClient()
 

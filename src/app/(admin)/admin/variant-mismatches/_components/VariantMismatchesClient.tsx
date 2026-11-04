@@ -35,7 +35,8 @@ export default function VariantMismatchesClient({ rows, total, page, pageSize, e
       setBusy(null)
       if (!r.success) return void toast.error(r.error)
       toast.success(r.data.fixed > 0 ? fixedNote(r.data.fixed) : 'Already changed. Nothing to fix.')
-      router.refresh()
+      // A fix refreshes the page itself; nothing fixed means the list was out of date.
+      if (r.data.fixed === 0) router.refresh()
     })
   }
 
@@ -47,7 +48,6 @@ export default function VariantMismatchesClient({ rows, total, page, pageSize, e
       setBusy(null)
       if (!r.success) return void toast.error(r.error)
       toast.success(r.data.remaining > 0 ? `${fixedNote(r.data.fixed)}. ${r.data.remaining} left, press again.` : fixedNote(r.data.fixed))
-      router.refresh()
     })
   }
 

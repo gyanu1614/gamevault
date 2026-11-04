@@ -11,6 +11,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { getVerifiedAdmin } from '@/lib/admin/context'
 import { revalidatePath } from 'next/cache'
 
 export interface ApplicationStatusResult {
@@ -231,14 +232,10 @@ export async function rejectApplication(
       return { success: false, error: 'Not authenticated' }
     }
 
-    // Verify user is admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single() as any
-
-    if (!profile || !['admin', 'super_admin'].includes((profile as any).role)) {
+    // Active admin_roles staff with two-factor in this session (it checked
+    // profiles.role, the wrong list).
+    const admin = await getVerifiedAdmin()
+    if (!admin || !['admin', 'super_admin'].includes(admin.role)) {
       return { success: false, error: 'Unauthorized - admin access required' }
     }
 

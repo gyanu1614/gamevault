@@ -6,6 +6,7 @@
  * renders the client builder.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { notFound } from 'next/navigation'
 import { loadBuilderState } from '@/lib/actions/admin-template-builder'
 import TemplateBuilder from '../../../_components/TemplateBuilder'
@@ -17,6 +18,8 @@ export default async function TemplateBuilderPage({
 }: {
   params: { id: string; categorySlug: string }
 }) {
+  await requireAdmin()
+
   const res = await loadBuilderState(params.id, params.categorySlug)
   if (!res.success) {
     notFound()

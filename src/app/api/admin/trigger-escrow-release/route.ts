@@ -17,30 +17,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAdminGate } from '@/lib/admin/context'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { releaseDueOrder } from '@/lib/escrow/auto-release'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    // Verify user is admin
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    // Active admin_roles staff with two-factor in this session (it checked
+    // profiles.role, the wrong list, with no second factor), and only the roles
+    // that may move money.
+    const gate = await getAdminGate()
+    if (gate.status === 'signed_out') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single() as any
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+    if (gate.status !== 'ok' || (gate.admin.role !== 'admin' && gate.admin.role !== 'super_admin')) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 

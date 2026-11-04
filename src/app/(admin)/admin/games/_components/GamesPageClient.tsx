@@ -115,8 +115,9 @@ export default function GamesPageClient({
   initialGames,
   initialBadges,
 }: {
-  initialGames: Game[]
-  initialBadges: AdminGameCategoryBadge[]
+  /** Absent on a server action's refresh: the mounted client already has the data. */
+  initialGames?: Game[]
+  initialBadges?: AdminGameCategoryBadge[]
 }) {
   const [filter, setFilter] = useState('')
   // Step 2 — the Discord alert links to /admin/games?status=pending#<slug>:
@@ -154,20 +155,30 @@ export default function GamesPageClient({
     staleTime: 60_000,
   })
 
+  /** A switch shows at the click; a failure reloads the list. */
+  const patchGame = (id: string, patch: Partial<Game>) => {
+    void qc.cancelQueries({ queryKey: ['admin-games', 'list'] })
+    qc.setQueryData<Game[]>(['admin-games', 'list'], (old) => old?.map((g) => (g.id === id ? { ...g, ...patch } : g)))
+  }
+  const reloadGames = () => {
+    void qc.invalidateQueries({ queryKey: ['admin-games', 'list'] })
+  }
+  const switchFailed = (message: string) => {
+    toast.error(message)
+    reloadGames()
+  }
+
   // V17l — Pause/resume mutation. The action takes the current state
   // and flips it (server-side), so we pass `is_active` as-is.
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       toggleGameActive(id, isActive),
+    onMutate: ({ id, isActive }) => patchGame(id, { is_active: !isActive }),
     onSuccess: (res, vars) => {
-      if (res.success) {
-        toast.success(vars.isActive ? 'Game paused' : 'Game activated')
-        qc.invalidateQueries({ queryKey: ['admin-games'] })
-      } else {
-        toast.error(res.error ?? 'Failed to update game')
-      }
+      if (res.success) toast.success(vars.isActive ? 'Game paused' : 'Game activated')
+      else switchFailed(res.error ?? 'Failed to update game')
     },
-    onError: (err: any) => toast.error(err?.message ?? 'Failed to update game'),
+    onError: (err: any) => switchFailed(err?.message ?? 'Failed to update game'),
   })
 
   const deleteMutation = useMutation({
@@ -184,52 +195,42 @@ export default function GamesPageClient({
     onError: (err: any) => toast.error(err?.message ?? 'Failed to delete game'),
   })
 
-  // V17s — Toggle the "popular" flag for homepage curation. Same
-  // optimistic-flip pattern as pause/activate.
+  // V17s — Toggle the "popular" flag for homepage curation.
   const popularMutation = useMutation({
     mutationFn: ({ id, isPopular }: { id: string; isPopular: boolean }) =>
       toggleGamePopular(id, isPopular),
+    onMutate: ({ id, isPopular }) => patchGame(id, { is_popular: !isPopular }),
     onSuccess: (res, vars) => {
-      if (res.success) {
-        toast.success(vars.isPopular ? 'Removed from popular' : 'Marked as popular')
-        qc.invalidateQueries({ queryKey: ['admin-games'] })
-      } else {
-        toast.error(res.error ?? 'Failed to update popular flag')
-      }
+      if (res.success) toast.success(vars.isPopular ? 'Removed from popular' : 'Marked as popular')
+      else switchFailed(res.error ?? 'Failed to update popular flag')
     },
-    onError: (err: any) => toast.error(err?.message ?? 'Failed to update popular flag'),
+    onError: (err: any) => switchFailed(err?.message ?? 'Failed to update popular flag'),
   })
 
   // Blog v2 — switch the game's content hub (blog home, guides, hub nav
-  // picker) on or off. Same optimistic-flip pattern.
+  // picker) on or off.
   const contentHubMutation = useMutation({
     mutationFn: ({ id, isEnabled }: { id: string; isEnabled: boolean }) =>
       toggleGameContentHub(id, isEnabled),
+    onMutate: ({ id, isEnabled }) => patchGame(id, { content_hub_enabled: !isEnabled }),
     onSuccess: (res, vars) => {
-      if (res.success) {
-        toast.success(vars.isEnabled ? 'Guides & content switched off' : 'Guides & content switched on')
-        qc.invalidateQueries({ queryKey: ['admin-games'] })
-      } else {
-        toast.error(res.error ?? 'Failed to update guides & content')
-      }
+      if (res.success) toast.success(vars.isEnabled ? 'Guides & content switched off' : 'Guides & content switched on')
+      else switchFailed(res.error ?? 'Failed to update guides & content')
     },
-    onError: (err: any) => toast.error(err?.message ?? 'Failed to update guides & content'),
+    onError: (err: any) => switchFailed(err?.message ?? 'Failed to update guides & content'),
   })
 
   // Toggle the "spotlight" flag — features the game in the mobile
-  // hamburger Spotlight grid. Same optimistic-flip pattern.
+  // hamburger Spotlight grid.
   const spotlightMutation = useMutation({
     mutationFn: ({ id, isSpotlight }: { id: string; isSpotlight: boolean }) =>
       toggleGameSpotlight(id, isSpotlight),
+    onMutate: ({ id, isSpotlight }) => patchGame(id, { is_spotlight: !isSpotlight }),
     onSuccess: (res, vars) => {
-      if (res.success) {
-        toast.success(vars.isSpotlight ? 'Removed from spotlight' : 'Added to spotlight')
-        qc.invalidateQueries({ queryKey: ['admin-games'] })
-      } else {
-        toast.error(res.error ?? 'Failed to update spotlight flag')
-      }
+      if (res.success) toast.success(vars.isSpotlight ? 'Removed from spotlight' : 'Added to spotlight')
+      else switchFailed(res.error ?? 'Failed to update spotlight flag')
     },
-    onError: (err: any) => toast.error(err?.message ?? 'Failed to update spotlight flag'),
+    onError: (err: any) => switchFailed(err?.message ?? 'Failed to update spotlight flag'),
   })
 
   const badgesQuery = useQuery<AdminGameCategoryBadge[]>({

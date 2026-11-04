@@ -38,7 +38,7 @@ import { DeliveredInRow } from './_DeliveredInRow'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useUserChannelEvent } from '@/hooks/use-user-channel'
 import { logDeliveredOrderView } from '@/lib/actions/order-access'
 import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
@@ -211,33 +211,15 @@ export function OrderClient(props: OrderClientProps) {
   const openDispute = () => setDisputeOpen(true)
   const router = useRouter()
 
-  // V21/P5.d — Subscribe to UPDATE events on this specific order row
-  // so the buyer reacts the moment the seller marks delivered (and
-  // vice versa). One channel per orderId, one filter, cleaned up on
-  // unmount. We use router.refresh() to re-fetch the server component
-  // — keeps a single source of truth (no duplicating order state on
-  // the client) and triggers every dependent prop to recompute.
-  useEffect(() => {
-    const supabase = createClient()
-    const channel = supabase
-      .channel(`order:${order.id}`)
-      .on(
-        'postgres_changes' as any,
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${order.id}`,
-        },
-        () => {
-          router.refresh()
-        },
-      )
-      .subscribe()
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-  }, [order.id, router])
+  // V21/P5.d — Re-render the moment the other party changes this order
+  // (seller marks delivered, buyer confirms, …). The user's live channel
+  // (user:<id>) carries an 'order' event for every change to an order I'm
+  // party to (orders_user_channel trigger); router.refresh() re-fetches the
+  // server component, so the order state has one source of truth. Replaced a
+  // Postgres Changes listener per open order page (incident 2026-11-02).
+  useUserChannelEvent(currentUserId, 'order', (payload) => {
+    if (payload.order_id === order.id) router.refresh()
+  })
 
   // V21/P2.d — Use the shared avatar helper so users without an uploaded
   // avatar still get their DiceBear character seeded by username instead

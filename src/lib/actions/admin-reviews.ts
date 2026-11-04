@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireRole } from '@/lib/actions/admin-permissions'
+import { ilikeContains, orIlike } from '@/lib/db/ilike'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -49,9 +50,10 @@ export interface AdminReviewStats {
  * Get reviews with filters (admin)
  */
 export async function getAdminReviews(filters: AdminReviewFilters = {}) {
-  const supabase = await createClient()
-
   try {
+    await requireReviewModerator()
+    const supabase = await createClient()
+
     const {
       status = [],
       rating = [],
@@ -127,7 +129,16 @@ export async function getAdminReviews(filters: AdminReviewFilters = {}) {
 
     // Search filter
     if (search) {
-      query = query.or(`comment.ilike.%${search}%,title.ilike.%${search}%`)
+      const term = search.trim()
+      // The people first, as ids: a typed comma or parenthesis stays inside a value.
+      const { data: people } = await supabase.from('profiles').select('id').ilike('username', ilikeContains(term)).limit(50)
+      const ids = (people ?? []).map((p: any) => p.id as string)
+      query = query.or(
+        [
+          orIlike(['comment', 'title'], term),
+          ...(ids.length > 0 ? [`reviewer_id.in.(${ids.join(',')})`, `seller_id.in.(${ids.join(',')})`] : []),
+        ].join(','),
+      )
     }
 
     // Pagination
@@ -177,32 +188,15 @@ export async function getReviewStats(): Promise<{
   stats?: AdminReviewStats
   error?: string
 }> {
-  const supabase = await createClient()
-
   try {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('id, rating, flagged_for_moderation, is_visible') as any
+    await requireReviewModerator()
 
+    const { data, error } = await (createServiceRoleClient().rpc as any)('admin_review_stats')
     if (error) {
       console.error('Error fetching review stats:', error)
       return { success: false, error: error.message }
     }
-
-    const reviews = data || []
-
-    const stats: AdminReviewStats = {
-      total_reviews: reviews.length,
-      flagged_reviews: reviews.filter((r: any) => r.flagged_for_moderation).length,
-      hidden_reviews: reviews.filter((r: any) => !r.is_visible).length,
-      avg_rating: reviews.length > 0
-        ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
-        : 0,
-      positive_reviews: reviews.filter((r: any) => r.rating >= 4).length,
-      negative_reviews: reviews.filter((r: any) => r.rating <= 2).length,
-    }
-
-    return { success: true, stats }
+    return { success: true, stats: { ...data, avg_rating: Number(data.avg_rating) } }
   } catch (error: any) {
     console.error('Error in getReviewStats:', error)
     return { success: false, error: error.message }

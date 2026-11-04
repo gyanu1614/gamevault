@@ -22,14 +22,14 @@ import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 import { sendCompletionReceipt } from '@/lib/trustpilot/invite'
 import { sellerCancelFault, sellerCancelReasonLabel, validateSellerCancel } from '@/lib/orders/seller-cancel-reasons'
 
-// Joined rows the order page renders (no emails — see getOrder).
+// Joined rows the order page renders (display columns only).
 const ORDER_DETAIL_EMBEDS = `
-  buyer:buyer_id (
+  buyer:public_profiles!orders_buyer_id_fkey (
     id,
     username,
     avatar_url
   ),
-  seller:seller_id (
+  seller:public_profiles!orders_seller_id_fkey (
     id,
     username,
     avatar_url,

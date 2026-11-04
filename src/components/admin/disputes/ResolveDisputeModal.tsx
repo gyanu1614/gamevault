@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -39,7 +38,6 @@ export default function ResolveDisputeModal({
   onClose,
   dispute,
 }: ResolveDisputeModalProps) {
-  const router = useRouter()
   const queryClient = useQueryClient()
   const [decision, setDecision] = useState<ResolutionDecision>('buyer_favor')
   const [partialAmount, setPartialAmount] = useState('')
@@ -109,7 +107,6 @@ export default function ResolveDisputeModal({
       await queryClient.invalidateQueries({ queryKey: ['dispute', dispute.id] })
 
       onClose()
-      router.refresh()
     } catch (error) {
       console.error('Error resolving dispute:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to resolve dispute')

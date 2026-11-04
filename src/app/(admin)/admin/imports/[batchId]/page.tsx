@@ -2,6 +2,7 @@
  * Step 4 — one import batch: the preview an admin reads before applying, and the
  * controls for the listings it created.
  */
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { notFound } from 'next/navigation'
 import { fetchImportBatch } from '@/lib/actions/admin-imports'
 import BatchDetailClient from '../_components/BatchDetailClient'
@@ -13,6 +14,8 @@ export default async function AdminImportBatchPage({
 }: {
   params: Promise<{ batchId: string }>
 }) {
+  await requireAdmin()
+
   const { batchId } = await params
   const res = await fetchImportBatch(batchId)
   if (!res.success) notFound()

@@ -46,10 +46,12 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useUserChannelEvent } from '@/hooks/use-user-channel'
 import Link from '@/components/navigation/AppLink'
 import { toast } from 'sonner'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { ilikeContains } from '@/lib/db/ilike'
 import { OPEN_DISPUTE_STATUSES } from '@/lib/admin/status-sets'
 import type { AdminProfile } from './AdminChrome'
 import { NavIconButton, NavMenuDivider, NavPanel, NavPanelHeader, navMenuIconCls, navMenuRowCls } from '@/components/navbar/NavChrome'
@@ -107,6 +109,9 @@ const SEARCH_PANEL =
   'shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)] ' +
   'animate-in fade-in-0 slide-in-from-top-1 duration-150'
 
+/** One letter matches nearly everything and cannot use the trigram indexes. */
+const MIN_SEARCH_CHARS = 2
+
 export default function EnhancedAdminHeader({
   role,
   user,
@@ -129,6 +134,7 @@ export default function EnhancedAdminHeader({
   /** Phones: the search field takes over the whole bar while open. */
   const [mobileSearch, setMobileSearch] = useState(false)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const searchRequestRef = useRef(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const searchRef = useRef<HTMLDivElement>(null)
@@ -180,89 +186,63 @@ export default function EnhancedAdminHeader({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Queue counts — "what needs me right now". 60s refresh, visible tab only.
-  const { data: quickStats } = useQuery({
-    queryKey: ['admin-quick-stats', user.id],
+  // Queue badges + unread notifications in ONE call (admin_header_snapshot; was
+  // five requests). The bell refreshes on the live channel the moment a
+  // notification arrives; the slow visible-tab poll keeps the queue badges fresh.
+  const { data: headerSnapshot } = useQuery({
+    queryKey: ['admin-header', user.id],
     queryFn: async () => {
-      const supabase = createClient()
-      const [pendingApps, openDisputes, highFraud] = await Promise.all([
-        supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'pending').limit(1),
-        supabase.from('disputes').select('*', { count: 'exact' }).in('status', OPEN_DISPUTE_STATUSES).limit(1),
-        supabase.from('fraud_flags').select('*', { count: 'exact' }).eq('status', 'open').eq('severity', 'high').limit(1),
-      ])
-      return {
-        pendingApplications: pendingApps.count || 0,
-        openDisputes: openDisputes.count || 0,
-        highSeverityFraud: highFraud.count || 0,
+      const { data, error } = await (createClient().rpc as any)('admin_header_snapshot', {
+        p_open_disputes: [...OPEN_DISPUTE_STATUSES],
+      })
+      if (error) throw error
+      return data as {
+        pending_applications: number
+        open_disputes: number
+        high_fraud: number
+        unread_notifications: number
+        latest_notifications: any[]
+      } | null
+    },
+    staleTime: 60_000,
+    ...foregroundPoll(POLL_MS.adminHeader),
+  })
+  useUserChannelEvent(user.id, 'notification', () => {
+    void queryClient.invalidateQueries({ queryKey: ['admin-header', user.id] }, { cancelRefetch: false })
+  })
+  const quickStats = headerSnapshot
+    ? {
+        pendingApplications: headerSnapshot.pending_applications,
+        openDisputes: headerSnapshot.open_disputes,
+        highSeverityFraud: headerSnapshot.high_fraud,
       }
-    },
-    ...foregroundPoll(POLL_MS.adminHeader),
-  })
-
-  // Unread notifications — count + latest five. 60s refresh, visible tab only.
-  const { data: notificationCount } = useQuery({
-    queryKey: ['admin-unread-notifications', user.id],
-    queryFn: async () => {
-      const supabase = createClient()
-      const { count } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id)
-        .eq('is_read', false).limit(1)
-      return count || 0
-    },
-    ...foregroundPoll(POLL_MS.adminHeader),
-  })
-
-  const { data: notifications } = useQuery({
-    queryKey: ['admin-notifications-list', user.id],
-    queryFn: async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_read', false)
-        .order('created_at', { ascending: false })
-        .limit(5)
-      return data || []
-    },
-    ...foregroundPoll(POLL_MS.adminHeader),
-  })
+    : undefined
+  const notificationCount = headerSnapshot?.unread_notifications
+  const notifications = headerSnapshot?.latest_notifications
 
   // Entity search — users, applications, disputes, orders.
   const performSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
+    if (query.trim().length < MIN_SEARCH_CHARS) {
       setSearchResults([])
       return
     }
     setSearching(true)
-    const supabase = createClient()
+    const requestId = ++searchRequestRef.current
     const results: EntityResult[] = []
 
-    const [{ data: users }, { data: applications }, { data: disputes }, { data: orders }] =
-      await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, username, email, full_name')
-          .or(`username.ilike.%${query}%,email.ilike.%${query}%,full_name.ilike.%${query}%`)
-          .limit(3) as any,
-        supabase
-          .from('seller_applications')
-          .select('id, display_name, email, status')
-          .or(`display_name.ilike.%${query}%,email.ilike.%${query}%`)
-          .limit(3) as any,
-        supabase
-          .from('disputes')
-          .select('id, title, reason, status')
-          .or(`title.ilike.%${query}%,reason.ilike.%${query}%`)
-          .limit(3) as any,
-        supabase
-          .from('orders')
-          .select('id, order_number, status')
-          .ilike('order_number_search', orderNumberSearchPattern(query))
-          .limit(3) as any,
-      ])
+    // One call for all four (admin_quick_search), from the browser so it never
+    // queues behind a server action.
+    const { data } = await (createClient().rpc as any)('admin_quick_search', {
+      p_like: ilikeContains(query.trim()),
+      p_order_like: orderNumberSearchPattern(query),
+    })
+    // Typing moved on while this ran: a newer answer is on its way.
+    if (requestId !== searchRequestRef.current) return
+
+    const users = data?.users as any[] | undefined
+    const applications = data?.applications as any[] | undefined
+    const disputes = data?.disputes as any[] | undefined
+    const orders = data?.orders as any[] | undefined
 
     users?.forEach((u: any) =>
       results.push({
@@ -309,10 +289,12 @@ export default function EnhancedAdminHeader({
   // Debounce
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
-    if (searchQuery.trim()) {
+    if (searchQuery.trim().length >= MIN_SEARCH_CHARS) {
       searchTimeoutRef.current = setTimeout(() => performSearch(searchQuery), 300)
     } else {
+      searchRequestRef.current += 1
       setSearchResults([])
+      setSearching(false)
     }
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
@@ -348,8 +330,7 @@ export default function EnhancedAdminHeader({
       is_read: true,
       read_at: new Date().toISOString(),
     }).eq('id', notificationId)
-    queryClient.invalidateQueries({ queryKey: ['admin-notifications-list', user.id] })
-    queryClient.invalidateQueries({ queryKey: ['admin-unread-notifications', user.id] })
+    queryClient.invalidateQueries({ queryKey: ['admin-header', user.id] })
   }
 
   const markAllRead = async () => {
@@ -360,8 +341,7 @@ export default function EnhancedAdminHeader({
     })
       .eq('user_id', user.id)
       .eq('is_read', false)
-    queryClient.invalidateQueries({ queryKey: ['admin-notifications-list', user.id] })
-    queryClient.invalidateQueries({ queryKey: ['admin-unread-notifications', user.id] })
+    queryClient.invalidateQueries({ queryKey: ['admin-header', user.id] })
     toast.success('All notifications marked as read')
   }
 

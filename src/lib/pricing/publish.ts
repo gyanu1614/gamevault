@@ -26,6 +26,8 @@ import { selectAllByKey } from '@/lib/db/select-all-by-key'
 export const PUBLISHED_PRICES_TABLE = 'values_published_prices'
 
 const WRITE_BATCH = 500
+/** Item slugs per DELETE: they ride in the URL (`item_slug=in.(…)`), so keep it short. */
+const DELETE_BATCH = 100
 
 /** The slice of a Supabase client this needs (service role). */
 export type SnapshotClient = { from: (table: string) => any }
@@ -97,16 +99,27 @@ export async function commitPublishedSnapshot(
     if (error) throw new Error(`${PUBLISHED_PRICES_TABLE} upsert: ${error.message ?? String(error)}`)
     written += batch.length
   }
-  let deleted = 0
+  // Deletes go out per variant, DELETE_BATCH item slugs at a time (it was one
+  // DELETE per row: 827 requests a day; DB read audit 2026-11-02).
+  const slugsByVariant = new Map<string, string[]>()
   for (const d of diff.deletes) {
-    const { error } = await client
-      .from(PUBLISHED_PRICES_TABLE)
-      .delete()
-      .eq('game_slug', gameSlug)
-      .eq('item_slug', d.itemSlug)
-      .eq('variant', d.variant)
-    if (error) throw new Error(`${PUBLISHED_PRICES_TABLE} delete: ${error.message ?? String(error)}`)
-    deleted += 1
+    const list = slugsByVariant.get(d.variant) ?? []
+    list.push(d.itemSlug)
+    slugsByVariant.set(d.variant, list)
+  }
+  let deleted = 0
+  for (const [variant, slugs] of slugsByVariant) {
+    for (let i = 0; i < slugs.length; i += DELETE_BATCH) {
+      const batch = slugs.slice(i, i + DELETE_BATCH)
+      const { error } = await client
+        .from(PUBLISHED_PRICES_TABLE)
+        .delete()
+        .eq('game_slug', gameSlug)
+        .eq('variant', variant)
+        .in('item_slug', batch)
+      if (error) throw new Error(`${PUBLISHED_PRICES_TABLE} delete: ${error.message ?? String(error)}`)
+      deleted += batch.length
+    }
   }
   return { written, deleted }
 }

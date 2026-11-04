@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { AdminPanel, LabeledField, PanelHead, adminBtnSm, adminNumCls } from '../components/kit'
@@ -24,7 +23,6 @@ const SETTING_LABELS: Record<MoneySettingKey, { label: string; unit: string; hel
 const titleCase = (s: string) => s.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
 export function MoneySettingsClient({ initial }: { initial: Data }) {
-  const router = useRouter()
   const [busy, start] = useTransition()
   const [settings, setSettings] = useState<Record<MoneySettingKey, string>>(
     Object.fromEntries(Object.entries(initial.settings).map(([k, v]) => [k, String(v)])) as Record<MoneySettingKey, string>,
@@ -45,7 +43,6 @@ export function MoneySettingsClient({ initial }: { initial: Data }) {
       const r = await fn()
       if (!r.success) return void toast.error(r.error || 'Save failed')
       toast.success(ok)
-      router.refresh()
     })
 
   return (

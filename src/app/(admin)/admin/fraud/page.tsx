@@ -4,12 +4,15 @@
  * Server component: pre-loads open flags + stats, passes to FraudClient.
  */
 
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getFraudFlags, getFraudStats } from '@/lib/actions/fraud-detection'
 import FraudClient from './FraudClient'
 
 export const metadata = { title: 'Fraud Detection' }
 
 export default async function AdminFraudPage() {
+  await requireAdmin()
+
   const [flagsResult, statsResult] = await Promise.all([
     getFraudFlags('open'),
     getFraudStats(),

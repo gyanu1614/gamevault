@@ -13,6 +13,7 @@ import { ilikeContains } from '@/lib/db/ilike'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 import { fetchDisputeOrderInfo, type DisputeOrderInfo } from '@/lib/admin/dispute-order-info'
+import { getAdminOverviewStats } from '@/lib/admin/overview-stats'
 
 // ============================================
 // TYPES
@@ -207,6 +208,46 @@ export async function getDisputeById(disputeId: string) {
     return { success: false, error: disputeResult.error.message }
   }
 
+  // The order behind the dispute and its chat. Shared order columns only: '*'
+  // on orders is refused to a session client (orders column grant).
+  const transactionId = (disputeResult.data as any).transaction_id as string | null
+  const [orderResult, conversationResult] = transactionId
+    ? await Promise.all([
+        supabase
+          .from('orders')
+          .select(`
+            id,
+            order_number,
+            total_amount,
+            status,
+            created_at,
+            chat_active_until,
+            listing:listing_id (
+              title,
+              images,
+              game_id
+            ),
+            buyer:buyer_id (
+              id,
+              username,
+              avatar_url
+            ),
+            seller:seller_id (
+              id,
+              username,
+              avatar_url
+            )
+          `)
+          .eq('id', transactionId)
+          .maybeSingle() as any,
+        supabase
+          .from('conversations')
+          .select('id')
+          .eq('order_id', transactionId)
+          .maybeSingle() as any,
+      ])
+    : [{ data: null }, { data: null }]
+
   await logAdminActivity({
     action: ADMIN_ACTIONS.DISPUTE_VIEWED,
     actionCategory: 'dispute',
@@ -219,6 +260,8 @@ export async function getDisputeById(disputeId: string) {
     success: true,
     dispute: disputeResult.data,
     messages: messagesResult.data || [],
+    order: orderResult.data ?? null,
+    conversationId: (conversationResult.data?.id as string | undefined) ?? null,
   }
 }
 
@@ -580,41 +623,26 @@ export async function escalateDispute(disputeId: string, reason: string) {
 
 export async function getDisputeStats() {
   await requirePermission('disputes.view')
-  const supabase = await createClient()
-
-  // Page through every dispute (PostgREST caps one response at 1000 rows).
-  const data: { status: string; priority: string; resolved_at: string | null }[] = []
-  const PAGE = 1000
-  for (let from = 0; ; from += PAGE) {
-    const { data: rows, error } = await (supabase
-      .from('disputes')
-      .select('id, status, priority, resolved_at')
-      .order('id', { ascending: true })
-      .range(from, from + PAGE - 1) as any)
-    if (error) return { success: false, error: error.message }
-    data.push(...(rows ?? []))
-    if (!rows || rows.length < PAGE) break
+  try {
+    // One cached call shared with the dashboard (lib/admin/overview-stats). Was a
+    // walk of every dispute, 1,000 rows per request.
+    const { disputes } = await getAdminOverviewStats()
+    return {
+      success: true,
+      stats: {
+        total: disputes.total,
+        open: disputes.open,
+        underReview: disputes.under_review,
+        escalated: disputes.escalated,
+        awaitingResponse: disputes.awaiting_response,
+        // Resolved in the last 7 days, by when it was resolved (not opened).
+        resolvedThisWeek: disputes.resolved_week,
+        urgent: disputes.urgent_open,
+      },
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message as string }
   }
-
-  // Finished = resolved_* or closed; everything else is still open work.
-  const isFinished = (status: string) => status.startsWith('resolved_') || status === 'closed'
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-  const stats = {
-    total: data.length,
-    open: data.filter((d) => d.status === 'open').length,
-    underReview: data.filter((d) => d.status === 'under_review').length,
-    escalated: data.filter((d) => d.status === 'escalated').length,
-    awaitingResponse: data.filter((d) =>
-      d.status === 'awaiting_seller_response' || d.status === 'awaiting_buyer_response'
-    ).length,
-    // Resolved in the last 7 days, by when it was resolved (not opened).
-    resolvedThisWeek: data.filter((d) =>
-      isFinished(d.status) && d.resolved_at != null && new Date(d.resolved_at).getTime() > weekAgo
-    ).length,
-    urgent: data.filter((d) => d.priority === 'urgent' && !isFinished(d.status)).length,
-  }
-
-  return { success: true, stats }
 }
 
 

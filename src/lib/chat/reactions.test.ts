@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { CHAT_REACTIONS, reactionIntent, removeReaction, summarizeReactions, upsertReaction, type ReactionRow } from './reactions'
+import { CHAT_REACTIONS, reactionIntent, removeReaction, replaceReactionsFor, summarizeReactions, upsertReaction, type ReactionRow } from './reactions'
 
 const row = (message_id: string, user_id: string, emoji: string): ReactionRow => ({
   message_id, user_id, emoji, conversation_id: 'c1', created_at: '2026-10-21T00:00:00Z',
@@ -34,5 +34,11 @@ describe('chat reactions', () => {
     expect(reactionIntent(null, '👍')).toBe('add')
     expect(reactionIntent('👍', '👍')).toBe('remove')
     expect(reactionIntent('👍', '😢')).toBe('change')
+  })
+
+  it("a newest-slice re-sync replaces only that slice's reactions", () => {
+    const rows = [row('old', 'u1', '👍'), row('new', 'u1', '😢')]
+    const next = replaceReactionsFor(rows, ['new'], [row('new', 'u2', '❤️')])
+    expect(next).toEqual([row('old', 'u1', '👍'), row('new', 'u2', '❤️')])
   })
 })

@@ -17,6 +17,7 @@
  * "GUARD-TEST-…" listing behind.)
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { enrollVerifiedTotp } from './totp'
 
 import { supabaseReachable } from '../supabase-reachable'
 import { fixtureNamespace, purgeAuditLogs, type FixtureNamespace } from './fixture-namespace'
@@ -50,7 +51,10 @@ export type Fixture = {
   svc: SupabaseClient
   seller: Actor
   buyer: Actor
+  /** Active admin_roles row, signed in WITH two-factor (aal2), like real staff. */
   admin: Actor
+  /** A fresh sign-in of the same admin WITHOUT the second factor (aal1): the stolen-password case. */
+  adminPasswordOnly: () => Promise<SupabaseClient>
   listingId: string
   pendingOrderId: string
   completedOrderId: string
@@ -122,6 +126,8 @@ export const DEPENDENT_TABLES: ReadonlyArray<readonly [string, readonly string[]
   ['referral_earnings', ['referrer_id', 'referred_user_id']],
   ['notifications', ['user_id']],
   ['admin_roles', ['user_id']],
+  ['admin_activity_log', ['admin_id']],
+  ['seller_restrictions', ['seller_id', 'restricted_by']],
 ]
 
 export const GUARD_EMAIL_LIKE = 'guardtest-%@example.com'
@@ -241,10 +247,15 @@ export async function makeFixture(): Promise<Fixture> {
       const { error: pe } = await svc.from('profiles').insert({ id: data.user.id, username: ns.username(label), email })
       if (pe) throw new Error(`profile insert(${label}): ${pe.message}`)
     }
+    const client = await signIn(email, password, label)
+    return { id: data.user.id, client }
+  }
+
+  async function signIn(email: string, password: string, label: string): Promise<SupabaseClient> {
     const client = createClient(URL!, ANON!, { auth: { persistSession: false } })
     const { error: se } = await client.auth.signInWithPassword({ email, password })
     if (se) throw new Error(`signIn(${label}): ${se.message}`)
-    return { id: data.user.id, client }
+    return client
   }
 
   const cleanup = async () => {
@@ -282,6 +293,8 @@ export async function makeFixture(): Promise<Fixture> {
     if (re) throw new Error(`seller role update: ${re.message}`)
     const { error: ae } = await svc.from('admin_roles').insert({ user_id: admin.id, role: 'admin', is_active: true })
     if (ae) throw new Error(`admin_roles insert: ${ae.message}`)
+    // Every staff power requires a two-factor session (20261103125855).
+    await enrollVerifiedTotp(admin.client)
 
     // A fresh local DB (supabase db reset, no seed.sql) has no catalogue rows —
     // create a throwaway game + category when none exist; cleanup removes them.
@@ -333,6 +346,7 @@ export async function makeFixture(): Promise<Fixture> {
 
     return {
       svc, seller, buyer, admin,
+      adminPasswordOnly: () => signIn(ns.email('admin'), `Pw!${tag}adminXy`, 'admin-password-only'),
       listingId: (listing as any).id,
       pendingOrderId: (pending as any).id,
       completedOrderId: (completed as any).id,

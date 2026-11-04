@@ -10,7 +10,7 @@ import type { PaidOrderSummary } from './OrderPaidView'
 export async function loadPaidOrderSummary(supabase: any, orderId: string, userId: string): Promise<PaidOrderSummary | null> {
   const { data: order } = (await supabase
     .from('orders')
-    .select('id, order_number, buyer_id, status, quantity, total_amount, listing_id, listing:listing_id ( title, images, delivery_time, delivery_method, game:game_id ( name, slug, image_url ), seller:seller_id ( shop_name, username ) )')
+    .select('id, order_number, buyer_id, status, quantity, total_amount, listing_id, listing:listing_id ( title, images, delivery_time, delivery_method, game:game_id ( name, slug, image_url ), seller:public_profiles!listings_seller_id_fkey ( shop_name, username ) )')
     .eq('id', orderId)
     .maybeSingle()) as any
   if (!order || order.buyer_id !== userId) return null

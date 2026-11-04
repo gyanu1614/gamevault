@@ -39,7 +39,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     .from('listings')
     .select(`
       *,
-      seller:seller_id (
+      seller:public_profiles!listings_seller_id_fkey (
         id, username, shop_name, avatar_url, seller_tier,
         seller_rating, total_reviews, total_sales, is_verified, created_at
       ),
@@ -104,7 +104,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     listing.seller?.id
       ? (supabase
           .from('reviews')
-          .select('id, rating, comment, created_at, buyer:profiles!reviews_reviewer_id_fkey (username, avatar_url)')
+          .select('id, rating, comment, created_at, buyer:public_profiles!reviews_reviewer_id_fkey (username, avatar_url)')
           .eq('seller_id', listing.seller.id)
           .order('created_at', { ascending: false })
           .limit(5) as any)

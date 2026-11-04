@@ -10,7 +10,7 @@
  */
 
 import { lockScroll } from '@/lib/scroll-lock'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from '@/components/navigation/AppLink'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -62,7 +62,10 @@ function fmtShortRel(iso: string): string {
 
 export default function MessagesPage() {
   const { user, loading: authLoading } = useAuth()
-  const { conversations, isLoadingConversations } = useSellerMessages()
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const { conversations, isLoadingConversations, hasMoreConversations, loadMoreConversations } = useSellerMessages({
+    openConversationId: selectedConversationId,
+  })
 
   // Currency name + icon for every game with a currency order in the list
   // (phone rows: "Order For Robux" beside the Robux icon).
@@ -72,12 +75,23 @@ export default function MessagesPage() {
       .map((c) => c.order?.listing?.game?.id ?? ''),
   )
 
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [tab, setTab] = useState<ChatTab>('all')
   const [isOrderInfoCollapsed, setIsOrderInfoCollapsed] = useState(true)
 
   useEffect(() => setIsOrderInfoCollapsed(true), [selectedConversationId])
+
+  // Older conversations load as the list nears its end (30 per page).
+  const listEndRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = listEndRef.current
+    if (!el || !hasMoreConversations) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) loadMoreConversations()
+    }, { rootMargin: '200px' })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMoreConversations, loadMoreConversations])
 
   // Route-scoped scroll lock: this page IS the viewport. Without it the
   // global min-h-screen shell leaves an iOS dvh/vh mismatch strip under the
@@ -297,6 +311,7 @@ export default function MessagesPage() {
                 })}
               </ul>
             )}
+            {hasMoreConversations && <div ref={listEndRef} aria-hidden className="h-px" />}
           </div>
         </aside>
 

@@ -37,7 +37,10 @@ vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()
   return Object.fromEntries(Object.keys(real).map((k) => [k, async () => undefined]))
 })
-vi.mock('@/lib/actions/admin-permissions', () => ({ requireAdmin: async () => ({ userId: 'admin' }) }))
+vi.mock('@/lib/actions/admin-permissions', () => ({
+  requireAdmin: async () => ({ userId: 'admin' }),
+  requireRole: async () => ({ userId: 'admin' }),
+}))
 vi.mock('@/lib/actions/revalidate-listing-surfaces', () => ({ revalidateMyListingSurfaces: async () => undefined }))
 vi.mock('@/lib/actions/listings', () => ({ updateListing: async () => undefined, bulkUpdateListings: async () => undefined }))
 
