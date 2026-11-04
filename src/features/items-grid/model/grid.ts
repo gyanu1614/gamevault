@@ -1,6 +1,6 @@
 /**
  * Items page grid model (values games): one card per catalogue item with OUR
- * stock, the Recommended / Cheapest / Priciest orders, the filters and the page
+ * stock, the Popular / Cheapest / Priciest orders, the filters and the page
  * slice. Pure, so every rule is a unit test; the server feeds it the shared
  * values feed (lib/value-listings/feed) and the client re-runs it as the
  * visitor filters. Every card links to the item's page (its offers), never to
@@ -30,7 +30,7 @@ export interface GridItem {
   isNew: boolean
   /** Orders out-of-stock items only; never shown. */
   rankValue: number
-  /** 1 = most popular (sellers listing it); orders Recommended. Null when unranked. */
+  /** 1 = most popular (market demand, `pnpm adoptme:popularity`); orders the Popular sort. Null when unranked. */
   popularRank: number | null
   /** Our live listings of the item. */
   offers: number
@@ -100,9 +100,10 @@ export function splitByForm(items: readonly GridItem[], f: GridFilters): GridIte
   })
 }
 
-/** Out of stock: New first, then by value (the catalogue's own order breaks ties). */
+/** Out of stock: most wanted first, so Notify Me on them is easy to find; then New, then by value (the catalogue's own order breaks ties). */
 function outOfStockOrder(a: GridItem, b: GridItem): number {
-  return Number(b.isNew) - Number(a.isNew) || b.rankValue - a.rankValue
+  const rank = (i: GridItem) => i.popularRank ?? Number.POSITIVE_INFINITY
+  return rank(a) - rank(b) || Number(b.isNew) - Number(a.isNew) || b.rankValue - a.rankValue
 }
 
 export function sortGrid(items: readonly GridItem[], sort: GridSort): GridItem[] {
@@ -112,7 +113,7 @@ export function sortGrid(items: readonly GridItem[], sort: GridSort): GridItem[]
   const rank = (i: GridItem) => i.popularRank ?? Number.POSITIVE_INFINITY
   if (sort === 'cheapest') inStock.sort((a, b) => price(a) - price(b))
   else if (sort === 'priciest') inStock.sort((a, b) => price(b) - price(a))
-  // Recommended (owner, 2026-11-02): the pets most players trade first (seller count), then the most offers, then cheapest.
+  // Popular (owner, 2026-11-03): the pets buyers want most first, then the most offers, then cheapest.
   else inStock.sort((a, b) => rank(a) - rank(b) || b.offers - a.offers || price(a) - price(b))
   return [...inStock, ...out]
 }

@@ -24,6 +24,7 @@ export interface GameRow {
 
 export type { FeedItem, ValuesFeed } from '@/lib/value-listings/feed/types'
 import type { FeedItem, ValuesFeed } from '@/lib/value-listings/feed/types'
+import type { GridItem } from '@/features/items-grid/model/grid'
 
 export interface HotNewCard {
   slug: string
@@ -89,6 +90,13 @@ export interface OfferRowModel {
   offers: ItemOffer[]
 }
 
+/** Popular {Game} {Items}: one card per pet we have in stock, most wanted first. */
+export interface PopularRowModel {
+  title: string
+  seeAllHref: string
+  items: GridItem[]
+}
+
 export interface PriceMovesModel {
   title: string
   listHref: string
@@ -139,7 +147,9 @@ export interface GameHomeModel {
   itemNounSingular: string
   header: HeaderModel
   currency: CurrencyModel | null
-  /** Top Selling rows: items, then accounts. Empty when the game has neither. */
+  /** Replaces the items row where the game has a popularity rank; else null. */
+  popular: PopularRowModel | null
+  /** Top Selling rows: items (unless `popular` shows), then accounts. Empty when the game has neither. */
   topSelling: OfferRowModel[]
   /** Hot New {Game} {Items}, or null without new items. */
   hotNew: HotNewModel | null

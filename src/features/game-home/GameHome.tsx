@@ -3,7 +3,7 @@
  * house sections and rules (house design checklist, 2026-10-24):
  *
  *   header        the category pages' header (logo, game, title, seller prompt) + live facts
- *   offers        currency card, Top Selling rows (OfferRail)
+ *   offers        currency card, Popular row (pet cards) or Top Selling, Top Selling Accounts (OfferRail)
  *   How It Works  the house bento (HowItWorksBand)
  *   Hot New       values games with new items
  *   Sell          the homepage's seller banners (SellerCta)
@@ -21,6 +21,7 @@ import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { WhyBuyCard } from '@/components/marketplace/WhyBuyCard'
 import { FaqSection } from '@/components/marketplace/FaqCards'
 import { PaymentsStrip } from '@/components/marketplace/PaymentsStrip'
+import { PopularCarousel } from '@/features/item-buy/PopularCarousel'
 import { SellerCta } from '@/features/home/components/SellerCta'
 import type { GameHomeModel } from './types'
 import { Header } from './sections/Header'
@@ -50,6 +51,17 @@ export function GameHome({ model }: { model: GameHomeModel }) {
               accent={model.currency.accent}
               fromLabel={model.currency.fromLabel}
               avgDelivery={model.currency.avgDelivery}
+            />
+          )}
+
+          {model.popular && (
+            <PopularCarousel
+              className="mt-12 sm:mt-14"
+              id="popular-items"
+              heading={model.popular.title}
+              items={model.popular.items}
+              gameSlug={gameSlug}
+              seeAllHref={model.popular.seeAllHref}
             />
           )}
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { ShowAllLink } from '@/components/marketplace/ShowAllLink'
 import { GridCard } from '@/features/items-grid/GridCard'
 import type { GridItem } from '@/features/items-grid/model/grid'
 import { cn } from '@/lib/utils'
@@ -17,8 +18,23 @@ const FADE = '56px'
  * the Items page's own cards, in one Embla row. Drag, trackpad (wheel plugin)
  * or the arrows; the edges fade only while there is more to scroll. Cards are
  * real links in the server HTML; nothing moves on hover (house checklist).
+ * Also the game home's Popular row, with a Show All to the Items page.
  */
-export function PopularCarousel({ id, heading, items, gameSlug }: { id: string; heading: string; items: GridItem[]; gameSlug: string }) {
+export function PopularCarousel({
+  id,
+  heading,
+  items,
+  gameSlug,
+  seeAllHref,
+  className,
+}: {
+  id: string
+  heading: string
+  items: GridItem[]
+  gameSlug: string
+  seeAllHref?: string
+  className?: string
+}) {
   const [ref, api] = useEmblaCarousel({ align: 'start', containScroll: 'trimSnaps', dragFree: true, slidesToScroll: 'auto' }, [WheelGesturesPlugin()])
   const [canPrev, setCanPrev] = useState(false)
   const [canNext, setCanNext] = useState(false)
@@ -40,18 +56,21 @@ export function PopularCarousel({ id, heading, items, gameSlug }: { id: string; 
   const mask = [canPrev ? `transparent 0, #000 ${FADE}` : '#000 0', canNext ? `#000 calc(100% - ${FADE}), transparent 100%` : '#000 100%'].join(', ')
 
   return (
-    <section aria-labelledby={id}>
+    <section aria-labelledby={id} className={className}>
       <div className="mb-5 flex items-center justify-between gap-4">
         <h2 id={id} className={ITEM_H2}>
           {heading}
         </h2>
-        <div className="hidden items-center gap-2 sm:flex">
-          <ArrowButton label="Previous pets" disabled={!canPrev} onClick={() => api?.scrollPrev()}>
-            <IconChevronLeft aria-hidden size={18} stroke={2} />
-          </ArrowButton>
-          <ArrowButton label="More pets" disabled={!canNext} onClick={() => api?.scrollNext()}>
-            <IconChevronRight aria-hidden size={18} stroke={2} />
-          </ArrowButton>
+        <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 sm:flex">
+            <ArrowButton label="Previous pets" disabled={!canPrev} onClick={() => api?.scrollPrev()}>
+              <IconChevronLeft aria-hidden size={18} stroke={2} />
+            </ArrowButton>
+            <ArrowButton label="More pets" disabled={!canNext} onClick={() => api?.scrollNext()}>
+              <IconChevronRight aria-hidden size={18} stroke={2} />
+            </ArrowButton>
+          </div>
+          {seeAllHref ? <ShowAllLink href={seeAllHref} /> : null}
         </div>
       </div>
       <div ref={ref} className="overflow-hidden" style={{ maskImage: `linear-gradient(to right, ${mask})`, WebkitMaskImage: `linear-gradient(to right, ${mask})` }}>

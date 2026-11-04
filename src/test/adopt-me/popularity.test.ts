@@ -1,8 +1,85 @@
 import { describe, expect, it } from 'vitest'
-import { planRankUpdates, rankPetsBySellers } from '../../../scripts/lib/adoptme-popularity.mjs'
+import { blendRanks, fetchProductOrder, planRankUpdates, rankPetsByFeed, rankPetsBySellers } from '../../../scripts/lib/adoptme-popularity.mjs'
 
-// Popularity = distinct sellers listing a pet (owner, 2026-11-01).
+// One of the two signals: distinct sellers listing a pet (owner, 2026-11-01).
 const row = (pet_id: string, seller_id: string | null) => ({ pet_id, seller_id })
+
+describe('fetchProductOrder', () => {
+  const page = (totalPages: number, names: string[]) => ({ totalPages, results: names.map((name) => ({ name })) })
+
+  it('walks every page of the pet feed, in order', async () => {
+    const urls: URL[] = []
+    const pages: Record<string, unknown> = { '1': page(2, ['Skelicorn', 'Crystal Egg']), '2': page(2, ['Unicorn']) }
+    const names = await fetchProductOrder(async (u: URL) => {
+      urls.push(u)
+      return pages[u.searchParams.get('pageIndex')!]
+    })
+    expect(names).toEqual(['Skelicorn', 'Crystal Egg', 'Unicorn'])
+    expect(urls[0].pathname).toBe('/api/v1/item-management/products')
+    expect(urls[0].searchParams.get('gameId')).toBe('201')
+  })
+
+  it('a failed page throws: a partial order would rank wrongly', async () => {
+    await expect(
+      fetchProductOrder(async (u: URL) => {
+        if (u.searchParams.get('pageIndex') === '2') throw new Error('blocked')
+        return page(2, ['Skelicorn'])
+      }),
+    ).rejects.toThrow('blocked')
+  })
+})
+
+describe('rankPetsByFeed', () => {
+  const pets = [
+    { id: 'u', name: 'Unicorn' },
+    { id: 's', name: 'Skelicorn' },
+    { id: 'r', name: 'Wooly Rhino' },
+  ]
+
+  it('ranks among pets only: eggs and potions push nothing down', () => {
+    const ranks = rankPetsByFeed(['Crystal Egg', 'Skelicorn', 'Ride Potion', 'Unicorn'], pets)
+    expect([...ranks]).toEqual([
+      ['s', 1],
+      ['u', 2],
+    ])
+  })
+
+  it('matches by normalised name and the known spelling differences, first position wins', () => {
+    const ranks = rankPetsByFeed(['UNICORN!', 'Woolly Rhino', 'Unicorn'], pets)
+    expect([...ranks]).toEqual([
+      ['u', 1],
+      ['r', 2],
+    ])
+  })
+})
+
+describe('blendRanks', () => {
+  it('near the top of both beats the top of one; a classic high on sellers still makes it', () => {
+    const feed = new Map([
+      ['new-hit', 1],
+      ['both', 5],
+      ['classic', 160],
+    ])
+    const sellers = new Map([
+      ['classic', 2],
+      ['both', 5],
+      ['new-hit', 170],
+    ])
+    expect([...blendRanks(feed, sellers).keys()]).toEqual(['both', 'new-hit', 'classic'])
+  })
+
+  it('a pet on one list only still gets a rank, below one strong on both', () => {
+    const ranks = blendRanks(new Map([['a', 1], ['b', 2]]), new Map([['a', 1], ['c', 2]]))
+    expect(ranks.get('a')).toBe(1)
+    expect([...ranks.keys()].sort()).toEqual(['a', 'b', 'c'])
+  })
+
+  it('ties break on the seller rank, then pet id, so a re-run gives the same ranks', () => {
+    const feed = new Map([['y', 1], ['x', 1]])
+    expect([...blendRanks(feed, new Map()).keys()]).toEqual(['x', 'y'])
+    expect([...blendRanks(feed, new Map([['y', 3], ['x', 3]])).keys()]).toEqual(['x', 'y'])
+  })
+})
 
 describe('rankPetsBySellers', () => {
   it('ranks by distinct sellers, not by copies from one seller', () => {

@@ -71,7 +71,24 @@ describe('sortGrid', () => {
     expect(slugs(sortGrid(items, 'recommended'))).toEqual(['a', 'e', 'd', 'c', 'b'])
   })
 
-  it('recommended: in-stock pets by popularity first (1 = most sellers), unranked after them', () => {
+  it('out of stock: most wanted first, then New, then by value', () => {
+    const list = toGridItems(
+      'adopt-me',
+      feed(
+        [
+          item('rich', { valueUsd: 90 }),
+          item('fresh', { isNew: true, valueUsd: 1 }),
+          item('wanted-2', { popularRank: 8 }),
+          item('wanted-1', { popularRank: 3 }),
+          item('in-stock', { popularRank: 50 }),
+        ],
+        { 'in-stock': [1, 10] },
+      ),
+    )
+    expect(slugs(sortGrid(list, 'recommended'))).toEqual(['in-stock', 'wanted-1', 'wanted-2', 'fresh', 'rich'])
+  })
+
+  it('recommended: in-stock pets by popularity first (1 = most wanted), unranked after them', () => {
     const ranked = toGridItems(
       'adopt-me',
       feed(

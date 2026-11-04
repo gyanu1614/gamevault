@@ -57,6 +57,55 @@ describe('buildGameHome', () => {
     expect(m.topSelling[0].seeAllHref).toBe('/adopt-me/buy-pets')
   })
 
+  describe('Popular row', () => {
+    const feedItem = (slug: string, popularRank: number | null) =>
+      ({ slug, name: slug, imageUrl: null, rarityKey: null, itemType: null, isNew: false, valueUsd: 1, popularRank }) as unknown as NonNullable<GameHomeData['values']>['items'][number]
+    const values = (stock: Record<string, number>) =>
+      ({
+        items: [feedItem('cow', 4), feedItem('unicorn', 1), feedItem('skelicorn', 2), feedItem('crow', null)],
+        stock,
+        minPrice: Object.fromEntries(Object.keys(stock).map((s) => [s, 5])),
+        forms: {},
+        buyHref: {},
+        categorySlug: 'buy-items',
+        updatedAt: null,
+      }) as unknown as NonNullable<GameHomeData['values']>
+    const items = card({ id: 'i', count: 2, href: '/adopt-me/buy-items' })
+
+    it('Adopt Me: pets we have, most wanted first, replacing Top Selling; a wanted pet with no stock stays out', () => {
+      const m = buildGameHome(data({ cards: [items], values: values({ cow: 2, unicorn: 1, crow: 9 }), offers: { items: [offer('o1', 5)], accounts: [] } }), NOW)
+      expect(m.popular?.title).toBe('Popular Adopt Me Pets')
+      expect(m.popular?.seeAllHref).toBe('/adopt-me/buy-items')
+      expect(m.popular?.items.map((i) => i.slug)).toEqual(['unicorn', 'cow', 'crow'])
+      expect(m.topSelling).toEqual([])
+    })
+
+    it('every card goes to the market, never to a value page', () => {
+      const m = buildGameHome(data({ cards: [items], values: values({ cow: 1 }) }), NOW)
+      expect(m.popular?.items[0].href).toBe('/adopt-me/buy-items/item/cow')
+    })
+
+    it('the Accounts row stays Top Selling', () => {
+      const accounts = card({ id: 'a', name: 'Accounts', type: 'account', href: '/adopt-me/buy-accounts', count: 1 })
+      const m = buildGameHome(data({ cards: [items, accounts], values: values({ cow: 1 }), offers: { items: [offer('o1', 5)], accounts: [offer('o2', 9)] } }), NOW)
+      expect(m.topSelling.map((r) => r.title)).toEqual(['Top Selling Adopt Me Accounts'])
+    })
+
+    it('nothing in stock, or no values feed: back to Top Selling', () => {
+      const noStock = buildGameHome(data({ cards: [items], values: values({}), offers: { items: [offer('o1', 5)], accounts: [] } }), NOW)
+      expect(noStock.popular).toBeNull()
+      expect(noStock.topSelling.map((r) => r.title)).toEqual(['Top Selling Adopt Me Pets'])
+      expect(buildGameHome(data({ cards: [items] }), NOW).popular).toBeNull()
+    })
+
+    it('other games keep Top Selling for now', () => {
+      const game = { id: 'g', name: 'Murder Mystery 2', slug: 'murder-mystery-2', description: null, image_url: null }
+      const m = buildGameHome(data({ game, cards: [items], values: values({ cow: 1 }), offers: { items: [offer('o1', 5)], accounts: [] } }), NOW)
+      expect(m.popular).toBeNull()
+      expect(m.topSelling).toHaveLength(1)
+    })
+  })
+
   it('leaves out a row with no offers', () => {
     const m = buildGameHome(data({ cards: [card({ id: 'i', count: 0 })] }), NOW)
     expect(m.topSelling).toEqual([])

@@ -34,7 +34,7 @@ const PAGE_SIZE = 24
 const SELL_ROW_AFTER = 6
 
 const SORT_OPTIONS: { slug: GridSort; label: string }[] = [
-  { slug: 'recommended', label: 'Recommended' },
+  { slug: 'recommended', label: 'Popular' },
   { slug: 'cheapest', label: 'Cheapest First' },
   { slug: 'priciest', label: 'Priciest First' },
 ]

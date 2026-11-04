@@ -5,8 +5,9 @@
  * and GameHome leaves it out.
  */
 import { pickTopSelling } from '@/app/(marketplace)/[gameSlug]/_hubModel'
+import { sortGrid, toGridItems } from '@/features/items-grid/model/grid'
 import { formatStatPrice } from '@/lib/seo/page-stats-format'
-import type { GameHomeData, GameHomeModel, GuidesModel, HotNewModel, OfferRowModel, PriceMovesModel, ToolsModel } from '../types'
+import type { GameHomeData, GameHomeModel, GuidesModel, HotNewModel, OfferRowModel, PopularRowModel, PriceMovesModel, ToolsModel } from '../types'
 import { gameTools } from './tools'
 import { aboutRows } from './about'
 import { howItWorksHighlight } from './how-it-works'
@@ -17,6 +18,17 @@ import { itemNoun, itemNounSingular } from './item-noun'
 
 /** Offers per Top Selling row (the rail scrolls; See All goes to the category). */
 const ROW_LIMIT = 12
+
+/** Games whose items row ranks pets by market demand (owner, 2026-11-03); needs `pnpm adoptme:popularity` or its like. */
+const POPULAR_ROW_GAMES = new Set(['adopt-me'])
+
+function buildPopular({ game, values }: GameHomeData, noun: string, itemsHref: string | null): PopularRowModel | null {
+  if (!values || !itemsHref || !POPULAR_ROW_GAMES.has(game.slug)) return null
+  const items = sortGrid(toGridItems(game.slug, values), 'recommended')
+    .filter((i) => i.offers > 0)
+    .slice(0, ROW_LIMIT)
+  return items.length > 0 ? { title: `Popular ${game.name} ${noun}`, seeAllHref: itemsHref, items } : null
+}
 
 const POST_TYPE: Record<string, { label: string; accent: string }> = {
   guide: { label: 'Guide', accent: '#7DB4FF' },
@@ -87,8 +99,9 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
   const itemsCard = cards.find((c) => c.type === 'items') ?? null
   const accountsCard = cards.find((c) => c.type === 'account') ?? null
 
+  const popular = buildPopular(data, noun, itemsCard?.href ?? null)
   const topSelling: OfferRowModel[] = []
-  if (itemsCard && offers.items.length > 0) {
+  if (!popular && itemsCard && offers.items.length > 0) {
     topSelling.push({ title: `Top Selling ${game.name} ${noun}`, seeAllHref: itemsCard.href, offers: pickTopSelling(offers.items, ROW_LIMIT) })
   }
   if (accountsCard && offers.accounts.length > 0) {
@@ -135,6 +148,7 @@ export function buildGameHome(data: GameHomeData, now: number): GameHomeModel {
           avgDelivery: spotlight.avgDelivery,
         }
       : null,
+    popular,
     topSelling,
     hotNew: buildHotNew(data, noun, now),
     priceMoves: buildPriceMoves(data),
