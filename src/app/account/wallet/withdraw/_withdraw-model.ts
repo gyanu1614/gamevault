@@ -134,27 +134,27 @@ export function payoutTimeLine(method: WithdrawalMethod): string {
     : 'Arrives within 1 to 3 business days after review.'
 }
 
-const fmtDate = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-const fmtDateTime = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
+const fmtDate = (iso: string | null | undefined, timeZone?: string) =>
+  iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone }) : ''
+const fmtDateTime = (iso: string | null | undefined, timeZone?: string) =>
+  iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone }) : ''
 
 /**
  * Why this seller cannot withdraw right now. The gate fails closed, and the
  * database sends its own sentence, so a reason this file does not map still
  * reads correctly.
  */
-export function gateMessage(overview: WalletOverview | null): string | null {
+export function gateMessage(overview: WalletOverview | null, timeZone?: string): string | null {
   const gate = overview?.gate
   if (gate && !gate.eligible) {
     if (gate.reason === 'not_a_seller') {
       return 'Store credit is spent at checkout, with no service fee. To withdraw it instead, contact support@dropmarket.gg.'
     }
     if (gate.reason === 'account_age') {
-      return `Withdrawals open ${gate.minAgeDays} days after your seller account is approved, on ${fmtDate(gate.unlockAt)}.`
+      return `Withdrawals open ${gate.minAgeDays} days after your seller account is approved, on ${fmtDate(gate.unlockAt, timeZone)}.`
     }
     if (gate.reason === 'payout_details_freeze') {
-      return `You changed your payout details recently. Withdrawals resume ${fmtDateTime(gate.freezeUntil)}.`
+      return `You changed your payout details recently. Withdrawals resume ${fmtDateTime(gate.freezeUntil, timeZone)}.`
     }
     return gate.message || 'Withdrawals are not available on this account yet.'
   }

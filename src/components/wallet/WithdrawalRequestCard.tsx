@@ -34,7 +34,8 @@ const STATUS: Record<string, { label: string; tone: IconTileTone }> = {
 }
 
 const money = (n: number) => `$${Number(n).toFixed(2)}`
-const day = (iso: string) => format(new Date(iso), 'MMM d, yyyy')
+// Fixed to UTC: rows are drawn on the server first, and the two must match.
+const day = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 const moment = (iso: string) => format(new Date(iso), 'MMM d, yyyy, h:mm a')
 
 export const WITHDRAWAL_TABLE_GRID = 'md:grid-cols-[minmax(0,1fr)_108px_124px_112px_16px]'

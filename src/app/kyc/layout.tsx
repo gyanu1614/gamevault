@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 /** The ID check's own tabs: nothing here belongs in search results. */
 export const metadata: Metadata = {
-  title: 'ID Check',
+  title: 'Identity Verification',
   robots: { index: false, follow: false },
 }
 

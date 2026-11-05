@@ -150,11 +150,11 @@ export default function WalletClient({ userId, isSeller, initialTab, overview, e
           actions={
             isSeller ? (
               <>
-                <Link href="/account/wallet/withdraw" className={cn(accountBtn.primary, 'h-11 flex-1 px-6 text-[14px] sm:flex-none')}>
+                <Link href="/account/wallet/withdraw" className={cn(accountBtn.primary, 'h-11 flex-1 px-3 text-[14px] sm:flex-none sm:px-6')}>
                   <ArrowLineDownIcon size={18} weight="bold" aria-hidden />
                   Withdraw
                 </Link>
-                <Link href="/account/settings?tab=payouts" className={cn(accountBtn.secondary, 'h-11 flex-1 px-5 text-[14px] sm:flex-none')}>
+                <Link href="/account/settings?tab=payouts" className={cn(accountBtn.secondary, 'h-11 flex-1 px-3 text-[14px] sm:flex-none sm:px-5')}>
                   <GearSixIcon size={18} weight="duotone" aria-hidden />
                   Payout Settings
                 </Link>

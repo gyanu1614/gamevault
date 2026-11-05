@@ -92,7 +92,9 @@ export default function WithdrawClient({
   const groups = useMemo(() => groupMethods(methods ?? [], details), [methods, details])
   const available = overview ? Math.max(0, overview.available + overview.wallet) : 0
   const amountNum = parseFloat(amount) || 0
-  const gate = gateMessage(overview)
+  // UTC on the server and first draw so they match, then the seller's own time zone.
+  const [gate, setGate] = useState(() => gateMessage(overview, 'UTC'))
+  useEffect(() => setGate(gateMessage(overview)), [overview])
   const destination = savedDestinationFor(selected, details)
   const openRequest = requests.find((r) => isOpenWithdrawal(r.status)) ?? null
   const freezeHours = details?.freezeHours ?? 24
