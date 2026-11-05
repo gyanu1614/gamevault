@@ -3,7 +3,8 @@
  * service-role only, the listings trigger marks an item's open alerts due when
  * a listing of it goes live — an any-trait alert for every listing, a trait
  * alert only for a listing of that trait — and stock_alerts_claim_due hands
- * each due alert to exactly one dispatcher, once.
+ * each due alert to exactly one dispatcher, once. A store back from Offline
+ * Mode marks the alerts it was holding up due (migration 20261104190015).
  *
  * Rows: the alerts belong to the fixture users (stock_alerts is in
  * DEPENDENT_TABLES, and its user FK cascades), so fx.cleanup() removes them.
@@ -129,5 +130,41 @@ describe.skipIf(!hasEnv)('stock alerts — posture, trigger, claim (integration)
     const after = (await alerts()).find((a) => a.item_slug === itemSlug && a.variant === null)!
     expect(after.due_at).toBe(before.due_at)
     expect(after.notified_at).toBe(before.notified_at)
+  })
+
+  it('a store back from Offline Mode makes open alerts on its live items due, and pausing does not', async () => {
+    const back = `guard-back-${fx!.ns.tag}`
+    const idle = `guard-idle-${fx!.ns.tag}`
+    const presence = () => fx!.svc.from('seller_presence')
+    await presence().upsert({ seller_id: fx!.seller.id, store_paused: false }, { onConflict: 'seller_id' })
+    await fx!.svc.from('listings').update({ value_item_slug: back, value_variant: 'fly-ride' }).eq('id', fx!.listingId)
+    const { error } = await fx!.svc.from('stock_alerts').insert([
+      { user_id: fx!.buyer.id, game_id: gameId, item_slug: back },
+      { user_id: fx!.buyer.id, game_id: gameId, item_slug: back, variant: 'fly-ride' },
+      { user_id: fx!.buyer.id, game_id: gameId, item_slug: back, variant: 'neon-fly-ride' },
+      { user_id: fx!.buyer.id, game_id: gameId, item_slug: idle },
+    ])
+    if (error) throw new Error(error.message)
+    const dueOf = async (slug: string, variant: string | null) =>
+      (await alerts()).find((a) => a.item_slug === slug && a.variant === variant)!.due_at
+
+    await presence().update({ store_paused: true }).eq('seller_id', fx!.seller.id)
+    expect(await dueOf(back, null)).toBeNull()
+
+    await presence().update({ store_paused: false }).eq('seller_id', fx!.seller.id)
+    expect(await dueOf(back, null)).not.toBeNull()
+    expect(await dueOf(back, 'fly-ride')).not.toBeNull()
+    expect(await dueOf(back, 'neon-fly-ride')).toBeNull()
+    expect(await dueOf(idle, null)).toBeNull()
+  })
+
+  it('a heartbeat on a store that was never paused marks nothing due', async () => {
+    const quiet = `guard-quiet-${fx!.ns.tag}`
+    await fx!.svc.from('listings').update({ value_item_slug: quiet }).eq('id', fx!.listingId)
+    const { error } = await fx!.svc.from('stock_alerts').insert({ user_id: fx!.buyer.id, game_id: gameId, item_slug: quiet })
+    if (error) throw new Error(error.message)
+    await fx!.svc.from('stock_alerts').update({ due_at: null }).eq('user_id', fx!.buyer.id).eq('item_slug', quiet)
+    await fx!.svc.from('seller_presence').update({ store_paused: false, is_online: true }).eq('seller_id', fx!.seller.id)
+    expect((await alerts()).find((a) => a.item_slug === quiet)!.due_at).toBeNull()
   })
 })
