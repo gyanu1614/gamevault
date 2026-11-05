@@ -17,6 +17,7 @@ import { checkRateLimit } from '@/lib/security/rate-limit'
 import { getValueCatalog } from '@/lib/value-listings/stock-server'
 import { isKnownVariant } from '@/lib/value-listings/item-page'
 import { scheduleStockAlertDispatch } from '@/lib/stock-alerts/dispatch'
+import { itemHasVisibleOffer } from '@/lib/stock-alerts/visible-offer'
 import { stockAlertKey } from '@/lib/stock-alerts/key'
 
 type Result = { ok: true } | { ok: false; error: string }
@@ -59,20 +60,16 @@ export async function setStockAlert(gameSlug: string, itemSlug: string, variant:
     if (variant !== null && !isKnownVariant(catalog, variant)) return { ok: false, error: NOT_FOUND }
 
     const svc = createServiceRoleClient()
-    let liveQuery = svc.from('listings').select('id').eq('game_id', gameId).eq('value_item_slug', itemSlug).eq('status', 'active')
-    if (variant !== null) liveQuery = liveQuery.eq('value_variant', variant)
-    const [{ data: open, error: openErr }, { data: live, error: liveErr }] = await Promise.all([
+    const [{ data: open, error: openErr }, inStock] = await Promise.all([
       svc.from('stock_alerts').select('id').eq('user_id', userId).is('notified_at', null).limit(MAX_OPEN_ALERTS + 1),
-      liveQuery.limit(1),
+      itemHasVisibleOffer(gameSlug, itemSlug, variant),
     ])
     if (openErr) throw new Error(`stock_alerts: ${openErr.message}`)
-    if (liveErr) throw new Error(`listings: ${liveErr.message}`)
     if ((open?.length ?? 0) >= MAX_OPEN_ALERTS) return { ok: false, error: 'You have too many alerts. Remove a few first.' }
 
-    // Already listed (the page was a moment old): due now, so the email goes out right away.
+    // Already on the site (the page was a moment old): due now, so the email goes out right away.
     // Past the hourly email budget the alert waits for the next listing, so a loop of
     // set + clear can't be used to send email.
-    const inStock = (live?.length ?? 0) > 0
     const sendNow = inStock && !(await checkRateLimit('stockAlertEmail', `user:${userId}`)).limited
     const now = new Date().toISOString()
     const { error } = await svc

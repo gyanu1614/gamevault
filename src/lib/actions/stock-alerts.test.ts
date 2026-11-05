@@ -18,6 +18,8 @@ const h = vi.hoisted(() => ({
   openRows: null as Array<{ id: string; item_slug: string; variant: string | null }> | null,
   calls: [] as Call[],
   dispatched: 0,
+  visibleArgs: [] as unknown[][],
+  visibleFail: false,
 }))
 
 vi.mock('server-only', () => ({}))
@@ -35,6 +37,13 @@ vi.mock('@/lib/value-listings/stock-server', () => ({
   })),
 }))
 vi.mock('@/lib/stock-alerts/dispatch', () => ({ scheduleStockAlertDispatch: () => { h.dispatched += 1 } }))
+vi.mock('@/lib/stock-alerts/visible-offer', () => ({
+  itemHasVisibleOffer: vi.fn(async (...args: unknown[]) => {
+    h.visibleArgs.push(args)
+    if (h.visibleFail) throw new Error('read failed')
+    return h.live
+  }),
+}))
 vi.mock('@/lib/supabase/service', () => ({
   createServiceRoleClient: () => ({
     from(table: string) {
@@ -43,7 +52,6 @@ vi.mock('@/lib/supabase/service', () => ({
       const result = () => {
         const op = call.ops[0]?.[0]
         if (table === 'games') return { data: { id: 'g-1' }, error: null }
-        if (table === 'listings') return { data: h.live ? [{ id: 'l-1' }] : [], error: null }
         if (op === 'select')
           return { data: h.openRows ?? Array.from({ length: h.openCount }, (_, i) => ({ id: `a-${i}`, item_slug: `item-${i}`, variant: null })), error: null }
         return { data: null, error: null }
@@ -62,7 +70,6 @@ import { checkRateLimit } from '@/lib/security/rate-limit'
 import { setStockAlert, clearStockAlert, listMyStockAlerts } from './stock-alerts'
 
 const alertCalls = () => h.calls.filter((c) => c.table === 'stock_alerts')
-const listingCalls = () => h.calls.filter((c) => c.table === 'listings')
 const eqs = (c: Call) => c.ops.filter(([m]) => m === 'eq').map(([, a]) => a)
 const iss = (c: Call) => c.ops.filter(([m]) => m === 'is').map(([, a]) => a)
 const upsertRow = () => alertCalls().flatMap((c) => c.ops).find(([m]) => m === 'upsert')?.[1][0] as Record<string, unknown> | undefined
@@ -77,6 +84,8 @@ beforeEach(() => {
   h.openRows = null
   h.calls = []
   h.dispatched = 0
+  h.visibleArgs = []
+  h.visibleFail = false
   vi.mocked(checkRateLimit).mockClear()
 })
 
@@ -140,14 +149,14 @@ describe('setStockAlert', () => {
   it('an item alert (no trait) stores variant null and checks any listing of the item', async () => {
     await setStockAlert('adopt-me', 'frost-dragon')
     expect(upsertRow()).toMatchObject({ variant: null })
-    expect(eqs(listingCalls()[0]).some(([k]) => k === 'value_variant')).toBe(false)
+    expect(h.visibleArgs[0]).toEqual(['adopt-me', 'frost-dragon', null])
   })
 
   it('a trait alert stores the trait and only that trait counts as listed', async () => {
     h.live = true
     expect(await setStockAlert('adopt-me', 'frost-dragon', 'neon-fly-ride')).toEqual({ ok: true })
     expect(upsertRow()).toMatchObject({ user_id: 'u-1', item_slug: 'frost-dragon', variant: 'neon-fly-ride' })
-    expect(eqs(listingCalls()[0])).toContainEqual(['value_variant', 'neon-fly-ride'])
+    expect(h.visibleArgs[0]).toEqual(['adopt-me', 'frost-dragon', 'neon-fly-ride'])
   })
 
   it('refuses a trait the game does not have, and a malformed one before any read', async () => {

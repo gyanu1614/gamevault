@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const r = await sendDueStockAlerts(100)
     sent += r.sent
     failed += r.failed
-    if (r.sent + r.failed === 0) break
+    if (r.sent + r.failed + r.waiting === 0) break
   }
   return NextResponse.json({ ok: true, sent, failed })
 }

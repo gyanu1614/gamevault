@@ -88,6 +88,11 @@
 - The public read policy is `is_active OR item_kind IS NOT NULL`, because the market catalogue (`loadValueCatalog`) reads with the anon key. Narrowing it 404s every egg page with no error; `adopt-me-market-items.guard.integration.test.ts` pins it.
 - The Items page reads `getItemsGridFeed`, other surfaces `getValuesFeed`. A catalogue item with `kind` has no traits, rarity or value page, and a pet named in the same listing title wins over it.
 
+## Notify Me fires only for what the site shows (2026-11-04)
+- An alert means "you can buy this now", so setting it and sending it both go through `itemHasVisibleOffer` (`src/lib/stock-alerts/visible-offer.ts`): the item page's read, minus paused stores and test accounts. A due alert the site doesn't show gets no email and goes back to waiting.
+- A live listing is not enough. `trg_listings_stock_alert_due` knows a listing went live, not whether anyone can see it; `trg_seller_presence_stock_alert_due` re-fires alerts when a store comes back from Offline Mode.
+- Why: on 2026-11-04 the owner set an alert on Frost Fury and got "Frost Fury Is Listed" a second later; the only listing was from a paused store, and 14 items were in that state.
+
 ## Public pages are static-first (from Step 7a, 2026-09-19)
 - Every public page is ISR or SSG. `scripts/check-public-route-caching.mjs` runs ahead of `next build` (and as `src/test/guards/public-route-caching.guard.test.ts`) and fails the deploy when a public route breaks a rule below. A new per-request public route needs an entry in its `GRANDFATHERED` list with the reason — the same review a `force-dynamic` would get.
 - **No cookie client on a public read.** `@/lib/supabase/server` calls `cookies()`; one call anywhere in a page's server import graph makes the whole route `private, no-store`. Public data goes through `@/lib/supabase/anon`. A `'use server'` module that mixes session writes with public reads must be in `MIXED_ACTION_MODULES`, and its public reads must be covered by a behaviour test that mocks the cookie client to throw (`category-page-anon-reads.test.ts`).
