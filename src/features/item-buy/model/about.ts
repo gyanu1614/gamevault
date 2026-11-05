@@ -19,6 +19,8 @@ export interface AboutInput {
   /** Display label ("Legendary"); null when the catalogue has none. */
   rarity: string | null
   facts: ItemFacts
+  /** An Adopt Me egg or potion: no traits to explain, and its own one line. */
+  kind?: 'egg' | 'potion'
 }
 
 export interface ItemAbout {
@@ -49,18 +51,25 @@ export function usesItemFacts(gameSlug: string): boolean {
   return gameSlug !== 'adopt-me'
 }
 
+const KIND_LINE: Record<'egg' | 'potion', (itemName: string, gameName: string) => string> = {
+  egg: (itemName, gameName) => `${itemName} is an egg in ${gameName}. Look after it and it hatches into a random pet.`,
+  potion: (itemName, gameName) => `${itemName} is a potion in ${gameName} that you use on one of your pets.`,
+}
+
 export function itemAbout(input: AboutInput): ItemAbout {
-  const { gameSlug, gameName, itemName, rarity, facts } = input
+  const { gameSlug, gameName, itemName, rarity, facts, kind } = input
   const noun = itemNoun(gameSlug)
-  const isAdoptMe = gameSlug === 'adopt-me'
+  const handedOver = kind ?? noun.one
+  const hasTraits = gameSlug === 'adopt-me' && !kind
 
   const known = usesItemFacts(gameSlug) && (rarity != null || facts.released != null || facts.origin != null)
-  const intro = known
+  const factsLine = known
     ? [
         `${itemName} is ${withArticle(rarity ? `${rarity} ${noun.one}` : noun.one)} in ${gameName}${facts.released ? `, ${releasedPhrase(facts.released)}` : ''}.`,
         ...(facts.origin ? [`It came ${fromOrigin(facts.origin)}.`] : []),
       ].join(' ')
     : null
+  const intro = kind ? KIND_LINE[kind](itemName, gameName) : factsLine
 
   const faq = [
     {
@@ -69,10 +78,10 @@ export function itemAbout(input: AboutInput): ItemAbout {
     },
     {
       q: `How do I get my ${itemName} after paying?`,
-      a: `The seller contacts you in the order chat and hands the ${itemName} over to you in ${gameName}. Check the ${noun.one} before you confirm the order.`,
+      a: `The seller contacts you in the order chat and hands the ${itemName} over to you in ${gameName}. Check the ${handedOver} before you confirm the order.`,
     },
     { q: 'What if the seller doesn’t deliver?', a: helpAnswer('late-order') },
-    ...(isAdoptMe
+    ...(hasTraits
       ? [
           {
             q: `What do F, R, N and M mean on ${withArticle(itemName)}?`,
@@ -83,9 +92,9 @@ export function itemAbout(input: AboutInput): ItemAbout {
   ]
 
   return {
-    heading: isAdoptMe ? `${gameName} Traits Explained` : `About ${gameName} ${itemName}`,
+    heading: hasTraits ? `${gameName} Traits Explained` : `About ${gameName} ${itemName}`,
     intro,
-    traitGuide: isAdoptMe,
+    traitGuide: hasTraits,
     faqHeading: `${gameName} ${itemName} FAQ`,
     faq,
     relatedHeading: `Popular ${gameName} ${noun.many}`,

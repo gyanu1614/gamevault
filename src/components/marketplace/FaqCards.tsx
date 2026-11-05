@@ -108,7 +108,7 @@ export function FaqCards({
                     'leading-snug text-text-primary',
                     glass
                       ? 'text-[16px] font-semibold tracking-[-0.005em] sm:text-[17.5px]'
-                      : 'text-[15px] font-medium tracking-[-0.005em] sm:text-[15.5px]',
+                      : 'text-[16px] font-medium tracking-[-0.005em]',
                   )}
                 >
                   {item.q}
@@ -153,11 +153,11 @@ export function FaqCards({
             </Accordion.Header>
             <Accordion.Content forceMount asChild>
               <Expand open={open} pullUp={glass ? 4 : 6}>
-                <div className={glass ? 'px-5 pb-4 sm:px-6 sm:pb-5' : 'px-4 pb-4 sm:px-5 sm:pb-[18px]'}>
+                <div className={glass ? 'px-5 pb-4 sm:px-6 sm:pb-5' : 'px-4 pb-4 sm:px-5 sm:pb-5'}>
                   <div
                     className={cn(
                       'space-y-2.5 text-text-secondary',
-                      glass ? 'text-[14.5px] leading-[1.55] sm:text-[15px]' : 'text-[14.5px] leading-[1.65]',
+                      glass ? 'text-[14.5px] leading-[1.55] sm:text-[15px]' : 'text-[14px] leading-[1.65]',
                     )}
                   >
                     {item.a

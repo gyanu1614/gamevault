@@ -12,7 +12,7 @@
  * is tapped. See useFilterDropdown.
  */
 
-import { useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { Check, ChevronDown, type LucideIcon } from 'lucide-react'
 
@@ -21,7 +21,7 @@ import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 const EDGE = 12 // panels keep this far from the screen edges
 const PANEL_WIDTH = 260
-const TOP_CLEARANCE = 80 // the fixed navbar (≤64px) + a little air
+const TOP_CLEARANCE = 136 // the fixed navbar (≤64px) + sub-navbar (52px) + a little air
 const ROOM_WANTED = 360 // header + search + about six rows
 
 /** One option row in any filter's list. */
@@ -32,35 +32,57 @@ export const FILTER_LIST = 'min-h-0 overflow-y-auto overscroll-contain py-1.5 te
 export const FILTER_TICK = 'h-[18px] w-[18px] rounded data-[state=checked]:border-[#6AA8FF] data-[state=checked]:bg-[#6AA8FF] data-[state=checked]:text-[#141519]'
 
 /**
+ * How far to shift a panel from its button so it stays on screen. It runs
+ * toward the panel's far side: rightward for 'start', leftward for 'end'.
+ */
+export function panelOffset(align: 'start' | 'end', button: { left: number; right: number }, viewportWidth: number): number {
+  const width = Math.min(PANEL_WIDTH, viewportWidth - EDGE * 2)
+  if (align === 'start') {
+    const left = Math.min(Math.max(button.left, EDGE), viewportWidth - EDGE - width)
+    return left - button.left
+  }
+  const right = Math.max(Math.min(button.right, viewportWidth - EDGE), EDGE + width)
+  return button.right - right
+}
+
+/**
  * Open state + placement for one filter dropdown. Radix would flip a panel
  * that doesn't fit below to the top, and its sideways shift is behind the
- * same switch, so both are off and handled here when the panel opens: the
+ * same switch, so both are off and handled here: when the panel opens the
  * page scrolls just enough to leave room below the button (never past what
- * fits under the navbar), and the panel is nudged sideways to stay on
- * screen. Whatever height is left, the list scrolls inside it (FilterPanel
- * caps it with Radix's available-height variable).
+ * fits under the navbar). The panel is nudged sideways to stay on screen, and
+ * nudged again whenever the button changes size or the screen turns: ticking
+ * a filter changes the button's width, which moves it, and the panel with it
+ * (owner, 2026-11-04: it slid off the phone). Whatever height is left, the list
+ * scrolls inside it (FilterPanel caps it with Radix's available-height variable).
  */
 export function useFilterDropdown(align: 'start' | 'end') {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpenState] = useState(false)
   const [alignOffset, setAlignOffset] = useState(0)
 
-  const place = () => {
+  const placeSideways = useCallback(() => {
+    const el = triggerRef.current
+    if (el) setAlignOffset(panelOffset(align, el.getBoundingClientRect(), document.documentElement.clientWidth))
+  }, [align])
+
+  useEffect(() => {
+    const el = triggerRef.current
+    if (!open || !el) return
+    const observer = new ResizeObserver(placeSideways)
+    observer.observe(el)
+    window.addEventListener('resize', placeSideways)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', placeSideways)
+    }
+  }, [open, placeSideways])
+
+  const makeRoomBelow = () => {
     const el = triggerRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
-    const vw = document.documentElement.clientWidth
     const vh = window.innerHeight
-    const width = Math.min(PANEL_WIDTH, vw - EDGE * 2)
-    // alignOffset runs toward the panel's far side: rightward for 'start',
-    // leftward for 'end'.
-    if (align === 'start') {
-      const left = Math.min(Math.max(r.left, EDGE), vw - EDGE - width)
-      setAlignOffset(left - r.left)
-    } else {
-      const right = Math.max(Math.min(r.right, vw - EDGE), EDGE + width)
-      setAlignOffset(r.right - right)
-    }
     const wanted = Math.min(ROOM_WANTED, vh - TOP_CLEARANCE - r.height - EDGE)
     const room = vh - r.bottom - EDGE
     if (room < wanted) {
@@ -70,7 +92,10 @@ export function useFilterDropdown(align: 'start' | 'end') {
   }
 
   const setOpen = (next: boolean) => {
-    if (next) place()
+    if (next) {
+      placeSideways()
+      makeRoomBelow()
+    }
     setOpenState(next)
   }
 

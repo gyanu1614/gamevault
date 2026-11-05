@@ -3,13 +3,13 @@ import { loadValueListRows, valueListKind } from '@/app/(marketplace)/[gameSlug]
 import type { AdoptMePetItem } from '@/app/(marketplace)/[gameSlug]/values/_adoptMeListModel'
 import type { BrainrotDirectoryItem } from '@/app/(marketplace)/[gameSlug]/values/_sabListModel'
 import type { ValueListRow } from '@/app/(marketplace)/[gameSlug]/values/_generic/valueListModel'
-import { getValueStock } from '@/lib/value-listings/stock-server'
+import { getValueCatalog, getValueStock } from '@/lib/value-listings/stock-server'
 import { getValuesFreshness } from '@/lib/values/data'
 import { amVariantCode, variantLabel } from '@/lib/value-listings/catalogs'
 import type { FeedItem, FormStock, ValuesFeed } from './types'
 
 export type { FeedItem, ValuesFeed } from './types'
-import { fromAdoptMe, fromGeneric, fromSab } from './map'
+import { fromAdoptMe, fromGeneric, fromSab, withMarketItems } from './map'
 
 /**
  * A values game's feed for the home sections: the SAME rows its /values list
@@ -74,4 +74,10 @@ export async function getValuesFeed(gameSlug: string): Promise<ValuesFeed | null
     console.error(`[values-feed] values feed unavailable for ${gameSlug}:`, e instanceof Error ? e.message : e)
     return null
   }
+}
+
+/** The Items page's list: the values feed, plus what only the market sells (Adopt Me's eggs and potions). */
+export async function getItemsGridFeed(gameSlug: string): Promise<ValuesFeed | null> {
+  const [feed, catalog] = await Promise.all([getValuesFeed(gameSlug), gameSlug === 'adopt-me' ? getValueCatalog(gameSlug) : null])
+  return feed && catalog ? withMarketItems(feed, catalog.items) : feed
 }

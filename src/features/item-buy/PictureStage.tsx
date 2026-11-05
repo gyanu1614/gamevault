@@ -2,12 +2,14 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ItemPicture } from '@/features/items-grid/ItemPicture'
+import { cn } from '@/lib/utils'
+import { GLASS } from './layout'
 import { TraitMarks } from './TraitMarks'
 
 /**
  * The pet in a plain card (owner, 2026-10-27: "a normal image within a card,
- * like Eldorado"; 2026-11-02: a short box on phones; 2026-11-03: on desktop no
- * box, the pet alone on the glass panel). No stage lighting or float.
+ * like Eldorado"; 2026-11-02: a short box on phones; 2026-11-04: a small glass
+ * tile on desktop). No stage lighting or float.
  * The picture keeps near its real resolution once loaded so small catalogue
  * art stays sharp. The picked trait's badges sit top-right and pop in on a
  * change on phones; on desktop the trait picker right under it shows them.
@@ -26,9 +28,9 @@ export function PictureStage({
 
   return (
     // Phones: one step lighter than the house card fill so the picture never melts into the page ground (owner,
-    // 2026-11-02). Desktop: no tile, the pet floats on the glass panel, no box in a box (owner, 2026-11-03).
-    // The box fills the panel's column up to a cap, so opening the instructions doesn't move the picture or the picker.
-    <div className="overflow-hidden rounded-lg bg-[linear-gradient(180deg,#2B2C33_0%,#232429_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] lg:relative lg:max-h-[349px] lg:min-h-[280px] lg:flex-1 lg:overflow-visible lg:bg-none lg:shadow-none">
+    // 2026-11-02). Desktop: a small glass tile (owner, 2026-11-04). It fills its column up to a cap, so opening the
+    // instructions doesn't move the picture or the picker.
+    <div className={cn(GLASS, 'overflow-hidden rounded-lg bg-[linear-gradient(180deg,#2B2C33_0%,#232429_100%)] max-lg:shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] lg:relative lg:max-h-[400px] lg:min-h-[200px] lg:flex-1 lg:bg-none')}>
       <div className="relative grid h-[200px] w-full place-items-center sm:h-[240px] lg:absolute lg:inset-0 lg:h-auto">
         <ItemPicture
           src={imageUrl}

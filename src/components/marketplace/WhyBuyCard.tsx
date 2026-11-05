@@ -1,6 +1,7 @@
 import { SilverIcon } from '@/components/ui/silver-icon'
 import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
 import { GuideBackdrop } from './GuideBackdrop'
+import { SECTION_TITLE, TITLE_GAP } from './page-scale'
 
 /**
  * "Why Buy <subject> on DropMarket": six reasons over the game's own CTA art.
@@ -58,7 +59,7 @@ export async function WhyBuyCard({
   return (
     <div
       className={[
-        'relative overflow-hidden rounded-xl bg-[#1A1B1F] shadow-[inset_0_1px_0_rgba(233,237,242,0.07)]',
+        'relative overflow-hidden rounded-lg bg-[#1A1B1F] shadow-[inset_0_1px_0_rgba(233,237,242,0.07)]',
         className,
       ]
         .filter(Boolean)
@@ -73,15 +74,15 @@ export async function WhyBuyCard({
             'linear-gradient(180deg, color-mix(in srgb, var(--color-bg-base) 68%, transparent) 0%, color-mix(in srgb, var(--color-bg-base) 76%, transparent) 60%, color-mix(in srgb, var(--color-bg-base) 90%, transparent) 100%)',
         }}
       />
-      <div className="relative px-5 py-7 sm:px-10 sm:py-9">
-        <h2 id={headingId} className="text-center text-subheading font-bold text-text-primary [text-wrap:balance]">
+      <div className="relative px-5 py-8 sm:p-10">
+        <h2 id={headingId} className={`text-center [text-wrap:balance] ${SECTION_TITLE}`}>
           Why Buy {subject} on DropMarket
         </h2>
-        <ul className="mx-auto mt-7 grid max-w-5xl grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className={`mx-auto grid max-w-5xl grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 ${TITLE_GAP}`}>
           {why.map((w) => (
             <li key={w.title} className="flex items-center gap-3">
               <SilverIcon src={w.icon} alt={`${w.title} icon`} className="h-6 w-6 shrink-0" />
-              <p className="text-[15px] font-semibold leading-snug text-text-primary">{w.title}</p>
+              <p className="text-[14px] font-semibold leading-snug text-text-primary">{w.title}</p>
             </li>
           ))}
         </ul>

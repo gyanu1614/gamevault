@@ -8,6 +8,7 @@
 import { VARIANTS, VARIANT_ALIASES, VARIANT_KEY, VARIANT_LABEL, isVariant, variantFromKey, type Variant } from '../adopt-me/variants'
 import { variantFromTitle } from '../adopt-me/variant-from-title'
 import { listFieldSlugs, MM2_SELL_FORM } from '../catalogue/sell-form/config'
+import type { AmItemKind } from './am-item-kind'
 import type { ValueCatalog } from './match'
 import type { SimilarCandidate } from './stock'
 
@@ -67,6 +68,8 @@ export interface CatalogItemRow extends SimilarCandidate {
   hasPage?: boolean
   /** 1 = most popular (Adopt Me: distinct sellers listing it, `pnpm adoptme:popularity`); null when unranked. */
   popularRank?: number | null
+  /** Set only on an Adopt Me egg or potion: on sale, but with no value page, trait or rarity. */
+  kind?: AmItemKind
 }
 
 export interface LoadedCatalog {
@@ -144,12 +147,13 @@ export async function loadValueCatalog(client: AnyClient, game: { id: string; sl
     })
   }
   if (game.slug === 'adopt-me') {
-    const { data, error } = await client.from('adopt_me_pets').select('slug, name, rarity, image_url, is_active, demand_rank').limit(5000)
+    const { data, error } = await client.from('adopt_me_pets').select('slug, name, rarity, image_url, is_active, demand_rank, item_kind').limit(5000)
     if (error) throw error
     return buildValueCatalog(game.slug, {
       items: (data ?? []).map((r: any) => ({
-        slug: r.slug, name: r.name, rarity: r.rarity, imageUrl: r.image_url, hasPage: r.is_active === true,
+        slug: r.slug, name: r.name, rarity: r.item_kind ? null : r.rarity, imageUrl: r.image_url, hasPage: r.is_active === true,
         popularRank: r.demand_rank == null ? null : Number(r.demand_rank),
+        ...(r.item_kind ? { kind: r.item_kind } : {}),
       })),
     })
   }

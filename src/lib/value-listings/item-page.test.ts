@@ -98,3 +98,29 @@ describe('buildItemPage', () => {
     expect(m.related).toEqual([])
   })
 })
+
+describe('buildItemPage — Adopt Me eggs and potions', () => {
+  const am = buildValueCatalog('adopt-me', {
+    items: [
+      { slug: 'parrot', name: 'Parrot', rarity: 'legendary', popularRank: 1 },
+      { slug: 'owl', name: 'Owl', rarity: 'legendary', popularRank: 2 },
+      { slug: 'safari-egg', name: 'Safari Egg', popularRank: 3, kind: 'egg' },
+      { slug: 'crystal-egg', name: 'Crystal Egg', popularRank: 4, kind: 'egg' },
+      { slug: 'fly-potion', name: 'Fly Potion', popularRank: 5, kind: 'potion' },
+    ],
+  })!
+  const amRows = [row('a', 'parrot', 'fly-ride', 5), row('b', 'owl', 'fly-ride', 6), row('c', 'safari-egg', null, 2), row('d', 'fly-potion', null, 3)]
+  const amBase = { gameSlug: 'adopt-me', categorySlug: 'buy-items', catalog: am, rows: amRows, variant: null }
+
+  it('the row under a pet page stays pets', () => {
+    expect(buildItemPage({ ...amBase, itemSlug: 'parrot' })!.related.map((r) => r.slug)).toEqual(['owl'])
+  })
+
+  it('the row under an egg with offers is pets too: its heading says Pets', () => {
+    expect(buildItemPage({ ...amBase, itemSlug: 'safari-egg' })!.related.map((r) => r.slug)).toEqual(['parrot', 'owl'])
+  })
+
+  it('an egg nobody sells offers eggs first, then pets, never another kind', () => {
+    expect(buildItemPage({ ...amBase, itemSlug: 'crystal-egg' })!.similar.map((r) => r.slug)).toEqual(['safari-egg', 'parrot', 'owl'])
+  })
+})

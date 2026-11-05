@@ -100,10 +100,15 @@ export function buildItemPage<T extends ItemPageRow>(input: ItemPageInput<T>): I
     return { ...c, count: s.total, minPriceUsd: s.minPriceUsd ?? 0, href: itemBuyHref({ gameSlug, categorySlug, itemSlug: c.slug }) }
   }
   const stockCount = (slug: string) => stockMap.get(slug)?.total ?? 0
+  // The row under the page is the game's main items, whatever the page sells (its heading says so).
+  const mainItems = catalog.items.filter((c) => !c.kind)
+  const sameKind = item.kind ? catalog.items.filter((c) => c.kind === item.kind) : []
   const others: StockedItem[] = (
     inStock
-      ? pickPopularItems(itemSlug, catalog.items, stockCount, RELATED_LIMIT)
-      : pickSimilarItems(itemSlug, catalog.items, (s) => stockCount(s) > 0, SIMILAR_LIMIT)
+      ? pickPopularItems(itemSlug, mainItems, stockCount, RELATED_LIMIT)
+      : item.kind
+        ? [...pickPopularItems(itemSlug, sameKind, stockCount, SIMILAR_LIMIT), ...pickPopularItems(itemSlug, mainItems, stockCount, SIMILAR_LIMIT)].slice(0, SIMILAR_LIMIT)
+        : pickSimilarItems(itemSlug, mainItems, (s) => stockCount(s) > 0, SIMILAR_LIMIT)
   ).map(stocked)
 
   return {

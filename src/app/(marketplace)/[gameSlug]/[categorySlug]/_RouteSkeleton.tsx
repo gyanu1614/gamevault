@@ -75,5 +75,5 @@ export default function CategoryRouteSkeleton() {
   }
   // Everything else (items / accounts / boosting / top-up / future). A values
   // game's Items page shows one picture-top card per item (ItemsGridClient).
-  return <ItemsSkeleton grid={categorySlug === 'buy-items' && VALUE_CATALOG_GAMES.includes(segments[0] ?? '')} />
+  return <ItemsSkeleton grid={categorySlug === 'buy-items' && VALUE_CATALOG_GAMES.includes(segments[0] ?? '')} typeTabs={categorySlug === 'buy-items' && segments[0] === 'adopt-me'} />
 }

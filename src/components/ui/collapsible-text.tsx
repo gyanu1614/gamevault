@@ -66,6 +66,12 @@ export interface CollapsibleTextProps {
   /** Lines shown while collapsed. Default 3. */
   lines?: 2 | 3 | 4 | 5 | 6
   /**
+   * Replaces `lines` when the count changes with screen size, as CSS so the
+   * first paint is already right (e.g. "line-clamp-4 lg:line-clamp-[7]").
+   * Only on while collapsed, like `lines`.
+   */
+  clampClassName?: string
+  /**
    * Accessible name for the expand control. The toggle is a bare
    * chevron, so this is the only name a screen reader announces — it
    * is not rendered visually. Default "Show more".
@@ -91,6 +97,7 @@ export interface CollapsibleTextProps {
 export function CollapsibleText({
   children,
   lines = 3,
+  clampClassName,
   moreLabel = 'Show more',
   lessLabel = 'Show less',
   className,
@@ -204,7 +211,7 @@ export function CollapsibleText({
           id={regionId}
           className={cn(
             'whitespace-pre-line',
-            clampOn && (CLAMP_CLASS[lines] ?? CLAMP_CLASS[3]),
+            clampOn && (clampClassName ?? CLAMP_CLASS[lines] ?? CLAMP_CLASS[3]),
             className,
           )}
         >

@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { cn } from '@/lib/utils'
 import { StockAlertsProvider } from '@/features/items-grid/stock-alerts-context'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { BuyBox, ItemTitle } from './BuyBox'
@@ -13,7 +12,7 @@ import { PictureStage } from './PictureStage'
 import { TraitField } from './TraitField'
 import { defaultTrait, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
 import { useBuyOffer } from './use-buy-offer'
-import { GLASS, ITEM_SECTION_GAP } from './layout'
+import { ITEM_SECTION_GAP } from './layout'
 
 export interface ItemBuyClientProps {
   gameSlug: string
@@ -129,34 +128,24 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
 
   return (
     <StockAlertsProvider gameSlug={p.gameSlug}>
-      {/* Two rows on the right (buy card, seller); the panel spans both, so the columns end level and any extra height
-          from the opened instructions lands in the seller's row: the buy card never moves. */}
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[auto_1fr] lg:gap-x-6 lg:gap-y-3 xl:grid-cols-[minmax(0,1fr)_400px]">
-        <div className={cn(GLASS, 'contents lg:row-span-2 lg:block lg:p-7')}>
-          <div className="contents lg:grid lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:gap-x-6 lg:[grid-template-areas:'pic_title'_'pic_facts'_'pic_notes'] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)] xl:gap-x-8">
-            <div className="order-1 min-w-0 lg:flex lg:min-h-[46px] lg:items-center lg:[grid-area:title]">
-              <ItemTitle itemName={p.itemName} gameName={p.gameName} />
-            </div>
-            <div className="order-2 min-w-0 lg:flex lg:flex-col lg:[grid-area:pic]">
-              <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
-              {options.length > 0 ? (
-                <div className="mt-4 hidden shrink-0 lg:block">
-                  <TraitField filled noun={p.noun} options={options} value={trait} onChange={onTrait} />
-                </div>
-              ) : null}
-            </div>
-            <div className="order-3 min-w-0 lg:mt-5 lg:[grid-area:facts]">
-              <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
-            </div>
-            <div className="order-5 min-w-0 lg:mt-5 lg:[grid-area:notes]">
-              {offer ? <DeliveryNotes text={offer.description ?? null} fallback={p.deliveryFallback} resetKey={offer.id} /> : null}
-              {p.trust}
-            </div>
-          </div>
+      {/* Desktop (owner, 2026-11-04: "2 big modals… too tight"): a small picture tile, the details floating on the page,
+          one buy card, with room between them. The buy card sets the row's height; the picture column ends level with it. */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[220px_minmax(0,1fr)_340px] lg:grid-rows-[auto_auto_1fr] lg:gap-x-8 lg:gap-y-0 lg:[grid-template-areas:'pic_title_buy'_'pic_facts_buy'_'pic_notes_buy'] xl:grid-cols-[300px_minmax(0,1fr)_380px] xl:gap-x-10">
+        <div className="order-1 min-w-0 lg:[grid-area:title]">
+          <ItemTitle itemName={p.itemName} gameName={p.gameName} />
         </div>
-
-        {/* Desktop: `contents`, so the buy card and the seller card are items of the grid above. */}
-        <div className="order-4 min-w-0 lg:contents">
+        <div className="order-2 min-w-0 lg:flex lg:flex-col lg:[grid-area:pic]">
+          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
+          {options.length > 0 ? (
+            <div className="mt-3 hidden shrink-0 lg:block">
+              <TraitField filled noun={p.noun} options={options} value={trait} onChange={onTrait} />
+            </div>
+          ) : null}
+        </div>
+        <div className="order-3 min-w-0 lg:mt-6 lg:[grid-area:facts]">
+          <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
+        </div>
+        <div className="order-4 min-w-0 lg:[grid-area:buy]">
           <BuyBox
             gameSlug={p.gameSlug}
             itemSlug={p.itemSlug}
@@ -173,6 +162,10 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
             isOwn={isOwn}
             buyRef={buyRef}
           />
+        </div>
+        <div className="order-5 min-w-0 lg:mt-6 lg:[grid-area:notes]">
+          {offer ? <DeliveryNotes text={offer.description ?? null} fallback={p.deliveryFallback} resetKey={offer.id} /> : null}
+          {p.trust}
         </div>
       </div>
 

@@ -29,6 +29,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
+import { SECTION_TITLE, TITLE_GAP } from '@/components/marketplace/page-scale'
+import { cn } from '@/lib/utils'
 
 interface Step {
   num: string
@@ -178,14 +180,14 @@ export function BuyerSteps({
   return (
     <section className="page-measure">
       <header className="text-center">
-        <h2 className="section-title">{title}</h2>
+        <h2 className={cn(SECTION_TITLE, '[text-wrap:balance]')}>{title}</h2>
         {subtitle && (
-          <p className="mt-2.5 text-[15px] leading-[1.5] text-text-secondary">{subtitle}</p>
+          <p className="mt-2 text-[14px] leading-[1.5] text-text-secondary">{subtitle}</p>
         )}
       </header>
 
       <IconDefs />
-      <ol className="mt-12 grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4', TITLE_GAP)}>
         {STEPS.map((s, i) => (
           <StepCard key={s.num} step={s} index={i} sub={subs?.[i]} />
         ))}

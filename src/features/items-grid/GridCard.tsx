@@ -30,7 +30,7 @@ export function GridCard({ item, gameSlug }: { item: GridItem; gameSlug: string 
       <div className="relative grid h-[92px] place-items-center bg-[#2E2F36] transition-colors group-hover:bg-[#33343B] sm:h-[136px]">
         <ItemPicture src={item.imageUrl} name={item.name} className="h-[76%] w-[76%] drop-shadow-[0_10px_14px_rgba(0,0,0,0.4)]" />
         {item.isNew && (
-          <span className="absolute left-2 top-2 inline-flex h-5 items-center gap-1 rounded bg-lime-tint-bg px-1.5 text-[11px] font-semibold text-lime-text sm:left-2.5 sm:top-2.5 sm:h-6 sm:px-2 sm:text-[11.5px]">
+          <span className="absolute left-2 top-2 inline-flex h-5 items-center gap-1 rounded bg-lime-tint-bg px-1.5 text-[12px] font-semibold text-lime-text sm:left-2.5 sm:top-2.5 sm:h-6 sm:px-2">
             <IconSparkles aria-hidden size={12} stroke={2} />
             New
           </span>
@@ -43,7 +43,7 @@ export function GridCard({ item, gameSlug }: { item: GridItem; gameSlug: string 
           ))}
       </div>
 
-      <div className="flex flex-1 flex-col px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-4 sm:pt-3">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
         <h3 className="line-clamp-2 text-center text-[16px] font-bold leading-snug tracking-[-0.01em] text-text-primary">
           <Link
             href={item.href}
@@ -58,20 +58,21 @@ export function GridCard({ item, gameSlug }: { item: GridItem; gameSlug: string 
             <div className="flex items-end justify-between gap-2">
               {/* Phones: "From $54.99" on one line, so the card stays short. */}
               <span className="flex min-w-0 items-baseline gap-1.5 sm:flex-col sm:items-start sm:gap-0">
-                <span className="text-[12px] font-medium text-text-secondary sm:text-[13px]">From</span>
+                <span className="text-[13px] font-medium text-text-secondary">From</span>
                 <span className="text-[16px] font-bold tabular-nums leading-tight text-text-primary sm:text-[length:var(--fs-price)]">${formatStatPrice(item.minPrice!)}</span>
               </span>
               {/* The card's buy cue (the whole card is the link): quiet at rest, brand green on hover, nothing moves. */}
               <span
                 aria-hidden
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white/[0.07] text-text-primary transition-colors group-hover:bg-lime group-hover:text-text-inverse sm:h-9 sm:w-9"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white/[0.07] text-text-primary transition-colors group-hover:bg-lime group-hover:text-text-inverse sm:h-9 sm:w-9"
               >
                 <ArrowOutwardRoundedIcon style={{ fontSize: 18 }} />
               </span>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[13px] font-medium text-text-secondary max-sm:hidden">No Offers Yet</span>
+            // As tall as the priced card's From + price, so every card in the grid is one height.
+            <div className="flex items-end justify-between gap-2 sm:min-h-[46px]">
+              <span className="pb-2 text-[13px] font-medium text-text-secondary max-sm:hidden">No Offers Yet</span>
               <NotifyMeButton gameSlug={gameSlug} itemSlug={item.slug} itemName={item.name} className="max-sm:h-8 max-sm:w-full max-sm:justify-center" />
             </div>
           )}

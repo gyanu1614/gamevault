@@ -7,7 +7,9 @@ import type { AdoptMePetItem } from '@/app/(marketplace)/[gameSlug]/values/_adop
 import { cardVariant } from '@/app/(marketplace)/[gameSlug]/values/_adoptMeListModel'
 import type { BrainrotDirectoryItem } from '@/app/(marketplace)/[gameSlug]/values/_sabListModel'
 import type { ValueListRow } from '@/app/(marketplace)/[gameSlug]/values/_generic/valueListModel'
-import type { FeedItem } from './types'
+import { amItemType } from '@/lib/value-listings/am-item-kind'
+import type { CatalogItemRow } from '@/lib/value-listings/catalogs'
+import type { FeedItem, ValuesFeed } from './types'
 
 const num = (v: unknown): number | null => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
 
@@ -64,4 +66,34 @@ export function fromGeneric(rows: readonly ValueListRow[]): FeedItem[] {
     valueUsd: r.marketUsd ?? r.cheapestUsd,
     popularRank: null,
   }))
+}
+
+/**
+ * The Adopt Me Items page's list: the pets, typed, plus the eggs and potions,
+ * which live only in the market catalogue (no value-list row, so the game page's
+ * pet sections and the Values pages never see them). None in the catalogue: the
+ * feed as it was, so the page has no types to pick from.
+ */
+export function withMarketItems(feed: ValuesFeed, catalog: readonly CatalogItemRow[]): ValuesFeed {
+  const extras = catalog.filter((c) => c.kind)
+  if (extras.length === 0) return feed
+  return {
+    ...feed,
+    items: [
+      ...feed.items.map((i) => ({ ...i, itemType: amItemType(null) })),
+      ...extras.map((c) => ({
+        slug: c.slug,
+        name: c.name,
+        imageUrl: c.imageUrl ?? null,
+        href: null,
+        rarityKey: null,
+        itemType: amItemType(c.kind),
+        isNew: false,
+        trendPct: null,
+        trendLabel: null,
+        valueUsd: null,
+        popularRank: c.popularRank ?? null,
+      })),
+    ],
+  }
 }

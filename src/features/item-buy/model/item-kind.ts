@@ -27,6 +27,6 @@ export function deliveryMethodLabel(gameSlug: string): string {
 }
 
 /** The delivery card when the seller wrote nothing: how every order is handed over (the FAQ's answer). */
-export function defaultDeliveryNote(gameSlug: string, gameName: string): string {
-  return `After you pay, the seller messages you in the order chat and hands the ${itemNoun(gameSlug).one} over to you in ${gameName}.`
+export function defaultDeliveryNote(gameSlug: string, gameName: string, kind?: 'egg' | 'potion'): string {
+  return `After you pay, the seller messages you in the order chat and hands the ${kind ?? itemNoun(gameSlug).one} over to you in ${gameName}.`
 }

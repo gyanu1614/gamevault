@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import { CurrencySellerRow } from '@/components/marketplace/CurrencySellerRow'
+import { TITLE_GAP } from '@/components/marketplace/page-scale'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
@@ -83,14 +84,14 @@ export function OffersSection({
       </div>
 
       {matching.length === 0 ? (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-5 py-4" style={{ fontSize: 'var(--fs-body)' }}>
+        <div className={cn('flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-5 py-4', TITLE_GAP)} style={{ fontSize: 'var(--fs-body)' }}>
           <span className="text-text-secondary">{filterName ? `No ${filterName} offers right now.` : 'No offers right now.'}</span>
           <button type="button" onClick={() => setFilter(null)} className="font-semibold text-text-primary underline-offset-4 hover:underline">
             Show All Offers
           </button>
         </div>
       ) : (
-        <ul className="mt-4 space-y-2">
+        <ul className={cn('space-y-3', TITLE_GAP)}>
           <AnimatePresence initial={false} mode="popLayout">
             {shown.map((o) => {
               const s = o.seller
@@ -111,12 +112,13 @@ export function OffersSection({
                     seller={{ name: sellerDisplayName(s), avatarUrl: s.avatarUrl, verified: s.verified, rating: s.ratingPercent, reviews: s.reviewCount, sales: s.sales, tier: s.tier ?? null }}
                     sellerHref={slug ? `/shop/${slug}` : null}
                     metrics={[
-                      { label: noun, value: trait, width: 132 },
+                      // Eggs and potions have no traits, so no column for them.
+                      ...(traitDefs.length > 0 ? [{ label: noun, value: trait, width: 132 }] : []),
                       { icon: Inventory2RoundedIcon, label: 'In Stock', value: stock, width: 104 },
                       { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery, width: 124 },
                     ]}
                     mobileMetrics={[
-                      { label: '', value: trait },
+                      ...(traitDefs.length > 0 ? [{ label: '', value: trait }] : []),
                       { icon: Inventory2RoundedIcon, label: 'In Stock', value: stock },
                       { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery },
                     ]}
@@ -137,7 +139,7 @@ export function OffersSection({
         <button
           type="button"
           onClick={() => setAll(true)}
-          className="mt-2 h-11 w-full rounded-md bg-white/[0.04] font-semibold text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
+          className="mt-3 h-11 w-full rounded-md bg-white/[0.04] font-semibold text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
           style={{ fontSize: 'var(--fs-meta)' }}
         >
           Show All {matching.length} Offers

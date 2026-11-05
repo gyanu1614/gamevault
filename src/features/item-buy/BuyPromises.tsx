@@ -46,7 +46,7 @@ export function BuyPromises() {
             {[0, 1].map((track) => (
               <div key={track} className="flex shrink-0 items-center gap-8 pr-8">
                 {[...ROWS, ...ROWS].map(({ Icon, label }, i) => (
-                  <span key={`${label}-${i}`} className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[15px] font-medium text-text-primary">
+                  <span key={`${label}-${i}`} className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[14px] font-medium text-text-primary">
                     <Icon size={20} weight="fill" color={TRUST_BLUE} className="shrink-0" />
                     {label}
                   </span>
@@ -57,7 +57,7 @@ export function BuyPromises() {
         </div>
       </div>
 
-      <ul aria-label="Our Promises" className="hidden gap-4 lg:grid">
+      <ul aria-label="Our Promises" className="hidden gap-3 lg:grid">
         {ROWS.map(({ Icon, label, sub }) => (
           <li key={label} className="flex items-start gap-3" style={{ fontSize: 'var(--fs-body)' }}>
             <Icon aria-hidden size={20} weight="fill" color={TRUST_BLUE} className="mt-px shrink-0" />

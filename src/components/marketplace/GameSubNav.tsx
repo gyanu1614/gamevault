@@ -8,9 +8,10 @@
  * (icon + label, full bar height), the content tab right. Phones keep the
  * scrollable strip under the 60px app bar — except inside a listing
  * (`phoneBack`): there phones get a back button and the game name in the
- * navbar's own colour, fixed under it, so the two bars read as one section and
- * never come apart (owner, 2026-11-02/03, Eldorado's phone item page as the
- * reference).
+ * navbar's own colour, so the two bars read as one section (owner, 2026-11-02/03,
+ * Eldorado's phone item page as the reference). Fixed under the navbar; it slides
+ * away on scroll down and returns on a small scroll up (owner, 2026-11-04,
+ * GameBoost), except a phone's back row, which stays. Join Discord on every bar.
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react'
@@ -20,9 +21,12 @@ import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { SubnavSellButton } from '@/components/seller/SellerPrompt'
+import { useHideOnScroll } from '@/hooks/useHideOnScroll'
 import { BackButton } from './BackButton'
 import {
   SUBNAV_BG,
+  SUBNAV_HIDDEN,
+  SUBNAV_HIDDEN_MD,
   SUBNAV_LOGO,
   SUBNAV_NAME,
   SUBNAV_ROW,
@@ -31,6 +35,7 @@ import {
   SUBNAV_TAB,
   SUBNAV_TAB_ACTIVE,
   SubnavActiveBar,
+  SubnavDiscordButton,
   categoryIcon,
   subnavIconClass,
 } from './subnav-tab'
@@ -78,6 +83,7 @@ export default function GameSubNav({
   phoneBack,
 }: GameSubNavProps) {
   const router = useRouter()
+  const scrollHidden = useHideOnScroll()
   // V14m — Track which tab is mid-navigation so we can show a small spinner
   // on it (instead of the whole UI sitting silent until the new page paints).
   const [isPendingNav, startNavTransition] = useTransition()
@@ -133,11 +139,10 @@ export default function GameSubNav({
   }, [])
 
   return (
-    /* A full-width strip flush under the navbar, in the page: it scrolls away
-       and only the navbar stays. */
+    /* A full-width strip fixed flush under the navbar; the slot holds its place in the page. */
     <nav aria-label={`${gameName} categories`} className={SUBNAV_SLOT}>
       <div
-        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:fixed max-md:top-[var(--subnav-top)] max-md:!bg-[#1C1D22] max-md:shadow-none')}
+        className={cn(SUBNAV_STRIP, phoneBack && 'max-md:shadow-none', scrollHidden && (phoneBack ? SUBNAV_HIDDEN_MD : SUBNAV_HIDDEN))}
         style={{ backgroundColor: SUBNAV_BG }}
       >
         {phoneBack ? (
@@ -148,7 +153,9 @@ export default function GameSubNav({
             <Link href={`/${gameSlug}`} className="min-w-0 flex-1 truncate px-2 text-center text-[15px] font-bold text-text-primary">
               {gameName}
             </Link>
-            <span aria-hidden className="w-11 shrink-0" />
+            <span className="flex w-11 shrink-0 justify-end">
+              <SubnavDiscordButton />
+            </span>
           </div>
         ) : null}
         <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>
@@ -232,17 +239,21 @@ export default function GameSubNav({
               {/* Right-edge fade — overflow affordance, phones only */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-black/35 to-transparent md:hidden"
+                className="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-[#16171B] to-transparent md:hidden"
               />
             </div>
           )}
 
-          {/* ── Content tab + Sell (desktop: right column). Sell from lg up:
-                 below that the strip is full, and listings carry a Sell row
+          {/* Phones: always in reach, beside the sliding strip. */}
+          <SubnavDiscordButton className="ml-1 md:hidden" />
+
+          {/* ── Content tab + Sell + Discord (desktop: right column). Sell from lg
+                 up: below that the strip is full, and listings carry a Sell row
                  in their grid instead. ─────────────────────────────────── */}
           <div className="hidden items-center gap-3 justify-self-end md:flex">
             {extraTabs}
             <SubnavSellButton className="max-lg:hidden" />
+            <SubnavDiscordButton />
           </div>
         </div>
       </div>

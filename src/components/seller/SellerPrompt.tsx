@@ -109,7 +109,7 @@ export function HeroEyebrow({ className = '' }: { className?: string }) {
       {/* Phones: one full-width row, the catch on the left and the button on
           the right. Wider screens: centred, the whole pitch on one line. */}
       <div
-        className={`mx-auto flex min-h-[40px] max-w-[1400px] items-center justify-between gap-x-3 whitespace-nowrap text-[15px] leading-tight text-text-secondary sm:justify-center sm:gap-x-3.5 ${className}`}
+        className={`mx-auto flex min-h-[40px] max-w-[1400px] items-center justify-between gap-x-3 whitespace-nowrap text-[14px] leading-tight text-text-secondary sm:justify-center sm:gap-x-3.5 ${className}`}
       >
         <p className="m-0 min-w-0 truncate">
           {/* On a phone the catch is the whole text, so it carries the shimmer. */}
@@ -125,7 +125,7 @@ export function HeroEyebrow({ className = '' }: { className?: string }) {
         <Link
           href={cta.href}
           onClick={cta.onClick}
-                    className={`group relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${BOX[variant ?? 'visitor']}`}
+                    className={`group relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${BOX[variant ?? 'visitor']}`}
         >
           {!reduce && <ShineBorder duration={6} borderWidth={1} shineColor="rgba(200,240,107,0.85)" />}
           <span className="sm:hidden">{copy.phoneCta}</span>
@@ -165,14 +165,14 @@ export function SellerPromptCard({
         >
           <Icon className="h-[22px] w-[22px]" stroke={1.8} />
         </span>
-        <p className="m-0 min-w-0 flex-1 text-[13.5px] leading-snug text-text-secondary">
-          <span className="block text-[15px] font-semibold text-text-primary">{copy.lead}</span>
+        <p className="m-0 min-w-0 flex-1 text-[13px] leading-snug text-text-secondary">
+          <span className="block text-[14px] font-semibold text-text-primary">{copy.lead}</span>
           <span className="seller-shimmer hidden font-medium sm:block">{copy.tail}</span>
         </p>
         <Link
           href={cta.href}
           onClick={cta.onClick}
-                    className={`inline-flex h-10 shrink-0 items-center rounded-md px-4 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
+                    className={`inline-flex h-10 shrink-0 items-center rounded-md px-4 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
             variant === 'seller' ? 'bg-lime text-text-inverse hover:bg-lime-hover active:bg-lime-pressed' : 'bg-white text-black hover:bg-white/90'
           }`}
         >
@@ -231,7 +231,7 @@ export function SellerPromptRow({ gameName, categoryLabel, className = '' }: { g
         <Link
           href={cta.href}
           onClick={cta.onClick}
-          className={`inline-flex h-9 shrink-0 items-center rounded-md px-3.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
+          className={`inline-flex h-9 shrink-0 items-center rounded-md px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
             variant === 'seller' ? 'bg-lime text-text-inverse hover:bg-lime-hover active:bg-lime-pressed' : 'bg-white text-black hover:bg-white/90'
           }`}
         >
