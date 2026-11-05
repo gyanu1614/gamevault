@@ -32,6 +32,11 @@ function feed(items: FeedItem[], stock: Record<string, [number, number, string[]
 const slugs = (xs: GridItem[]) => xs.map((x) => x.slug)
 
 describe('toGridItems', () => {
+  it('leaves out an item with no picture and no offers (owner, 2026-11-04), but never one somebody sells', () => {
+    const list = toGridItems('murder-mystery-2', feed([item('glow', { imageUrl: null }), item('brew', { imageUrl: null }), item('owl')], { brew: [1, 5] }))
+    expect(list.map((g) => g.slug)).toEqual(['brew', 'owl'])
+  })
+
   it('maps catalogue items with our stock and links every card to its item page', () => {
     const [g] = toGridItems('adopt-me', feed([item('bat-dragon', { rarityKey: 'ultra_rare' })], { 'bat-dragon': [2, 269.99, ['FR', 'NFR']] }))
     expect(g).toEqual({
