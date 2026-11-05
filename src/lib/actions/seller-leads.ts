@@ -12,7 +12,8 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { requireAdmin } from './admin-permissions'
+import { requireRole } from './admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { revalidatePath } from 'next/cache'
 // Types + constants live in a plain module — a 'use server' file may only export
 // async functions, so SELLER_LEAD_STATUSES etc. can't be exported from here.
@@ -30,7 +31,7 @@ const SELECT =
 /** Admin-only — the full lead pipeline, newest-touched first. */
 export async function getSellerLeads(): Promise<ListResult> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
   } catch {
     return { ok: false, error: 'Not authorized.' }
   }
@@ -66,7 +67,7 @@ export async function createSellerLead(
   input: CreateSellerLeadInput,
 ): Promise<Result> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
   } catch {
     return { ok: false, error: 'Not authorized.' }
   }
@@ -118,7 +119,7 @@ export async function updateSellerLead(
   input: UpdateSellerLeadInput,
 ): Promise<Result> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
   } catch {
     return { ok: false, error: 'Not authorized.' }
   }
@@ -157,7 +158,7 @@ export async function updateSellerLead(
 /** Admin-only — delete a lead (mistaken entry / cleanup). */
 export async function deleteSellerLead(id: string): Promise<Result> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
   } catch {
     return { ok: false, error: 'Not authorized.' }
   }

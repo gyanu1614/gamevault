@@ -169,6 +169,7 @@ export default function SettingsPage() {
                   pendingEmail={pendingEmail}
                   onEmailChangeStarted={setPendingEmail}
                   isSeller={isSeller}
+                  isVerified={isSeller && cached?.is_verified === true}
                   displayName={displayName}
                   shopSlug={isSeller ? sellerShopSlug({ shop_slug: cached?.shop_slug, username }) : null}
                   memberSince={memberSince}
@@ -205,10 +206,16 @@ function SellerTabContainer({
   saveShop: (updates: { shop_name?: string; business_name: string }) => Promise<void>
 }) {
   const { profile, isLoading } = useSellerSettings()
+  const { data: hasCompletedSale = false } = useQuery({
+    queryKey: ['settings', 'has-completed-sale'],
+    queryFn: () => settingsApi.hasCompletedSale(),
+    staleTime: 5 * 60 * 1000,
+  })
   return (
     <SellerTab
       shopName={profile.shop_name ?? null}
       shopNameUpdatedAt={profile.shop_name_updated_at ?? null}
+      hasCompletedSale={hasCompletedSale}
       businessName={businessName}
       loading={isLoading}
       saveShop={saveShop}

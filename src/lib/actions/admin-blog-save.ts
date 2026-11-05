@@ -18,7 +18,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod'
 
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { submitPostEvent } from '@/lib/seo/indexnow'
 import { postChecklist } from '@/lib/blog/editor/checklist'
 import { docReadMinutes } from '@/lib/blog/render/outline'
@@ -81,7 +82,7 @@ function refresh(gameSlug: string | null, slug: string) {
 }
 
 export async function saveBlogPost(id: string | null, raw: SaveBlogPostInput): Promise<Result> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const parsed = SaveSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Check the post fields.' }
   const p = parsed.data

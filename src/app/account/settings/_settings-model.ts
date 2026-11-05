@@ -45,16 +45,17 @@ export function usernameError(raw: string): string | null {
   return null
 }
 
-const SHOP_NAME_COOLDOWN_DAYS = 30
+export const SHOP_NAME_COOLDOWN_DAYS = 90
 const DAY_MS = 24 * 60 * 60 * 1000
 
-/** A named shop can be renamed once every 30 days. */
+/** Free until the first completed sale, then once per 90 days. The database enforces it. */
 export function shopNameCooldown(
   currentShopName: string | null | undefined,
   updatedAt: string | null | undefined,
+  hasCompletedSale: boolean,
   now: number = Date.now(),
 ): { locked: boolean; daysRemaining: number } {
-  if (!currentShopName || !updatedAt) return { locked: false, daysRemaining: 0 }
+  if (!hasCompletedSale || !currentShopName || !updatedAt) return { locked: false, daysRemaining: 0 }
   const daysSince = (now - new Date(updatedAt).getTime()) / DAY_MS
   const daysRemaining = Math.ceil(SHOP_NAME_COOLDOWN_DAYS - daysSince)
   return daysRemaining > 0 ? { locked: true, daysRemaining } : { locked: false, daysRemaining: 0 }

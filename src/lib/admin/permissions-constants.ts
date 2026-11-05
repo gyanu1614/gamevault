@@ -2,6 +2,7 @@
 // Note: This file does NOT have 'use server' so we can export constants
 
 export const PERMISSIONS = {
+  LISTINGS_MODERATE: 'listings.moderate',
   APPLICATIONS_VIEW: 'applications.view',
   APPLICATIONS_REVIEW: 'applications.review',
   APPLICATIONS_APPROVE: 'applications.approve',

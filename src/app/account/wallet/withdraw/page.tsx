@@ -3,6 +3,7 @@
 import { CHAIN_LABELS, chunkAddress } from '@/lib/crypto/address-validation'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { IdentityCheckButton } from '@/components/account/IdentityCheck'
 import Link from '@/components/navigation/AppLink'
 import {
   ArrowLeft,
@@ -288,6 +289,7 @@ export default function WithdrawPage() {
             {gateMessage}
           </p>
         )}
+        {gate?.reason === 'kyc_required' && <IdentityCheckButton />}
       </div>
 
       {selectedMethod ? (

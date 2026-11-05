@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { screenImage } from '@/lib/images/screen'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { generateGamerTagCandidates } from '@/lib/username/gamer-names'
+import { isReservedName } from '@/lib/seller/name-rules'
 import { redirect } from 'next/navigation'
 import type { z } from 'zod'
 import { applyReferralAtSignup } from '@/lib/referral/commission'
@@ -57,6 +58,8 @@ export async function signup(formData: {
     console.log('🔍 Checking Supabase connection...')
     console.log('URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL)
     console.log('Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+
+    if (isReservedName(formData.username)) return { error: 'That username is reserved. Try another.' }
 
     // Check if username is already taken
     console.log('🔍 Checking if username exists:', formData.username)
@@ -325,6 +328,7 @@ export async function updateProfile(formData: {
 
   // If updating username, check if it's available
   if (formData.username) {
+    if (isReservedName(formData.username)) return { error: 'That username is reserved. Try another.' }
     const { data: existingProfile } = await supabase
       .from('public_profiles')
       .select('username, id')

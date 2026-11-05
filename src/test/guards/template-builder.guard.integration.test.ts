@@ -17,9 +17,10 @@ import { fixtureNamespace } from './fixture-namespace'
 import { SELL_TEMPLATE_TAG } from '@/lib/sell/template-tags'
 
 const revalidated: string[] = []
-vi.mock('@/lib/actions/admin-permissions', () => ({
-  requireAdmin: async () => ({ userId: 'guard-admin', email: 'guard@example.com', role: 'super_admin', permissions: [] }),
-}))
+vi.mock('@/lib/actions/admin-permissions', () => {
+  const requireAdmin = async () => ({ userId: 'guard-admin', email: 'guard@example.com', role: 'super_admin', permissions: [] })
+  return { requireAdmin, requireRole: requireAdmin }
+})
 vi.mock('next/cache', () => ({
   revalidatePath: (p: string) => revalidated.push(`path:${p}`),
   revalidateTag: (t: string) => revalidated.push(`tag:${t}`),

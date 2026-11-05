@@ -55,20 +55,24 @@ describe('shopNameCooldown', () => {
   const now = new Date('2026-09-29T12:00:00Z').getTime()
 
   it('is unlocked when the shop has no name yet', () => {
-    expect(shopNameCooldown(null, '2026-09-28T12:00:00Z', now)).toEqual({ locked: false, daysRemaining: 0 })
+    expect(shopNameCooldown(null, '2026-09-28T12:00:00Z', true, now)).toEqual({ locked: false, daysRemaining: 0 })
   })
 
   it('is unlocked when there is no last-changed date', () => {
-    expect(shopNameCooldown('BloxShop', null, now)).toEqual({ locked: false, daysRemaining: 0 })
+    expect(shopNameCooldown('BloxShop', null, true, now)).toEqual({ locked: false, daysRemaining: 0 })
   })
 
-  it('locks for 30 days after a change and counts days left (rounded up)', () => {
-    expect(shopNameCooldown('BloxShop', '2026-09-19T12:00:00Z', now)).toEqual({ locked: true, daysRemaining: 20 })
-    expect(shopNameCooldown('BloxShop', '2026-09-19T18:00:00Z', now)).toEqual({ locked: true, daysRemaining: 21 })
+  it('is free before the first completed sale, however recent the last change', () => {
+    expect(shopNameCooldown('BloxShop', '2026-09-28T12:00:00Z', false, now)).toEqual({ locked: false, daysRemaining: 0 })
   })
 
-  it('unlocks once 30 days have passed', () => {
-    expect(shopNameCooldown('BloxShop', '2026-08-30T12:00:00Z', now)).toEqual({ locked: false, daysRemaining: 0 })
+  it('locks for 90 days after a change once they have a sale, counting days left (rounded up)', () => {
+    expect(shopNameCooldown('BloxShop', '2026-09-19T12:00:00Z', true, now)).toEqual({ locked: true, daysRemaining: 80 })
+    expect(shopNameCooldown('BloxShop', '2026-09-19T18:00:00Z', true, now)).toEqual({ locked: true, daysRemaining: 81 })
+  })
+
+  it('unlocks once 90 days have passed', () => {
+    expect(shopNameCooldown('BloxShop', '2026-07-01T12:00:00Z', true, now)).toEqual({ locked: false, daysRemaining: 0 })
   })
 })
 

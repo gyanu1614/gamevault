@@ -1,7 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { requireAdmin } from './admin-permissions'
+import { requireRole } from './admin-permissions'
+import { MODERATOR_STAFF } from '@/lib/admin/staff-roles'
 import { getAllGames, type Game } from '@/lib/utils/games'
 import {
   revalidateListingSurfaces,
@@ -223,7 +224,7 @@ async function resolveStoreImageUrl(
  * service-role client because RLS blocks writing to another user's profile.
  */
 export async function toggleSellerTest(profileId: string, isTest: boolean) {
-  await requireAdmin()
+  await requireRole(['admin', 'super_admin'])
   const { createClient: createServiceClient } = await import('@supabase/supabase-js')
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -261,7 +262,7 @@ export async function toggleSellerTest(profileId: string, isTest: boolean) {
  * negation — the caller passes what it is, we flip it.
  */
 export async function setFoundingSeller(profileId: string, founding: boolean) {
-  await requireAdmin()
+  await requireRole(['admin', 'super_admin'])
   const { createClient: createServiceClient } = await import('@supabase/supabase-js')
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -290,7 +291,7 @@ export async function setFoundingSeller(profileId: string, founding: boolean) {
 export async function getSellerApplications(
   status?: 'pending' | 'approved' | 'rejected'
 ): Promise<SellerApplication[]> {
-  await requireAdmin()
+  await requireRole(MODERATOR_STAFF)
 
   const supabase = await createClient()
 
@@ -381,7 +382,7 @@ export async function getSellerApplications(
  * Get single seller application by ID
  */
 export async function getSellerApplication(applicationId: string): Promise<SellerApplication | null> {
-  await requireAdmin()
+  await requireRole(MODERATOR_STAFF)
 
   const supabase = await createClient()
 
@@ -494,7 +495,7 @@ export async function approveApplication(
   applicationId: string,
   adminNotes?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(MODERATOR_STAFF)
 
   // Check if admin can approve applications
   // TODO: Re-implement permission checks when canPerformAction is available
@@ -609,7 +610,7 @@ export async function rejectApplication(
     is_permanent_ban: boolean
   }
 }> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(MODERATOR_STAFF)
 
   // Check if admin can reject applications
   // TODO: Re-implement permission checks when canPerformAction is available

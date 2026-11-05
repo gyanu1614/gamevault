@@ -7,7 +7,8 @@
  */
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { revalidatePath } from 'next/cache'
 import { submitPostEvent } from '@/lib/seo/indexnow'
 
@@ -58,7 +59,7 @@ function revalidatePostPaths(gameSlug: string | null, slug: string) {
 
 /** All posts for the admin list (any status), newest first. */
 export async function fetchAdminBlogPosts(): Promise<AdminBlogPost[]> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const { data, error } = await supabase
     .from('blog_posts')
@@ -69,7 +70,7 @@ export async function fetchAdminBlogPosts(): Promise<AdminBlogPost[]> {
 }
 
 export async function fetchAdminBlogPost(id: string): Promise<AdminBlogPost | null> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const { data, error } = await supabase.from('blog_posts').select('*').eq('id', id).maybeSingle()
   if (error || !data) return null
@@ -77,7 +78,7 @@ export async function fetchAdminBlogPost(id: string): Promise<AdminBlogPost | nu
 }
 
 export async function deleteBlogPost(id: string) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   // Grab the paths before deleting so we can revalidate them.
   const { data: existing } = await supabase
@@ -97,7 +98,7 @@ export async function deleteBlogPost(id: string) {
 }
 
 export async function setBlogPostStatus(id: string, status: BlogStatus) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const { data: previous } = await supabase.from('blog_posts').select('status').eq('id', id).maybeSingle()
   const { data, error } = await supabase

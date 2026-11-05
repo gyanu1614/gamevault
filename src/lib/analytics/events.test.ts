@@ -13,6 +13,7 @@ describe('event catalogue', () => {
       'seller_banner_clicked',
       'founding_step_viewed',
       'founding_step_completed',
+      'founding_left',
       'seller_first_listing_published',
       'seller_first_sale',
       'rail_viewed',

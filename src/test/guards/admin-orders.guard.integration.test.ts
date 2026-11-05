@@ -27,12 +27,13 @@ vi.mock('@/lib/email', async (importOriginal) => {
   return Object.fromEntries(Object.keys(real).map((k) => [k, async () => undefined]))
 })
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => state.client }))
-vi.mock('@/lib/actions/admin-permissions', () => ({
-  requireAdmin: async () => {
+vi.mock('@/lib/actions/admin-permissions', () => {
+  const requireAdmin = async () => {
     if (!state.admin) throw new Error('NEXT_REDIRECT')
     return { userId: 'admin' }
-  },
-}))
+  }
+  return { requireAdmin, requireRole: requireAdmin }
+})
 
 import { getOrders, getOrderStats } from '@/lib/actions/admin-orders'
 

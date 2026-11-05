@@ -20,7 +20,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { ORDER_PARTY_SELECT } from '@/lib/orders/columns'
 import { withOwnOrderFields } from '@/lib/orders/own-fields'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 
@@ -191,7 +192,7 @@ export async function getGdprRequests(statusFilter = 'pending'): Promise<{
   error?:    string
 }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     let query = supabase
@@ -241,7 +242,7 @@ export async function processGdprRequest(
 ): Promise<{ success: boolean; error?: string }> {
   // Outside the try: requireAdmin redirects (throws NEXT_REDIRECT) for a
   // non-admin, and the catch below must not swallow that.
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   try {
     const supabase = await createClient()
 

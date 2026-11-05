@@ -21,7 +21,7 @@ import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 const WHY_STAY = [
-  { Icon: PlusCircle, tile: 'bg-lime-tint-bg text-lime-text', text: 'List an item. It takes two minutes and goes live right away.' },
+  { Icon: PlusCircle, tile: 'bg-lime-tint-bg text-lime-text', text: 'List an item. Your first 3 listings are checked by our team.' },
   { Icon: ChatCircleText, tile: 'bg-info-bg text-info', text: 'A buyer pays first. Then you deliver, right here on DropMarket.' },
   { Icon: ShieldCheck, tile: 'bg-lime-tint-bg text-lime-text', text: 'Every sale is protected. You get paid for every item you deliver.' },
 ]

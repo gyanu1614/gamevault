@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { requireAdmin, requireRole } from './admin-permissions'
+import { requireRole } from './admin-permissions'
+import { MODERATOR_STAFF } from '@/lib/admin/staff-roles'
 import { getEntryTier } from '@/lib/seller/entry-tier'
 import { revalidatePath } from 'next/cache'
 import { revalidateSellerStorefront } from '@/lib/revalidation/listings'
@@ -71,7 +72,7 @@ export interface ApplicationStats {
  */
 export async function getApplicationStats(): Promise<ApplicationStats> {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     // Get application counts by status
@@ -149,7 +150,7 @@ export async function getApplicationStats(): Promise<ApplicationStats> {
  */
 export async function getRecentApplications(limit: number = 5) {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -182,7 +183,7 @@ export async function getSellerApplicationCounts(): Promise<{
   rejected: number
   restricted: number
 }> {
-  await requireAdmin()
+  await requireRole(MODERATOR_STAFF)
   const { data, error } = await (getServiceClient().rpc as any)('admin_application_counts')
   if (error) throw new Error(`admin_application_counts: ${error.message}`)
   return data
@@ -190,7 +191,7 @@ export async function getSellerApplicationCounts(): Promise<{
 
 export async function getSellerApplications(filters: ApplicationFilters = {}) {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     let query = supabase
@@ -333,7 +334,7 @@ export async function getSellerApplications(filters: ApplicationFilters = {}) {
  */
 export async function getApplicationById(applicationId: string) {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     // Get application
@@ -404,7 +405,7 @@ export async function getApplicationById(applicationId: string) {
  */
 export async function startReview(applicationId: string) {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     // Update status to under_review
@@ -998,7 +999,7 @@ export async function rejectApplication(applicationId: string, reason: string, n
  */
 export async function requestMoreInfo(applicationId: string, message: string) {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     // Get application details with user profile
@@ -1083,7 +1084,7 @@ export async function requestMoreInfo(applicationId: string, message: string) {
  */
 export async function verifyDocument(documentId: string, verified: boolean = true) {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     const { error } = await (supabase
@@ -1118,7 +1119,7 @@ export async function verifyDocument(documentId: string, verified: boolean = tru
  */
 export async function getDocumentUrl(filePath: string) {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     const { data, error } = await supabase.storage
@@ -1172,7 +1173,7 @@ export async function updateFraudScore(applicationId: string, score: number) {
  */
 export async function checkDuplicates(applicationId: string) {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
     const supabase = await createClient()
 
     // Get current application

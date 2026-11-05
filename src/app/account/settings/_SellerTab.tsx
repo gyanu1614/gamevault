@@ -6,18 +6,21 @@ import ScheduleRounded from '@mui/icons-material/ScheduleRounded'
 import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded'
 import { toast } from 'sonner'
 import StoreAvailabilitySection from '@/components/account/settings/StoreAvailabilitySection'
+import { IdentityCheckCard } from '@/components/account/IdentityCheck'
 import { SettingsCard, Field, accountInputCls, accountBtn } from '@/components/account/AccountSurface'
 import { SaveButton } from '@/components/account/SaveButton'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { useFormState, useSavedFlash } from './_useFormState'
 import { StoreBannerCard } from './_StoreBannerCard'
-import { shopNameCooldown, shopSlugPreview } from './_settings-model'
+import { storeNameSchema } from '@/lib/founding/onboarding'
+import { SHOP_NAME_COOLDOWN_DAYS, shopNameCooldown, shopSlugPreview } from './_settings-model'
 
 interface SellerTabProps {
   /** Saved shop name, or null before the seller has picked one. */
   shopName: string | null
   shopNameUpdatedAt: string | null
+  hasCompletedSale: boolean
   businessName: string
   loading: boolean
   saveShop: (updates: { shop_name?: string; business_name: string }) => Promise<void>
@@ -28,22 +31,23 @@ export function SellerTab(props: SellerTabProps) {
     <>
       <StoreAvailabilitySection />
       <ShopIdentityCard {...props} />
+      <IdentityCheckCard />
       <StoreBannerCard />
     </>
   )
 }
 
-function ShopIdentityCard({ shopName, shopNameUpdatedAt, businessName, loading, saveShop }: SellerTabProps) {
+function ShopIdentityCard({ shopName, shopNameUpdatedAt, hasCompletedSale, businessName, loading, saveShop }: SellerTabProps) {
   const form = useFormState({ shop_name: shopName ?? '', business_name: businessName })
   const [saving, setSaving] = useState(false)
   const [saved, flashSaved] = useSavedFlash()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const cooldown = shopNameCooldown(shopName, shopNameUpdatedAt)
+  const cooldown = shopNameCooldown(shopName, shopNameUpdatedAt, hasCompletedSale)
   const nextName = form.values.shop_name.trim()
   const nameChanged = nextName !== (shopName ?? '')
-  const nameError =
-    nameChanged && (nextName.length < 3 || nextName.length > 50) ? 'Use 3 to 50 characters.' : null
+  const nameCheck = nameChanged ? storeNameSchema.safeParse(nextName) : null
+  const nameError = nameCheck && !nameCheck.success ? nameCheck.error.issues[0]?.message ?? 'Check your shop name' : null
   const slug = shopSlugPreview(nextName)
 
   const persist = async () => {
@@ -65,7 +69,7 @@ function ShopIdentityCard({ shopName, shopNameUpdatedAt, businessName, loading, 
 
   const onSave = () => {
     if (nameError) return
-    // A rename locks the name for 30 days, so it gets a second look.
+    // A rename changes the public store address, so it gets a second look.
     if (nameChanged) setConfirmOpen(true)
     else void persist()
   }
@@ -80,8 +84,10 @@ function ShopIdentityCard({ shopName, shopNameUpdatedAt, businessName, loading, 
             <ScheduleRounded style={{ fontSize: 15 }} aria-hidden />
             You can rename your shop again in {cooldown.daysRemaining} day{cooldown.daysRemaining === 1 ? '' : 's'}.
           </span>
+        ) : hasCompletedSale ? (
+          `You can rename your shop once every ${SHOP_NAME_COOLDOWN_DAYS} days.`
         ) : (
-          'You can rename your shop once every 30 days.'
+          `You can rename your shop until your first sale, then once every ${SHOP_NAME_COOLDOWN_DAYS} days.`
         )
       }
       footerAction={
@@ -132,7 +138,7 @@ function ShopIdentityCard({ shopName, shopNameUpdatedAt, businessName, loading, 
               onChange={(e) => form.set('shop_name', e.target.value)}
               placeholder="Your shop name…"
               disabled={cooldown.locked}
-              maxLength={50}
+              maxLength={20}
               className={cn(accountInputCls, cooldown.locked && 'cursor-not-allowed')}
             />
           )}
@@ -157,7 +163,7 @@ function ShopIdentityCard({ shopName, shopNameUpdatedAt, businessName, loading, 
           <DialogTitle className="pr-8 text-base font-semibold text-text-primary">Rename Your Shop?</DialogTitle>
           <DialogDescription className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">
             Your shop will be called <span className="break-words font-semibold text-text-primary">{nextName}</span>.
-            You won&apos;t be able to change it again for 30 days.
+            {hasCompletedSale && <> You won&apos;t be able to change it again for {SHOP_NAME_COOLDOWN_DAYS} days.</>}
           </DialogDescription>
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => setConfirmOpen(false)} disabled={saving} className={accountBtn.secondary}>

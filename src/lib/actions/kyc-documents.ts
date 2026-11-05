@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { requireAdmin } from './admin-permissions'
+import { requireRole } from './admin-permissions'
+import { MODERATOR_STAFF } from '@/lib/admin/staff-roles'
 
 /**
  * Get a signed URL for viewing/downloading a KYC document
@@ -11,7 +12,7 @@ export async function getDocumentSignedUrl(
   filePath: string
 ): Promise<{ url: string | null; error?: string }> {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
 
     // Use service role client to bypass RLS and access any user's documents
     const supabase = createServiceRoleClient()
@@ -43,7 +44,7 @@ export async function getDocumentsSignedUrls(
   filePaths: string[]
 ): Promise<{ urls: Record<string, string>; error?: string }> {
   try {
-    await requireAdmin()
+    await requireRole(MODERATOR_STAFF)
 
     // Use service role client to bypass RLS and access any user's documents
     const supabase = createServiceRoleClient()

@@ -117,9 +117,8 @@ export async function getAdminUserIdsWithPermission(permission: string): Promise
 
     const rolesWithPermission = rolesWithPermissionRaw ?? []
 
-    // Every admin/super_admin always counts: the permission table is thin on
-    // prod (only applications.review is seeded, 2026-10-09), and the owner
-    // got no signup / moderation alerts because of it.
+    // Every admin/super_admin always counts, so a permission missing from the
+    // table can never silence the owner's alerts.
     const roles = Array.from(new Set([...rolesWithPermission.map((r: any) => r.role), 'admin', 'super_admin']))
 
     // Get all active admin users with these roles

@@ -14,7 +14,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { SUPPORT_STAFF } from '@/lib/admin/staff-roles'
 import { logAudit } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
 
@@ -85,7 +86,7 @@ export async function getMyRefundToSourceRequest(orderId: string): Promise<Refun
 /** Admin: pending and recently decided requests, newest first. */
 export async function listRefundToSourceRequests(): Promise<{ data?: Array<RefundToSourceRequest & { order?: any; buyer?: any }>; error?: { message: string } }> {
   try {
-    await requireAdmin()
+    await requireRole(SUPPORT_STAFF)
     const { data, error } = await createServiceRoleClient()
       .from('refund_to_source_requests')
       .select('*, order:orders(id, order_number, total_amount, status), buyer:profiles!refund_to_source_requests_buyer_id_fkey(id, username, email)')
@@ -101,7 +102,7 @@ export async function listRefundToSourceRequests(): Promise<{ data?: Array<Refun
 /** Admin: approve — the credit leaves the wallet and the provider refund is queued, in one RPC; then drained inline. */
 export async function approveRefundToSource(requestId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(SUPPORT_STAFF)
     const { data, error } = await (createServiceRoleClient().rpc as any)('refund_to_source_approve', {
       p_request_id: requestId,
       p_admin_id: admin.userId,
@@ -134,7 +135,7 @@ export async function approveRefundToSource(requestId: string): Promise<{ succes
 /** Admin: decline — the store credit stays with the buyer. */
 export async function rejectRefundToSource(requestId: string, notes?: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(SUPPORT_STAFF)
     const { data, error } = await (createServiceRoleClient().rpc as any)('refund_to_source_reject', {
       p_request_id: requestId,
       p_admin_id: admin.userId,

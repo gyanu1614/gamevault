@@ -4,17 +4,22 @@
  * Only http(s) URLs and bare "www." hosts become links; anything else
  * (javascript:, data:, mailto:) stays text. Trailing sentence punctuation
  * is left out of the link ("see https://x.com/a." links to /a).
+ *
+ * Discord and Telegram stay plain text: House Rules keep trades on DropMarket,
+ * so chat does not hand anyone a one-tap route off the site.
  */
 
 export type TextSegment = { type: 'text'; value: string } | { type: 'link'; value: string; href: string }
 
 const URL_RE = /(?:https?:\/\/|www\.)[^\s<>"']+/gi
 const TRAILING = /[).,!?;:\]}]+$/
+const OFF_SITE_HOST = /(^|\.)(discord\.gg|discord\.com|discordapp\.com|t\.me|telegram\.me|telegram\.dog|telegram\.org)$/i
 
 function safeHref(raw: string): string | null {
   const candidate = /^www\./i.test(raw) ? `https://${raw}` : raw
   try {
     const u = new URL(candidate)
+    if (OFF_SITE_HOST.test(u.hostname)) return null
     return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null
   } catch {
     return null

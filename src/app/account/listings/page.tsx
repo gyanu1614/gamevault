@@ -32,6 +32,7 @@
  */
 
 import { lockScroll } from '@/lib/scroll-lock'
+import { sellerFacingReason } from '@/lib/moderation/seller-reason'
 import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -90,7 +91,7 @@ const OFFER_META: Record<OfferType, { title: string }> = {
 
 // ─── Status chips ────────────────────────────────────────────────────────────
 
-type ChipKey = 'active' | 'paused' | 'draft' | 'closed' | 'suspended' | 'pending' | 'offline' | 'changes'
+type ChipKey = 'active' | 'paused' | 'draft' | 'closed' | 'rejected' | 'suspended' | 'pending' | 'offline' | 'changes'
 
 const STATUS_CHIP: Record<ChipKey, { label: string; cls: string }> = {
   active: { label: 'Active', cls: 'border-[rgba(198,255,61,0.22)] bg-[rgba(198,255,61,0.10)] text-lime-text' },
@@ -100,6 +101,7 @@ const STATUS_CHIP: Record<ChipKey, { label: string; cls: string }> = {
   pending: { label: 'Under Review', cls: 'border-sky-400/25 bg-sky-400/10 text-sky-300' },
   changes: { label: 'Changes Requested', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
   closed: { label: 'Closed', cls: 'border-white/[0.08] bg-white/[0.03] text-text-tertiary' },
+  rejected: { label: 'Not Approved', cls: 'border-red-500/25 bg-red-500/10 text-red-300' },
   suspended: { label: 'Suspended', cls: 'border-red-500/25 bg-red-500/10 text-red-300' },
 }
 
@@ -112,7 +114,8 @@ function chipKeyFor(status: string, storePaused: boolean): ChipKey {
   if (status === 'pending_approval') return 'pending'
   if (status === 'changes_requested') return 'changes'
   if (status === 'suspended') return 'suspended'
-  return 'closed' // archived, sold, rejected, anything legacy
+  if (status === 'rejected') return 'rejected'
+  return 'closed' // archived, sold, anything legacy
 }
 
 function StatusChip({ k }: { k: ChipKey }) {
@@ -933,6 +936,7 @@ function OffersContent() {
 
               {!isLoading && !error && paged.map((l) => {
                 const chip = chipKeyFor(l.status, storePaused)
+                const reason = sellerFacingReason(l)
                 const logo = (type === 'items' || type === 'accounts' ? l.images?.[0] : null) || l.game?.image_url
                 return (
                   <tr
@@ -969,23 +973,20 @@ function OffersContent() {
                           <span className="mt-0.5 block max-w-[240px] truncate text-[13.5px] font-bold text-text-primary">
                             {displayTitle(l, type, currencyConfigs?.[l.game_id])}
                           </span>
-                          {/* What the review team asked to change — shown ONLY
-                              while the offer is in Changes Requested (the same
-                              column is internal notes after approval). Tap/click
-                              opens the full note (hover-only title doesn't work
-                              on touch). */}
-                          {l.status === 'changes_requested' && l.moderation_notes && (
+                          {/* Why the review team acted on this offer. Tap/click opens
+                              the full text (a hover-only title doesn't work on touch). */}
+                          {reason && (
                             <Popover>
                               <PopoverTrigger asChild>
                                 <button
                                   type="button"
                                   className="mt-1 block max-w-[240px] truncate text-left text-[12px] font-medium text-amber-300 underline decoration-amber-300/40 decoration-dotted underline-offset-2"
                                 >
-                                  Requested: {l.moderation_notes}
+                                  {reason.label}: {reason.text}
                                 </button>
                               </PopoverTrigger>
                               <PopoverContent align="start" className="text-amber-200">
-                                {l.moderation_notes}
+                                {reason.text}
                               </PopoverContent>
                             </Popover>
                           )}
@@ -1083,6 +1084,7 @@ function OffersContent() {
 
           {!isLoading && !error && paged.map((l) => {
             const chip = chipKeyFor(l.status, storePaused)
+            const reason = sellerFacingReason(l)
             const logo = (type === 'items' || type === 'accounts' ? l.images?.[0] : null) || l.game?.image_url
             return (
               <div
@@ -1115,10 +1117,10 @@ function OffersContent() {
                   <StatusChip k={chip} />
                 </div>
 
-                {/* Moderation ask — wraps fully on cards (no hover needed). */}
-                {l.status === 'changes_requested' && l.moderation_notes && (
+                {/* Why the review team acted — wraps fully on cards (no hover needed). */}
+                {reason && (
                   <p className="mt-3 rounded-md border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[12px] font-medium leading-snug text-amber-300">
-                    Requested: {l.moderation_notes}
+                    {reason.label}: {reason.text}
                   </p>
                 )}
 

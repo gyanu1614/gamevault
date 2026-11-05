@@ -11,7 +11,8 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { revalidateGameCategorySurfaces } from '@/lib/revalidation/listings'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 // The public reads below run inside ISR pages (category, currency shell),
 // so they use the cookie-free anon client. Step 7a: this import used to alias
 // the SESSION client as `createAnonClient`, which made every caller dynamic.
@@ -84,7 +85,7 @@ export async function upsertCategoryConfig<T extends CategoryConfigType>(
   config: CategoryConfigByType[T],
 ): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const { data, error } = await (supabase
@@ -124,7 +125,7 @@ export async function fetchCategoryConfigAdmin<T extends CategoryConfigType>(
   gameId: string,
   categoryType: T,
 ): Promise<CategoryConfigByType[T] | null> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const { data } = await supabase
     .from('category_configs')
@@ -148,7 +149,7 @@ export async function uploadCurrencyImage(
   fileData: { name: string; type: string; size: number; base64: string },
 ): Promise<Result<{ url: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp']

@@ -9,7 +9,8 @@
 import { submitGameIfLive } from '@/lib/seo/indexnow'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { SITE_URL } from '@/config/site'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { approveGame, loadReview, loadReviewCounts, rejectGame, snoozeGame, type ReviewData } from '@/lib/trend-radar/review'
@@ -17,17 +18,17 @@ import { approveGame, loadReview, loadReviewCounts, rejectGame, snoozeGame, type
 export type { ReviewData }
 
 export async function fetchTrendReview(gameId: string): Promise<ReviewData | null> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   return loadReview(createServiceRoleClient(), gameId)
 }
 
 export async function fetchTrendReviewCounts(): Promise<{ pending: number; declining: number }> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   return loadReviewCounts(createServiceRoleClient())
 }
 
 export async function approveTrendGame(gameId: string) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const service = createServiceRoleClient()
   const res = await approveGame(service, gameId, {
     webhookUrl: process.env.DISCORD_TREND_RADAR_WEBHOOK_URL ?? null,
@@ -47,14 +48,14 @@ export async function approveTrendGame(gameId: string) {
 }
 
 export async function rejectTrendGame(gameId: string, note: string) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const res = await rejectGame(createServiceRoleClient(), gameId, note)
   if (res.ok) revalidatePath('/admin/games')
   return res
 }
 
 export async function snoozeTrendGame(gameId: string) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const res = await snoozeGame(createServiceRoleClient(), gameId, { days: 7 })
   if (res.ok) revalidatePath('/admin/games')
   return res

@@ -19,9 +19,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { ANON, SVC, URL, assertGuardTargetAllowed, hasEnv } from './throwaway'
 import { fixtureNamespace } from './fixture-namespace'
 
-vi.mock('@/lib/actions/admin-permissions', () => ({
-  requireAdmin: async () => ({ userId: '00000000-0000-0000-0000-000000000000', email: 'guard@example.com', role: 'super_admin', permissions: [] }),
-}))
+vi.mock('@/lib/actions/admin-permissions', () => {
+  const requireAdmin = async () => ({ userId: '00000000-0000-0000-0000-000000000000', email: 'guard@example.com', role: 'super_admin', permissions: [] })
+  return { requireAdmin, requireRole: requireAdmin }
+})
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined, unstable_cache: (fn: any) => fn }))
 vi.mock('@/lib/seo/indexnow', () => ({ submitPostEvent: async () => undefined }))
 vi.mock('server-only', () => ({}))

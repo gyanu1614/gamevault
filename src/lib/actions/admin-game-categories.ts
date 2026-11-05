@@ -7,7 +7,8 @@
 'use server'
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 
 // Service-role client — bypasses RLS for admin reads (matches admin-games.ts pattern)
 function getAdminSupabase() {
@@ -36,7 +37,7 @@ export interface AdminGameCategoryBadge {
  * parent_id set) are included so the badge list shows what is live.
  */
 export async function fetchAdminGameCategoryBadges(): Promise<AdminGameCategoryBadge[]> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { data, error } = await supabase

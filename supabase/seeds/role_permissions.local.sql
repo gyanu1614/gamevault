@@ -63,6 +63,9 @@ from (values
   ('support', 'disputes.view'),
   ('support', 'sellers.view'),
   ('support', 'transactions.view'),
-  ('support', 'users.view')
+  ('support', 'users.view'),
+  ('super_admin', 'listings.moderate'),
+  ('admin', 'listings.moderate'),
+  ('moderator', 'listings.moderate')
 ) as r(role, permission)
 on conflict (role, permission) do nothing;

@@ -2,7 +2,8 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { submitGameIfLive, submitGameRemoved } from '@/lib/seo/indexnow'
@@ -29,7 +30,7 @@ function getAdminSupabase() {
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 export async function fetchAdminGames() {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { data: gamesData, error } = await supabase
@@ -51,7 +52,7 @@ export async function fetchAdminGames() {
 }
 
 export async function deleteGame(id: string) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { error } = await supabase.from('games').delete().eq('id', id)
@@ -64,7 +65,7 @@ export async function deleteGame(id: string) {
 }
 
 export async function updateGame(id: string, data: GameData) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { error } = await supabase
@@ -87,7 +88,7 @@ export async function updateGame(id: string, data: GameData) {
 }
 
 export async function insertGame(data: GameData) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { data: created, error } = await supabase
@@ -114,7 +115,7 @@ export async function insertGame(data: GameData) {
 }
 
 export async function toggleGameActive(id: string, isActive: boolean) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   // The slug is needed to tell engines a switched-off game's pages are gone.
   const { data: before } = await supabase.from('games').select('slug').eq('id', id).maybeSingle()
@@ -144,7 +145,7 @@ export async function toggleGameActive(id: string, isActive: boolean) {
  * pass the CURRENT flag and the action flips it.
  */
 export async function toggleGamePopular(id: string, isPopular: boolean) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { error } = await (supabase
@@ -169,7 +170,7 @@ export async function toggleGamePopular(id: string, isPopular: boolean) {
  * current-flag-in, action-flips pattern as toggleGamePopular.
  */
 export async function toggleGameSpotlight(id: string, isSpotlight: boolean) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { error } = await (supabase
@@ -191,7 +192,7 @@ export async function toggleGameSpotlight(id: string, isSpotlight: boolean) {
  * current-flag-in, action-flips pattern as toggleGamePopular.
  */
 export async function toggleGameContentHub(id: string, isEnabled: boolean) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const { error } = await (supabase
@@ -225,7 +226,7 @@ export interface GameSeoData {
 
 /** Read a game's SEO override fields for the admin SEO tab. */
 export async function fetchGameSeo(id: string): Promise<GameSeoData & { name: string; slug: string } | null> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const { data, error } = await (supabase
     .from('games') as any)
@@ -241,7 +242,7 @@ export async function fetchGameSeo(id: string): Promise<GameSeoData & { name: st
  * template layer falls back to auto-generation (empty override = use template).
  */
 export async function updateGameSeo(id: string, data: GameSeoData) {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const nn = (v: string | null | undefined) => {
@@ -282,7 +283,7 @@ export async function uploadGameIcon(
   fileData: { name: string; type: string; size: number; base64: string }
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     // Validate file type
@@ -363,7 +364,7 @@ export async function uploadGameIcon(
 
 export async function deleteGameIcon(gameId: string) {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     // Get current icon URL

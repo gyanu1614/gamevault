@@ -64,7 +64,7 @@ export interface SellerModerationContext {
   pendingCount: number
 }
 
-/** The newest this many rows reach the screen; the numbers on top count all of them. */
+/** The longest-waiting this many rows reach the screen; the numbers on top count all of them. */
 const QUEUE_LIMIT = 200
 
 /**
@@ -104,7 +104,7 @@ async function readPendingListings(): Promise<{
         category:game_categories!listings_game_category_id_fkey(name, slug)
       `)
       .in('status', ['pending_approval', 'changes_requested'])
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(QUEUE_LIMIT) as any)
 
     if (error) {
@@ -311,12 +311,6 @@ async function releaseListings(
     approvedIds.push(id)
   }
   if (approvedIds.length === 0) return { approvedIds, drainedCount: 0, error: failure }
-
-  if (notes) {
-    // AUTH-006: moderation_notes is trigger-protected; the moderator session
-    // (gated by requireModerator) writes it via the service role.
-    await (service.from('listings').update as any)({ moderation_notes: notes }).in('id', approvedIds)
-  }
 
   const approvedRows = rows.filter((r) => approvedIds.includes(r.id))
   const sellerIds = Array.from(new Set(approvedRows.map((r) => r.seller_id).filter(Boolean))) as string[]

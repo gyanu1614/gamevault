@@ -9,7 +9,8 @@
  */
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { processBlogImage, type Crop } from '@/lib/blog/images'
 import type { SrcItem, StoredImage } from '@/lib/blog/doc/types'
 
@@ -37,7 +38,7 @@ function parseCrop(raw: FormDataEntryValue | null): Crop | null {
 }
 
 export async function uploadBlogImageV2(form: FormData): Promise<Result> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const file = form.get('file')
   if (!(file instanceof File)) return { success: false, error: 'No image was sent.' }
   if (!TYPES.includes(file.type)) return { success: false, error: 'Use a PNG, JPEG, WebP, AVIF or GIF image.' }

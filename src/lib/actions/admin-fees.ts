@@ -22,7 +22,8 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import {
   ACCOUNT_RISK_BAND_PCT,
   earliestBaseStartUtc,
@@ -121,7 +122,7 @@ const auditKey = (pair: { game_slug: string; slug: string }, kind: string) => `$
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function fetchPairFeeState(gameCategoryId: string): Promise<PairFeeState | null> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const pair = await loadPair(supabase, gameCategoryId)
   if (!pair) return null
@@ -179,7 +180,7 @@ export async function scheduleBaseFeeRule(input: {
   startsAt: unknown
   note?: string | null
 }): Promise<Result<{ rule: FeeRuleRow }>> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const pct = parsePct(input.pct)
@@ -226,7 +227,7 @@ export async function setAccountRiskBand(input: {
 }): Promise<Result<{ rule: FeeRuleRow }>> {
   const band = String(input.band ?? '') as AccountRiskBandKey
   if (!(band in ACCOUNT_RISK_BAND_PCT)) return { success: false, error: 'Pick a risk band: low, mid or high' }
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const pair = await loadPair(getAdminSupabase(), String(input.gameCategoryId ?? ''))
   if (!pair) return { success: false, error: 'Unknown game category' }
   if (pair.type !== 'account') return { success: false, error: 'Risk bands apply to account categories only' }
@@ -240,7 +241,7 @@ export async function setAccountRiskBand(input: {
 
 /** Delete a scheduled (not yet started) pair base rule; re-opens the rule it closed. */
 export async function cancelScheduledBaseRule(input: { ruleId: string }): Promise<Result> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const ruleId = String(input.ruleId ?? '')
   const { data: before } = await supabase.from('fee_rules').select(RULE_COLS).eq('id', ruleId).maybeSingle()
@@ -268,7 +269,7 @@ export async function createPromoFeeRule(input: {
   endsAt: unknown
   note?: string | null
 }): Promise<Result<{ rule: FeeRuleRow }>> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   const pct = parsePct(input.pct)
@@ -316,7 +317,7 @@ export async function createPromoFeeRule(input: {
  * not started yet is deleted (it never applied to any order).
  */
 export async function endPromoFeeRule(input: { ruleId: string }): Promise<Result> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const ruleId = String(input.ruleId ?? '')
   const { data: before } = await supabase.from('fee_rules').select(RULE_COLS).eq('id', ruleId).maybeSingle()
@@ -356,7 +357,7 @@ export async function fetchMoneySettings(): Promise<{
   windows: Array<{ category_type: string; auto_complete_hours: number; updated_at: string }>
   methods: Array<{ id: string; method_name: string; display_name: string; method_type: string; fee_percentage: number; fee_fixed: number; fee_min: number; min_withdrawal: number; max_withdrawal: number; is_active: boolean; coming_soon: boolean }>
 }> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const [{ data: s }, { data: w }, { data: m }] = await Promise.all([
     supabase.from('platform_fee_settings').select('completion_hold_hours, dispute_window_days, withdrawal_min_account_age_days, payout_details_freeze_hours').eq('id', true).maybeSingle(),
@@ -388,7 +389,7 @@ function parseInt0(v: unknown, label: string, min: number, max: number): { n: nu
 }
 
 export async function updateMoneySetting(input: { key: MoneySettingKey; value: unknown }): Promise<Result<{ old: number; value: number }>> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const bounds: Record<MoneySettingKey, [number, number, string]> = {
     completion_hold_hours: [0, 24 * 90, 'Completion hold (hours)'],
     dispute_window_days: [0, 365, 'Dispute window (days)'],
@@ -406,7 +407,7 @@ export async function updateMoneySetting(input: { key: MoneySettingKey; value: u
 }
 
 export async function updateCompletionWindow(input: { categoryType: string; hours: unknown }): Promise<Result<{ old: number; hours: number }>> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const v = parseInt0(input.hours, 'Auto-complete window (hours)', 1, 24 * 60)
   if ('error' in v) return { success: false, error: v.error }
   const { data, error } = await (getAdminSupabase().rpc as any)('order_completion_window_set', { p_admin_id: admin.userId, p_category_type: String(input.categoryType), p_hours: v.n })
@@ -420,7 +421,7 @@ export async function updateWithdrawalMethodFees(input: {
   /** Omitted = leave coming_soon as it is. */
   comingSoon?: boolean
 }): Promise<Result> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : NaN }
   const vals = [num(input.feePct), num(input.feeFixed), num(input.feeMin), num(input.minWithdrawal), num(input.maxWithdrawal)]
   if (vals.some((n) => Number.isNaN(n) || n < 0)) return { success: false, error: 'Every fee field must be a non-negative number' }

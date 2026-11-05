@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { SUPPORT_STAFF } from '@/lib/admin/staff-roles'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { ilikeContains } from '@/lib/db/ilike'
 import { getAdminOverviewStats } from '@/lib/admin/overview-stats'
@@ -69,7 +70,7 @@ export interface AdminOrder {
 export async function getOrders(filters: OrderFilters = {}) {
   // Outside the try: requireAdmin redirects (throws NEXT_REDIRECT) for a
   // non-admin, and the catch below must not swallow that.
-  await requireAdmin()
+  await requireRole(SUPPORT_STAFF)
   try {
     const supabase = await createClient()
 
@@ -210,7 +211,7 @@ export async function getOrders(filters: OrderFilters = {}) {
 }
 
 export async function getOrderStats() {
-  await requireAdmin()
+  await requireRole(SUPPORT_STAFF)
   try {
     // One cached call shared with the dashboard (lib/admin/overview-stats). Was
     // four counts plus a walk of every collected order.

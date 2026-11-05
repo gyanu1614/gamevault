@@ -28,6 +28,8 @@ interface ProfileTabProps {
   pendingEmail: string | null
   onEmailChangeStarted: (email: string) => void
   isSeller: boolean
+  /** The blue check: ID checked, not merely a seller. */
+  isVerified: boolean
   /** Shop name for sellers, else the username. */
   displayName: string
   shopSlug: string | null
@@ -56,6 +58,7 @@ export function ProfileTab(props: ProfileTabProps) {
 
 function IdentityCard({
   isSeller,
+  isVerified,
   displayName,
   shopSlug,
   memberSince,
@@ -125,7 +128,7 @@ function IdentityCard({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="truncate text-[17px] font-semibold leading-tight text-text-primary">{displayName}</p>
-            {isSeller && <VerifiedBadge size={17} />}
+            {isVerified && <VerifiedBadge size={17} />}
           </div>
           <p className="mt-1 truncate text-[13px] text-text-secondary">
             @{profile.username || 'username'}

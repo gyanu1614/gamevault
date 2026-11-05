@@ -15,7 +15,8 @@
 
 import { slugify } from '@/lib/utils'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { ensureGameCategory } from '@/lib/categories'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { SELL_TEMPLATE_TAG } from '@/lib/sell/template-tags'
@@ -136,7 +137,7 @@ export async function loadBuilderState(
   globalCategorySlug: string,
 ): Promise<Result<BuilderState>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     // 1. Game + global category
@@ -314,7 +315,7 @@ export interface CreateAttributeInput {
 
 export async function createAttribute(input: CreateAttributeInput): Promise<Result<{ id: string; slug: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const baseSlug = slugify(input.name) || `attr-${Date.now()}`
@@ -372,7 +373,7 @@ export async function createSubAttribute(
   input: CreateSubAttributeInput
 ): Promise<Result<{ id: string; slug: string; rule_id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     if (input.template_id === '' || !input.trigger_attribute_id) {
@@ -453,7 +454,7 @@ export interface UpdateAttributeInput {
 
 export async function updateAttribute(input: UpdateAttributeInput): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     const patch: Record<string, unknown> = {}
     if (input.name          !== undefined) patch.name = input.name.trim()
@@ -488,7 +489,7 @@ export async function updateAttribute(input: UpdateAttributeInput): Promise<Resu
 
 export async function deleteAttribute(id: string): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     const inUse = await guardFieldDelete(supabase, id)
     if (inUse) return { success: false, error: inUse }
@@ -503,7 +504,7 @@ export async function deleteAttribute(id: string): Promise<Result<{ id: string }
 
 export async function reorderOptions(orderedIds: string[]): Promise<Result<{ count: number }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     await Promise.all(
       orderedIds.map((id, idx) =>
@@ -519,7 +520,7 @@ export async function reorderOptions(orderedIds: string[]): Promise<Result<{ cou
 
 export async function reorderAttributes(orderedIds: string[]): Promise<Result<{ count: number }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     // Single UPDATE per id — fewer than 50 in practice
     await Promise.all(
@@ -545,7 +546,7 @@ export interface CreateOptionInput {
 
 export async function createOption(input: CreateOptionInput): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const baseSlug = slugify(input.label) || `opt-${Date.now()}`
@@ -606,7 +607,7 @@ export async function bulkCreateOptions(
   input: BulkCreateOptionsInput,
 ): Promise<Result<{ created: number; skipped: number }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const raw = Array.isArray(input.labels)
@@ -702,7 +703,7 @@ export async function bulkDeleteOptions(input: {
   ids?: string[]
 }): Promise<Result<{ deleted: number }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     // Never orphan live listings: a choice in use is renamed, not deleted.
     const inUse = await guardChoiceDelete(supabase, { attributeId: input.attribute_id, optionIds: input.ids })
@@ -738,7 +739,7 @@ export interface UpdateOptionInput {
 
 export async function updateOption(input: UpdateOptionInput): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     const patch: Record<string, unknown> = {}
     if (input.label       !== undefined) patch.label = input.label.trim()
@@ -769,7 +770,7 @@ export async function uploadOptionIcon(
   fileData: { name: string; type: string; size: number; base64: string }
 ): Promise<Result<{ url: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     const validTypes = ['image/png','image/jpeg','image/jpg','image/svg+xml','image/webp']
     if (!validTypes.includes(fileData.type)) {
@@ -826,7 +827,7 @@ export async function uploadOptionIcon(
 
 export async function deleteOption(id: string): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     const inUse = await guardChoiceDelete(supabase, { optionIds: [id] })
     if (inUse) return { success: false, error: inUse }
@@ -851,7 +852,7 @@ export interface SaveRuleInput {
 
 export async function saveRule(input: SaveRuleInput): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     if (input.attribute_id === input.trigger_attribute_id) {
       return { success: false, error: 'An attribute cannot trigger itself' }
@@ -883,7 +884,7 @@ export async function saveRule(input: SaveRuleInput): Promise<Result<{ id: strin
 
 export async function deleteRule(id: string): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
     const { error } = await supabase.from('attribute_conditional_rules').delete().eq('id', id)
     if (error) return { success: false, error: error.message }

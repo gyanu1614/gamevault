@@ -49,6 +49,7 @@ interface AccountSidebarProps {
     avatar_url?: string
     seller_tier?: string
     isApprovedSeller?: boolean
+    isVerified?: boolean
     shop_name?: string | null
     shop_slug?: string | null
     seller_status?: 'active' | 'restricted' | 'banned'
@@ -198,7 +199,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 <div className="flex items-center gap-1.5">
                   <p className="truncate text-sm font-semibold leading-tight text-text-primary">{displayName}</p>
                   {/* The one verified mark used for sellers site-wide. */}
-                  {isSeller && <VerifiedBadge size={16} />}
+                  {user?.isVerified && <VerifiedBadge size={16} />}
                 </div>
                 <p className="mt-0.5 truncate text-[11px] text-text-tertiary">
                   {joinedDate ? (

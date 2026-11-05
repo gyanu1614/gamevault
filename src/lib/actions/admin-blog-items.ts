@@ -6,7 +6,8 @@
  * pipeline (MM2, Steal an Egg, …). Only items with a value page, so every
  * card's "See Value" link works. Admin only; read-only.
  */
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { searchCatalog } from '@/lib/blog/item-catalog'
 
 export interface BlogItemHit {
@@ -29,7 +30,7 @@ function rank(rows: BlogItemHit[], q: string): BlogItemHit[] {
 }
 
 export async function searchBlogItems(gameSlug: string, q: string): Promise<BlogItemHit[]> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   // The game's catalogue (Adopt Me pets, SAB brainrots, or values_items): src/lib/blog/item-catalog.ts.
   return rank(await searchCatalog(gameSlug, q), q)
 }

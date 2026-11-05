@@ -16,6 +16,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { foundingTokenMatches } from '@/lib/founding/token'
+import { isReservedName } from '@/lib/seller/name-rules'
 
 export interface CreateFoundingAccountResult {
   success: boolean
@@ -33,6 +34,7 @@ export async function createFoundingAccount(input: {
   const password = input.password || ''
 
   if (storeName.length < 3) return { success: false, error: 'Store name must be at least 3 characters.' }
+  if (isReservedName(storeName)) return { success: false, error: 'That name is reserved. Try another.' }
   if (password.length < 8) return { success: false, error: 'Password must be at least 8 characters.' }
   if (!input.id || !input.token) return { success: false, error: 'This page link is missing its invite token — reopen the magic link from your email.' }
 

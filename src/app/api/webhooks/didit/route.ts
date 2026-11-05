@@ -13,8 +13,9 @@
  *     timingSafeEqual. Didit also sends `X-Timestamp` (unix seconds); when
  *     present it must be within a 5-minute window to stop replays.
  *   - Missing secret env → warn + 503 (fail closed in prod, nothing crashes).
- *   - This endpoint ONLY records evidence. It never approves applications,
- *     never changes roles — the webhook body is not trusted for privileges.
+ *   - For a legacy application this endpoint ONLY records evidence. For a check
+ *     started from Settings or the withdrawal page it re-reads the decision from
+ *     Didit (syncIdentityCheck); the webhook body is never trusted for privileges.
  *
  * Conventions mirror /api/webhooks/coingate: raw-body handling, service-role
  * writes, idempotency (re-delivered webhooks must not duplicate rows), fast
@@ -31,6 +32,7 @@ import {
   normalizeDiditStatus,
 } from '@/app/account/become-seller/_redesign/integrations'
 import { DIDIT_EVIDENCE_PREFIX } from '@/lib/utils/seller-verification'
+import { syncIdentityCheck } from '@/lib/identity/didit'
 import { checkRateLimit, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
@@ -138,6 +140,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, ignored: true }, { status: 200 })
     }
     const userId = vendorData
+
+    // A check started from Settings or the withdrawal page. The provider's own
+    // answer decides, read with our API key; this call only says it changed.
+    const { data: identityCheck } = (await (createServiceRoleClient() as any)
+      .from('identity_checks')
+      .select('user_id')
+      .eq('session_id', sessionId)
+      .maybeSingle()) as { data: { user_id: string } | null }
+    if (identityCheck) {
+      await syncIdentityCheck(sessionId, identityCheck.user_id)
+      return NextResponse.json({ ok: true }, { status: 200 })
+    }
 
     if (status === 'declined' || status === 'in_review') {
       // Record nothing — the poll path stores no evidence for these either.

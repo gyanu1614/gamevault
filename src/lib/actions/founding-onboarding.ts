@@ -207,7 +207,7 @@ export async function saveFoundingDetails(input: DetailsInput): Promise<{ succes
       { onConflict: 'user_id' },
     )
     if (error) throw error
-    await trackFoundingStep(user.id, 2)
+    await trackFoundingStep(user.id, 2, { discord_given: Boolean(d.discord) })
     return { success: true }
   } catch (err: any) {
     console.error('[founding] saveFoundingDetails:', err?.message)
@@ -265,7 +265,7 @@ export async function saveFoundingStore(input: { storeName: string; logoDataUrl?
       logoUrl = (up as { avatarUrl?: string }).avatarUrl ?? null
     }
 
-    const { data: existing } = await svc().from('seller_onboarding').select('user_id').eq('user_id', user.id).maybeSingle()
+    const { data: existing } = await svc().from('seller_onboarding').select('user_id, logo_uploaded_at').eq('user_id', user.id).maybeSingle()
     if (!existing) return { success: false, error: 'Finish your details first.' }
 
     const { error } = await svc().from('seller_onboarding').update({
@@ -275,7 +275,7 @@ export async function saveFoundingStore(input: { storeName: string; logoDataUrl?
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id)
     if (error) throw error
-    await trackFoundingStep(user.id, 3)
+    await trackFoundingStep(user.id, 3, { logo_given: Boolean(logoUrl || existing.logo_uploaded_at) })
     return { success: true, logoUrl }
   } catch (err: any) {
     console.error('[founding] saveFoundingStore:', err?.message)

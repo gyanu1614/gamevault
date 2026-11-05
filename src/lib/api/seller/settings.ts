@@ -6,6 +6,8 @@
  */
 import { supabase } from './client'
 import { slugify } from '@/lib/utils'
+import { isReservedName } from '@/lib/seller/name-rules'
+import { storeNameSchema } from '@/lib/founding/onboarding'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
 import type { SellerProfile } from './types'
 
@@ -44,6 +46,9 @@ export const settingsApi = {
       if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
         throw new Error('Username can only use letters, numbers, hyphens and underscores')
       }
+      if (isReservedName(username)) {
+        throw new Error('That username is reserved. Try another.')
+      }
 
       // Case-insensitive: "GPandeyy" and "gpandeyy" must not coexist. Own
       // row is excluded, so changing only the casing of your own handle
@@ -63,32 +68,17 @@ export const settingsApi = {
       updateData.username = username
     }
 
-    // If shop_name is being updated, validate and generate shop_slug
+    if (updates.business_name && isReservedName(updates.business_name)) {
+      throw new Error('That business name is reserved. Try another.')
+    }
+
+    // If shop_name is being updated, validate and generate shop_slug. The
+    // database trigger trg_profiles_name_rules is the real block and owns
+    // shop_name_updated_at; these give the friendly answer first.
     if (updates.shop_name !== undefined) {
-      // Validate shop_name format
-      if (updates.shop_name.length < 3 || updates.shop_name.length > 50) {
-        throw new Error('Shop name must be between 3 and 50 characters')
-      }
-
-      // Get current profile to check last update time
-      const { data: currentProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('shop_name_updated_at')
-        .eq('id', user.id)
-        .single() as any
-
-      if (profileError) throw profileError
-
-      // Check 30-day restriction (only if shop_name was previously updated)
-      if (currentProfile.shop_name_updated_at) {
-        const lastUpdate = new Date(currentProfile.shop_name_updated_at)
-        const now = new Date()
-        const daysSinceLastUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24)
-
-        if (daysSinceLastUpdate < 30) {
-          const daysRemaining = Math.ceil(30 - daysSinceLastUpdate)
-          throw new Error(`You can change your shop name again in ${daysRemaining} days`)
-        }
+      const parsed = storeNameSchema.safeParse(updates.shop_name)
+      if (!parsed.success) {
+        throw new Error(parsed.error.issues[0]?.message ?? 'Check your shop name')
       }
 
       // Generate shop_slug using the database function
@@ -102,7 +92,6 @@ export const settingsApi = {
 
       // Add generated slug and timestamp to updates
       updateData.shop_slug = slugData || baseSlug
-      updateData.shop_name_updated_at = new Date().toISOString()
     }
 
     const { error } = await (supabase
@@ -111,6 +100,8 @@ export const settingsApi = {
       .eq('id', user.id)
 
     if (error) {
+      // Our own name rules write a message meant for the seller.
+      if (error.hint === 'name_rule') throw new Error(error.message)
       // Backstop for the race between the check above and this write, and
       // for any other constraint. Never surface raw Postgres text.
       if (error.code === '23505' || /duplicate key value/i.test(error.message ?? '')) {
@@ -124,6 +115,19 @@ export const settingsApi = {
       }
       throw new Error(error.message || 'Could not save your profile. Try again.')
     }
+  },
+
+  /** A rename is free until the first completed sale. */
+  async hasCompletedSale(): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+    const { data } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('seller_id', user.id)
+      .eq('status', 'completed')
+      .limit(1) as any
+    return (data?.length ?? 0) > 0
   },
 
   /**
