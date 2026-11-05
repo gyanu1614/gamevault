@@ -9,6 +9,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { SealCheckIcon } from '@phosphor-icons/react/dist/csr/SealCheck'
 import Link from '@/components/navigation/AppLink'
 import { accountBtn } from '@/components/account/AccountSurface'
 
@@ -31,14 +32,17 @@ export default function KycCompletePage() {
   }, [])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg-base p-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-bg-base p-4">
       <div className="w-full max-w-sm rounded-lg bg-bg-raised p-6 text-center">
-        <h1 className="text-[18px] font-semibold text-text-primary">Thanks, That&apos;s Done</h1>
+        <span aria-hidden className="mx-auto grid h-12 w-12 place-items-center rounded-md bg-[rgba(106,168,255,0.12)] text-[#6AA8FF]">
+          <SealCheckIcon size={28} weight="duotone" />
+        </span>
+        <h1 className="mt-4 text-balance text-[18px] font-semibold text-text-primary">Thanks, We’re Checking Your ID</h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-text-secondary">
           {closing ? 'Taking you back…' : 'Your result shows in Settings as soon as it is in.'}
         </p>
         {!closing && (
-          <Link href="/account/settings?tab=seller" className={`${accountBtn.primary} mt-5`}>
+          <Link href="/account/settings?tab=seller" className={`${accountBtn.primary} mt-5 w-full`}>
             Back To Settings
           </Link>
         )}

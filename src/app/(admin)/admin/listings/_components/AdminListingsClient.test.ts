@@ -81,7 +81,7 @@ describe('AdminListingsClient', () => {
   })
 
   it('shows a plain empty state', () => {
-    expect(render([])).toContain('No listings match')
+    expect(render([])).toContain('No Listings Match')
   })
 
   it('a listing whose seller is gone still renders', () => {

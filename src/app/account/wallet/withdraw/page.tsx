@@ -1,9 +1,9 @@
 'use client'
 
 import { CHAIN_LABELS, chunkAddress } from '@/lib/crypto/address-validation'
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { IdentityCheckButton } from '@/components/account/IdentityCheck'
+import { IdentityCheckPanel } from '@/components/account/IdentityCheck'
 import Link from '@/components/navigation/AppLink'
 import {
   ArrowLeft,
@@ -91,6 +91,15 @@ export default function WithdrawPage() {
     })()
     return () => {
       cancelled = true
+    }
+  }, [])
+
+  // A passed ID check lifts the gate without a reload.
+  const refreshOverview = useCallback(async () => {
+    const bal = await getMyWalletOverview()
+    if (bal.success && bal.overview) {
+      setOverview(bal.overview)
+      setAvailableBalance(Math.max(0, bal.overview.available + bal.overview.wallet))
     }
   }, [])
 
@@ -239,7 +248,7 @@ export default function WithdrawPage() {
 
   /** Sticky summary rail — balance, and once a method is chosen, the maths. */
   const summaryRail = (
-    <aside className="space-y-4 lg:sticky lg:top-24">
+    <aside className={cn('space-y-4 lg:sticky lg:top-24', gateMessage && 'order-first lg:order-none')}>
       <div className="rounded-lg bg-bg-raised p-5">
         <div className="flex items-center gap-2">
           <Wallet className="h-4 w-4 text-success" aria-hidden />
@@ -248,7 +257,7 @@ export default function WithdrawPage() {
         <p className="mt-1.5 text-3xl font-bold text-text-primary">
           ${(availableBalance ?? 0).toFixed(2)}
         </p>
-        <p className="mt-1 text-[12px] text-text-tertiary">Ready to withdraw.</p>
+        {!gateMessage && <p className="mt-1 text-[12px] text-text-tertiary">Ready to withdraw.</p>}
         {overview && (
           <dl className="mt-3 space-y-1.5 border-t border-white/[0.07] pt-3 text-[12px]">
             {overview.pending > 0 && (
@@ -283,13 +292,14 @@ export default function WithdrawPage() {
             )}
           </dl>
         )}
-        {gateMessage && (
+        {gateMessage && gate?.reason === 'kyc_required' ? (
+          <IdentityCheckPanel message={gateMessage} onVerified={refreshOverview} />
+        ) : gateMessage ? (
           <p className="mt-3 flex items-start gap-2 rounded-md bg-warning-bg px-3 py-2.5 text-[12px] leading-relaxed text-text-secondary">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
             {gateMessage}
           </p>
-        )}
-        {gate?.reason === 'kyc_required' && <IdentityCheckButton />}
+        ) : null}
       </div>
 
       {selectedMethod ? (

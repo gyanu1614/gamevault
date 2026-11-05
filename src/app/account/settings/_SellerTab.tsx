@@ -30,8 +30,8 @@ export function SellerTab(props: SellerTabProps) {
   return (
     <>
       <StoreAvailabilitySection />
+      <IdentityCheckCard shopName={props.shopName} />
       <ShopIdentityCard {...props} />
-      <IdentityCheckCard />
       <StoreBannerCard />
     </>
   )

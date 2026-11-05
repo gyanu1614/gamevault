@@ -97,7 +97,7 @@ export default function AdminListingsClient({ result, filters }: { result: Admin
     <div className="space-y-5">
       <PageHeader title="Listings" description="Find any listing by title, store, username or id." />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-3">
         <form action="/admin/listings" method="get" className="relative w-full lg:w-[320px]">
           {filters.status && <input type="hidden" name="status" value={filters.status} />}
           <MagnifyingGlass aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -105,7 +105,8 @@ export default function AdminListingsClient({ result, filters }: { result: Admin
             type="search"
             name="q"
             defaultValue={filters.q ?? ''}
-            placeholder="Title, store, username or id"
+            placeholder="Title, store, username or id…"
+            autoComplete="off"
             aria-label="Search listings"
             className={cn(adminFieldCls, 'pl-9')}
           />
@@ -119,7 +120,7 @@ export default function AdminListingsClient({ result, filters }: { result: Admin
       </div>
 
       {rows.length === 0 ? (
-        <AdminEmpty icon={Storefront} title="No listings match" hint="Try another status or clear the search." />
+        <AdminEmpty icon={Storefront} title="No Listings Match" hint="Try another status or clear the search." />
       ) : (
         <div className="overflow-hidden rounded-lg border border-white/[0.06] bg-bg-raised">
           <div className="hidden grid-cols-[minmax(0,1fr)_170px_90px_140px_100px_110px] items-center gap-3 border-b border-white/[0.06] px-4 py-2 text-[12px] font-medium text-text-tertiary lg:grid">
@@ -157,7 +158,7 @@ export default function AdminListingsClient({ result, filters }: { result: Admin
 
       <Dialog open={!!target} onOpenChange={(open) => !open && setTarget(null)}>
         <DialogContent className="max-w-[460px] rounded-lg border-white/[0.08] bg-[#16171B] p-5 text-text-primary">
-          <DialogTitle className="text-[17px] font-semibold">Take down “{target?.title}”</DialogTitle>
+          <DialogTitle className="text-[17px] font-semibold">Take Down “{target?.title}”</DialogTitle>
           <DialogDescription className="text-[13px] text-text-secondary">The seller is emailed this reason. Keep it plain and specific.</DialogDescription>
           <textarea
             value={reason}
@@ -165,7 +166,7 @@ export default function AdminListingsClient({ result, filters }: { result: Admin
             rows={3}
             autoFocus
             aria-label="Reason"
-            placeholder="Why it is being removed"
+            placeholder="Why it is being removed…"
             className="mt-3 w-full resize-none rounded-md bg-bg-well px-3 py-2 text-[16px] text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:text-[13.5px]"
           />
           <label className="mt-3 flex items-center gap-2 text-[13px] text-text-secondary">
@@ -201,11 +202,11 @@ function ListingRow({ row, status, onTakeDown, onRestore }: { row: AdminListingR
   const href = status === 'active' ? publicListingHref(row) : null
   const reason = status === row.status ? sellerFacingReason({ status: row.status, moderation_notes: row.note, rejection_reason: null }) : null
   return (
-    <li className="grid grid-cols-1 gap-3 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_170px_90px_140px_100px_110px] lg:items-center">
-      <div className="flex min-w-0 items-center gap-3">
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_170px_90px_140px_100px_110px] lg:gap-3">
+      <div className="col-span-2 flex min-w-0 items-center gap-3 lg:col-span-1">
         {row.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={row.image} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-md object-cover" />
+          <img src={row.image} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 shrink-0 rounded-md object-cover" />
         ) : (
           <span aria-hidden className="h-10 w-10 shrink-0 rounded-md bg-white/[0.05]" />
         )}
@@ -216,7 +217,7 @@ function ListingRow({ row, status, onTakeDown, onRestore }: { row: AdminListingR
             <p className="truncate text-[13.5px] font-medium text-text-primary">{row.title}</p>
           )}
           <p className="truncate text-[12px] text-text-tertiary">{[row.game?.name, row.category?.name].filter(Boolean).join(' · ')}</p>
-          {reason && <p className="mt-0.5 line-clamp-2 text-[12px] text-text-secondary">{reason.text}</p>}
+          {reason && <p className={cn('mt-0.5 line-clamp-2 text-[12px]', reason.label === 'Requested' ? 'text-warning' : 'text-error')}>{reason.text}</p>}
         </div>
       </div>
       <div className="min-w-0 text-[13px]">
@@ -226,12 +227,12 @@ function ListingRow({ row, status, onTakeDown, onRestore }: { row: AdminListingR
           <span className="text-text-tertiary">Unknown</span>
         )}
       </div>
-      <div className="text-[13px] tabular-nums text-text-primary lg:text-right">{money(row.price)}</div>
+      <div className="text-right text-[13px] tabular-nums text-text-primary">{money(row.price)}</div>
       <div><StatusBadge status={STATUS_LABEL.get(status) ?? status} tone={STATUS_TONE[status] ?? 'neutral'} /></div>
-      <div className="text-[12.5px] text-text-tertiary lg:text-right">
-        {new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+      <div className="text-right text-[12.5px] text-text-tertiary">
+        {new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
       </div>
-      <div className="lg:text-right">
+      <div className="col-span-2 empty:hidden lg:col-span-1 lg:text-right lg:empty:block">
         {CAN_TAKE_DOWN.has(status) && <button type="button" onClick={onTakeDown} className={adminBtnSm.danger}>Take Down</button>}
         {status === 'suspended' && <button type="button" onClick={onRestore} className={adminBtnSm.secondary}>Restore</button>}
       </div>

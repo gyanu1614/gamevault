@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/actions/identity-check', () => ({ startIdentityCheck: vi.fn() }))
 
-import { IdentityCheckButton, IdentityCheckCard } from './IdentityCheck'
+import { IdentityCheckCard, IdentityCheckPanel } from './IdentityCheck'
 import type { IdentityState } from '@/lib/identity/state'
 
 function render(component: () => React.ReactElement | null, state: IdentityState | null, available = true): string {
@@ -21,66 +21,92 @@ function render(component: () => React.ReactElement | null, state: IdentityState
   return renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(component)))
 }
 
+const GATE_MESSAGE = 'Verify your identity to withdraw.'
+const Panel = () => createElement(IdentityCheckPanel, { message: GATE_MESSAGE })
+const Card = () => createElement(IdentityCheckCard, { shopName: 'CheckShop' })
+
 describe('IdentityCheckCard', () => {
   it('says when it is needed', () => {
-    expect(render(IdentityCheckCard, 'not_started')).toContain('Needed before your first withdrawal.')
+    expect(render(Card, 'not_started')).toContain('Needed before your first withdrawal.')
   })
 
-  it('not started: offers the check', () => {
-    const html = render(IdentityCheckCard, 'not_started')
+  it('not started: offers the check and shows what it gives', () => {
+    const html = render(Card, 'not_started')
     expect(html).toContain('Not Started')
     expect(html).toContain('Verify Identity')
+    expect(html).toContain('CheckShop')
+    expect(html).toContain('Blue badge on your store and listings')
+    expect(html).toContain('Withdraw Your Balance')
+    expect(html).toContain('No extra price review')
   })
 
   it('in review: no button to start another', () => {
-    const html = render(IdentityCheckCard, 'in_review')
+    const html = render(Card, 'in_review')
     expect(html).toContain('In Review')
+    expect(html).toContain('Checking Your Details')
     expect(html).not.toContain('Verify Identity')
     expect(html).not.toContain('Try Again')
   })
 
   it('needs attention: offers another try and support', () => {
-    const html = render(IdentityCheckCard, 'needs_attention')
+    const html = render(Card, 'needs_attention')
     expect(html).toContain('Needs Attention')
     expect(html).toContain('Try Again')
     expect(html).toContain('support@dropmarket.gg')
   })
 
-  it('verified: shows the state and no button', () => {
-    const html = render(IdentityCheckCard, 'verified')
+  it('verified: the store with its badge, and no button', () => {
+    const html = render(Card, 'verified')
     expect(html).toContain('Verified')
+    expect(html).toContain('CheckShop')
     expect(html).not.toContain('Verify Identity')
   })
 
   it('checks not open: says so, and offers no button', () => {
-    const html = render(IdentityCheckCard, 'not_started', false)
-    expect(html).toContain('not open right now')
+    const html = render(Card, 'not_started', false)
+    expect(html).toContain('Not Open Right Now')
     expect(html).not.toContain('Verify Identity')
   })
 
   it('still loading: a placeholder, not a wrong state', () => {
-    const html = render(IdentityCheckCard, null)
+    const html = render(Card, null)
     expect(html).toContain('skeleton')
     expect(html).not.toContain('Not Started')
   })
 })
 
-describe('IdentityCheckButton on the withdrawal page', () => {
-  it('offers the check to a seller who has not done it', () => {
-    expect(render(IdentityCheckButton, 'not_started')).toContain('Verify Identity')
+describe('IdentityCheckPanel on the withdrawal page', () => {
+  it('offers the check to a seller who has not done it, with the reason', () => {
+    const html = render(Panel, 'not_started')
+    expect(html).toContain(GATE_MESSAGE)
+    expect(html).toContain('Verify Identity')
   })
 
   it('offers another try after a declined check', () => {
-    expect(render(IdentityCheckButton, 'needs_attention')).toContain('Try Again')
+    const html = render(Panel, 'needs_attention')
+    expect(html).toContain('Try Again')
+    expect(html).toContain('support@dropmarket.gg')
   })
 
   it('explains the wait while in review, with no button', () => {
-    const html = render(IdentityCheckButton, 'in_review')
-    expect(html).toContain('being checked')
+    const html = render(Panel, 'in_review')
+    expect(html).toContain('Checking Your Details')
     expect(html).not.toContain('<button')
   })
 
-  it.each([['verified', true], ['not_started', false]] as const)('draws nothing when %s and open=%s', (state, available) => {
-    expect(render(IdentityCheckButton, state, available)).toBe('')
+  it('checks not open: the reason stays, with no button', () => {
+    const html = render(Panel, 'not_started', false)
+    expect(html).toContain(GATE_MESSAGE)
+    expect(html).not.toContain('<button')
+  })
+
+  it('still loading: the reason shows, with no button yet', () => {
+    const html = render(Panel, null)
+    expect(html).toContain(GATE_MESSAGE)
+    expect(html).not.toContain('<button')
+  })
+
+  it('draws nothing once verified', () => {
+    expect(render(Panel, 'verified')).toBe('')
   })
 })
