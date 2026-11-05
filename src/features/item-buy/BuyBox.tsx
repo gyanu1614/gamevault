@@ -59,11 +59,11 @@ export interface BuyBoxProps {
  * The buy column (owner, 2026-10-27/28, 2026-11-02; StockX's buy box and
  * Eldorado's phone page as references): the price (rolling when the trait
  * changes) with the quantity, Buy, the three promises, then the ways to pay; the
- * seller under it. Desktop frames it in glass with room to breathe (owner,
- * 2026-11-03: too bold, too packed) and has the trait picker under the picture
- * instead; on phones it floats on the page with the picker on top, the promises
- * in one sliding row and the ways to pay under the seller. A trait nobody sells
- * gets Notify Me instead.
+ * seller under it. Desktop: one glass card holding all of it (owner, 2026-11-04:
+ * cleaner, not two big panels), with the trait picker under the picture instead;
+ * on phones it floats on the page with the picker on top, the promises in one
+ * sliding row and the ways to pay under the seller. A trait nobody sells gets
+ * Notify Me instead.
  */
 export function BuyBox(p: BuyBoxProps) {
   const { offer } = p
@@ -72,8 +72,8 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     // Phones: lands under the navbar and the back row, both fixed there.
-    <section id="buy-box" aria-labelledby="item-title" className="scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)] lg:contents">
-      <div className={cn(GLASS, 'lg:p-7')}>
+    <section id="buy-box" aria-labelledby="item-title" className={cn(GLASS, 'scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)] lg:p-6')}>
+      <div>
         {p.traits.length > 0 ? (
           <div className="lg:hidden">
             <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
@@ -104,8 +104,8 @@ export function BuyBox(p: BuyBoxProps) {
                 />
               ) : null}
             </div>
-            <div ref={p.buyRef} className="mt-6">
-              <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="h-14 w-full text-[16px]" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
+            <div ref={p.buyRef} className="mt-6 lg:mt-5">
+              <BuyButton onClick={p.onBuy} loading={p.navigating} loadingLabel="Loading Checkout…" className="h-14 w-full text-[16px] lg:h-[52px]" disabled={!offer.isUnlimited && (offer.stock ?? 1) <= 0}>
                 {p.isOwn ? 'Edit Your Listing' : BUY_CTA_LABEL}
               </BuyButton>
             </div>
@@ -122,10 +122,10 @@ export function BuyBox(p: BuyBoxProps) {
           </div>
         )}
 
-        <div className="mt-6 lg:mb-6">
+        <div className="mt-6 lg:mb-5 lg:mt-5">
           <BuyPromises />
         </div>
-        <div className="hidden pt-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] lg:block">
+        <div className="hidden pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] lg:block">
           <PaymentMarks />
         </div>
       </div>
@@ -141,8 +141,8 @@ export function BuyBox(p: BuyBoxProps) {
 
 /**
  * Who sells it: the house seller identity (avatar, name, badge, rating and
- * sales) and the way into their shop. A small card on desktop (owner,
- * 2026-10-28); on phones a plain row between two hairlines.
+ * sales) and the way into their shop. The buy card's last row on desktop (owner,
+ * 2026-11-04), under a hairline; on phones a plain row between two hairlines.
  */
 function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
   const slug = sellerShopSlug(offer.seller)
@@ -158,21 +158,25 @@ function SellerCard({ offer, isOwn }: { offer: ItemOffer; isOwn: boolean }) {
       {slug ? <IconChevronRight aria-hidden size={16} stroke={2} className="shrink-0 text-text-tertiary" /> : null}
     </>
   )
+  // Desktop: the hover fill reaches 12px past the text edge; the negative margin keeps the avatar on that edge.
   const cls = cn(
     'mt-6 flex min-w-0 items-center gap-3 py-3.5 max-lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_-1px_0_rgba(255,255,255,0.07)]',
-    // Desktop: its avatar on the buy card's text edge (28px).
-    'lg:col-start-2 lg:mt-0 lg:self-start lg:px-7 lg:py-4',
-    GLASS,
+    'lg:-mx-3 lg:-mb-2 lg:mt-1 lg:rounded-md lg:px-3 lg:py-2',
   )
-  return slug ? (
-    <SmartLink
-      href={`/shop/${slug}`}
-      aria-label={`${sellerDisplayName(s)}'s shop`}
-      className={cn(cls, 'transition-colors duration-200 lg:hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
-    >
-      {body}
-    </SmartLink>
-  ) : (
-    <div className={cls}>{body}</div>
+  return (
+    <>
+      <div aria-hidden className="mt-4 hidden h-px bg-white/[0.08] lg:block" />
+      {slug ? (
+        <SmartLink
+          href={`/shop/${slug}`}
+          aria-label={`${sellerDisplayName(s)}'s shop`}
+          className={cn(cls, 'transition-colors duration-200 lg:hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
+        >
+          {body}
+        </SmartLink>
+      ) : (
+        <div className={cls}>{body}</div>
+      )}
+    </>
   )
 }

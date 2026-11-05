@@ -57,7 +57,7 @@ export function BuyPromises() {
         </div>
       </div>
 
-      <ul aria-label="Our Promises" className="hidden gap-4 lg:grid">
+      <ul aria-label="Our Promises" className="hidden gap-3 lg:grid">
         {ROWS.map(({ Icon, label, sub }) => (
           <li key={label} className="flex items-start gap-3" style={{ fontSize: 'var(--fs-body)' }}>
             <Icon aria-hidden size={20} weight="fill" color={TRUST_BLUE} className="mt-px shrink-0" />

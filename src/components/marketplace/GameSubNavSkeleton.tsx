@@ -29,7 +29,9 @@ export default function GameSubNavSkeleton({ tabs = 2, phoneBack = false }: { ta
           <div className="flex w-full items-center md:hidden">
             <Bone className="h-11 w-11 shrink-0" />
             <Bone className="mx-auto h-4 w-24" />
-            <span className="w-11 shrink-0" />
+            <span className="flex w-11 shrink-0 justify-end">
+              <Bone className="h-9 w-9" />
+            </span>
           </div>
         ) : null}
         <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>
@@ -43,9 +45,11 @@ export default function GameSubNavSkeleton({ tabs = 2, phoneBack = false }: { ta
               <TabBone key={i} />
             ))}
           </div>
+          <Bone className="ml-1 h-9 w-9 shrink-0 md:hidden" />
           <div className="hidden items-center gap-3 justify-self-end md:flex">
             <TabBone label="w-28" />
             <Bone className="h-9 w-[132px] max-lg:hidden" />
+            <Bone className="h-9 w-9 xl:w-[126px]" />
           </div>
         </div>
       </div>

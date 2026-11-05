@@ -83,7 +83,7 @@
      navbar is a deep frosted near-black. The game sub-navbar is the same surface
      (owner, 2026-11-03: "both look different"), so the two read as one header. */
   --navbar-bg:               rgba(12, 13, 16, 0.76);
-  --subnav-bg:               var(--navbar-bg);
+  --subnav-bg:               rgba(9, 10, 12, 0.82); /* one step under --navbar-bg (owner, 2026-11-04) */
   --navbar-mobile-bg:        #16171B;
   --navbar-dropdown-bg:      #1D1E23;
 
