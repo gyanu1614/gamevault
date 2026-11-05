@@ -63,7 +63,9 @@ const inPriceRange = (p: number, f: GridFilters) => (f.minPrice == null || p >= 
 
 export function toGridItems(gameSlug: string, feed: ValuesFeed, categorySlug: string | null = feed.categorySlug): GridItem[] {
   const base = `/${gameSlug}/${categorySlug ?? 'buy-items'}/item/`
-  return feed.items.map((i) => {
+  // No picture and nothing on sale: not worth a blank card (owner, 2026-11-04). Its page still exists.
+  const shown = feed.items.filter((i) => i.imageUrl || (feed.stock[i.slug] ?? 0) > 0)
+  return shown.map((i) => {
     return {
       key: i.slug,
       slug: i.slug,

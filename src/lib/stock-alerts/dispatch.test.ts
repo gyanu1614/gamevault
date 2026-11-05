@@ -10,6 +10,10 @@ const h = vi.hoisted(() => ({
   sends: [] as Array<{ to: string; itemName: string; url: string }>,
   failFor: null as string | null,
   released: [] as string[],
+  waiting: [] as string[],
+  visible: true,
+  visibleFail: false,
+  visibleCalls: 0,
 }))
 
 vi.mock('server-only', () => ({}))
@@ -26,6 +30,13 @@ vi.mock('@/lib/value-listings/stock-server', () => ({
   getValueCatalog: vi.fn(async () => ({ items: [{ slug: 'parrot', name: 'Parrot', imageUrl: null }], mutations: [] })),
   getItemsPair: vi.fn(async () => ({ categorySlug: 'buy-items' })),
 }))
+vi.mock('./visible-offer', () => ({
+  itemHasVisibleOffer: vi.fn(async () => {
+    h.visibleCalls += 1
+    if (h.visibleFail) throw new Error('read failed')
+    return h.visible
+  }),
+}))
 vi.mock('@/lib/supabase/service', () => ({
   createServiceRoleClient: () => ({
     rpc: async () => ({ data: h.claimed, error: null }),
@@ -34,11 +45,15 @@ vi.mock('@/lib/supabase/service', () => ({
         table === 'games'
           ? [{ id: 'g-1', slug: 'adopt-me', name: 'Adopt Me', image_url: null }]
           : [{ id: 'u-1', email: 'buyer@example.com', username: 'buyer' }]
+      let update: Record<string, unknown> = {}
       const b: Record<string, unknown> = {
         select: () => b,
-        update: () => b,
+        update: (row: Record<string, unknown>) => {
+          update = row
+          return b
+        },
         in: (_c: string, ids: string[]) => {
-          if (table === 'stock_alerts') h.released.push(...ids)
+          if (table === 'stock_alerts') ('due_at' in update ? h.waiting : h.released).push(...ids)
           return b
         },
         then: (resolve: (v: unknown) => unknown) => resolve({ data: rows, error: null }),
@@ -56,6 +71,10 @@ beforeEach(() => {
   h.sends = []
   h.failFor = null
   h.released = []
+  h.waiting = []
+  h.visible = true
+  h.visibleFail = false
+  h.visibleCalls = 0
 })
 
 describe('sendDueStockAlerts', () => {
@@ -64,7 +83,7 @@ describe('sendDueStockAlerts', () => {
       { id: 'a-1', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: 'neon-fly-ride' },
       { id: 'a-2', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: null },
     ]
-    expect(await sendDueStockAlerts()).toEqual({ sent: 2, failed: 0 })
+    expect(await sendDueStockAlerts()).toEqual({ sent: 2, failed: 0, waiting: 0 })
     expect(h.sends).toContainEqual({
       to: 'buyer@example.com',
       itemName: 'Neon Fly Ride Parrot',
@@ -76,7 +95,35 @@ describe('sendDueStockAlerts', () => {
   it('puts an alert whose email failed back in the queue', async () => {
     h.claimed = [{ id: 'a-9', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: 'fly-ride' }]
     h.failFor = 'Fly Ride Parrot'
-    expect(await sendDueStockAlerts()).toEqual({ sent: 0, failed: 1 })
+    expect(await sendDueStockAlerts()).toEqual({ sent: 0, failed: 1, waiting: 0 })
     expect(h.released).toEqual(['a-9'])
+  })
+
+  it("sends nothing for an item the site doesn't show: the alert goes back to waiting, still open", async () => {
+    h.claimed = [{ id: 'a-3', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: null }]
+    h.visible = false
+    expect(await sendDueStockAlerts()).toEqual({ sent: 0, failed: 0, waiting: 1 })
+    expect(h.sends).toEqual([])
+    expect(h.waiting).toEqual(['a-3'])
+    expect(h.released).toEqual([])
+  })
+
+  it("can't check: sends nothing and retries later, because the alert stays due", async () => {
+    h.claimed = [{ id: 'a-4', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: null }]
+    h.visibleFail = true
+    expect(await sendDueStockAlerts()).toEqual({ sent: 0, failed: 1, waiting: 0 })
+    expect(h.sends).toEqual([])
+    expect(h.released).toEqual(['a-4'])
+    expect(h.waiting).toEqual([])
+  })
+
+  it('checks each item and trait once, however many buyers wait for it', async () => {
+    h.claimed = [
+      { id: 'a-5', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: null },
+      { id: 'a-6', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: null },
+      { id: 'a-7', user_id: 'u-1', game_id: 'g-1', item_slug: 'parrot', variant: 'fly-ride' },
+    ]
+    await sendDueStockAlerts()
+    expect(h.visibleCalls).toBe(2)
   })
 })

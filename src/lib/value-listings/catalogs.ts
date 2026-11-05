@@ -131,26 +131,42 @@ export function buildValueCatalog(
 
 type AnyClient = { from: (table: string) => any }
 
+const CATALOGUE_PAGE = 1000
+
+/**
+ * Every row of a catalogue read. PostgREST stops at 1,000 rows with no error,
+ * whatever .limit() asks for: on 2026-11-04 Murder Mystery 2 had 1,108 items, so
+ * 108 of them lost their item pages and couldn't match a listing. Ordered, so
+ * rows can't repeat or go missing between pages.
+ */
+async function readAllRows(build: () => any, orderBy: string): Promise<any[]> {
+  const rows: any[] = []
+  for (let from = 0; ; from += CATALOGUE_PAGE) {
+    const { data, error } = await build().order(orderBy).range(from, from + CATALOGUE_PAGE - 1)
+    if (error) throw error
+    rows.push(...(data ?? []))
+    if ((data ?? []).length < CATALOGUE_PAGE) return rows
+  }
+}
+
 export async function loadValueCatalog(client: AnyClient, game: { id: string; slug: string }): Promise<LoadedCatalog | null> {
   if (game.slug === 'steal-a-brainrot') {
     const [items, mutations] = await Promise.all([
-      client.from('sab_brainrot_market_catalog').select('slug, name, rarity, market_value_usd, image_url').limit(5000),
+      readAllRows(() => client.from('sab_brainrot_market_catalog').select('slug, name, rarity, market_value_usd, image_url'), 'slug'),
       client.from('sab_mutations').select('slug, name, is_active').limit(500),
     ])
-    if (items.error) throw items.error
     if (mutations.error) throw mutations.error
     return buildValueCatalog(game.slug, {
-      items: (items.data ?? []).map((r: any) => ({
+      items: items.map((r: any) => ({
         slug: r.slug, name: r.name, rarity: r.rarity, valueUsd: r.market_value_usd == null ? null : Number(r.market_value_usd), imageUrl: r.image_url,
       })),
       mutations: (mutations.data ?? []).filter((m: any) => m.is_active !== false).map((m: any) => ({ slug: m.slug, name: m.name })),
     })
   }
   if (game.slug === 'adopt-me') {
-    const { data, error } = await client.from('adopt_me_pets').select('slug, name, rarity, image_url, is_active, demand_rank, item_kind').limit(5000)
-    if (error) throw error
+    const rows = await readAllRows(() => client.from('adopt_me_pets').select('slug, name, rarity, image_url, is_active, demand_rank, item_kind'), 'slug')
     return buildValueCatalog(game.slug, {
-      items: (data ?? []).map((r: any) => ({
+      items: rows.map((r: any) => ({
         slug: r.slug, name: r.name, rarity: r.item_kind ? null : r.rarity, imageUrl: r.image_url, hasPage: r.is_active === true,
         popularRank: r.demand_rank == null ? null : Number(r.demand_rank),
         ...(r.item_kind ? { kind: r.item_kind } : {}),
@@ -158,14 +174,9 @@ export async function loadValueCatalog(client: AnyClient, game: { id: string; sl
     })
   }
   if (VALUES_PIPELINE_GAMES.has(game.slug)) {
-    const { data, error } = await client
-      .from('values_items')
-      .select('slug, name, rarity, image_url, is_enabled')
-      .eq('game_id', game.id)
-      .limit(5000)
-    if (error) throw error
+    const rows = await readAllRows(() => client.from('values_items').select('slug, name, rarity, image_url, is_enabled').eq('game_id', game.id), 'slug')
     return buildValueCatalog(game.slug, {
-      items: (data ?? []).filter((r: any) => r.is_enabled !== false).map((r: any) => ({ slug: r.slug, name: r.name, rarity: r.rarity, imageUrl: r.image_url })),
+      items: rows.filter((r: any) => r.is_enabled !== false).map((r: any) => ({ slug: r.slug, name: r.name, rarity: r.rarity, imageUrl: r.image_url })),
     })
   }
   return null

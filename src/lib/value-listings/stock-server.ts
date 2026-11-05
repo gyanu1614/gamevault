@@ -97,6 +97,21 @@ export async function readValueListings(
   hidden: readonly string[],
   catalog: LoadedCatalog | null,
 ): Promise<ValueListingRow[]> {
+  try {
+    return await fetchValueListings(pair, itemSlug, hidden, catalog)
+  } catch (e) {
+    console.error('[value-listings] stock read failed', e instanceof Error ? e.message : e)
+    return []
+  }
+}
+
+/** The same read for callers that must tell "no listings" from "could not read" (Notify Me): a failed read throws. */
+export async function fetchValueListings(
+  pair: ItemsPair,
+  itemSlug: string | null,
+  hidden: readonly string[],
+  catalog: LoadedCatalog | null,
+): Promise<ValueListingRow[]> {
   let q: any = (createAnonClient() as any)
     .from('listings')
     .select(VALUE_LISTING_SELECT)
@@ -106,10 +121,7 @@ export async function readValueListings(
   q = q.order('price', { ascending: true }).limit(2000)
   if (hidden.length) q = q.not('seller_id', 'in', `(${hidden.join(',')})`)
   const { data, error } = await q
-  if (error) {
-    console.error('[value-listings] stock read failed', error.message)
-    return []
-  }
+  if (error) throw new Error(error.message)
   const rows = (data ?? []) as ValueListingRow[]
   // Re-check each stored link against today's matcher: a link written by
   // an older matcher ("Fairy Bat Dragon NFR" → Bat Dragon) stays in the
