@@ -35,21 +35,4 @@ side is broken.
 
 ## Current contents
 
-`20261104171225_profiles_own_row_only.sql` (DLT-001b): a signed-in user reads their
-own profile row and nobody else's. The code on `fix/profile-private-columns` reads other
-people's display details through `public_profiles`, which already works today, so it can
-deploy first. Pushed before that code, signed-in users would see blank seller and buyer
-names until the deploy.
-
-To ship it, once that code is live:
-
-```
-git mv supabase/migrations_pending/20261104171225_profiles_own_row_only.sql supabase/migrations/
-supabase db push
-```
-
-Until then any signed-in user can read every user's email: don't leave it here long.
-
-The directory and its guard stay so the next held-back migration has somewhere
-to go — and so the rule (`db push` applies everything in `migrations/` at once)
-stays written down rather than being rediscovered.
+None. `20261104171225_profiles_own_row_only.sql` (DLT-001b) shipped on 2026-11-04.
