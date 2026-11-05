@@ -16,6 +16,7 @@ import { Loader2 } from 'lucide-react'
 import { getMyStorePaused, setStorePaused } from '@/lib/actions/seller-presence'
 import { Switch } from '@/components/ui/switch'
 import { SettingsCard } from '@/components/account/AccountSurface'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
 import { cn } from '@/lib/utils'
 
 export default function StoreAvailabilitySection() {
@@ -58,6 +59,8 @@ export default function StoreAvailabilitySection() {
     <SettingsCard
       title="Store Availability"
       description="Pause while you’re away. Your offers stay saved and come back the moment you switch back on. Orders already placed still need delivering."
+      icon={<StorefrontIcon size={22} weight="duotone" />}
+      iconTone={paused ? 'attention' : 'money'}
       aside={<StatusPill loading={loading} paused={paused} />}
     >
       <div className="flex items-center justify-between gap-4 rounded-md bg-bg-overlay px-4 py-3">

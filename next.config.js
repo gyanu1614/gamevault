@@ -125,6 +125,9 @@ const nextConfig = {
       // sitemap and in inboxes, so they 308 rather than 404.
       { source: '/early-seller', destination: '/founding', permanent: true },
       { source: '/signup-become-seller', destination: '/founding', permanent: true },
+      // One wallet address: these were pages that only redirected.
+      { source: '/wallet', destination: '/account/wallet', permanent: true },
+      { source: '/account/earnings', destination: '/account/wallet', permanent: true },
       // Payment-provider reviewers type these (2026-10-23 site review): the
       // common names for our policy and help pages land on the real page.
       { source: '/terms-of-service', destination: '/terms', permanent: true },

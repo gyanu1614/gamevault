@@ -4,6 +4,7 @@ import { useState } from 'react'
 import StorefrontRounded from '@mui/icons-material/StorefrontRounded'
 import ScheduleRounded from '@mui/icons-material/ScheduleRounded'
 import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
 import { toast } from 'sonner'
 import StoreAvailabilitySection from '@/components/account/settings/StoreAvailabilitySection'
 import { IdentityCheckCard } from '@/components/account/IdentityCheck'
@@ -78,6 +79,8 @@ function ShopIdentityCard({ shopName, shopNameUpdatedAt, hasCompletedSale, busin
     <SettingsCard
       title="Shop Identity"
       description="Your shop name is your public storefront and its web address."
+      icon={<StorefrontIcon size={22} weight="duotone" />}
+      iconTone="speed"
       footerHint={
         cooldown.locked ? (
           <span className="inline-flex items-center gap-1.5 text-warning">

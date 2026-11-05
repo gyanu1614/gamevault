@@ -1,115 +1,99 @@
 'use client'
 
-import Link from '@/components/navigation/AppLink'
-import { ArrowDownToLine, ChevronRight } from 'lucide-react'
-import { useSellerEarnings } from '@/hooks/use-seller-earnings'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLineDownIcon } from '@phosphor-icons/react/dist/csr/ArrowLineDown'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
+import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ClockCounterClockwise'
+import { HourglassMediumIcon } from '@phosphor-icons/react/dist/csr/HourglassMedium'
+import { PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/csr/PaperPlaneTilt'
 import PayoutDetailsSection from '@/components/account/settings/PayoutDetailsSection'
-import { AccountCard, SettingsCard, accountBtn } from '@/components/account/AccountSurface'
-import { cn } from '@/lib/utils'
+import { SettingsCard, accountBtn } from '@/components/account/AccountSurface'
+import { BalanceHero, usd } from '@/components/account/BalanceHero'
+import Link from '@/components/navigation/AppLink'
+import WithdrawalRequestCard from '@/components/wallet/WithdrawalRequestCard'
+import type { WalletOverview } from '@/lib/actions/wallet-ledger'
+import type { WithdrawalRequest } from '@/lib/actions/withdrawals'
+import type { SellerEarningsSummary } from '@/lib/wallet/reads'
 
-const usd = (n: number | null | undefined) =>
-  (n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
+interface WalletSummary {
+  overview: WalletOverview
+  earnings: SellerEarningsSummary
+  withdrawn: number
+  requests: WithdrawalRequest[]
+}
 
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const QUERY_KEY = ['settings', 'wallet-summary'] as const
+
+async function fetchWalletSummary(): Promise<WalletSummary> {
+  const res = await fetch('/api/account/wallet-summary', { cache: 'no-store' })
+  if (!res.ok) throw new Error(`wallet summary ${res.status}`)
+  return res.json()
+}
 
 /**
- * Payouts (sellers). Mounted only while the tab is open, so buyers and other
- * tabs never fetch earnings. Figures come from the same ledger reads as
- * /account/wallet.
+ * Payouts (sellers). Mounted only while the tab is open. The same reads as the
+ * wallet page, so the two can never show different numbers.
  */
 export function PayoutsTab() {
-  const { stats, payouts, isLoadingStats, isLoadingPayouts } = useSellerEarnings()
+  const queryClient = useQueryClient()
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: QUERY_KEY, queryFn: fetchWalletSummary })
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: QUERY_KEY })
 
   return (
     <>
-      {/* Same balance panel as the wallet page: one fill, a divider between cells. */}
-      <AccountCard padded={false} className="overflow-hidden">
-        <div className="grid divide-y divide-white/[0.07] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-          <div className="flex items-start justify-between gap-3 p-5">
-            <Balance label="Available Balance" value={stats.available_balance} loading={isLoadingStats} caption="Ready to withdraw." />
-            <Link
-              href="/account/wallet/withdraw"
-              // Not disabled at $0: withdrawals can also draw on store credit,
-              // which this tab doesn't load (the withdraw page checks both).
-              className={cn(accountBtn.primary, 'shrink-0')}
-            >
-              <ArrowDownToLine className="h-4 w-4" aria-hidden />
+      {isLoading ? (
+        <div className="skeleton h-[190px] w-full rounded-lg" aria-hidden />
+      ) : data ? (
+        <BalanceHero
+          label="Store Balance"
+          amount={data.overview.available + data.overview.wallet}
+          actions={
+            <Link href="/account/wallet/withdraw" className={accountBtn.primary}>
+              <ArrowLineDownIcon size={18} weight="bold" aria-hidden />
               Withdraw
             </Link>
-          </div>
-          <div className="p-5">
-            <Balance label="Pending Sales" value={stats.pending_balance} loading={isLoadingStats} caption="Credited once the buyer confirms delivery." />
-          </div>
-        </div>
-      </AccountCard>
+          }
+          rows={[
+            { label: 'Pending Sales', value: usd(data.earnings.pendingSales + data.overview.pending), tone: 'trust', icon: <HourglassMediumIcon size={18} weight="duotone" /> },
+            { label: 'Withdrawn', value: usd(data.withdrawn), tone: 'neutral', icon: <PaperPlaneTiltIcon size={18} weight="duotone" /> },
+          ]}
+        />
+      ) : null}
 
       <PayoutDetailsSection />
 
       <SettingsCard
-        title="Recent Payouts"
-        description="Your last five withdrawals."
+        title="Recent Withdrawals"
+                icon={<ClockCounterClockwiseIcon size={22} weight="duotone" />}
         aside={
-          <Link
-            href="/account/wallet"
-            className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
-          >
+          <Link href="/account/wallet?tab=payouts" className="inline-flex items-center gap-1 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary">
             View All
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            <ArrowRightIcon size={14} weight="bold" aria-hidden />
           </Link>
         }
+        bodyClassName="pb-0 sm:pb-0"
       >
-        {isLoadingPayouts ? (
-          <div className="divide-y divide-white/[0.07]" aria-busy>
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                <div className="space-y-1.5">
-                  <div className="skeleton h-4 w-20 rounded" />
-                  <div className="skeleton h-3 w-24 rounded" />
-                </div>
-                <div className="skeleton h-6 w-20 rounded-full" />
-              </div>
-            ))}
+        {isLoading ? (
+          <div className="space-y-3 pb-5" aria-busy>
+            {[0, 1, 2].map((i) => <div key={i} className="skeleton h-12 w-full rounded-md" />)}
           </div>
-        ) : payouts.length === 0 ? (
-          <p className="rounded-md bg-bg-overlay px-4 py-6 text-center text-[13px] text-text-secondary">
-            No payouts yet. Withdrawals you request show up here.
+        ) : isError ? (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md bg-bg-overlay px-4 py-3">
+            <p className="text-[13px] text-text-secondary">We couldn’t load your withdrawals.</p>
+            <button type="button" onClick={() => void refetch()} className={accountBtn.secondary}>Try Again</button>
+          </div>
+        ) : !data?.requests.length ? (
+          <p className="mb-5 rounded-md bg-bg-overlay px-4 py-6 text-center text-[13px] text-text-secondary">
+            No withdrawals yet.
           </p>
         ) : (
-          <ul className="divide-y divide-white/[0.07]">
-            {payouts.slice(0, 5).map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold tabular-nums text-text-primary">{usd(p.amount)}</p>
-                  <p className="mt-0.5 text-[12px] text-text-tertiary">{shortDate(p.completed_at ?? p.created_at)}</p>
-                </div>
-                <span
-                  className={cn(
-                    'inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold capitalize',
-                    p.status === 'completed' ? 'bg-success-bg text-success' : 'bg-white/[0.06] text-text-secondary',
-                  )}
-                >
-                  {p.status}
-                </span>
-              </li>
+          <div className="-mx-5 divide-y divide-white/[0.07] border-t border-white/[0.07] sm:-mx-6">
+            {data.requests.map((request) => (
+              <WithdrawalRequestCard key={request.id} request={request} onUpdate={refresh} />
             ))}
-          </ul>
+          </div>
         )}
       </SettingsCard>
     </>
-  )
-}
-
-function Balance({ label, value, caption, loading }: { label: string; value: number; caption: string; loading: boolean }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[12.5px] font-medium text-text-secondary">{label}</p>
-      {loading ? (
-        <div className="skeleton mt-1.5 h-8 w-28 rounded" aria-hidden />
-      ) : (
-        <p className="mt-1 text-[28px] font-bold leading-tight tabular-nums text-text-primary">{usd(value)}</p>
-      )}
-      <p className="mt-1 text-[12px] text-text-tertiary">{caption}</p>
-    </div>
   )
 }

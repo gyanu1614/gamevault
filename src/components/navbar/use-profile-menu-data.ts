@@ -7,13 +7,40 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
-import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
+import { setStorePaused } from '@/lib/actions/seller-presence'
 import { safeBackground } from '@/lib/utils/safe-background'
 
 type MenuUser = { id?: string; isApprovedSeller?: boolean } | null | undefined
+
+interface AccountMenu {
+  walletBalance: number
+  storePaused: boolean
+}
+
+const menuKey = (id: string | undefined) => ['account-menu', id] as const
+
+/**
+ * One plain request, not server actions. Next runs actions one at a time, so two
+ * reads here made every seller's page wait in line before its own data loaded.
+ */
+async function fetchAccountMenu(): Promise<AccountMenu> {
+  const res = await fetch('/api/account/menu', { cache: 'no-store' })
+  if (!res.ok) throw new Error(`account menu ${res.status}`)
+  return res.json()
+}
+
+function useAccountMenu(user: MenuUser) {
+  return useQuery({
+    queryKey: menuKey(user?.id),
+    queryFn: fetchAccountMenu,
+    enabled: !!user?.isApprovedSeller,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  })
+}
 
 /**
  * V21/P7.ae — Offline Mode (store pause). When on, the seller's offers are
@@ -24,20 +51,13 @@ export function useStoreOfflineMode(user: MenuUser) {
   const [offlineMode, setOfflineMode] = useState(false)
   const [pendingOffline, setPendingOffline] = useState(false)
 
-  // Hydrate for approved sellers.
+  const queryClient = useQueryClient()
+  const { data: menu } = useAccountMenu(user)
+
+  // Follow the server's answer; a failed read degrades to the safe default (online).
   useEffect(() => {
-    if (!user?.isApprovedSeller) { setOfflineMode(false); return }
-    let active = true
-    // A `.then()` with no `.catch()` here was JAVASCRIPT-NEXTJS-5: on a flaky
-    // mobile connection the server-action POST rejects with WebKit's opaque
-    // "TypeError: Load failed" and, with nothing handling it, reaches Sentry as
-    // an unhandled rejection. Offline Mode is an enrichment — degrade to the
-    // safe default (store online) rather than break the navbar.
-    void safeBackground(() => getMyStorePaused(), false, 'navbar:storePaused').then((v) => {
-      if (active) setOfflineMode(v)
-    })
-    return () => { active = false }
-  }, [user?.id, user?.isApprovedSeller])
+    setOfflineMode(user?.isApprovedSeller ? !!menu?.storePaused : false)
+  }, [user?.isApprovedSeller, menu?.storePaused])
 
   // Optimistic flip with rollback on failure.
   const toggleOfflineMode = useCallback(async () => {
@@ -59,8 +79,9 @@ export function useStoreOfflineMode(user: MenuUser) {
       toast.error('Could not update store status')
       return
     }
-    toast.success(next ? 'Store is now offline — your offers are hidden' : 'Store is back online')
-  }, [offlineMode, pendingOffline])
+    queryClient.setQueryData<AccountMenu>(menuKey(user?.id), (old) => (old ? { ...old, storePaused: next } : old))
+    toast.success(next ? 'Store is now offline. Your offers are hidden.' : 'Store is back online')
+  }, [offlineMode, pendingOffline, queryClient, user?.id])
 
   return { offlineMode, pendingOffline, toggleOfflineMode }
 }
@@ -71,15 +92,6 @@ export function useStoreOfflineMode(user: MenuUser) {
  * float table is archived and must not be read.
  */
 export function useNavWalletBalance(user: MenuUser) {
-  const { data } = useQuery({
-    queryKey: ['wallet-balance-navbar', user?.id],
-    queryFn: async () => {
-      const result = await getMyWalletBalance()
-      return result.success ? result.balance : null
-    },
-    enabled: !!user?.isApprovedSeller,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  })
-  return data != null ? Number(data.available_balance ?? 0) : null
+  const { data } = useAccountMenu(user)
+  return data != null ? data.walletBalance : null
 }

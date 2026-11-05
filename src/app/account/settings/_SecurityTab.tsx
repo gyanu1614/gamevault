@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import VisibilityRounded from '@mui/icons-material/VisibilityRounded'
 import VisibilityOffRounded from '@mui/icons-material/VisibilityOffRounded'
+import { LockKeyIcon } from '@phosphor-icons/react/dist/csr/LockKey'
 import { toast } from 'sonner'
 import { updatePassword } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/client'
@@ -76,6 +77,8 @@ function PasswordCard({ email }: { email: string | null }) {
     <SettingsCard
       title="Password"
       description="Change the password you use to sign in."
+      icon={<LockKeyIcon size={22} weight="duotone" />}
+      iconTone="trust"
       footerHint={`Use at least ${MIN_PASSWORD} characters.`}
       footerAction={
         <SaveButton saving={saving} saved={saved} disabled={!ready} onClick={submit} label="Update Password" savingLabel="Updating…" />

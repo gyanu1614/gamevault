@@ -24,6 +24,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getWalletBalance as getLedgerWalletBalance } from '@/lib/wallet/wallet'
+import { readWalletOverview } from '@/lib/wallet/reads'
 
 const WALLET_CURRENCIES = ['USD'] as const
 
@@ -216,35 +217,7 @@ export async function getMyWalletOverview(): Promise<{ success: boolean; overvie
   try {
     const userId = await sessionUserId()
     if (!userId) return { success: false, error: 'Not authenticated' }
-    const service = createServiceRoleClient()
-    const { data, error } = await (service.rpc as any)('wallet_available_balance', { p_seller_id: userId, p_currency: 'USD' })
-    if (error) throw new Error(`wallet_available_balance failed: ${error.message}`)
-    const d = data as any
-    const minor = (v: unknown) => Number(v ?? 0) / 100
-    return {
-      success: true,
-      overview: {
-        currency: String(d.currency ?? 'USD'),
-        available: minor(d.available_minor),
-        pending: minor(d.pending_minor),
-        nextMaturityAt: d.next_maturity_at ?? null,
-        frozen: minor(d.frozen_minor),
-        locked: minor(d.locked_minor),
-        wallet: minor(d.wallet_minor),
-        negative: Boolean(d.negative),
-        gate: {
-          eligible: Boolean(d.gate?.eligible),
-          reason: (d.gate?.reason ?? null) as WalletOverview['gate']['reason'],
-          message: typeof d.gate?.message === 'string' ? d.gate.message : null,
-          sellerSince: d.gate?.seller_since ?? null,
-          unlockAt: d.gate?.unlock_at ?? null,
-          freezeUntil: d.gate?.freeze_until ?? null,
-          minAgeDays: Number(d.gate?.min_age_days ?? 30),
-        },
-        completionHoldHours: Number(d.completion_hold_hours ?? 24),
-        disputeWindowDays: Number(d.dispute_window_days ?? 7),
-      },
-    }
+    return { success: true, overview: await readWalletOverview(userId) }
   } catch (err: any) {
     return { success: false, error: err?.message ?? 'Failed to fetch balance' }
   }

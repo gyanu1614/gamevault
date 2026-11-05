@@ -14,16 +14,21 @@ import type { IdentityCheckStatus } from './state'
 
 const DIDIT_BASE = 'https://verification.didit.me/v3'
 
+/** Env values pasted into a dashboard can carry a stray newline, which the provider rejects. */
+function env(name: string): string {
+  return process.env[name]?.trim() ?? ''
+}
+
 function appBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'http://localhost:3000'
+  return env('NEXT_PUBLIC_APP_URL').replace(/\/$/, '') || 'http://localhost:3000'
 }
 
 export async function createDiditSession(userId: string): Promise<{ sessionId: string; url: string } | null> {
   const res = await fetch(`${DIDIT_BASE}/session/`, {
     method: 'POST',
-    headers: { 'x-api-key': process.env.DIDIT_API_KEY!, 'Content-Type': 'application/json' },
+    headers: { 'x-api-key': env('DIDIT_API_KEY'), 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      workflow_id: process.env.DIDIT_WORKFLOW_ID,
+      workflow_id: env('DIDIT_WORKFLOW_ID'),
       vendor_data: userId,
       callback: `${appBaseUrl()}/kyc/complete`,
       metadata: { purpose: 'seller_verification' },
@@ -31,7 +36,9 @@ export async function createDiditSession(userId: string): Promise<{ sessionId: s
     cache: 'no-store',
   })
   if (!res.ok) {
-    console.error('[identity-check] create session failed:', res.status)
+    // The provider's own reason: allowed domains, unknown workflow, out of credits.
+    const reason = await res.text().catch(() => '')
+    console.error('[identity-check] create session failed:', res.status, reason.slice(0, 300))
     return null
   }
   const session = (await res.json()) as { session_id: string; url: string }
@@ -46,7 +53,7 @@ export async function createDiditSession(userId: string): Promise<{ sessionId: s
  */
 export async function syncIdentityCheck(sessionId: string, ownerId: string): Promise<IdentityCheckStatus | null> {
   const res = await fetch(`${DIDIT_BASE}/session/${sessionId}/decision/`, {
-    headers: { 'x-api-key': process.env.DIDIT_API_KEY! },
+    headers: { 'x-api-key': env('DIDIT_API_KEY') },
     cache: 'no-store',
   })
   if (!res.ok) throw new Error(`identity decision fetch failed: ${res.status}`)

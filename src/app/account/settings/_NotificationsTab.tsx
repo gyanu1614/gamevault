@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check } from 'lucide-react'
+import { BellRingingIcon } from '@phosphor-icons/react/dist/csr/BellRinging'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Switch } from '@/components/ui/switch'
@@ -66,6 +67,8 @@ export function NotificationsTab({ isSeller }: { isSeller: boolean }) {
   return (
     <SettingsCard
       title="Email Notifications"
+      icon={<BellRingingIcon size={22} weight="duotone" />}
+      iconTone="speed"
       description="Choose which emails DropMarket sends you. Changes save instantly."
       footerHint="Order receipts, delivery updates, disputes and refunds are always emailed."
     >

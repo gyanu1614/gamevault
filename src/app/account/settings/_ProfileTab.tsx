@@ -9,6 +9,8 @@ import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded'
 import ScheduleRounded from '@mui/icons-material/ScheduleRounded'
 import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded'
 import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded'
+import { EnvelopeSimpleIcon } from '@phosphor-icons/react/dist/csr/EnvelopeSimple'
+import { UserCircleIcon } from '@phosphor-icons/react/dist/csr/UserCircle'
 import { toast } from 'sonner'
 import { uploadProfileAvatar, changeEmail } from '@/lib/actions/auth'
 import { downscaleImageToDataUrl, ImageDecodeError } from '@/lib/utils/image-downscale'
@@ -140,8 +142,9 @@ function IdentityCard({
         </div>
 
         {isSeller && shopSlug && (
-          <Link href={`/shop/${shopSlug}`} className={cn(accountBtn.secondary, 'hidden sm:inline-flex')}>
-            View Shop
+          <Link href={`/shop/${shopSlug}`} className={cn(accountBtn.secondary, 'shrink-0 max-sm:px-3')}>
+            <span className="max-sm:hidden">View Shop</span>
+            <span className="sm:hidden">Shop</span>
             <ArrowOutwardRounded style={{ fontSize: 16 }} aria-hidden />
           </Link>
         )}
@@ -186,6 +189,8 @@ function PublicProfileCard({
     <SettingsCard
       title="Public Profile"
       description="How other people see you on DropMarket."
+      icon={<UserCircleIcon size={22} weight="duotone" />}
+      iconTone="trust"
       footerHint={
         <AnimatePresence initial={false}>
           {form.dirty && (
@@ -238,7 +243,7 @@ function PublicProfileCard({
               className={accountInputCls}
             />
           </Field>
-          <Field label="Full Name" htmlFor="settings-full-name">
+          <Field label="Full Name" htmlFor="settings-full-name" hint="Not shown on your store.">
             <input
               id="settings-full-name"
               name="full_name"
@@ -251,7 +256,7 @@ function PublicProfileCard({
             />
           </Field>
         </div>
-        <Field label="Bio" htmlFor="settings-bio" trailing={`${form.values.bio.length}/${BIO_MAX}`}>
+        <Field label="Bio" htmlFor="settings-bio" trailing={`${form.values.bio.length}/${BIO_MAX}`} hint="Sellers: this is the About text on your store.">
           <textarea
             id="settings-bio"
             name="bio"
@@ -282,6 +287,7 @@ function EmailCard({
     <SettingsCard
       title="Email Address"
       description="Used to sign in and for your order updates."
+      icon={<EnvelopeSimpleIcon size={22} weight="duotone" />}
       footerHint="Changing it needs a confirmation from your current and your new inbox."
       footerAction={
         <button type="button" onClick={() => setOpen(true)} className={accountBtn.secondary}>

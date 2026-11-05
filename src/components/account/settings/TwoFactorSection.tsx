@@ -21,6 +21,7 @@ import {
 } from '@/lib/actions/mfa'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { ShieldCheckIcon } from '@phosphor-icons/react/dist/csr/ShieldCheck'
 import { SettingsCard, accountBtn, accountInputCls } from '@/components/account/AccountSurface'
 
 const codeInputCls = cn(
@@ -123,6 +124,8 @@ export default function TwoFactorSection() {
   return (
     <SettingsCard
       title="Two-Factor Authentication"
+      icon={<ShieldCheckIcon size={22} weight="duotone" />}
+      iconTone="trust"
       description="Ask for a 6-digit code from an authenticator app when you sign in, on top of your password."
       aside={
         loading ? (

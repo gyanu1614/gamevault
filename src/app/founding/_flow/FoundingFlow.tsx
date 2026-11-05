@@ -33,6 +33,7 @@ import { StepAgreement } from './StepAgreement'
 import { DoneScreen, StoreTitle } from './DoneScreen'
 import { GLASS_CARD } from './ui'
 import { CongratsDialog } from './CongratsDialog'
+import { VerifyPrompt } from './VerifyPrompt'
 import { useFoundingDropOff } from './useFoundingDropOff'
 
 export interface FoundingFlowProps {
@@ -192,6 +193,9 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
         logoUrl={state.user?.avatarUrl ?? null}
         isFounding={state.isFounding}
       />
+
+      {/* After the congratulations, never on top of it. */}
+      {stage >= 5 && state.isSeller && !celebrate && state.user?.id && <VerifyPrompt userId={state.user.id} />}
     </div>
   )
 }

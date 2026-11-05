@@ -220,11 +220,11 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                     />
                     <PolicyBlock
                       title="Delivery"
-                      body="Digital goods are delivered immediately after payment confirmation."
+                      body="Each offer shows its delivery time. The seller delivers right here on DropMarket once your order is paid."
                     />
                     <PolicyBlock
                       title="Support"
-                      body="Message me anytime for questions or support — all communication stays on-platform, where SafeDrop covers your order."
+                      body="Message the seller anytime. Keep every message on DropMarket, where SafeDrop covers your order."
                     />
                   </div>
                 </Card>
