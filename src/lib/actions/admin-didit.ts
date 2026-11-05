@@ -9,7 +9,8 @@
  * it in an in-app modal.
  */
 
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { MODERATOR_STAFF } from '@/lib/admin/staff-roles'
 
 const SESSION_ID_PATTERN = /^[0-9a-f-]{16,64}$/i
 
@@ -47,7 +48,7 @@ export type DiditSessionDetailsResult =
 export async function getDiditSessionDetails(
   sessionId: string
 ): Promise<DiditSessionDetailsResult> {
-  await requireAdmin()
+  await requireRole(MODERATOR_STAFF)
 
   if (!SESSION_ID_PATTERN.test(sessionId)) {
     return { success: false, error: 'Invalid Didit session ID.' }

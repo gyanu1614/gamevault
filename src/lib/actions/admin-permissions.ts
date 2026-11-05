@@ -39,7 +39,7 @@ export async function requirePermission(permission: string): Promise<AdminUser> 
 /**
  * Check if user has one of the specified roles
  */
-export async function requireRole(roles: AdminRole[]): Promise<AdminUser> {
+export async function requireRole(roles: readonly AdminRole[]): Promise<AdminUser> {
   const admin = await requireAdmin()
 
   if (!roles.includes(admin.role)) {

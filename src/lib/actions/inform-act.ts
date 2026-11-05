@@ -15,7 +15,8 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ export async function runInformThresholdCheck(): Promise<{
   error?: string
 }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     // Find sellers over threshold who are still 'not_required'
@@ -261,7 +262,7 @@ export async function getInformDisclosures(statusFilter?: string): Promise<{
   error?:       string
 }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     let query = supabase
@@ -316,7 +317,7 @@ export async function getInformRequiredSellers(): Promise<{
   error?: string
 }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     const { data } = await supabase
@@ -342,7 +343,7 @@ export async function certifyInformDisclosure(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
-    const admin = await requireAdmin()
+    const admin = await requireRole(ADMIN_ONLY)
 
     const updatePayload: Record<string, any> = {
       status:       action,

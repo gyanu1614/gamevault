@@ -49,4 +49,33 @@ describe('every founding step is tracked where it is saved', () => {
   it('the browser no longer fires founding_step_completed (it would double count)', () => {
     expect(src('src/app/founding/_flow/FoundingFlow.tsx')).not.toMatch(/founding_step_completed/)
   })
+
+  it('steps 2 and 3 record whether the optional Discord and logo fields were left blank', () => {
+    const s = src('src/lib/actions/founding-onboarding.ts')
+    expect(s).toMatch(/trackFoundingStep\(user\.id, 2, \{ discord_given: Boolean\(d\.discord\) \}\)/)
+    expect(s).toMatch(/trackFoundingStep\(user\.id, 3, \{ logo_given: Boolean\(logoUrl \|\| existing\.logo_uploaded_at\) \}\)/)
+  })
+})
+
+/**
+ * Leaving the page has two routes: the tab closes or moves to another site
+ * (pagehide, no React cleanup runs), or a link inside the app (cleanup runs, no
+ * pagehide). Dropping either undercounts people leaving at the same step.
+ */
+describe('founding_left is wired for both ways of leaving', () => {
+  const src = (p: string) => readFileSync(join(process.cwd(), p), 'utf8')
+  const hook = src('src/app/founding/_flow/useFoundingDropOff.ts')
+
+  it('the flow uses the hook with the step it is on', () => {
+    expect(src('src/app/founding/_flow/FoundingFlow.tsx')).toMatch(/useFoundingDropOff\(stage, state\.signedIn\)/)
+  })
+
+  it('leaving the site and leaving by an in-app link both report', () => {
+    expect(hook).toMatch(/addEventListener\('pagehide', exit\.left\)/)
+    expect(hook).toMatch(/return \(\) => \{[\s\S]*exit\.left\(\)/)
+  })
+
+  it('sends by beacon so the request survives the page closing', () => {
+    expect(hook).toMatch(/track\('founding_left', props, \{ beacon: true \}\)/)
+  })
 })

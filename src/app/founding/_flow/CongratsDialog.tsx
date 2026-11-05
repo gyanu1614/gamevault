@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { getAvatarUrl } from '@/lib/utils/avatar'
 
 const NEXT = [
-  'List an item. It takes two minutes and goes live right away.',
+  'List an item. Your first 3 listings are checked by our team.',
   'A buyer pays first. Then you deliver, right here on DropMarket.',
   'Every sale is protected. You get paid for every item you deliver.',
 ]

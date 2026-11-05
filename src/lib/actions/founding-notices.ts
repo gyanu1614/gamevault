@@ -13,7 +13,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { requireAdmin } from './admin-permissions'
+import { requireRole } from './admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 
 export interface FoundingNotice {
   id: string
@@ -83,7 +84,7 @@ export async function getPublishedFoundingNotices(
 
 /** Admin: every notice (incl. drafts) for the composer table. */
 export async function listFoundingNotices(): Promise<FoundingNotice[]> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   // founding_notices isn't in the generated DB types yet — query via `as any`
   // at the boundary (same pattern as early-seller.ts for its new table).
   const supabase = createServiceRoleClient() as any
@@ -111,7 +112,7 @@ function sanitize(input: NoticeInput): { title: string; body: string | null } | 
 }
 
 export async function createFoundingNotice(input: NoticeInput): Promise<NoticeResult> {
-  const admin = await requireAdmin()
+  const admin = await requireRole(ADMIN_ONLY)
   const clean = sanitize(input)
   if (typeof clean === 'string') return { ok: false, error: clean }
 
@@ -138,7 +139,7 @@ export async function updateFoundingNotice(
   id: string,
   input: NoticeInput,
 ): Promise<NoticeResult> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const clean = sanitize(input)
   if (typeof clean === 'string') return { ok: false, error: clean }
 
@@ -164,7 +165,7 @@ export async function updateFoundingNotice(
 }
 
 export async function deleteFoundingNotice(id: string): Promise<NoticeResult> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = createServiceRoleClient() as any
   const { error } = await supabase.from('founding_notices').delete().eq('id', id)
 

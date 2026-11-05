@@ -20,9 +20,10 @@ import { MANAGED_KEY_MESSAGE } from '@/lib/catalogue/sell-form/managed'
 import type { SellFormConfig } from '@/lib/catalogue/sell-form/types'
 
 // The builder test below: the admin check and next/cache are mocked (no Next runtime in vitest).
-vi.mock('@/lib/actions/admin-permissions', () => ({
-  requireAdmin: async () => ({ userId: 'guard-admin', email: 'guard@example.com', role: 'super_admin', permissions: [] }),
-}))
+vi.mock('@/lib/actions/admin-permissions', () => {
+  const requireAdmin = async () => ({ userId: 'guard-admin', email: 'guard@example.com', role: 'super_admin', permissions: [] })
+  return { requireAdmin, requireRole: requireAdmin }
+})
 vi.mock('next/cache', () => ({ revalidatePath: () => {}, revalidateTag: () => {}, unstable_cache: (fn: any) => fn }))
 vi.mock('server-only', () => ({}))
 

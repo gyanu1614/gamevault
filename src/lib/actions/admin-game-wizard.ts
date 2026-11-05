@@ -17,7 +17,8 @@
 'use server'
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { ensureGameCategory } from '@/lib/categories'
 import { GAME_CTA_BANNERS_TAG } from '@/lib/revalidation/tags'
@@ -132,7 +133,7 @@ type Result<T> =
 
 /** Fetch a single game by id. */
 export async function fetchGameById(id: string): Promise<GameDetail | null> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
 
   // content_tier/ecosystem come from 20260915100000. Kept in `base` (not the
@@ -175,7 +176,7 @@ export async function fetchGameById(id: string): Promise<GameDetail | null> {
  * for display.
  */
 export async function fetchGameCategoryRows(gameId: string): Promise<GameCategoryRow[]> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const { data, error } = await supabase
     .from('game_categories')
@@ -232,7 +233,7 @@ export async function fetchGameCategoryRows(gameId: string): Promise<GameCategor
 export async function fetchGlobalCategoriesForWizard(): Promise<
   Array<{ id: string; slug: string; name: string; icon_emoji: string | null; is_active: boolean; sort_order: number }>
 > {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   const supabase = getAdminSupabase()
   const { data, error } = await supabase
     .from('global_categories')
@@ -253,7 +254,7 @@ export async function saveGameIdentity(
   input: SaveGameIdentityInput
 ): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     // Validate through the SHARED validator (lib/games/validate-game.ts) so the
@@ -340,7 +341,7 @@ export async function uploadGameLogoV2(
   fileData: { name: string; type: string; size: number; base64: string }
 ): Promise<Result<{ url: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp']
@@ -415,7 +416,7 @@ export async function uploadGameCoverV2(
   fileData: { name: string; type: string; size: number; base64: string }
 ): Promise<Result<{ url: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
@@ -477,7 +478,7 @@ export async function uploadGameCoverV2(
 
 export async function deleteGameCoverV2(gameId: string): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const { data: existing } = await supabase
@@ -515,7 +516,7 @@ export async function deleteGameCoverV2(gameId: string): Promise<Result<{ id: st
 
 export async function deleteGameLogoV2(gameId: string): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const { data: existing } = await supabase
@@ -563,7 +564,7 @@ export async function upsertGameCategory(
   input: UpsertGameCategoryInput
 ): Promise<Result<{ id: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const { data: gc } = await supabase
@@ -632,7 +633,7 @@ export async function uploadGameBlogCtaImage(
   crop?: { x: number; y: number; width: number; height: number } | null,
 ): Promise<Result<{ url: string }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = getAdminSupabase()
 
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif']

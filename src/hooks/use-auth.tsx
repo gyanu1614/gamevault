@@ -31,6 +31,7 @@ const REALTIME_PROFILE_KEYS: (keyof Profile)[] = [
   'seller_tier',
   'seller_status',
   'full_name',
+  'is_verified',
 ] as unknown as (keyof Profile)[]
 
 // LocalStorage keys for caching

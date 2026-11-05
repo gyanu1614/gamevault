@@ -63,6 +63,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     // (string | undefined), so normalise null away like avatar_url above.
     seller_tier: user.profile?.seller_tier || undefined,
     isApprovedSeller: user.isApprovedSeller,
+    isVerified: user.profile?.is_verified === true,
     shop_name: user.profile?.shop_name,
     shop_slug: user.profile?.shop_slug,
     seller_status: (user.profile as any)?.seller_status as 'active' | 'restricted' | 'banned',

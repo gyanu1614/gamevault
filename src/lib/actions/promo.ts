@@ -154,7 +154,7 @@ export async function recordPromoUsage(params: {
 
 // ── Admin: CRUD for promo codes ───────────────────────────────────────────────
 
-async function requireAdmin() {
+async function requirePromoAdmin() {
   const admin = await getVerifiedAdmin()
   if (!admin) throw new Error('Not authenticated')
   if (!['admin', 'super_admin'].includes(admin.role)) {
@@ -181,7 +181,7 @@ export async function createPromoCode(data: CreatePromoData): Promise<{
   error?: string
 }> {
   try {
-    const { supabase, userId } = await requireAdmin()
+    const { supabase, userId } = await requirePromoAdmin()
 
     const { data: promoRaw, error } = await supabase
       .from('promo_codes')
@@ -219,7 +219,7 @@ export async function getPromoCodes(): Promise<{
   error?: string
 }> {
   try {
-    const { supabase } = await requireAdmin()
+    const { supabase } = await requirePromoAdmin()
     const { data, error } = await supabase
       .from('promo_codes')
       .select('*')
@@ -234,7 +234,7 @@ export async function getPromoCodes(): Promise<{
 
 export async function togglePromoCode(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const { supabase } = await requireAdmin()
+    const { supabase } = await requirePromoAdmin()
 
     const { data: current } = await supabase
       .from('promo_codes')
@@ -255,7 +255,7 @@ export async function togglePromoCode(id: string): Promise<{ success: boolean; e
 
 export async function deletePromoCode(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const { supabase } = await requireAdmin()
+    const { supabase } = await requirePromoAdmin()
     await supabase.from('promo_codes').delete().eq('id', id)
     revalidatePath('/admin/promos')
     return { success: true }

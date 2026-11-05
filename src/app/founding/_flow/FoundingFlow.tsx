@@ -33,6 +33,7 @@ import { StepAgreement } from './StepAgreement'
 import { DoneScreen, StoreTitle } from './DoneScreen'
 import { GLASS_CARD } from './ui'
 import { CongratsDialog } from './CongratsDialog'
+import { useFoundingDropOff } from './useFoundingDropOff'
 
 export interface FoundingFlowProps {
   initialState: FoundingFlowState
@@ -115,6 +116,7 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
     viewed.current.add(open)
     track('founding_step_viewed', { step: open })
   }, [open, stage])
+  useFoundingDropOff(stage, state.signedIn)
 
   const renderStep = (id: FoundingStepId) => {
     if (id === 1) return <StepAccount signedIn={state.signedIn} email={state.user?.email ?? null} onContinue={next} onSignedIn={reload} />

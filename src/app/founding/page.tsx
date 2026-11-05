@@ -28,7 +28,7 @@ export const metadata: Metadata = seoMeta({
   openGraph: {
     images: DEFAULT_OG_IMAGES,
     title: 'Sell Game Items for Real Money on DropMarket',
-    description: 'Four short steps. List today, verify when you cash out. Founding sellers lock in half-price commission.',
+    description: 'Four short steps. List today. Founding sellers lock in half-price commission.',
     url: '/founding',
     type: 'website',
   },

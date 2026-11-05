@@ -9,7 +9,7 @@ const requireAdmin = vi.fn()
 const createServiceRoleClient = vi.fn(() => {
   throw new Error('service role must not be reached')
 })
-vi.mock('@/lib/actions/admin-permissions', () => ({ requireAdmin: () => requireAdmin() }))
+vi.mock('@/lib/actions/admin-permissions', () => ({ requireRole: () => requireAdmin() }))
 vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: () => createServiceRoleClient() }))
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), revalidatePath: vi.fn() }))
 vi.mock('server-only', () => ({}))

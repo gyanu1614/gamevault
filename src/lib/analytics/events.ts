@@ -13,7 +13,8 @@
  * Seller funnel  (fired by the founding / banner pages)
  *   seller_banner_clicked     { source }
  *   founding_step_viewed      { step: 1 | 2 | 3 | 4 }
- *   founding_step_completed   { step: 1 | 2 | 3 | 4 }
+ *   founding_step_completed   { step: 1 | 2 | 3 | 4, discord_given? (step 2), logo_given? (step 3) } (server)
+ *   founding_left             { step: 1 | 2 | 3 | 4, signed_in, seconds }
  *   seller_first_listing_published { game, category }
  *   seller_first_sale         { order_id, total_usd, game } (server)
  *
@@ -34,6 +35,7 @@ export const ANALYTICS_EVENTS = [
   'seller_banner_clicked',
   'founding_step_viewed',
   'founding_step_completed',
+  'founding_left',
   'seller_first_listing_published',
   'seller_first_sale',
   'rail_viewed',

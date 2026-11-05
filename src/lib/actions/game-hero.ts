@@ -11,7 +11,8 @@
  */
 
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { gameHeroTag } from '@/lib/revalidation/tags'
 import { GAME_HERO_BUCKET } from '@/lib/games/hero'
@@ -48,7 +49,7 @@ export async function createGameHeroUpload(
   gameId: string,
   file: { type: string; size: number },
 ): Promise<HeroUploadTicket> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   try {
     return await createHeroUploadCore(deps(), gameId, file)
   } catch (err) {
@@ -67,7 +68,7 @@ export async function processGameHero(
   focalY?: number,
   crop?: { x: number; y: number; width: number; height: number } | null,
 ): Promise<HeroResult> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   try {
     return await processHeroCore(deps(), gameId, sourcePath, focalY, crop)
   } catch (err) {
@@ -78,7 +79,7 @@ export async function processGameHero(
 
 /** Reposition the saved hero (vertical focal point 0–100). */
 export async function saveGameHeroPosition(gameId: string, focalY: number): Promise<HeroResult> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   try {
     return await setHeroFocalCore(deps(), gameId, focalY)
   } catch (err) {
@@ -89,7 +90,7 @@ export async function saveGameHeroPosition(gameId: string, focalY: number): Prom
 
 /** Remove the uploaded hero: the game falls back to its static art / neutral gradient. */
 export async function removeGameHero(gameId: string): Promise<HeroResult> {
-  await requireAdmin()
+  await requireRole(ADMIN_ONLY)
   try {
     return await removeHeroCore(deps(), gameId)
   } catch (err) {

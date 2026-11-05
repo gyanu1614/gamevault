@@ -18,7 +18,8 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -305,7 +306,7 @@ async function ruleSellerBalanceAnomaly(supabase: any): Promise<number> {
 
 export async function runFraudScan(): Promise<FraudScanResult> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     const rules = [
@@ -337,7 +338,7 @@ export async function getFraudFlags(statusFilter: FraudStatus = 'open'): Promise
   error?: string
 }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     // Fetch flags
@@ -384,7 +385,7 @@ export async function resolveFraudFlag(
   action: 'resolved' | 'dismissed'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     const { error } = await (supabase.from('fraud_flags') as any)
@@ -412,7 +413,7 @@ export async function getFraudStats(): Promise<{
   error?: string
 }> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const supabase = await createClient()
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)

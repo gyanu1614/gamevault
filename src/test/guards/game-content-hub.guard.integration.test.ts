@@ -10,12 +10,13 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { ANON, SVC, URL, assertGuardTargetAllowed, hasEnv } from './throwaway'
 
 let admin = true
-vi.mock('@/lib/actions/admin-permissions', () => ({
-  requireAdmin: async () => {
+vi.mock('@/lib/actions/admin-permissions', () => {
+  const requireAdmin = async () => {
     if (!admin) throw new Error('redirect:/login')
     return { userId: '00000000-0000-0000-0000-000000000000', email: 'guard@example.com', role: 'super_admin', permissions: [] }
-  },
-}))
+  }
+  return { requireAdmin, requireRole: requireAdmin }
+})
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined, unstable_cache: (fn: any) => fn }))
 vi.mock('server-only', () => ({}))
 vi.mock('react', async (load) => ({ ...(await load<typeof import('react')>()), cache: <T,>(fn: T) => fn }))

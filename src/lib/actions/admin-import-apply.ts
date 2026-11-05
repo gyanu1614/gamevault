@@ -16,7 +16,8 @@
  * chunk, cached per catalogue item.
  */
 import { revalidatePath } from 'next/cache'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { findEnabledGameCategory } from '@/lib/categories'
@@ -67,7 +68,7 @@ export async function applyImportBatch(
   opts: { restart?: boolean } = {},
 ): Promise<Result<ApplyProgress>> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
 
     const { data: batch } = await svc
@@ -340,7 +341,7 @@ async function setBatchListingStatus(
   action: string,
 ): Promise<Result<{ affected: number }>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
 
     const { data: batch } = await svc

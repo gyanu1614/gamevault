@@ -16,7 +16,7 @@ export function NewSellerBadge({ size = 14, className }: { size?: number; classN
       sx={{ width: size, height: size, color: NEW_GREY }}
       className={cn('inline-block shrink-0 align-[-0.12em]', className)}
       role="img"
-      aria-label="New seller, not yet identity-verified"
+      aria-label="New seller"
       titleAccess="New Seller"
       focusable="false"
     />

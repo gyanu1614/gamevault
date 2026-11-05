@@ -41,9 +41,10 @@ vi.mock('@/lib/utils/notifications', async (importOriginal) => ({
   notifyAdmins: async () => undefined,
 }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => state.client }))
-vi.mock('@/lib/actions/admin-permissions', () => ({
-  requireAdmin: async () => ({ userId: state.adminId }),
-}))
+vi.mock('@/lib/actions/admin-permissions', () => {
+  const requireAdmin = async () => ({ userId: state.adminId })
+  return { requireAdmin, requireRole: requireAdmin }
+})
 
 import { getFraudFlags, getFraudStats, resolveFraudFlag } from '@/lib/actions/fraud-detection'
 import { exportMyData, getGdprRequests, getMyGdprRequests, processGdprRequest, submitGdprRequest } from '@/lib/actions/gdpr'

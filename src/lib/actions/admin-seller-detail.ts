@@ -15,6 +15,7 @@ import { sellsGames } from '@/lib/founding/onboarding'
 import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
+import { limitSignupForRole, seesLegalDetails } from '@/lib/admin/staff-roles'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -349,7 +350,7 @@ async function readSellerDetail(userId: string): Promise<{
   error?: string
 }> {
   try {
-    await requireAdmin()
+    const staff = await requireAdmin()
 
     const service = createServiceRoleClient()
 
@@ -488,7 +489,7 @@ async function readSellerDetail(userId: string): Promise<{
         .catch(() => ({ data: { user: null }, error: null })) as any,
       (service.rpc as any)('admin_seller_detail_numbers', { p_seller_id: userId }),
       readSellerAgreements(service, userId),
-      readSellerOnboarding(service, userId),
+      readSellerOnboarding(service, userId).then((signup) => limitSignupForRole(signup, staff.role)),
       readSellerModeration(service, userId),
     ])
 
@@ -518,7 +519,7 @@ async function readSellerDetail(userId: string): Promise<{
       profile: {
         id: profile.id,
         username: profile.username ?? null,
-        full_name: profile.full_name ?? null,
+        full_name: seesLegalDetails(staff.role) ? profile.full_name ?? null : null,
         email: profile.email ?? null,
         avatar_url: profile.avatar_url ?? null,
         shop_name: profile.shop_name ?? null,

@@ -37,6 +37,22 @@ describe('linkifySegments', () => {
     ])
   })
 
+  it.each([
+    'https://discord.gg/abc',
+    'https://discord.com/invite/abc',
+    'https://www.discordapp.com/invite/abc',
+    'https://t.me/someone',
+    'https://telegram.me/someone',
+    'www.discord.gg/abc',
+  ])('leaves %s as plain text', (url) => {
+    expect(linkifySegments(`add me ${url} ok`)).toEqual([{ type: 'text', value: `add me ${url} ok` }])
+  })
+
+  it('still links other sites, including lookalike names', () => {
+    expect(linkifySegments('https://notdiscord.gg/a')[0]?.type).toBe('link')
+    expect(linkifySegments('https://www.roblox.com/share/x')[0]?.type).toBe('link')
+  })
+
   it('handles several links and plain text', () => {
     const segs = linkifySegments('a http://x.com b https://y.com/z')
     expect(segs.map((s) => s.type)).toEqual(['text', 'link', 'text', 'link'])

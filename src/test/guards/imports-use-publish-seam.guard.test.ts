@@ -122,12 +122,12 @@ describe('born-approved is an admin-only capability', () => {
     for (const path of [READ_ACTIONS, APPLY_ACTIONS]) {
       const fns = functionBodies(file(path).source)
       // A local helper that runs requireAdmin() itself (setBatchListingStatus).
-      const guarded = new Set(fns.filter((f) => !f.exported && f.body.includes('requireAdmin()')).map((f) => f.name))
+      const guarded = new Set(fns.filter((f) => !f.exported && /require(Admin|Role)\(/.test(f.body)).map((f) => f.name))
       const exported = fns.filter((f) => f.exported)
       expect(exported.length, `${path} exports no actions`).toBeGreaterThan(0)
       for (const fn of exported) {
-        const ok = fn.body.includes('requireAdmin()') || [...guarded].some((g) => fn.body.includes(`${g}(`))
-        expect(ok, `${path} → ${fn.name} must call requireAdmin() before touching the service-role client`).toBe(true)
+        const ok = /require(Admin|Role)\(/.test(fn.body) || [...guarded].some((g) => fn.body.includes(`${g}(`))
+        expect(ok, `${path} → ${fn.name} must check the caller's staff role before touching the service-role client`).toBe(true)
       }
     }
   })

@@ -10,7 +10,8 @@
  * caller cannot reach them at all and these modules are the only way in.
  */
 import { revalidatePath } from 'next/cache'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireRole } from '@/lib/actions/admin-permissions'
+import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import { logAdminActivity } from '@/lib/admin/activity-log'
@@ -35,7 +36,7 @@ import type {
 /** The games that have an import config, with whether their category is live. */
 export async function fetchImportableGames(): Promise<Result<ImportableGame[]>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
     const slugs = importableGameSlugs()
     const { data, error } = await svc.from('games').select('id, slug, name').in('slug', slugs)
@@ -65,7 +66,7 @@ export async function fetchImportableGames(): Promise<Result<ImportableGame[]>> 
 /** Seller accounts a batch can be imported on behalf of. */
 export async function fetchStoreSellers(): Promise<Result<StoreSellerOption[]>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
     const { data, error } = await svc
       .from('profiles')
@@ -104,7 +105,7 @@ export async function fetchStoreSellers(): Promise<Result<StoreSellerOption[]>> 
 
 export async function fetchImportBatches(): Promise<Result<BatchSummaryRow[]>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
     const { data, error } = await svc
       .from('listing_import_batches')
@@ -123,7 +124,7 @@ export async function fetchImportBatches(): Promise<Result<BatchSummaryRow[]>> {
 
 export async function fetchImportBatch(batchId: string): Promise<Result<BatchDetail>> {
   try {
-    await requireAdmin()
+    await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
     const { data: batch, error } = await svc
       .from('listing_import_batches')
@@ -182,7 +183,7 @@ export async function createImportBatch(
   input: CreateBatchInput,
 ): Promise<Result<{ batchId: string; summary: ResolveSummary; inputErrors: string[] }>> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
 
     const { data: game } = await svc.from('games').select('id, slug, name').eq('id', input.gameId).maybeSingle()
@@ -273,7 +274,7 @@ export async function teachImportAlias(input: {
   itemRef: string
 }): Promise<Result<{ alias: string }>> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(ADMIN_ONLY)
     const svc = createServiceRoleClient()
 
     const { data: row } = await svc

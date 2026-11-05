@@ -77,6 +77,7 @@ const PAGES: Array<{ label: string; href: string; keywords?: string }> = [
   { label: 'Fraud', href: '/admin/fraud', keywords: 'flags scan' },
   { label: 'Games', href: '/admin/games' },
   { label: 'Moderation', href: '/admin/moderation', keywords: 'listings queue' },
+  { label: 'Listings', href: '/admin/listings', keywords: 'take down search offers' },
   { label: 'Reviews', href: '/admin/reviews' },
   { label: 'Promo Codes', href: '/admin/promos', keywords: 'discount coupon' },
   { label: 'Notifications', href: '/admin/notifications' },

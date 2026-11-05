@@ -96,9 +96,9 @@ export function StepDetails({
   }
 
   return (
-    <StepCard title="A Few Details" lead="What you sell and who you are. Buyers see the games; your name and address stay with our team.">
+    <StepCard title="A Few Details" lead="Your details stay with our team.">
       <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
-        <Field label="Games You Sell" hint="Pick every game you trade in. You can add more later.">
+        <Field label="Games You Sell">
           <GameMultiSelect games={games} selected={selectedIds} onChange={setSelectedIds} placeholder="Search And Select Games…" tone="neutral" />
         </Field>
 
@@ -135,7 +135,7 @@ export function StepDetails({
           </div>
         )}
 
-        <Field label="Expected Monthly Sales" htmlFor="f-volume" hint="A rough guess is fine. It helps us set your limits.">
+        <Field label="Expected Monthly Sales" htmlFor="f-volume">
           <select id="f-volume" value={expectedVolume} onChange={(e) => setExpectedVolume(e.target.value)} className={INPUT_CLS}>
             <option value="" disabled>Choose a range</option>
             {EXPECTED_VOLUMES.map((v) => (
@@ -157,11 +157,11 @@ export function StepDetails({
           </Field>
         </div>
 
-        <Field label="Country" hint="Used for payouts and tax rules later.">
+        <Field label="Country">
           <Combobox value={country} onChange={setCountry} options={COUNTRY_OPTIONS} placeholder="Choose your country" tone="neutral" ariaLabel="Country" iconInTrigger iconClassName={FLAG_CLS} />
         </Field>
 
-        <Field label="Discord Username" optional htmlFor="f-discord" hint="So buyers and our team can reach you fast.">
+        <Field label="Discord Username" optional htmlFor="f-discord">
           <input id="f-discord" value={discord} onChange={(e) => setDiscord(e.target.value)} className={INPUT_CLS} placeholder="yourname" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
         </Field>
         {/* Not on Discord yet, or not in our server: the invite, right where they think of it. */}

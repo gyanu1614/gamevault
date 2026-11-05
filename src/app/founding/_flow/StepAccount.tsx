@@ -176,7 +176,7 @@ export function StepAccount({
   return (
     <StepCard
       title={mode === 'signup' ? 'Sign Up' : 'Log In'}
-      lead={mode === 'signup' ? 'Email and a password. Your store name comes in step 3.' : 'Welcome back. Log in to pick up where you left off.'}
+      lead={mode === 'signup' ? undefined : 'Welcome back. Log in to pick up where you left off.'}
     >
       <OAuthButtons next="/founding" tone="dark" dividerLabel="or use your email" className="mb-6" />
       <form onSubmit={submit} className="flex flex-col gap-5" noValidate>

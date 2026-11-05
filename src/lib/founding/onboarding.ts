@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { COUNTRIES } from '@/app/account/become-seller/data/countries'
 import { SECTION_ORDER, type SellerCategorySection } from '@/app/account/become-seller/_redesign/game-categories-shared'
 import type { LegalDoc } from '@/lib/legal/documents'
+import { isReservedName, RESERVED_NAME_ERROR } from '@/lib/seller/name-rules'
 
 export const FOUNDING_STEPS = [
   { id: 1, label: 'Account', title: 'Sign Up Or Log In' },
@@ -80,12 +81,6 @@ export const detailsSchema = z.object({
 })
 export type DetailsInput = z.input<typeof detailsSchema>
 
-/** Store name: 3–50 chars, letters/digits plus space . ' & - ; must start with a letter or digit. */
-/** Names that read as staff or the brand; never a store. */
-export const RESERVED_STORE_NAMES = new Set([
-  'dropmarket', 'drop_market', 'admin', 'administrator', 'support', 'official', 'staff', 'moderator', 'mod', 'help', 'security', 'safedrop',
-])
-
 /**
  * One word, like a handle (owner, 2026-10-09): letters, numbers and
  * underscore, 3–20 characters, no spaces. It is the store URL as typed,
@@ -98,7 +93,7 @@ export const storeNameSchema = z
   .max(20, 'At most 20 characters')
   .refine((s) => /^[A-Za-z0-9_]+$/.test(s), 'One word: letters, numbers and _ only, no spaces')
   .refine((s) => /[A-Za-z]/.test(s), 'Add at least one letter')
-  .refine((s) => !RESERVED_STORE_NAMES.has(s.toLowerCase().replace(/_/g, '')), 'That name is reserved')
+  .refine((s) => !isReservedName(s), RESERVED_NAME_ERROR)
 
 export const typedNameSchema = z
   .string()

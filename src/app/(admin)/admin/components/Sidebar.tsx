@@ -103,6 +103,7 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
       { label: 'Disputes', href: '/admin/disputes', icon: Scales, roles: ['admin', 'support', 'super_admin'] },
       { label: 'Fraud', href: '/admin/fraud', icon: ShieldWarning, roles: ['admin', 'super_admin'] },
       { label: 'Moderation', href: '/admin/moderation', icon: ListChecks, roles: ['admin', 'moderator', 'super_admin'] },
+      { label: 'Listings', href: '/admin/listings', icon: Storefront, roles: ['admin', 'moderator', 'super_admin'] },
       { label: 'Reports', href: '/admin/reports', icon: Flag, roles: ['admin', 'moderator', 'super_admin'] },
     ],
   },
