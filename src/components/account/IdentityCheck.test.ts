@@ -15,7 +15,7 @@ vi.mock('@/lib/actions/identity-check', () => ({ startIdentityCheck: vi.fn() }))
 import { IdentityCheckButton, IdentityCheckCard } from './IdentityCheck'
 import type { IdentityState } from '@/lib/identity/state'
 
-function render(component: typeof IdentityCheckCard, state: IdentityState | null, available = true): string {
+function render(component: () => React.ReactElement | null, state: IdentityState | null, available = true): string {
   const client = new QueryClient()
   if (state) client.setQueryData(['identity-check'], { state, available })
   return renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(component)))
