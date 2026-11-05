@@ -59,7 +59,9 @@ export interface WithdrawalRequest {
   user_id: string
   amount: number
   method_id: string
+  /** The internal key, such as usdt_trc20. Show method.display_name. */
   method_name: string
+  method?: { display_name: string | null; coin: string | null } | null
   status: 'pending' | 'approved' | 'processing' | 'completed' | 'rejected' | 'cancelled' | 'failed'
   fee_amount: number
   net_amount: number

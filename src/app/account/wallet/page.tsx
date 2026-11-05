@@ -1,45 +1,58 @@
 /**
- * /account/wallet — server shell.
+ * /account/wallet: server page. The balance, earnings and withdrawals are read
+ * together here, in one request with one sign-in check, so the top of the page
+ * arrives with its numbers. Only the tab's list loads in the browser.
  *
- * STATE-008 — this was the worst client-side auth→data waterfall in the app:
- * five useQuery calls, every one gated `enabled: !!user?.id && !authLoading`.
- * They fanned out in parallel with each other (correct), but the whole fan-out
- * sat behind a client auth round-trip, guaranteeing a two-hop cold start before
- * any wallet figure appeared — and an auth-shaped spinner while it happened.
- *
- * The route is middleware-protected, so the server already knows the user when
- * the request arrives. Resolving identity and seller status here lets the five
- * queries start on mount instead of after the session resolves, and lets the
- * island open on the correct tab on first paint rather than correcting it in a
- * useEffect after hydration.
+ * Before this: a server shell, then six reads from the browser, most of them server
+ * actions, which Next runs one at a time behind the navbar's own. One of them
+ * (loyalty stats) was never shown at all.
  */
 
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import WalletClient from './_WalletClient'
+import { readSellerEarnings, readWalletOverview, readWithdrawalRequests, withdrawnTotal } from '@/lib/wallet/reads'
+import WalletClient, { type WalletTab } from './_WalletClient'
 
-export default async function WalletPage() {
+export const metadata: Metadata = {
+  title: 'Wallet',
+  robots: { index: false, follow: false },
+}
+
+function orNull<T>(what: string, read: Promise<T>): Promise<T | null> {
+  return read.catch((err) => {
+    console.error(`[wallet] ${what} failed:`, err instanceof Error ? err.message : err)
+    return null
+  })
+}
+
+export default async function WalletPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect(`/login?redirect=${encodeURIComponent('/account/wallet')}`)
 
-  if (!user) {
-    redirect(`/login?redirect=${encodeURIComponent('/account/wallet')}`)
-  }
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  const isSeller = (profile as { role?: string } | null)?.role === 'seller'
 
-  // Seller status decides the opening tab and whether the sales query runs.
-  // Same signal use-auth resolves on the client: profiles.role === 'seller'.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
+  const [overview, earnings, requests, { tab }] = await Promise.all([
+    orNull('balance', readWalletOverview(user.id)),
+    isSeller ? orNull('earnings', readSellerEarnings(user.id)) : null,
+    isSeller ? orNull('withdrawals', readWithdrawalRequests(supabase, user.id)) : [],
+    searchParams,
+  ])
+
+  const sellerTabs: WalletTab[] = ['earnings', 'purchases', 'payouts']
+  const initialTab: WalletTab = isSeller ? (sellerTabs.includes(tab as WalletTab) ? (tab as WalletTab) : 'earnings') : 'purchases'
 
   return (
     <WalletClient
       userId={user.id}
-      isSeller={(profile as { role?: string } | null)?.role === 'seller'}
+      isSeller={isSeller}
+      initialTab={initialTab}
+      overview={overview}
+      earnings={earnings}
+      requests={requests ?? []}
+      withdrawn={withdrawnTotal(requests ?? [])}
     />
   )
 }

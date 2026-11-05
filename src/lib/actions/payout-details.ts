@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { validatePayoutAddress, COIN_CHAINS, type PayoutChain } from '@/lib/crypto/address-validation'
+import { readPayoutDetails } from '@/lib/wallet/reads'
 import { encryptPayoutSecret, hashPayoutSecret, revealPayoutSecret } from '@/lib/crypto/payout-encryption'
 
 export interface PayoutDetails {
@@ -27,6 +28,8 @@ export interface PayoutDetails {
   payoneerEmail: string | null
   detailsChangedAt: string | null
   freezeUntil: string | null
+  /** How long a change pauses withdrawals: platform_fee_settings, never hardcoded in copy. */
+  freezeHours: number
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -36,25 +39,7 @@ export async function getMyPayoutDetails(): Promise<{ success: boolean; details?
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
-    const service = createServiceRoleClient()
-    const [{ data: row }, { data: settings }] = await Promise.all([
-      (service as any).from('seller_payout_details').select('*').eq('seller_id', user.id).maybeSingle(),
-      (service as any).from('platform_fee_settings').select('payout_details_freeze_hours').eq('id', true).maybeSingle(),
-    ])
-    const changed = row?.details_changed_at ? new Date(row.details_changed_at) : null
-    const freezeHours = Number(settings?.payout_details_freeze_hours ?? 48)
-    return {
-      success: true,
-      details: {
-        cryptoCoin: row?.crypto_coin ?? null,
-        cryptoChain: row?.crypto_chain ?? null,
-        // Decrypted server-side for the OWNER only (this action is session-scoped).
-        cryptoAddress: revealPayoutSecret(row?.crypto_address_enc ?? row?.crypto_address_plain),
-        payoneerEmail: revealPayoutSecret(row?.payoneer_email_enc ?? row?.payoneer_email_plain),
-        detailsChangedAt: changed?.toISOString() ?? null,
-        freezeUntil: changed ? new Date(changed.getTime() + freezeHours * 3_600_000).toISOString() : null,
-      },
-    }
+    return { success: true, details: await readPayoutDetails(user.id) }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Failed to load payout details' }
   }

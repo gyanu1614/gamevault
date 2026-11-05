@@ -294,7 +294,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 // hard refresh. prefetch={false} makes every click hit the
                 // middleware live.
                 prefetch={
-                  ['/account/analytics', '/account/earnings', '/account/listings'].some(
+                  ['/account/analytics', '/account/listings'].some(
                     (r) => item.href.startsWith(r),
                   )
                     ? false

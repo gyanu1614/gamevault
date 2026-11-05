@@ -24,7 +24,6 @@ export const PROTECTED_ROUTE_PREFIXES = [
   '/checkout',
   '/sell',
   '/seller',
-  '/wallet',
   '/admin',
 ] as const
 

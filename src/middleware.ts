@@ -133,8 +133,7 @@ export async function middleware(request: NextRequest) {
       // toast.
       const isSellerOnlyRoute =
         pathname.startsWith('/account/listings') ||
-        pathname.startsWith('/account/analytics') ||
-        pathname.startsWith('/account/earnings')
+        pathname.startsWith('/account/analytics')
 
       // ACC-07 — the sell surface (/sell, /sell/new, /sell/bulk, /sell/edit/*;
       // /sell/fees is public and never reaches here). Exact segment match: a

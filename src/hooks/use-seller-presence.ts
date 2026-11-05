@@ -10,7 +10,6 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { createClient } from '@/lib/supabase/client'
-import { updatePresenceOnline, updatePresenceOffline } from '@/lib/actions/seller-presence'
 import { isSellerOnline } from '@/lib/presence/online'
 
 /** A visibility change within this of the last heartbeat writes nothing. */
@@ -21,6 +20,19 @@ interface SellerPresence {
   is_online: boolean
   last_seen_at: string
   status_message?: string
+}
+
+/**
+ * A plain request, not a server action: Next runs actions one at a time, so a
+ * heartbeat could make the seller's own click wait behind it.
+ */
+async function beat(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/presence/online', { method: 'POST', keepalive: true })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -39,8 +51,7 @@ export function useMyPresence() {
     const initializePresence = async () => {
       // Set initial online status
       lastBeatRef.current = Date.now()
-      const result = await updatePresenceOnline()
-      if (result.success && mounted) {
+      if ((await beat()) && mounted) {
         setIsOnline(true)
       }
     }
@@ -52,7 +63,7 @@ export function useMyPresence() {
     heartbeatInterval.current = setInterval(async () => {
       if (document.visibilityState === 'visible') {
         lastBeatRef.current = Date.now()
-        await updatePresenceOnline()
+        await beat()
       }
     }, 2 * 60 * 1000) // 2 minutes
 
@@ -64,7 +75,7 @@ export function useMyPresence() {
         setIsOnline(true)
         if (Date.now() - lastBeatRef.current < HEARTBEAT_MIN_GAP_MS) return
         lastBeatRef.current = Date.now()
-        await updatePresenceOnline()
+        await beat()
       } else {
         // Don't immediately mark offline, let the cron job handle it
       }
@@ -92,7 +103,7 @@ export function useMyPresence() {
       window.removeEventListener('beforeunload', handleBeforeUnload)
 
       // Mark offline on unmount
-      updatePresenceOffline()
+      navigator.sendBeacon('/api/presence/offline')
     }
   }, [])
 

@@ -37,9 +37,9 @@ export default function KycCompletePage() {
         <span aria-hidden className="mx-auto grid h-12 w-12 place-items-center rounded-md bg-[rgba(106,168,255,0.12)] text-[#6AA8FF]">
           <SealCheckIcon size={28} weight="duotone" />
         </span>
-        <h1 className="mt-4 text-balance text-[18px] font-semibold text-text-primary">Thanks, We’re Checking Your ID</h1>
+        <h1 className="mt-4 text-balance text-[18px] font-semibold text-text-primary">Verification Submitted</h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-text-secondary">
-          {closing ? 'Taking you back…' : 'Your result shows in Settings as soon as it is in.'}
+          {closing ? 'Returning you to DropMarket…' : 'Your status updates in Settings once the review is complete.'}
         </p>
         {!closing && (
           <Link href="/account/settings?tab=seller" className={`${accountBtn.primary} mt-5 w-full`}>

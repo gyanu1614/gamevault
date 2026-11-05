@@ -22,7 +22,7 @@ export async function startIdentityCheck(): Promise<{ ok: true; url: string } | 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Sign in first.' }
-  if (!isKycVideoEnabled()) return { ok: false, error: 'Identity checks are not open right now. Try again later.' }
+  if (!isKycVideoEnabled()) return { ok: false, error: 'Verification is currently unavailable. Please try again later.' }
 
   const service = createServiceRoleClient() as any
   const { data: profile } = await service.from('profiles').select('role, is_verified').eq('id', user.id).maybeSingle()
@@ -30,14 +30,14 @@ export async function startIdentityCheck(): Promise<{ ok: true; url: string } | 
   if (profile.is_verified === true) return { ok: false, error: 'Your identity is already verified.' }
 
   const latest = await latestIdentityCheck(service, user.id)
-  if (latest?.status === 'in_review') return { ok: false, error: 'Your check is being reviewed. We will let you know the result.' }
+  if (latest?.status === 'in_review') return { ok: false, error: 'Your verification is being reviewed. We’ll notify you when it’s complete.' }
   if (latest?.status === 'started' && latest.session_url && Date.now() - new Date(latest.created_at).getTime() < REUSE_MS) {
     return { ok: true, url: latest.session_url }
   }
 
   try {
     const session = await createDiditSession(user.id)
-    if (!session) return { ok: false, error: 'Could not start the check. Try again in a moment.' }
+    if (!session) return { ok: false, error: 'We couldn’t start verification. Please try again in a moment.' }
     const { error } = await service
       .from('identity_checks')
       .insert({ user_id: user.id, session_id: session.sessionId, session_url: session.url })
@@ -45,6 +45,6 @@ export async function startIdentityCheck(): Promise<{ ok: true; url: string } | 
     return { ok: true, url: session.url }
   } catch (err) {
     console.error('[identity-check] start failed:', err instanceof Error ? err.message : err)
-    return { ok: false, error: 'Could not start the check. Try again in a moment.' }
+    return { ok: false, error: 'We couldn’t start verification. Please try again in a moment.' }
   }
 }

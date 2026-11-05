@@ -6,11 +6,9 @@
 import React, { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 ;(globalThis as { React?: unknown }).React = React
-
-vi.mock('@/lib/actions/identity-check', () => ({ startIdentityCheck: vi.fn() }))
 
 import { IdentityCheckCard, IdentityCheckPanel } from './IdentityCheck'
 import type { IdentityState } from '@/lib/identity/state'
@@ -27,7 +25,7 @@ const Card = () => createElement(IdentityCheckCard, { shopName: 'CheckShop' })
 
 describe('IdentityCheckCard', () => {
   it('says when it is needed', () => {
-    expect(render(Card, 'not_started')).toContain('Needed before your first withdrawal.')
+    expect(render(Card, 'not_started')).toContain('Required before your first withdrawal.')
   })
 
   it('not started: offers the check and shows what it gives', () => {
@@ -35,15 +33,15 @@ describe('IdentityCheckCard', () => {
     expect(html).toContain('Not Started')
     expect(html).toContain('Verify Identity')
     expect(html).toContain('CheckShop')
-    expect(html).toContain('Blue badge on your store and listings')
-    expect(html).toContain('Withdraw Your Balance')
-    expect(html).toContain('No extra price review')
+    expect(html).toContain('Verified badge on your store and listings')
+    expect(html).toContain('Withdraw your earnings')
+    expect(html).toContain('No additional price review')
   })
 
   it('in review: no button to start another', () => {
     const html = render(Card, 'in_review')
     expect(html).toContain('In Review')
-    expect(html).toContain('Checking Your Details')
+    expect(html).toContain('Verification In Progress')
     expect(html).not.toContain('Verify Identity')
     expect(html).not.toContain('Try Again')
   })
@@ -64,7 +62,7 @@ describe('IdentityCheckCard', () => {
 
   it('checks not open: says so, and offers no button', () => {
     const html = render(Card, 'not_started', false)
-    expect(html).toContain('Not Open Right Now')
+    expect(html).toContain('Currently Unavailable')
     expect(html).not.toContain('Verify Identity')
   })
 
@@ -90,7 +88,7 @@ describe('IdentityCheckPanel on the withdrawal page', () => {
 
   it('explains the wait while in review, with no button', () => {
     const html = render(Panel, 'in_review')
-    expect(html).toContain('Checking Your Details')
+    expect(html).toContain('Verification In Progress')
     expect(html).not.toContain('<button')
   })
 

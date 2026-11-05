@@ -16,7 +16,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { safeSession } from '@/lib/safe-storage'
-import { sellerListingCount } from '@/lib/actions/seller-banner'
 import { SELLER_PROMPT_LISTING_CAP, type SellerPromptVariant } from '@/lib/seller/seller-prompt'
 
 export type SellerPromptState = 'pending' | 'hidden' | SellerPromptVariant
@@ -34,8 +33,10 @@ export function useSellerPrompt(): { state: SellerPromptState; forgetCount: () =
     const cached = safeSession.get(key)
     if (cached !== null && /^\d+$/.test(cached)) { setListings(Number(cached)); return }
     let alive = true
-    sellerListingCount(SELLER_PROMPT_LISTING_CAP)
-      .then((n) => { if (!alive) return; setListings(n); safeSession.set(key, String(n)) })
+    // A plain request: a server action here queued ahead of the page's own work.
+    fetch(`/api/account/listing-count?cap=${SELLER_PROMPT_LISTING_CAP}`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : { count: 0 }))
+      .then(({ count }: { count: number }) => { if (!alive) return; setListings(count); safeSession.set(key, String(count)) })
       .catch(() => { if (alive) setListings(0) })
     return () => { alive = false }
   }, [sellerId])

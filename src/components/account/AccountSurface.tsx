@@ -12,6 +12,51 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
+/**
+ * One meaning per colour across the account area: trust blue for the badge and
+ * anything protecting the seller, green for money and good news, lime for speed
+ * and progress, amber when something needs them, neutral for plain settings.
+ * The blue is the checkout's TRUST_BLUE, the fill icon on a 12% tile.
+ */
+export const ICON_TILE = {
+  trust: 'bg-[rgba(106,168,255,0.12)] text-[#6AA8FF]',
+  money: 'bg-success-bg text-success',
+  speed: 'bg-lime-tint-bg text-lime-text',
+  attention: 'bg-warning-bg text-warning',
+  danger: 'bg-error-bg text-error',
+  neutral: 'bg-white/[0.06] text-text-secondary',
+} as const
+
+export type IconTileTone = keyof typeof ICON_TILE
+
+/** The same meanings for an icon with no tile. */
+export const ICON_TEXT: Record<IconTileTone, string> = {
+  trust: 'text-[#6AA8FF]',
+  money: 'text-success',
+  speed: 'text-lime-text',
+  attention: 'text-warning',
+  danger: 'text-error',
+  neutral: 'text-text-tertiary',
+}
+
+/** A 40px near-square tile for a Phosphor duotone icon. Decorative. */
+export function IconTile({ tone = 'neutral', children, className }: { tone?: IconTileTone; children: ReactNode; className?: string }) {
+  return (
+    <span aria-hidden className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-md', ICON_TILE[tone], className)}>
+      {children}
+    </span>
+  )
+}
+
+/** A status pill on a card's title row. */
+export function StatusPill({ tone = 'neutral', children }: { tone?: IconTileTone; children: ReactNode }) {
+  return (
+    <span className={cn('inline-flex h-6 items-center whitespace-nowrap rounded-full px-2.5 text-[12px] font-semibold', ICON_TILE[tone])}>
+      {children}
+    </span>
+  )
+}
+
 export function AccountCard({
   className,
   padded = true,
@@ -23,6 +68,9 @@ export function AccountCard({
 interface SettingsCardProps {
   title: string
   description?: ReactNode
+  /** A Phosphor duotone icon, drawn on a tile beside the title. */
+  icon?: ReactNode
+  iconTone?: IconTileTone
   /** Rendered at the right of the title row (a status pill, a link). */
   aside?: ReactNode
   /** Left side of the footer bar: a short hint about the card's action. */
@@ -45,6 +93,8 @@ interface SettingsCardProps {
 export function SettingsCard({
   title,
   description,
+  icon,
+  iconTone,
   aside,
   footerHint,
   footerAction,
@@ -59,11 +109,14 @@ export function SettingsCard({
     <section id={id} className={cn('overflow-hidden rounded-lg bg-bg-raised', className)}>
       <div className={cn('p-5 sm:p-6', bodyClassName)}>
         <header className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold leading-tight text-text-primary">{title}</h2>
-            {description && (
-              <p className="mt-1 max-w-[62ch] text-[13px] leading-relaxed text-text-secondary">{description}</p>
-            )}
+          <div className="flex min-w-0 items-start gap-3">
+            {icon && <IconTile tone={iconTone}>{icon}</IconTile>}
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold leading-tight text-text-primary">{title}</h2>
+              {description && (
+                <p className="mt-1 max-w-[62ch] text-[13px] leading-relaxed text-text-secondary">{description}</p>
+              )}
+            </div>
           </div>
           {aside && <div className="shrink-0">{aside}</div>}
         </header>
