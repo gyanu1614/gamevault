@@ -47,6 +47,9 @@ interface Props {
   withdrawn: number
 }
 
+/** A read that failed shows this, never a false $0.00. */
+const UNKNOWN = '—'
+
 const TAB_ICONS = { earnings: TrendUpIcon, purchases: ShoppingCartIcon, payouts: CreditCardIcon } as const
 
 export default function WalletClient({ userId, isSeller, initialTab, overview, earnings, requests, withdrawn }: Props) {
@@ -116,9 +119,9 @@ export default function WalletClient({ userId, isSeller, initialTab, overview, e
   const rows: BalanceRow[] = isSeller
     ? [
         // Still in flight, plus confirmed sales inside the short hold before release.
-        { label: 'Pending Sales', value: usd((earnings?.pendingSales ?? 0) + (overview?.pending ?? 0)), tone: 'trust', icon: <HourglassMediumIcon size={18} weight="duotone" /> },
-        { label: 'This Month', value: usd(earnings?.thisMonth ?? 0), tone: 'speed', icon: <ChartLineUpIcon size={18} weight="duotone" /> },
-        { label: 'Lifetime Earnings', value: usd(earnings?.totalEarned ?? 0), tone: 'money', icon: <CoinsIcon size={18} weight="duotone" /> },
+        { label: 'Pending Sales', value: earnings ? usd(earnings.pendingSales + (overview?.pending ?? 0)) : UNKNOWN, tone: 'trust', icon: <HourglassMediumIcon size={18} weight="duotone" /> },
+        { label: 'This Month', value: earnings ? usd(earnings.thisMonth) : UNKNOWN, tone: 'speed', icon: <ChartLineUpIcon size={18} weight="duotone" /> },
+        { label: 'Lifetime Earnings', value: earnings ? usd(earnings.totalEarned) : UNKNOWN, tone: 'money', icon: <CoinsIcon size={18} weight="duotone" /> },
         { label: 'Withdrawn', value: usd(withdrawn), tone: 'neutral', icon: <PaperPlaneTiltIcon size={18} weight="duotone" /> },
       ]
     : [
