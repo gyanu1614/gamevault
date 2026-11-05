@@ -22,7 +22,12 @@
 
 export interface ValueCatalog {
   gameSlug: string
-  items: ReadonlyArray<{ slug: string; name: string }>
+  /**
+   * `kind` marks an item that isn't the game's main kind (Adopt Me eggs and
+   * potions): a main item named in the same title wins ("Parrot - Fly Potion" is
+   * a Parrot), and it has no variants.
+   */
+  items: ReadonlyArray<{ slug: string; name: string; kind?: string }>
   /** `key` is the URL segment; `names` are labels/aliases that identify it. */
   variants: ReadonlyArray<{ key: string; names: readonly string[] }>
   /** Template fields whose value is the catalogue item slug. */
@@ -211,15 +216,22 @@ export function matchListingToValueItem(
   }
   // …else the longest catalogue name the title contains as a whole name.
   if (!item) {
+    let side: PreparedCatalog['items'][number] | undefined
     for (const candidate of p.items) {
       if (!title.includes(pad(candidate.n))) continue
-      if (nameOccurrence(tokens, candidate.words, p) === 'whole') {
+      if (nameOccurrence(tokens, candidate.words, p) !== 'whole') continue
+      // Longest first, so a main item's name inside the side item's own ("Dog Egg") is still that side item.
+      if (side && pad(side.n).includes(pad(candidate.n))) continue
+      if (!candidate.item.kind) {
         item = candidate.item
         break
       }
+      side ??= candidate
     }
+    item ??= side?.item
   }
   if (!item) return null
+  if (item.kind) return { itemSlug: item.slug, variant: null }
 
   // 2. Variant: template field first (by option label).
   for (const key of catalog.variantKeys ?? []) {

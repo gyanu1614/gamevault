@@ -84,7 +84,7 @@ function formatBundleDelivery(raw: string | null | undefined): string {
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
 import { VALUE_CATALOG_GAMES } from '@/lib/value-listings/catalogs'
-import { getValuesFeed } from '@/lib/value-listings/feed'
+import { getItemsGridFeed } from '@/lib/value-listings/feed'
 import { filterOptions, toGridItems } from '@/features/items-grid/model/grid'
 import { itemNoun } from '@/features/game-home/model/item-noun'
 const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
@@ -858,7 +858,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         return (data ?? []) as any[]
       })(),
       getCategoryStats(game.id, category.id),
-      isValuesGrid ? getValuesFeed(gameSlug) : Promise.resolve(null),
+      isValuesGrid ? getItemsGridFeed(gameSlug) : Promise.resolve(null),
     ])
 
     const offers = listingsRaw.map((l) => listingToItemOffer(l, taxonomy))
@@ -898,7 +898,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         />
         {/* The client reads ?attr_<slug>= / ?search= deep links through
             SearchParamsBridge, so it stays in the static HTML. */}
-        <Suspense fallback={<ItemsSkeleton grid={!!gridItems} subnav={false} />}>
+        <Suspense fallback={<ItemsSkeleton grid={!!gridItems} subnav={false} typeTabs={!!gridItems && gameSlug === 'adopt-me'} />}>
           {gridItems ? (
             <ItemsGridClient
               gameSlug={gameSlug}

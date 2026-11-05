@@ -605,6 +605,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          item_kind: string | null
           name: string
           obtainability: string
           origin_detail: string | null
@@ -625,6 +626,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          item_kind?: string | null
           name: string
           obtainability?: string
           origin_detail?: string | null
@@ -645,6 +647,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          item_kind?: string | null
           name?: string
           obtainability?: string
           origin_detail?: string | null

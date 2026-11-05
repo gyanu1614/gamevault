@@ -107,8 +107,9 @@ function GridCardSkeleton() {
 /**
  * `grid`: a values game's Items page (picture-top cards, 2 / 3 / 4 to a row); else
  * the listings view. `subnav` off: the real sub-navbar is already on screen.
+ * `typeTabs`: Adopt Me's All / Pets / Eggs / Potions row.
  */
-export default function ItemsSkeleton({ grid = false, subnav = true }: { grid?: boolean; subnav?: boolean }) {
+export default function ItemsSkeleton({ grid = false, subnav = true, typeTabs = false }: { grid?: boolean; subnav?: boolean; typeTabs?: boolean }) {
   return (
     <main className="min-h-screen" aria-busy>
       {subnav ? <GameSubNavSkeleton tabs={2} /> : null}
@@ -117,10 +118,11 @@ export default function ItemsSkeleton({ grid = false, subnav = true }: { grid?: 
           and its count, then search + filters + sort (desktop) or search +
           Filters (below lg), all 44px. */}
       <div className="mx-auto w-full max-w-7xl px-4 pb-2 pt-7 sm:px-6 md:pt-4 lg:px-8">
-        <div className="mb-5 flex items-baseline gap-3">
+        <div className={`${typeTabs ? 'mb-3' : 'mb-5'} flex items-baseline gap-3`}>
           <Block className="h-[31px] w-56 max-w-[70%] sm:h-[37px] sm:w-72" />
           <Block className="h-4 w-14" />
         </div>
+        {typeTabs ? <Block className="mb-4 h-10 w-[326px] max-w-full rounded-lg" /> : null}
         <div className="flex items-center gap-2">
           <Block className="h-11 min-w-0 flex-1 rounded-lg" />
           {[108, 100, 96].map((w, i) => (

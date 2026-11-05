@@ -65,6 +65,7 @@ export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
     itemName: model.item.name,
     rarity: model.item.rarity ? rarityMeta(params.gameSlug, model.item.rarity).label : null,
     facts,
+    kind: model.item.kind,
   })
   // Every trait's offers: the page sells all of them, whatever the URL's trait.
   const productLd = ownStockProduct({

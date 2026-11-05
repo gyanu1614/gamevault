@@ -32,7 +32,7 @@ type Data = NonNullable<Awaited<ReturnType<typeof loadItemListingsPage>>>
 export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; data: Data; about: ItemAbout }) {
   const { pair, catalog, model, offers, offerVariants } = data
   const { item } = model
-  const traits = traitDefs(gameSlug, catalog)
+  const traits = item.kind ? [] : traitDefs(gameSlug, catalog)
   const browseHref = `/${gameSlug}/${pair.categorySlug}`
   const rarity = item.rarity ? rarityMeta(gameSlug, item.rarity) : null
   // A quiet internal link from the About sentence (never a button): only when the item has a public value page.
@@ -63,7 +63,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
           basePath={model.canonicalPath}
           rarity={rarity ? { label: rarity.label, color: rarity.color } : null}
           deliveryMethod={deliveryMethodLabel(gameSlug)}
-          deliveryFallback={defaultDeliveryNote(gameSlug, pair.gameName)}
+          deliveryFallback={defaultDeliveryNote(gameSlug, pair.gameName, item.kind)}
           trust={<TrustRow />}
         />
       </div>

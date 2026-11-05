@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { fromAdoptMe, fromGeneric, fromSab } from './map'
+import { fromAdoptMe, fromGeneric, fromSab, withMarketItems } from './map'
+import type { ValuesFeed } from './types'
 
 describe('values feed mappers', () => {
   it('Adopt Me: the Fly Ride form carries the trend, value and its label; only pets with a page link', () => {
@@ -41,5 +42,26 @@ describe('values feed mappers', () => {
   it('generic: passes the row through, market price first', () => {
     const [r] = fromGeneric([{ slug: 'harvester', name: 'Harvester', rarity: 'Godly', itemType: 'knife', imageUrl: null, href: '/murder-mystery-2/values/harvester', trendPct: 2.1, marketUsd: 7, cheapestUsd: 6, isNew: true }] as never)
     expect(r).toEqual({ slug: 'harvester', name: 'Harvester', imageUrl: null, href: '/murder-mystery-2/values/harvester', rarityKey: 'Godly', itemType: 'knife', isNew: true, trendPct: 2.1, trendLabel: null, valueUsd: 7, popularRank: null })
+  })
+})
+
+describe('withMarketItems', () => {
+  const pet = { slug: 'parrot', name: 'Parrot', imageUrl: '/p.png', href: '/adopt-me/values/parrot', rarityKey: 'legendary', itemType: null, isNew: false, trendPct: 3, trendLabel: 'FR', valueUsd: 50, popularRank: 2 }
+  const feed = { items: [pet], stock: { 'crystal-egg': 2 }, buyHref: {}, minPrice: { 'crystal-egg': 4 }, forms: {}, categorySlug: 'buy-items' } as unknown as ValuesFeed
+
+  it('no eggs in the catalogue: the same feed, so the page shows no types', () => {
+    expect(withMarketItems(feed, [{ slug: 'parrot', name: 'Parrot' }])).toBe(feed)
+  })
+
+  it('types the pets and adds the eggs and potions with no rarity, value page or value', () => {
+    const out = withMarketItems(feed, [
+      { slug: 'parrot', name: 'Parrot' },
+      { slug: 'crystal-egg', name: 'Crystal Egg', imageUrl: '/e.png', popularRank: 3, kind: 'egg' },
+      { slug: 'fly-potion', name: 'Fly Potion', kind: 'potion' },
+    ])
+    expect(out.items.map((i) => [i.slug, i.itemType])).toEqual([['parrot', 'Pets'], ['crystal-egg', 'Eggs'], ['fly-potion', 'Potions']])
+    expect(out.items[1]).toMatchObject({ imageUrl: '/e.png', popularRank: 3, rarityKey: null, href: null, valueUsd: null, isNew: false })
+    expect(out.items[2].imageUrl).toBeNull()
+    expect(out.stock).toEqual(feed.stock)
   })
 })

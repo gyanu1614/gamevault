@@ -69,3 +69,23 @@ describe('itemAbout', () => {
     expect(itemAbout({ ...sab, rarity: null, facts: { ...NO_FACTS, origin: 'Admin Abuse events' } }).intro).toBe('Garama is a brainrot in Steal a Brainrot. It came from Admin Abuse events.')
   })
 })
+
+describe('itemAbout — eggs and potions', () => {
+  const egg = { ...parrot, itemName: 'Crystal Egg', rarity: null, kind: 'egg' as const }
+
+  it('an egg: its own line, no traits guide, no question about traits', () => {
+    const a = itemAbout(egg)
+    expect(a.heading).toBe('About Adopt Me Crystal Egg')
+    expect(a.intro).toBe('Crystal Egg is an egg in Adopt Me. Look after it and it hatches into a random pet.')
+    expect(a.traitGuide).toBe(false)
+    expect(a.faq.map((f) => f.q).join(' ')).not.toMatch(/F, R, N/)
+    expect(a.faq.map((f) => f.a).join(' ')).toMatch(/Check the egg before/)
+    expect(a.relatedHeading).toBe('Popular Adopt Me Pets')
+  })
+
+  it('a potion: its own line', () => {
+    const a = itemAbout({ ...egg, itemName: 'Fly Potion', kind: 'potion' })
+    expect(a.intro).toBe('Fly Potion is a potion in Adopt Me that you use on one of your pets.')
+    expect(a.faq.map((f) => f.a).join(' ')).toMatch(/Check the potion before/)
+  })
+})

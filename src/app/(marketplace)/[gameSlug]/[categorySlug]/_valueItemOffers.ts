@@ -37,8 +37,9 @@ export const resolveItemRoute = cache(
     const pair = await getItemsPair(gameSlug)
     if (!pair || pair.categorySlug !== categorySlug) return null
     const catalog = await getValueCatalog(gameSlug)
-    if (!catalog || !catalog.items.some((i) => i.slug === itemSlug)) return null
-    if (variant && !isKnownVariant(catalog, variant)) return null
+    const item = catalog?.items.find((i) => i.slug === itemSlug)
+    if (!catalog || !item) return null
+    if (variant && (item.kind || !isKnownVariant(catalog, variant))) return null
     return { pair, catalog }
   },
 )

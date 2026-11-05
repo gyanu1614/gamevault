@@ -270,3 +270,39 @@ describe('matchListingToValueItem — whole-name rule', () => {
     expect(matchListingToValueItem({ title: 'Mystery Dragon Cannelloni', templateData: {} }, catalog)).toBeNull()
   })
 })
+
+describe('matchListingToValueItem — Adopt Me eggs and potions', () => {
+  const rows = [
+    { slug: 'parrot', name: 'Parrot', rarity: 'legendary' },
+    { slug: 'dog', name: 'Dog', rarity: 'common' },
+    { slug: 'safari-egg', name: 'Safari Egg', rarity: 'common', kind: 'egg' as const },
+    { slug: 'christmas-future-egg', name: 'Christmas Future Egg', rarity: 'common', kind: 'egg' as const },
+    { slug: 'dog-egg', name: 'Dog Egg', rarity: 'common', kind: 'egg' as const },
+    { slug: 'fly-potion', name: 'Fly Potion', rarity: 'common', kind: 'potion' as const },
+    { slug: 'ride-potion', name: 'Ride Potion', rarity: 'common', kind: 'potion' as const },
+  ]
+  const catalog = buildValueCatalog('adopt-me', { items: rows })!.catalog
+  const match = (title: string, templateData?: Record<string, unknown>) => matchListingToValueItem({ title, templateData }, catalog)
+
+  it('finds them from the title, with no trait', () => {
+    expect(match('Safari Egg - Adopt Me (Quick Delivery)')).toEqual({ itemSlug: 'safari-egg', variant: null })
+    expect(match('Christmas Future Egg')).toEqual({ itemSlug: 'christmas-future-egg', variant: null })
+    expect(match('Fly Potion')).toEqual({ itemSlug: 'fly-potion', variant: null })
+    expect(match('Ride Potion - Instant')).toEqual({ itemSlug: 'ride-potion', variant: null })
+  })
+
+  it('a trait picked on the form does not stick to an egg', () => {
+    expect(match('Safari Egg', { trait: 'Neon' })).toEqual({ itemSlug: 'safari-egg', variant: null })
+  })
+
+  it('a pet named in the same title wins, even when the potion name is longer', () => {
+    expect(match('Parrot - Fly Potion')?.itemSlug).toBe('parrot')
+    expect(match('No potion parrot')).toEqual({ itemSlug: 'parrot', variant: 'normal' })
+    expect(match('Neon Fly Potion Parrot')?.itemSlug).toBe('parrot')
+  })
+
+  it("a pet's name inside the egg's own name is still the egg", () => {
+    expect(match('Dog Egg')?.itemSlug).toBe('dog-egg')
+    expect(match('Dog')?.itemSlug).toBe('dog')
+  })
+})

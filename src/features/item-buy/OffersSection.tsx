@@ -112,12 +112,13 @@ export function OffersSection({
                     seller={{ name: sellerDisplayName(s), avatarUrl: s.avatarUrl, verified: s.verified, rating: s.ratingPercent, reviews: s.reviewCount, sales: s.sales, tier: s.tier ?? null }}
                     sellerHref={slug ? `/shop/${slug}` : null}
                     metrics={[
-                      { label: noun, value: trait, width: 132 },
+                      // Eggs and potions have no traits, so no column for them.
+                      ...(traitDefs.length > 0 ? [{ label: noun, value: trait, width: 132 }] : []),
                       { icon: Inventory2RoundedIcon, label: 'In Stock', value: stock, width: 104 },
                       { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery, width: 124 },
                     ]}
                     mobileMetrics={[
-                      { label: '', value: trait },
+                      ...(traitDefs.length > 0 ? [{ label: '', value: trait }] : []),
                       { icon: Inventory2RoundedIcon, label: 'In Stock', value: stock },
                       { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery },
                     ]}
