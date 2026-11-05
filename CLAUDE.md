@@ -83,6 +83,11 @@
 - Adding a game: adapter + `games/<game-slug>.test.ts` (saved wiki pages) + registry line + workflow matrix key — the guard test fails until all exist. Never edit another game's adapter for it.
 - A new item must be priceable with no manual step. SAB matches Eldorado titles only through `sab_brainrot_aliases`: the `sab_brainrots_default_aliases` trigger (20261023031219) adds name + slug aliases on every insert, and `sab_recompute_tradeable` keeps brainrots added in the last 14 days in the crawl. Adopt Me and MM2 match by name from the DB; only a spelling that differs on Eldorado needs an alias (`ELDORADO_NAME_ALIASES` / `values_item_aliases`).
 
+## Adopt Me eggs and potions (from migration 20261104165718)
+- They are `adopt_me_pets` rows with `is_active = false` and `item_kind` (`egg|potion`), added only by `pnpm adoptme:market-items` (insert-only, checksummed report). Every Values, calculator, sitemap, blog and crawl reader filters `is_active = true`: keep that filter on any new reader, or eggs appear there.
+- The public read policy is `is_active OR item_kind IS NOT NULL`, because the market catalogue (`loadValueCatalog`) reads with the anon key. Narrowing it 404s every egg page with no error; `adopt-me-market-items.guard.integration.test.ts` pins it.
+- The Items page reads `getItemsGridFeed`, other surfaces `getValuesFeed`. A catalogue item with `kind` has no traits, rarity or value page, and a pet named in the same listing title wins over it.
+
 ## Public pages are static-first (from Step 7a, 2026-09-19)
 - Every public page is ISR or SSG. `scripts/check-public-route-caching.mjs` runs ahead of `next build` (and as `src/test/guards/public-route-caching.guard.test.ts`) and fails the deploy when a public route breaks a rule below. A new per-request public route needs an entry in its `GRANDFATHERED` list with the reason — the same review a `force-dynamic` would get.
 - **No cookie client on a public read.** `@/lib/supabase/server` calls `cookies()`; one call anywhere in a page's server import graph makes the whole route `private, no-store`. Public data goes through `@/lib/supabase/anon`. A `'use server'` module that mixes session writes with public reads must be in `MIXED_ACTION_MODULES`, and its public reads must be covered by a behaviour test that mocks the cookie client to throw (`category-page-anon-reads.test.ts`).
