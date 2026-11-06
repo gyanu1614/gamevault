@@ -16,7 +16,7 @@ type Scope = (q: any) => any
 
 const num = (v: unknown) => (v == null || !Number.isFinite(Number(v)) ? null : Number(v))
 
-async function trendDays(db: Db, table: string, scope: Scope): Promise<{ fromDate: string; toDate: string } | null> {
+export async function trendDays(db: Db, table: string, scope: Scope): Promise<{ fromDate: string; toDate: string } | null> {
   const newest = await scope(db.from(table).select('history_date')).order('history_date', { ascending: false }).limit(1).maybeSingle()
   if (newest.error) throw new Error(`${table}: ${newest.error.message}`)
   const toDate: string | undefined = newest.data?.history_date
