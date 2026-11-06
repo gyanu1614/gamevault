@@ -44,6 +44,7 @@ import { DeliveryMethodFilter } from '@/components/marketplace/DeliveryMethodFil
 import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
 import { filterByDeliveryMethod, methodsInUse } from '@/lib/currency/delivery-methods'
 import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -529,7 +530,7 @@ function SectionHeader({
                tile so the two-letter monogram has something to sit on. */
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={iconUrl}
+              src={pictureUrl(iconUrl, 'thumb')}
               alt={`${title} icon`}
               aria-hidden
               className="h-14 w-14 flex-shrink-0 rounded-xl object-contain sm:h-[60px] sm:w-[60px]"
@@ -1029,7 +1030,7 @@ function FilterChips({
   const tab = (iconSrc: string, label: string, shortLabel: string) => (
     <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={iconSrc} alt={`${label} icon`} aria-hidden draggable={false} width={18} height={18} className="hidden h-[18px] w-[18px] select-none object-contain sm:block" />
+      <img src={pictureUrl(iconSrc, 'icon')} alt={`${label} icon`} aria-hidden draggable={false} width={18} height={18} className="hidden h-[18px] w-[18px] select-none object-contain sm:block" />
       <span className="hidden sm:inline">{label}</span>
       <span className="sm:hidden">{shortLabel}</span>
     </>

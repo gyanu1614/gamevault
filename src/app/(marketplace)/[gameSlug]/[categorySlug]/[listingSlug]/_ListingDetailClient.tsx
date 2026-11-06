@@ -55,6 +55,7 @@ import type { TemplateField } from '@/lib/templates/types'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { acceptedMethodsPhrase } from '@/lib/payments/accepted-methods'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const fmtPrice = (n: number) => {
   if (n === 0) return '$0.00'
@@ -398,7 +399,7 @@ export default function ListingDetailClient({
                 {listing.gameImageUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={listing.gameImageUrl}
+                    src={pictureUrl(listing.gameImageUrl, 'icon')}
                     alt={listing.gameName}
                     className="h-8 w-8 shrink-0 rounded-lg object-cover ring-1 ring-border-subtle"
                   />
@@ -506,7 +507,7 @@ export default function ListingDetailClient({
                       )}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img} alt={`${listing.title} thumbnail ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                      <img src={pictureUrl(img, 'card')} alt={`${listing.title} thumbnail ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
                     </button>
                   ))}
                 </div>
@@ -1099,7 +1100,7 @@ function OtherSellerRow({
             {offer.imageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
-                src={offer.imageUrl}
+                src={pictureUrl(offer.imageUrl, 'thumb')}
                 alt={offer.name}
                 aria-hidden
                 className="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-border-subtle"
@@ -1204,7 +1205,7 @@ verified={offer.seller.verified}
               {offer.imageUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={offer.imageUrl}
+                  src={pictureUrl(offer.imageUrl, 'card')}
                   alt={offer.name}
                   className="h-24 w-24 shrink-0 rounded-lg object-cover ring-1 ring-border-subtle sm:h-28 sm:w-28"
                 />
@@ -1273,7 +1274,7 @@ function MiniCard({ listing, gameSlug }: { listing: MiniListing; gameSlug: strin
         {listing.image ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={listing.image}
+            src={pictureUrl(listing.image, 'big')}
             alt={listing.title}
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"

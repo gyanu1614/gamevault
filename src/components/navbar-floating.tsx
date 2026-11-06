@@ -42,6 +42,7 @@ import { ProfileMenu } from '@/components/navbar/ProfileMenu'
 import { useNavWalletBalance, useStoreOfflineMode } from '@/components/navbar/use-profile-menu-data'
 import { OrderStatusPill } from '@/components/account/OrderStatusPill'
 import { useUserChannelEvent, useUserChannelRejoined } from '@/hooks/use-user-channel'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 // 5 fixed nav tabs with their DB type keys
 /* Hamburger root on /account/* — the sidebar's destinations, flat.
@@ -181,7 +182,7 @@ function LiveOrderGameIcon({ game }: { game?: { slug?: string | null; image_url?
       {src && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={src}
+          src={pictureUrl(src, 'thumb')}
           alt="Game icon"
           aria-hidden
           width={44}
@@ -1505,7 +1506,7 @@ export function Navbar({
                                   <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-bg-overlay ring-1 ring-white/[0.08]">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                      src={game.iconSrc}
+                                      src={pictureUrl(game.iconSrc, 'thumb')}
                                       alt={`${game.name} logo`}
                                       aria-hidden
                                       width={44}
@@ -1701,7 +1702,7 @@ export function Navbar({
                               >
                                 {game.image_url && game.image_url !== '' ? (
                                   // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={game.image_url} alt={`${game.name} logo`} aria-hidden className="h-9 w-9 shrink-0 rounded-[8px] object-cover ring-1 ring-white/[0.10]" />
+                                  <img src={pictureUrl(game.image_url, 'thumb')} alt={`${game.name} logo`} aria-hidden className="h-9 w-9 shrink-0 rounded-[8px] object-cover ring-1 ring-white/[0.10]" />
                                 ) : (
                                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.08] text-[9px] font-bold text-white/45">
                                     {game.name.slice(0, 2).toUpperCase()}
@@ -1935,7 +1936,7 @@ function CategoryDropdown({
                           {game.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={game.image_url}
+                              src={pictureUrl(game.image_url, 'thumb')}
                               alt={`${game.name} logo`}
                               aria-hidden
                               width={40}
@@ -2010,7 +2011,7 @@ function CategoryDropdown({
                               {game.image_url ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                  src={game.image_url}
+                                  src={pictureUrl(game.image_url, 'icon')}
                                   alt={`${game.name} logo`}
                                   aria-hidden
                                   width={32}
@@ -2493,7 +2494,7 @@ function GlobalSearch({
                             {m.game.image_url ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img
-                                src={m.game.image_url}
+                                src={pictureUrl(m.game.image_url, 'icon')}
                                 alt={`${m.game.name} logo`}
                                 aria-hidden
                                 className="h-8 w-8 shrink-0 rounded-md object-cover ring-1 ring-white/10"
@@ -2550,7 +2551,7 @@ function GlobalSearch({
                                           ) : (
                                             /* eslint-disable-next-line @next/next/no-img-element */
                                             <img
-                                              src={c.iconUrl}
+                                              src={pictureUrl(c.iconUrl, 'icon')}
                                               alt={`${c.label} icon`}
                                               aria-hidden
                                               className="h-7 w-7 rounded-md object-contain"
@@ -2601,7 +2602,7 @@ function GlobalSearch({
                                       {h.gameImage ? (
                                         /* eslint-disable-next-line @next/next/no-img-element */
                                         <img
-                                          src={h.gameImage}
+                                          src={pictureUrl(h.gameImage, 'icon')}
                                           alt={`${h.gameName} logo`}
                                           aria-hidden
                                           className="h-8 w-8 shrink-0 rounded-md object-cover ring-1 ring-white/10"

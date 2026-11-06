@@ -1,6 +1,7 @@
 import { createAnonClient } from '@/lib/supabase/anon'
 import { loadCoreRows } from '@/lib/seo/category-data'
 import { computeCategoryPages } from '@/lib/seo/category-index'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 export interface CategoryPair {
   gameSlug: string
@@ -9,7 +10,9 @@ export interface CategoryPair {
 
 /**
  * The (game, category) pairs the sitemap advertises: the prerender set for
- * `/[gameSlug]/[categorySlug]/opengraph-image` (Step 7a).
+ * `/[gameSlug]/[categorySlug]` and its opengraph-image. Any other enabled pair
+ * renders on its first visit into the same ISR cache. Builds don't read the Data
+ * Cache, so a release's reads follow how many pages it builds (2026-11-05).
  *
  * The SAME rule as src/app/sitemap.ts (lib/seo/category-index.ts +
  * lib/games/indexability.ts): an enabled category of an active game with a
@@ -17,8 +20,7 @@ export interface CategoryPair {
  * curated currency content. Cookie-free: this runs in generateStaticParams at
  * build time, where there is no request.
  *
- * Any read failure yields [] — the long tail renders on demand into the same
- * ISR cache, so a bad build-time read costs first-hit renders, not pages.
+ * A failed read stops the build, which leaves the live site as it is.
  */
 export async function getIndexableCategoryPairs(): Promise<CategoryPair[]> {
   try {
@@ -26,43 +28,15 @@ export async function getIndexableCategoryPairs(): Promise<CategoryPair[]> {
     return rows
       .filter((r) => r.verdict === 'index')
       .map(({ gameSlug, categorySlug }) => ({ gameSlug, categorySlug }))
-  } catch {
-    return []
-  }
-}
-
-/**
- * EVERY enabled (active game, enabled category) pair — the prerender set for
- * `/[gameSlug]/[categorySlug]` from Step 7b on. With ~12 deploys a day, any
- * pair not built at deploy re-renders on its first visit after each one; the
- * sitemap's subset (above) stays the rule for indexability and OG images.
- * One read; [] on failure so the long tail simply renders on demand.
- */
-export async function getAllEnabledCategoryPairs(): Promise<CategoryPair[]> {
-  try {
-    const supabase = createAnonClient()
-    const { data } = (await supabase
-      .from('game_categories')
-      .select('slug, game:games!game_categories_game_id_fkey(slug, is_active)')
-      .eq('is_enabled', true)) as unknown as {
-      data: { slug: string; game: { slug: string; is_active: boolean } | null }[] | null
-    }
-    return (data ?? [])
-      .filter((c) => c.game?.slug && c.game.is_active)
-      .map((c) => ({ gameSlug: c.game!.slug, categorySlug: c.slug }))
-      .sort((a, b) =>
-        a.gameSlug === b.gameSlug
-          ? a.categorySlug.localeCompare(b.categorySlug)
-          : a.gameSlug.localeCompare(b.gameSlug),
-      )
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return []
   }
 }
 
 /**
  * Narrow `game/category` keys to the pairs `/[gameSlug]/[categorySlug]` can
- * actually serve (`renderable` = getAllEnabledCategoryPairs()). The sitemap
+ * actually serve (`renderable`). The sitemap
  * builds its pairs from active LISTINGS, so a listing left under a category an
  * admin switched off (is_enabled = false) put a URL in the sitemap that the page
  * gate answers with a 404 — found live as /gta-vi/buy-items.
@@ -72,9 +46,7 @@ export async function getAllEnabledCategoryPairs(): Promise<CategoryPair[]> {
  * categories of ACTIVE games and that belong to the listing's game, so it no
  * longer calls this helper. It stays exported, with its tests, for other callers.
  *
- * Fails OPEN: getAllEnabledCategoryPairs() returns [] when its read fails, and
- * a transient DB error must not empty the sitemap's category pages. Input order
- * is kept.
+ * Input order is kept.
  */
 export function onlyRenderablePairs(
   pairKeys: Iterable<string>,

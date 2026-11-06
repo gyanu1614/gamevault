@@ -7,6 +7,7 @@ import { ADMIN_ONLY } from '@/lib/admin/staff-roles'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { submitGameIfLive, submitGameRemoved } from '@/lib/seo/indexnow'
+import { toStoredImage } from '@/lib/images/resize-server'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -299,11 +300,10 @@ export async function uploadGameIcon(
 
     // Convert base64 to buffer
     const base64Data = fileData.base64.split(',')[1]
-    const buffer = Buffer.from(base64Data, 'base64')
+    const stored = await toStoredImage(new Uint8Array(Buffer.from(base64Data, 'base64')), fileData.type, 'icon')
 
     // Generate unique filename with 'games/' prefix to separate from categories
-    const fileExt = fileData.name.split('.').pop()
-    const fileName = `games/${gameId}-${Date.now()}.${fileExt}`
+    const fileName = `games/${gameId}-${Date.now()}.${stored.ext}`
     const filePath = `${fileName}`
 
     // Delete old icon if exists
@@ -323,8 +323,8 @@ export async function uploadGameIcon(
     // Upload new icon (using category-icons bucket)
     const { error: uploadError } = await supabase.storage
       .from('category-icons')
-      .upload(filePath, buffer, {
-        contentType: fileData.type,
+      .upload(filePath, stored.bytes, {
+        contentType: stored.mime,
         cacheControl: '31536000', // unique path per upload: immutable
         upsert: true,
       })

@@ -2,6 +2,7 @@ import Link from '@/components/navigation/AppLink'
 import { ArrowRight, Gamepad2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AboutModel, AboutRow } from '../types'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * About {Game}: the search copy Eldorado keeps at the bottom of its game
@@ -37,7 +38,7 @@ function Art({ art }: { art: string[] }) {
       {art.map((src, i) => (
         <span key={src} className={cn('col-span-2 grid aspect-square place-items-center', i === 3 && 'col-start-2')}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.5)]" />
+          <img src={pictureUrl(src, 'big')} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.5)]" />
         </span>
       ))}
     </div>
@@ -50,7 +51,7 @@ function Categories({ model }: { model: AboutModel }) {
     <div className="flex flex-col items-center gap-6">
       {model.gameImageUrl ? (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={model.gameImageUrl} alt={`${model.gameName} logo`} width={120} height={120} loading="lazy" decoding="async" className="h-[104px] w-[104px] rounded-lg object-cover sm:h-[120px] sm:w-[120px]" />
+        <img src={pictureUrl(model.gameImageUrl, 'card')} alt={`${model.gameName} logo`} width={120} height={120} loading="lazy" decoding="async" className="h-[104px] w-[104px] rounded-lg object-cover sm:h-[120px] sm:w-[120px]" />
       ) : (
         <span aria-hidden className="flex h-[104px] w-[104px] items-center justify-center rounded-lg bg-bg-overlay text-lime-text sm:h-[120px] sm:w-[120px]">
           <Gamepad2 className="h-8 w-8" />

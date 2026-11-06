@@ -59,6 +59,7 @@ import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
 import { methodsInUse } from '@/lib/currency/delivery-methods'
 import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 import { CurrencySellerRow, SellerIdentity, type SellerIdentityData } from '@/components/marketplace/CurrencySellerRow'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 export interface BundleOffer {
   listingId: string
@@ -339,7 +340,7 @@ export default function BundleCurrencyPageClient({
                currency page). Transparent PNG sits directly on the page. */
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={data.currencyIconUrl}
+              src={pictureUrl(data.currencyIconUrl, 'thumb')}
               alt={`${data.unitLabel} icon`}
               aria-hidden
               className="h-14 w-14 shrink-0 rounded-xl object-contain sm:h-[60px] sm:w-[60px]"
@@ -541,7 +542,7 @@ export default function BundleCurrencyPageClient({
                           {bundle.icon_url ? (
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img
-                              src={bundle.icon_url}
+                              src={pictureUrl(bundle.icon_url, 'thumb')}
                               alt={bundle.name}
                               aria-hidden
                               className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-[1.06]"
@@ -812,7 +813,7 @@ function OptionTiles({
                 {o.icon ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={o.icon}
+                    src={pictureUrl(o.icon, 'icon')}
                     alt={o.label}
                     aria-hidden
                     className={cn(

@@ -39,6 +39,7 @@ import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import type { ItemOffer } from './_itemsTypes'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const fmtPrice = (n: number) => {
   if (n === 0) return '$0.00'
@@ -233,7 +234,7 @@ export default function ItemCard({
           {offer.imageUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={offer.imageUrl}
+              src={pictureUrl(offer.imageUrl, 'card')}
               alt={offer.name}
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover"

@@ -20,6 +20,7 @@ import Link from '@/components/navigation/AppLink'
 import { getPostsTaggedForGame } from '@/lib/blog/db'
 import { VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { postHref } from '@/lib/blog/post-url'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const POST_TYPE_LABEL: Record<string, string> = {
   value: 'Value List',
@@ -60,7 +61,7 @@ export async function HubGuidesStrip({
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={p.cover}
+                  src={pictureUrl(p.cover, 'big')}
                   alt={p.title}
                   aria-hidden
                   loading="lazy"

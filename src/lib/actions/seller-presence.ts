@@ -12,6 +12,7 @@ import { revalidateTag, unstable_cache } from 'next/cache'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { PAUSED_SELLERS_TAG } from '@/lib/revalidation/tags'
 import { requestMemo } from '@/lib/revalidation/request-memo'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Update seller presence to online
@@ -281,7 +282,8 @@ const readPausedSellerIds = unstable_cache(
         .eq('store_paused', true)
       if (error || !data) return []
       return (data as any[]).map((r) => r.seller_id).filter(Boolean)
-    } catch {
+    } catch (e) {
+      rethrowFailedRead(e)
       return []
     }
   },

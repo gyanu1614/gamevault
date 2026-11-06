@@ -21,6 +21,7 @@ import type {
   CategoryConfigByType,
   CategoryConfigType,
 } from '@/lib/types/category-configs'
+import { toStoredImage } from '@/lib/images/resize-server'
 
 type Result<T> = { success: true; data: T } | { success: false; error: string }
 
@@ -161,16 +162,15 @@ export async function uploadCurrencyImage(
     }
 
     const base64Data = fileData.base64.split(',')[1] ?? fileData.base64
-    const buffer = Buffer.from(base64Data, 'base64')
-    const ext = (fileData.name.split('.').pop() ?? 'png').toLowerCase()
+    const stored = await toStoredImage(new Uint8Array(Buffer.from(base64Data, 'base64')), fileData.type, 'icon')
     // Stable-ish path includes the gameId + a timestamp so cache
     // busting works without piling up old files (upsert: true).
-    const filePath = `currency/${gameId}-${Date.now()}.${ext}`
+    const filePath = `currency/${gameId}-${Date.now()}.${stored.ext}`
 
     const { error: uploadError } = await supabase.storage
       .from('category-icons')
-      .upload(filePath, buffer, {
-        contentType: fileData.type,
+      .upload(filePath, stored.bytes, {
+        contentType: stored.mime,
         cacheControl: '31536000', // unique path per upload: immutable
         upsert: true,
       })

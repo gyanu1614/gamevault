@@ -18,13 +18,14 @@ import { Lightbulb } from '@phosphor-icons/react/dist/ssr/Lightbulb'
 import { Info } from '@phosphor-icons/react/dist/ssr/Info'
 import { WarningCircle } from '@phosphor-icons/react/dist/ssr/WarningCircle'
 import type { Icon } from '@phosphor-icons/react'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 export const BTN_WHITE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-[8px] bg-[#F2F3F5] px-5 text-[14px] font-semibold text-[#111214] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 const BTN_QUIET =
   'inline-flex h-11 items-center justify-center rounded-[8px] bg-white/[0.06] px-4 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.1]'
 
-const srcSet = (list: SrcItem[]) => list.map((s) => `${s.url} ${s.w}w`).join(', ')
+const srcSet = (list: SrcItem[]) => list.map((s) => `${pictureUrl(s.url, 'original')} ${s.w}w`).join(', ')
 // The reading column is up to 820px (components/blog/layout.ts); a Wide picture fills it too, just taller.
 const SIZES = {
   column: '(min-width: 1024px) 820px, calc(100vw - 32px)',
@@ -62,7 +63,7 @@ export function Picture({
       {webp.length > 0 && <source type="image/webp" srcSet={srcSet(webp)} sizes={sizes} />}
       {/* eslint-disable-next-line @next/next/no-img-element -- pre-sized at upload, served from storage */}
       <img
-        src={image.src}
+        src={pictureUrl(image.src, 'original')}
         alt={alt}
         width={image.width ?? undefined}
         height={image.height ?? undefined}
@@ -244,7 +245,7 @@ export function ItemCardView({ attrs, card }: { attrs: Record<string, unknown>; 
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt={name} width={64} height={64} loading="lazy" className="h-16 w-16 shrink-0 object-contain" />
+          <img src={pictureUrl(image, 'thumb')} alt={name} width={64} height={64} loading="lazy" className="h-16 w-16 shrink-0 object-contain" />
         )}
         <div className="min-w-0">
           <p className="truncate text-[16px] font-semibold text-text-primary">{name}</p>

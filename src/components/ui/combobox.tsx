@@ -38,6 +38,7 @@ import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { SIZES } from './combobox-sizes'
 import { OptionList } from './combobox-list'
 import { InlineCombobox } from './combobox-inline'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 export interface ComboboxOption {
   value: string
@@ -201,7 +202,7 @@ export function Combobox({
       <span className={cn('flex min-w-0 items-center', s.triggerGap)}>
         {iconInTrigger && selected?.icon_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={selected.icon_url} alt={selected.label} aria-hidden className={cn('shrink-0 object-cover', triggerIcon)} />
+          <img src={pictureUrl(selected.icon_url, 'icon')} alt={selected.label} aria-hidden className={cn('shrink-0 object-cover', triggerIcon)} />
         )}
         <span className={cn('truncate', !selected && 'font-normal text-text-tertiary')}>{selected?.label ?? placeholder}</span>
       </span>

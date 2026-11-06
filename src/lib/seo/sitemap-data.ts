@@ -8,6 +8,7 @@ import { readGateConfig, REPORT_ONLY } from '@/lib/seo/gate/settings'
 
 import type { SitemapInput, ValueEvidenceRow } from '@/lib/seo/sitemap-builder'
 import { isNewIndexable } from '@/lib/values/new-item'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /** The facts the Google rule needs per item: raw dates + whether a How To Get exists. */
 type FreshRow = { released_at?: string | null; created_at?: string | null; release_year?: number | null; htg?: string | null }
@@ -52,6 +53,7 @@ async function loadValueGate(db: Db): Promise<SitemapInput['valueGate']> {
     )
     return { mode: config.mode, overrides: config.overrides, evidence }
   } catch (e) {
+    rethrowFailedRead(e)
     console.error('[sitemap] value gate read failed, listing as report mode:', e)
     return { mode: REPORT_ONLY.mode, overrides: REPORT_ONLY.overrides, evidence: new Map() }
   }

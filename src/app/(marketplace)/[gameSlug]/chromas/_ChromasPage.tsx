@@ -74,6 +74,7 @@ import {
 } from './_chromasCopy'
 import { ChromaGrid } from './_ChromaGrid'
 import { ChromasSkeleton } from './_ChromasSkeleton'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * /[game]/chromas — the MM2 Chroma hub. H1 = the search ("MM2 Chroma
@@ -307,7 +308,7 @@ async function ChromasBody({ gameSlug, ctx, u, buyHref }: { gameSlug: string; ct
           {art?.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
-              src={art.imageUrl}
+              src={pictureUrl(art.imageUrl, 'big')}
               alt={`${art.name} artwork`}
               aria-hidden
               loading="lazy"
@@ -324,7 +325,7 @@ async function ChromasBody({ gameSlug, ctx, u, buyHref }: { gameSlug: string; ct
                   style={{ background: `radial-gradient(closest-side, rgba(${chromaRgb},0.28), rgba(${chromaRgb},0.06) 70%, rgba(255,255,255,0.03))` }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is */}
-                  <img src={art.imageUrl} alt={art.name} loading="lazy" decoding="async" className="h-[56px] w-[56px] object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
+                  <img src={pictureUrl(art.imageUrl, 'thumb')} alt={art.name} loading="lazy" decoding="async" className="h-[56px] w-[56px] object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
                 </div>
               )}
               <h2 id="chroma-worth" className="min-w-0 text-heading font-bold tracking-tight text-text-primary">

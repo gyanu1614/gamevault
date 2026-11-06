@@ -10,6 +10,7 @@ import type { FeedItem, FormStock, ValuesFeed } from './types'
 
 export type { FeedItem, ValuesFeed } from './types'
 import { fromAdoptMe, fromGeneric, fromSab, withMarketItems } from './map'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * A values game's feed for the home sections: the SAME rows its /values list
@@ -71,6 +72,7 @@ export async function getValuesFeed(gameSlug: string): Promise<ValuesFeed | null
       updatedAt: freshness?.lastChangedAt ?? null,
     }
   } catch (e) {
+    rethrowFailedRead(e)
     console.error(`[values-feed] values feed unavailable for ${gameSlug}:`, e instanceof Error ? e.message : e)
     return null
   }

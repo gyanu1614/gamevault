@@ -23,6 +23,7 @@ import { type Variant } from '../calculator/_adoptMeCalcTypes'
 import { variantColor } from '../values/[itemSlug]/_adoptMeVariantColor'
 import type { HubStat, HubTeaserItem } from './_hubData'
 import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /** Mosaic footprint per collage position — a deliberate, hand-tuned rhythm so
  *  the grid feels like a collage (one big hero, a couple of wides, the rest
@@ -148,7 +149,7 @@ function PetCell({
       {pet.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- remote pet art
         <img
-          src={pet.imageUrl}
+          src={pictureUrl(pet.imageUrl, 'card')}
           alt={pet.name}
           className={`absolute left-1/2 top-1/2 z-0 -translate-x-1/2 object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover/cell:scale-[1.06] ${
             big

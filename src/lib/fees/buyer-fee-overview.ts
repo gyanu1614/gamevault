@@ -7,6 +7,7 @@ import { PAYSSION_METHODS } from '@/lib/payments/providers/payssion/methods'
 import { BUYER_FEES_TAG } from '@/lib/revalidation/tags'
 import { describeMethodFee, getPublicBuyerFees } from './buyer-public-rates'
 import { publicMethodNames } from './buyer-fee-groups'
+import { strictReads } from '@/lib/supabase/failed-read'
 
 /**
  * Everything /fees shows about the buyer service fee, read live: the
@@ -64,7 +65,7 @@ async function loadOverview(): Promise<BuyerFeeOverview> {
   // other public, switched-on method gets a quote.
   const methods = rows.filter((r) => r.selectable && r.provider !== 'wallet' && PUBLIC_PAYMENT_PROVIDER_KEYS.has(r.provider))
 
-  const { data, error } = await (createServiceRoleClient().rpc as any)('buyer_fee_quote_many', {
+  const { data, error } = await (strictReads(createServiceRoleClient()).rpc as any)('buyer_fee_quote_many', {
     p_methods: methods.map((m) => m.method),
     p_subtotal_minor: String(EXAMPLE_SUBTOTAL_MINOR),
     p_currency: 'USD',

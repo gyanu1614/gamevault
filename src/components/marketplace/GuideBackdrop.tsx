@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { gameCtaSources } from '@/lib/content/game-cta-art'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * Background art for a guide card: the game's ONE CTA image (`src`, read
@@ -31,7 +32,7 @@ export function GuideBackdrop({
     // eslint-disable-next-line @next/next/no-img-element -- per-game art, same as HubCtaBand
     <img
       key={current}
-      src={current}
+      src={pictureUrl(current, 'full')}
       alt={alt}
       aria-hidden
       loading="lazy"

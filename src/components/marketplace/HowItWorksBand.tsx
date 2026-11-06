@@ -27,6 +27,7 @@ import type { ReactNode } from 'react'
 import { MousePointerClick, ShieldCheck, Wallet, PackageCheck, type LucideIcon } from 'lucide-react'
 import { IconDefs, StepIcon } from '@/features/home/components/BuyerSteps'
 import { cn } from '@/lib/utils'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 export interface HowItWorksStepCopy {
   title: string
@@ -96,7 +97,7 @@ function Highlight({ label, value, note, iconUrl, iconAlt }: HowItWorksHighlight
       {iconUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded currency icon
         <img
-          src={iconUrl}
+          src={pictureUrl(iconUrl, 'card')}
           alt={iconAlt ?? 'Currency icon'}
           aria-hidden
           loading="lazy"

@@ -338,11 +338,171 @@ export function staleGrandfathers(results) {
   return stale
 }
 
+/**
+ * R6  failed reads — a public read that fails must THROW, so the page keeps its
+ *     last good copy (src/lib/supabase/failed-read.ts). createAnonClient does
+ *     that by itself; these checks stop the failure being lost on the way up:
+ *       • a catch on a public read path starts with rethrowFailedRead(e);
+ *       • a service-role or hand-made client is wrapped in strictReads().
+ *     The 2026-11-05 Supabase block saved `null` as a 404 past both of these.
+ *
+ * Exempt files say why, and `catches` pins how many: a new catch in an exempt
+ * file fails too, so it gets the same review.
+ */
+export const READ_FAILURE_EXEMPT = {
+  'src/lib/actions/admin-category-configs.ts': { catches: 2, why: 'Admin action; its errors go back to the admin form' },
+  'src/lib/actions/new-schema.ts': { catches: 7, why: 'Returns { success: false } to the sell wizard; public callers (sell/template-read, sell/catalog-read) throw on it' },
+  'src/lib/actions/seller-presence.ts': { catches: 7, why: "The seller's own presence actions, which report errors to their form" },
+  'src/lib/blog/render/links.ts': { catches: 1, why: 'new URL() on a link; no read' },
+  'src/lib/email/index.ts': { catches: 7, why: 'Sending email; not a page read' },
+  'src/lib/revalidation/listings.ts': { catches: 5, why: 'Cache refresh after a write; must never fail the write' },
+  'src/lib/seo/og-template.tsx': { catches: 1, why: 'Social card: one without live data beats a broken share image' },
+  'src/lib/seo/sitemap-sections.ts': { catches: 1, why: 'Clears the memo on a failure; the caller still gets the rejection' },
+  'src/lib/stock-alerts/dispatch.ts': { catches: 4, why: 'Sends alert emails; one failure must not stop the rest' },
+  'src/lib/supabase/failed-read.ts': { catches: 1, why: 'The retry itself' },
+  'src/lib/supabase/server.ts': { catches: 2, why: 'Setting a cookie from a server component; never on a public route' },
+  'src/lib/templates/validation.ts': { catches: 1, why: 'new URL() on a seller field; no read' },
+  'src/lib/ui/image-accent.server.ts': { catches: 1, why: 'A picture sharp cannot read has no accent; the fetch above it throws' },
+  'src/lib/values/inventory.ts': { catches: 1, why: 'decodeURIComponent on a query; no read' },
+}
+
+/** Clients that are not reads, or not a page's reads. */
+export const OTHER_CLIENT_EXEMPT = {
+  'src/lib/actions/admin-category-configs.ts': 'Admin action',
+  'src/lib/stock-alerts/dispatch.ts': 'Sends alert emails',
+  'src/lib/stock-alerts/visible-offer.ts': 'Decides whether an alert may go out; a failure already throws',
+  'src/lib/supabase/anon.ts': 'The strict client itself',
+  'src/lib/supabase/service-role.ts': 'A client factory',
+  'src/lib/supabase/service.ts': 'A client factory',
+}
+
+const PUBLIC_ENTRY_FILES = new Set(['page.tsx', 'page.ts', 'layout.tsx', 'not-found.tsx', 'opengraph-image.tsx', 'twitter-image.tsx'])
+
+function listEntries(dir, out = []) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    if (statSync(p).isDirectory()) listEntries(p, out)
+    else if (PUBLIC_ENTRY_FILES.has(name)) out.push(p)
+  }
+  return out
+}
+
+/**
+ * Every server module a public route can reach, type-only imports aside.
+ * With `includeClient`, the client components they render too.
+ */
+export function publicServerModules({ includeClient = false } = {}) {
+  const entries = [
+    ...listEntries(APP).filter((p) => {
+      const rel = appRelative(p)
+      return rel === '' || isPublicRoute(rel)
+    }),
+    ...CRAWLER_ROUTE_FILES.map((rel) => join(APP, rel)).filter(existsSync),
+  ]
+  const entrySet = new Set(entries)
+  const seen = new Set()
+  const stack = [...entries]
+  while (stack.length) {
+    const file = stack.pop()
+    if (seen.has(file)) continue
+    const src = read(file)
+    if (!includeClient && !entrySet.has(file) && directive(src) === 'use client') continue
+    seen.add(file)
+    if (MIXED_ACTION_MODULES.has(relative(ROOT, file).split(sep).join('/'))) continue
+    const runtime = src.replace(/^\s*(?:import|export)\s+type\s[\s\S]*?from\s+['"][^'"]+['"];?/gm, '')
+    for (const spec of importSpecifiers(runtime)) {
+      const target = resolveSpecifier(spec, file)
+      if (target && target.startsWith(SRC) && !/\.test\.tsx?$/.test(target)) stack.push(target)
+    }
+  }
+  return [...seen].map((f) => relative(ROOT, f).split(sep).join('/')).sort()
+}
+
+/** The `src` of each raw <img> in this source, without its braces. Static strings aren't listed. */
+export function rawImageSources(source) {
+  const code = stripComments(source)
+  const out = []
+  const re = /<(?:motion\.)?img\b/g
+  let m
+  while ((m = re.exec(code))) {
+    const end = code.indexOf('/>', m.index)
+    const at = code.indexOf('src={', m.index)
+    if (at < 0 || at > end) continue
+    let depth = 0
+    for (let i = at + 4; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}' && --depth === 0) {
+        out.push(code.slice(at + 5, i).trim())
+        break
+      }
+    }
+  }
+  return out
+}
+
+/** How many catches in this source could hide a failed read. */
+export function swallowingCatches(source) {
+  const code = stripComments(source)
+  const re = /\bcatch\s*(?:\([^)]*\))?\s*\{|\.catch\(/g
+  let count = 0
+  let m
+  while ((m = re.exec(code))) {
+    const body = code.slice(m.index + m[0].length, m.index + m[0].length + 90)
+    if (/^\s*throw\b/.test(body) || body.includes('rethrowFailedRead(')) continue
+    count++
+  }
+  return count
+}
+
+export function checkFailedReads() {
+  const problems = []
+  for (const rel of publicServerModules()) {
+    const src = stripComments(read(join(ROOT, rel)))
+    const swallowed = swallowingCatches(src)
+    const allowed = READ_FAILURE_EXEMPT[rel]?.catches ?? 0
+    if (swallowed > allowed) {
+      problems.push(`${rel}: ${swallowed} catch(es) can hide a failed read, ${allowed} allowed. Start each with rethrowFailedRead(e).`)
+    }
+    if (/\bPromise\.allSettled\(/.test(src)) problems.push(`${rel}: Promise.allSettled hides a failed read`)
+    const makesClient =
+      /\bcreateServiceRoleClient\(\)|\bcreateServiceClient\(/.test(src) ||
+      /import\s*\{[^}]*\bcreateClient\b[^}]*\}\s*from\s*['"]@supabase\/supabase-js['"]/.test(src)
+    if (makesClient && !src.includes('strictReads(') && !(rel in OTHER_CLIENT_EXEMPT)) {
+      problems.push(`${rel}: wrap this client in strictReads(), or a failed read looks like no data`)
+    }
+  }
+  return problems
+}
+
+/** Exemptions that no longer do anything. */
+export function staleReadFailureExemptions() {
+  const modules = new Set(publicServerModules())
+  const stale = []
+  for (const [rel, { catches }] of Object.entries(READ_FAILURE_EXEMPT)) {
+    if (!modules.has(rel)) {
+      stale.push(`${rel}: no longer reachable from a public route`)
+      continue
+    }
+    const now = swallowingCatches(read(join(ROOT, rel)))
+    if (now !== catches) stale.push(`${rel}: has ${now} catch(es), the list says ${catches}`)
+  }
+  for (const rel of Object.keys(OTHER_CLIENT_EXEMPT)) {
+    if (!modules.has(rel)) stale.push(`${rel}: no longer reachable from a public route`)
+  }
+  return stale
+}
+
 function main() {
   const results = checkAll()
   const failing = [...results, ...checkCrawlerRoutes()].filter((r) => r.violations.length)
   const stale = staleGrandfathers(results)
   const report = process.argv.includes('--report')
+  const readProblems = [...checkFailedReads(), ...staleReadFailureExemptions()]
+  if (readProblems.length) {
+    console.error('\npublic-route caching guard: R6 failed reads')
+    for (const p of readProblems) console.error(`  ${p}`)
+    process.exit(1)
+  }
 
   if (report) {
     for (const r of results) {

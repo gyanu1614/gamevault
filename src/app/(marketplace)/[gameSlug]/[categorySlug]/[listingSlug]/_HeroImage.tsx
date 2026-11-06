@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * The gallery's hero image. A photo at least as big as the frame fills it
@@ -28,7 +29,7 @@ export default function HeroImage({ src, alt }: { src: string; alt: string }) {
   return (
     <motion.img
       ref={ref}
-      src={src}
+      src={pictureUrl(src, 'full')}
       alt={alt}
       onLoad={(e) => measure(e.currentTarget)}
       onError={() => setFit('fill')}

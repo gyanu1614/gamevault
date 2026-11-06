@@ -1,6 +1,8 @@
 /**
- * Serve stored art and listing photos through our own origin, cached by
- * Vercel's CDN, instead of straight from Supabase Storage.
+ * Serve a stored file as it is through our own origin, cached by Vercel's CDN,
+ * instead of straight from Supabase Storage. Pages reach this through
+ * pictureUrl(url, 'original'), for files already stored in their own sizes;
+ * anything else takes a standard size there, whose cache survives a release.
  *
  * Every <img> pointed at `<project>.supabase.co/storage/v1/object/public/...`,
  * so every visitor's download (cached or not) counted against Supabase's 5 GB

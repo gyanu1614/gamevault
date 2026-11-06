@@ -39,6 +39,7 @@ import {
   categoryIcon,
   subnavIconClass,
 } from './subnav-tab'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 export interface GameCategory {
   id: string
@@ -165,7 +166,7 @@ export default function GameSubNav({
             className="group flex min-w-0 flex-shrink-0 items-center gap-2.5 justify-self-start rounded-md px-2.5 py-2 transition-colors hover:bg-bg-raised-hover md:gap-3 md:px-0 md:hover:bg-transparent max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
           >
             <img
-              src={resolvedGameImage}
+              src={pictureUrl(resolvedGameImage, 'thumb')}
               alt={gameName}
               className={cn(SUBNAV_LOGO, 'object-contain opacity-95')}
             />

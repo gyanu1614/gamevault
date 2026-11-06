@@ -16,7 +16,7 @@
  */
 
 import Link from '@/components/navigation/AppLink'
-import { mediaUrl } from '@/lib/images/media-url'
+import { pictureUrl } from '@/lib/images/picture-url'
 import { getCachedGameDirectory } from '@/lib/marketplace/gameDirectoryCache'
 import { getCachedGameActivity } from '@/lib/marketplace/gameActivityCache'
 import { FOOTER_VISIBLE_GAMES, rankFooterGames } from '@/lib/marketplace/footerGameRanking'
@@ -115,7 +115,7 @@ export async function FooterGameLinks() {
               <Link href={g.href} className="group flex items-center gap-1.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={mediaUrl(g.icon) ?? undefined}
+                  src={pictureUrl(g.icon, 'icon')}
                   alt={`${g.name} logo`}
                   aria-hidden
                   width={22}

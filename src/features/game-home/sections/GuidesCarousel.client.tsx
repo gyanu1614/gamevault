@@ -16,6 +16,7 @@ import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import type { GuideCard } from '../types'
 import { useRailNav } from './rail.client'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const OPACITY_FLOOR = 0.45
 const PARALLAX = 0.18
@@ -74,7 +75,7 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
                     ref={(el) => {
                       if (el) covers.current[i] = el
                     }}
-                    src={post.cover}
+                    src={pictureUrl(post.cover, 'big')}
                     alt=""
                     loading="lazy"
                     decoding="async"

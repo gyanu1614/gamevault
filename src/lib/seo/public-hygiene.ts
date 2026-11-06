@@ -15,6 +15,7 @@ import { createAnonClient } from '@/lib/supabase/anon'
 import { unstable_cache } from 'next/cache'
 import { TEST_SELLERS_TAG } from '@/lib/revalidation/tags'
 import { requestMemo } from '@/lib/revalidation/request-memo'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Ids of test/demo seller accounts to exclude from public listing queries.
@@ -42,7 +43,8 @@ const readTestSellerIds = unstable_cache(
         .eq('is_test', true)
       if (error || !data) return []
       return (data as { id: string }[]).map((r) => r.id).filter(Boolean)
-    } catch {
+    } catch (e) {
+      rethrowFailedRead(e)
       return []
     }
   },

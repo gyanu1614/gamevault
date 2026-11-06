@@ -1,20 +1,25 @@
 import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { SITE_URL } from '@/config/site'
+import { PublicReadError } from '@/lib/supabase/failed-read'
 
 /**
  * The accent colour of an icon (Robux → gold, V-Bucks → blue): the most
  * saturated common colour in the image, as "r,g,b". Used to tint a card in
  * its icon's own colour, so every game's currency card matches its art
  * without a per-game setting. Cached per URL for 30 days (an uploaded icon
- * gets a new URL). Null when the image can't be read or has no colour.
+ * gets a new URL). Null when the image is gone or has no colour. A server that
+ * is down throws, so a 30-day "no colour" is never saved during an outage.
  */
 export const getImageAccent = unstable_cache(
   async (url: string): Promise<string | null> => {
+    const abs = url.startsWith('http') ? url : `${SITE_URL}${url}`
+    const res = await fetch(abs, { cache: 'no-store' })
+    if (res.status >= 500 || res.status === 402 || res.status === 429) {
+      throw new PublicReadError(`Image read failed: ${res.status}`, res.status)
+    }
+    if (!res.ok) return null
     try {
-      const abs = url.startsWith('http') ? url : `${SITE_URL}${url}`
-      const res = await fetch(abs, { cache: 'no-store' })
-      if (!res.ok) return null
       const sharp = (await import('sharp')).default
       const { data, info } = await sharp(Buffer.from(await res.arrayBuffer()))
         .resize(32, 32, { fit: 'inside' })

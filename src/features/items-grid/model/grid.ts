@@ -6,6 +6,7 @@
  * visitor filters. Every card links to the item's page (its offers), never to
  * the value page (values → market only).
  */
+import { storedPicturePath, storedPictureUrl } from '@/lib/images/picture-url'
 import { rarityMeta, rarityRank } from '@/lib/values/rarity'
 import type { ValuesFeed } from '@/lib/value-listings/feed/types'
 import type { AmLetter } from '@/features/item-buy/model/am-traits'
@@ -61,8 +62,74 @@ export const EMPTY_FILTERS: GridFilters = { rarities: [], types: [], forms: [], 
 
 const inPriceRange = (p: number, f: GridFilters) => (f.minPrice == null || p >= f.minPrice) && (f.maxPrice == null || p <= f.maxPrice)
 
+/** Where this game's item pages live; a card's link is this plus its slug. */
+export const gridItemBase = (gameSlug: string, categorySlug: string | null) => `/${gameSlug}/${categorySlug ?? 'buy-items'}/item/`
+
+/**
+ * One card as the page sends it. MM2's Items page carried 577 KB of card data in
+ * 755 KB of HTML, rebuilt and stored every time the page refreshed. Links and the
+ * storage address repeat on every card, so the browser rebuilds them; a field
+ * with nothing in it isn't sent.
+ */
+export interface GridRow {
+  slug: string
+  name: string
+  image?: string
+  rarity?: string
+  type?: string
+  isNew?: true
+  value?: number
+  popular?: number
+  offers?: number
+  min?: number
+  forms?: string[]
+  stock?: Omit<GridForm, 'href'>[]
+}
+
+const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i])
+
+export function toGridRows(items: readonly GridItem[]): GridRow[] {
+  return items.map((i) => {
+    const stock = i.formsInStock.map((f) => ({ variant: f.variant, label: f.label, count: f.count, minPrice: f.minPrice }))
+    const row: GridRow = { slug: i.slug, name: i.name }
+    if (i.imageUrl) row.image = storedPicturePath(i.imageUrl)
+    if (i.rarityKey) row.rarity = i.rarityKey
+    if (i.itemType) row.type = i.itemType
+    if (i.isNew) row.isNew = true
+    if (i.rankValue) row.value = Math.round(i.rankValue * 100) / 100
+    if (i.popularRank != null) row.popular = i.popularRank
+    if (i.offers) row.offers = i.offers
+    if (i.minPrice != null) row.min = i.minPrice
+    if (stock.length > 0) row.stock = stock
+    if (i.forms.length > 0 && !sameList(i.forms, stock.map((f) => f.label))) row.forms = i.forms
+    return row
+  })
+}
+
+export function fromGridRows(rows: readonly GridRow[], base: string): GridItem[] {
+  return rows.map((r) => {
+    const stock = r.stock ?? []
+    return {
+      key: r.slug,
+      slug: r.slug,
+      name: r.name,
+      imageUrl: r.image ? storedPictureUrl(r.image) : null,
+      rarityKey: r.rarity ?? null,
+      itemType: r.type ?? null,
+      isNew: r.isNew === true,
+      rankValue: r.value ?? 0,
+      popularRank: r.popular ?? null,
+      offers: r.offers ?? 0,
+      minPrice: r.min ?? null,
+      forms: r.forms ?? stock.map((f) => f.label),
+      href: `${base}${r.slug}`,
+      formsInStock: stock.map((f) => ({ ...f, href: `${base}${r.slug}/${f.variant}` })),
+    }
+  })
+}
+
 export function toGridItems(gameSlug: string, feed: ValuesFeed, categorySlug: string | null = feed.categorySlug): GridItem[] {
-  const base = `/${gameSlug}/${categorySlug ?? 'buy-items'}/item/`
+  const base = gridItemBase(gameSlug, categorySlug)
   // No picture and nothing on sale: not worth a blank card (owner, 2026-11-04). Its page still exists.
   const shown = feed.items.filter((i) => i.imageUrl || (feed.stock[i.slug] ?? 0) > 0)
   return shown.map((i) => {

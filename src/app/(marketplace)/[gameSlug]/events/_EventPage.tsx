@@ -70,6 +70,7 @@ import {
 import { EventSeasonTile } from './_EventSeasonTile'
 import { EventPageSkeleton } from './_EventsSkeleton'
 import { eventsCopyCtx } from './_EventsHubPage'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * /[game]/events/[eventSlug] — one event: H1 = the search ("MM2 Halloween
@@ -236,7 +237,7 @@ async function EventBody({
           {art && (
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
-              src={art}
+              src={pictureUrl(art, 'big')}
               alt={`${e.name} item artwork`}
               aria-hidden
               loading="lazy"

@@ -18,6 +18,7 @@ import { gameCtaSources } from '@/lib/content/game-cta-art'
 import { gameNameFromSlug } from '@/components/marketplace/GameHeroArt'
 import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /** 6px button, brand fill by default; hover lifts brightness (fill is inline). */
 const CTA_BTN =
@@ -96,7 +97,7 @@ export function HubCtaBand({
           <img
             key={src}
             ref={imgRef}
-            src={src}
+            src={pictureUrl(src, 'full')}
             alt={`${gameNameFromSlug(gameSlug)} background art`}
             aria-hidden
             loading="lazy"

@@ -25,6 +25,7 @@ import { BuyRail } from '@/components/buy-rails/BuyRail'
 import { BuyBar } from '@/components/buy-rails/BuyBar'
 import { RailCardView } from '@/components/buy-rails/RailCardView'
 import { RAIL_GRID } from '@/components/buy-rails/geometry'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -214,7 +215,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         {post.cover && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={post.cover}
+            src={pictureUrl(post.cover, 'full')}
             alt={post.title}
             className="mt-8 aspect-[2/1] w-full rounded-2xl object-cover ring-1 ring-border-subtle"
           />

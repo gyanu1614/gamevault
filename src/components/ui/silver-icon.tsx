@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * SilverIcon — the site's uniform icon material.
@@ -25,7 +26,7 @@ export function SilverIcon({ src, className, alt = 'Icon' }: { src: string; clas
     <span className={cn('relative inline-block flex-none select-none', className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={pictureUrl(src, 'thumb')}
         alt={alt}
         aria-hidden
         loading="lazy"

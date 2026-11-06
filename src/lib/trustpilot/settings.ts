@@ -1,15 +1,17 @@
 /**
  * trustpilot_settings (one row): the review count an admin sets on /admin.
  *
- * Every read FAILS CLOSED to 0: a database hiccup hides the TrustBox rather
- * than risking an empty widget. Public pages read it cookie-free and cached
- * under TRUSTPILOT_SETTINGS_TAG; the admin save revalidates that tag.
+ * Public pages read it cookie-free and cached under TRUSTPILOT_SETTINGS_TAG;
+ * the admin save revalidates that tag. A failed read on a public page throws,
+ * so the page keeps its last copy. On any other client it counts as 0, which
+ * hides the TrustBox rather than risking an empty widget.
  */
 import { unstable_cache } from 'next/cache'
 
 import { createAnonClient } from '@/lib/supabase/anon'
 import { TRUSTPILOT_SETTINGS_TAG } from '@/lib/revalidation/tags'
 import { TRUSTBOX_MIN_REVIEWS } from './links'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 type Db = any
 
@@ -18,7 +20,8 @@ export async function readReviewCount(db: Db): Promise<number> {
     const { data, error } = await db.from('trustpilot_settings').select('review_count').eq('id', 1).maybeSingle()
     const n = Number(data?.review_count)
     return !error && Number.isInteger(n) && n > 0 ? n : 0
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return 0
   }
 }

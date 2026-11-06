@@ -127,14 +127,18 @@ export async function signup(formData: {
         const base64Data = formData.avatarData.split(',')[1]
         const buffer = Buffer.from(base64Data, 'base64')
 
-        // File path: {user_id}/avatar.png
-        const filePath = `${data.user.id}/avatar.png`
+        // Loaded here so sign-in and the other auth actions don't load sharp.
+        const { toStoredImage } = await import('@/lib/images/resize-server')
+        const stored = await toStoredImage(new Uint8Array(buffer), 'image/png', 'avatar')
+
+        // File path: {user_id}/avatar.{ext}
+        const filePath = `${data.user.id}/avatar.${stored.ext}`
 
         // Upload to Supabase Storage
         const { error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(filePath, buffer, {
-            contentType: 'image/png',
+          .upload(filePath, stored.bytes, {
+            contentType: stored.mime,
             upsert: true,
           })
 
@@ -526,7 +530,7 @@ export async function uploadProfileAvatar(avatarData: string) {
       return { error: 'Unsupported image format' }
     }
 
-    const [, contentType, subtype, base64Data] = match
+    const [, contentType, , base64Data] = match
     const buffer = Buffer.from(base64Data, 'base64')
     const screened = await screenImage(new Uint8Array(buffer), contentType, 'avatar')
     if (!screened.ok) return { error: screened.reason }
@@ -537,15 +541,18 @@ export async function uploadProfileAvatar(avatarData: string) {
       return { error: 'That image is too large. Try a smaller one.' }
     }
 
+    // Loaded here so sign-in and the other auth actions don't load sharp.
+    const { toStoredImage } = await import('@/lib/images/resize-server')
+    const stored = await toStoredImage(new Uint8Array(buffer), contentType, 'avatar')
+
     // File path: {user_id}/avatar.{ext}
-    const ext = subtype === 'jpeg' ? 'jpg' : subtype
-    const filePath = `${user.id}/avatar.${ext}`
+    const filePath = `${user.id}/avatar.${stored.ext}`
 
     // Upload to Supabase Storage with upsert (replace existing)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(filePath, buffer, {
-        contentType,
+      .upload(filePath, stored.bytes, {
+        contentType: stored.mime,
         upsert: true, // Replace existing avatar
       })
 

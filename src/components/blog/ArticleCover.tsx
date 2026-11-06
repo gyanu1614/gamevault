@@ -1,5 +1,6 @@
 import { Picture } from '@/lib/blog/render/nodes'
 import type { StoredImage } from '@/lib/blog/doc/types'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * The cover: always 16:9, loaded first (it is the page's largest paint). A
@@ -14,7 +15,7 @@ export function ArticleCover({ image, url, alt }: { image: StoredImage | null; u
         <Picture image={image} alt={alt} sizes="(min-width: 1024px) 820px, calc(100vw - 32px)" eager className="h-full object-cover" />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url!} alt={alt} width={1600} height={900} loading="eager" fetchPriority="high" decoding="async" className="h-full w-full object-cover" />
+        <img src={pictureUrl(url!, 'full')} alt={alt} width={1600} height={900} loading="eager" fetchPriority="high" decoding="async" className="h-full w-full object-cover" />
       )}
     </div>
   )

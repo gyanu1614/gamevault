@@ -1254,7 +1254,7 @@ export async function uploadSellImage(
     // Shrink once before storing (<=1600 px WebP): images are served
     // unoptimized, so the stored file is what every buyer downloads. The
     // path is unique per upload, so it can be cached for a year.
-    const stored = await toStoredImage(checked.bytes, checked.image.mime)
+    const stored = await toStoredImage(checked.bytes, checked.image.mime, 'listing')
     const path = listingImagePathFor(user.id, stored.ext as typeof checked.image.ext)
     const { data, error } = await supabase.storage
       .from(LISTING_IMAGE_BUCKET)

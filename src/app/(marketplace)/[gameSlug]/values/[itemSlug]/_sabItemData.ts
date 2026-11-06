@@ -10,6 +10,7 @@
 import { createValueGameSharedReadClient, createValueItemReadClient } from '@/lib/values/read-client'
 import { selectAllByKey } from '@/lib/db/select-all-by-key'
 import type { MutationOption } from './_ItemHero'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /** The game the sab_* tables price — the tag game of every SAB read below. */
 export const SAB_GAME = 'steal-a-brainrot'
@@ -301,7 +302,8 @@ export async function getPriceHistory(
       key: ['history_date', 'mutation_id'],
       filter: (q) => q.eq('brainrot_id', brainrotId),
     })
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return {}
   }
 

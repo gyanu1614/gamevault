@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { RailButton } from './RailButton'
 import { useRailTracking } from './useRailTracking'
 import { useSellHref } from './useSellHref'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * One desktop rail card (≥1280px): a tall banner, GameBoost-style (owner,
@@ -108,7 +109,7 @@ function RailMedia({ card }: { card: RailCard }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={card.image.src}
+      src={pictureUrl(card.image.src, 'card')}
       alt={card.image.alt}
       width={big ? 132 : 96}
       height={big ? 132 : 96}
@@ -128,7 +129,7 @@ function CoinBackdrop({ src }: { src: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={pictureUrl(src, 'big')}
       alt=""
       aria-hidden
       width={300}
@@ -151,7 +152,7 @@ function ArtLayer({ game, src, dim }: { game: string; src: string; dim: boolean 
     <div aria-hidden className="absolute inset-0 -z-10">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={current}
+        src={pictureUrl(current, 'big')}
         alt=""
         width={220}
         height={460}

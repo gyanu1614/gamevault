@@ -3,6 +3,7 @@ import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import { getValueItems } from '@/lib/values/data'
 import { topValuesFromItems } from './_genericTopValues'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Data for the blog-hub teaser strips. Kept small and defensive: every query
@@ -308,6 +309,7 @@ export async function getHubTopValues(
     try {
       return topValuesFromItems(await getValueItems(gameSlug), limit)
     } catch (e) {
+      rethrowFailedRead(e)
       console.error('Hub top-values (values pipeline) error:', e)
       return []
     }

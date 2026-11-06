@@ -4,6 +4,7 @@ import { getValueItemRail } from '@/lib/buy-rails/server'
 import type { RailCard } from '@/lib/buy-rails/model'
 import type { ItemRef } from './outline'
 import { findCatalogItems, type LinkedItem } from '@/lib/blog/item-catalog'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Live data for a post's item cards: the same stock read the value pages'
@@ -17,7 +18,8 @@ export async function loadItemCards(refs: readonly ItemRef[]): Promise<Map<strin
       try {
         const card = await getValueItemRail(r.gameSlug, r.itemSlug, r.name, r.imageUrl || null)
         return [`${r.gameSlug}/${r.itemSlug}`, card] as const
-      } catch {
+      } catch (e) {
+        rethrowFailedRead(e)
         return null
       }
     }),
@@ -35,7 +37,8 @@ export async function loadTableItems(gameSlug: string, names: readonly string[])
   if (names.length === 0) return new Map()
   try {
     return await findCatalogItems(gameSlug, names)
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return new Map()
   }
 }

@@ -3,6 +3,7 @@ import { getGameIcon } from '@/features/home/lib/game-icons'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import type { BrowseGame } from './_browse-model'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * The hand-ordered popular games as tiles: the game's logo over a soft,
@@ -27,7 +28,7 @@ export function PopularGames({ games }: { games: BrowseGame[] }) {
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- the logo's own colours as the glow */}
               <img
-                src={src}
+                src={pictureUrl(src, 'card')}
                 alt=""
                 aria-hidden
                 width={160}
@@ -37,7 +38,7 @@ export function PopularGames({ games }: { games: BrowseGame[] }) {
               />
               {/* eslint-disable-next-line @next/next/no-img-element -- remote game logo */}
               <img
-                src={src}
+                src={pictureUrl(src, 'card')}
                 alt={`${g.name} logo`}
                 width={96}
                 height={96}

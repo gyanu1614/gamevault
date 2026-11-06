@@ -32,7 +32,7 @@ import { TRAIT_LETTERS, TraitFilterMenu, TraitSheetButtons } from '@/features/it
 import { TraitMarks } from '@/features/item-buy/TraitMarks'
 import type { AmLetter } from '@/features/item-buy/model/am-traits'
 import { AM_ITEM_TYPES, amTypesHeading, type AmItemType } from '@/lib/value-listings/am-item-kind'
-import { filterGrid, formsForLetters, sortGrid, splitByForm, toggleGridLetter, type FilterOption, type GridItem, type GridSort } from './model/grid'
+import { filterGrid, formsForLetters, fromGridRows, sortGrid, splitByForm, toggleGridLetter, type FilterOption, type GridRow, type GridSort } from './model/grid'
 import { GridCard } from './GridCard'
 import { StockAlertsProvider } from './stock-alerts-context'
 
@@ -63,7 +63,10 @@ export interface ItemsGridClientProps {
   gameName: string
   /** "Pets", "Brainrots", "Items": the heading, the search placeholder and the count. */
   itemNoun: string
-  items: GridItem[]
+  /** Every card, slimmed for the page (toGridRows). */
+  rows: GridRow[]
+  /** gridItemBase: what a card's link starts with. */
+  itemBase: string
   options: { rarities: FilterOption[]; types: FilterOption[]; forms: FilterOption[] }
   stats?: { count: number; lowPrice: number | null; avgDeliveryLabel: string | null } | null
   introLine?: string | null
@@ -71,7 +74,8 @@ export interface ItemsGridClientProps {
   moreListings: ItemOffer[]
 }
 
-export default function ItemsGridClient({ gameSlug, gameName, itemNoun, items, options, stats, introLine, moreListings }: ItemsGridClientProps) {
+export default function ItemsGridClient({ gameSlug, gameName, itemNoun, rows, itemBase, options, stats, introLine, moreListings }: ItemsGridClientProps) {
+  const items = useMemo(() => fromGridRows(rows, itemBase), [rows, itemBase])
   const { user } = useAuth()
   const isAm = gameSlug === 'adopt-me'
   const [rarities, setRarities] = useState<string[]>([])

@@ -1,6 +1,7 @@
 import { Gamepad2 } from 'lucide-react'
 import { SellerPromptCard } from '@/components/seller/SellerPrompt'
 import type { HeaderModel } from '../types'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * The game page header, the SAME as the category pages' (ItemsPageClient,
@@ -16,7 +17,7 @@ export function Header({ header }: { header: HeaderModel }) {
     <header className="flex flex-wrap items-center gap-3.5 pt-2 sm:gap-5 sm:pt-3">
       {gameImageUrl ? (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={gameImageUrl} alt={`${gameName} logo`} width={72} height={72} className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-[72px] sm:w-[72px]" />
+        <img src={pictureUrl(gameImageUrl, 'card')} alt={`${gameName} logo`} width={72} height={72} className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-[72px] sm:w-[72px]" />
       ) : (
         <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-bg-overlay text-lime-text sm:h-[72px] sm:w-[72px]">
           <Gamepad2 className="h-6 w-6" />

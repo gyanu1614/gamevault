@@ -6,6 +6,7 @@ import { getCachedGameDirectory } from '@/lib/marketplace/gameDirectoryCache'
 import { hasHubPage } from '@/lib/content/theme'
 import { getCurrencyGuide, guideFamily, type CurrencyGuide } from './index'
 import { buildGuideLinks, type GuideLinks } from './links'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Cookie-free, cached reads behind the currency guide (Step 7a: public pages
@@ -31,7 +32,7 @@ export const MIN_REVIEWS_FOR_RATING = 10
  * inside it, Next 14.2 skips their own cache (lib/seo/hidden-sellers).
  */
 async function readReviewStatsByGame(): Promise<Record<string, { count: number; sum: number }>> {
-  const testSellers = await getTestSellerIds().catch((): string[] => []) // fails open, as before
+  const testSellers = await getTestSellerIds()
   return unstable_cache(
     async (): Promise<Record<string, { count: number; sum: number }>> => {
       try {
@@ -51,7 +52,8 @@ async function readReviewStatsByGame(): Promise<Record<string, { count: number; 
           e.sum += r.rating
         }
         return out
-      } catch {
+      } catch (e) {
+        rethrowFailedRead(e)
         return {}
       }
     },
@@ -82,7 +84,8 @@ export async function getGuideLinks(guide: CurrencyGuide, gameName: string): Pro
       guideFor: getCurrencyGuide,
       familyOf: guideFamily,
     })
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return { game: [], related: [] }
   }
 }
@@ -111,7 +114,7 @@ interface LivePage {
  * ids are read outside the cached callback, as in readReviewStatsByGame.
  */
 async function readLivePages(): Promise<LivePage[]> {
-  const testSellers = await getTestSellerIds().catch((): string[] => []) // fails open, as before
+  const testSellers = await getTestSellerIds()
   return unstable_cache(
     async (): Promise<LivePage[]> => {
       try {
@@ -138,7 +141,8 @@ async function readLivePages(): Promise<LivePage[]> {
           out.push({ gameSlug: c.game.slug, gameName: c.game.name, ecosystem: c.game.ecosystem, slug: c.slug, name: c.name ?? c.slug, type: c.type, offers })
         }
         return out.sort((a, b) => b.offers - a.offers || a.gameName.localeCompare(b.gameName))
-      } catch {
+      } catch (e) {
+        rethrowFailedRead(e)
         return []
       }
     },
