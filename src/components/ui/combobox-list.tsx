@@ -17,6 +17,7 @@ export function OptionList({
   value,
   emptyText,
   rankMatches = false,
+  onFirstRow,
   size,
   rowIconClassName,
   onChoose,
@@ -28,6 +29,8 @@ export function OptionList({
   value: string
   emptyText: string | ((query: string) => string)
   rankMatches?: boolean
+  /** A search: the top row is the highlighted one, so Enter picks it. */
+  onFirstRow?: (value: string) => void
   size: 'md' | 'lg'
   rowIconClassName: string
   onChoose: (v: string) => void
@@ -37,6 +40,10 @@ export function OptionList({
   const index = React.useMemo(() => indexOptions(options), [options])
   const deferred = React.useDeferredValue(query)
   const { items, more } = React.useMemo(() => filterOptions(index, deferred, { rank: rankMatches }), [index, deferred, rankMatches])
+  const first = items[0]?.value
+  React.useEffect(() => {
+    if (first !== undefined) onFirstRow?.(first)
+  }, [first, onFirstRow])
   return (
     <CommandList id={listboxId} role="listbox" className={cn('overflow-y-auto overscroll-contain', s.list, className)}>
       {items.length === 0 && <p className="px-3 py-2 text-xs text-text-tertiary">{typeof emptyText === 'function' ? emptyText(deferred.trim()) : emptyText}</p>}

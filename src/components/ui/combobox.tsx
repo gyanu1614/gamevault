@@ -62,6 +62,8 @@ export interface ComboboxProps {
   footer?: (ctx: { query: string; close: () => void }) => React.ReactNode
   /** Touch: open the sheet with the keyboard up, for a list you search rather than browse. */
   sheetSearchFirst?: boolean
+  /** A search box, open or closed: the search icon leads, no chevron. */
+  searchField?: boolean
   disabled?: boolean
   className?: string
   /** Aria label when no visible label is paired */
@@ -108,6 +110,7 @@ export function Combobox({
   rankMatches = false,
   footer,
   sheetSearchFirst = false,
+  searchField = false,
   disabled,
   className,
   ariaLabel,
@@ -158,6 +161,7 @@ export function Combobox({
         emptyText={emptyText}
         rankMatches={rankMatches}
         footer={footer}
+        searchField={searchField}
         ariaLabel={ariaLabel}
         listboxId={listboxId}
         invalid={invalid}
@@ -213,13 +217,14 @@ export function Combobox({
       )}
     >
       <span className={cn('flex min-w-0 items-center', s.triggerGap)}>
+        {searchField ? <Search aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" /> : null}
         {iconInTrigger && selected?.icon_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={pictureUrl(selected.icon_url, 'icon')} alt={selected.label} aria-hidden className={cn('shrink-0 object-cover', triggerIcon)} />
         )}
         <span className={cn('truncate', !selected && 'font-normal text-text-tertiary')}>{selected?.label ?? placeholder}</span>
       </span>
-      <ChevronDown className={cn('h-4 w-4 shrink-0 text-text-tertiary transition-transform', open && 'rotate-180')} />
+      {searchField ? null : <ChevronDown className={cn('h-4 w-4 shrink-0 text-text-tertiary transition-transform', open && 'rotate-180')} />}
     </div>
   )
 
@@ -323,8 +328,9 @@ function ComboboxPanel({
   const s = SIZES[size]
   // Mounted per open, so each open starts with an empty search.
   const [query, setQuery] = React.useState('')
+  const [highlight, setHighlight] = React.useState('')
   return (
-    <Command shouldFilter={false} className="flex min-h-0 w-full flex-1 flex-col">
+    <Command shouldFilter={false} value={rankMatches ? highlight : undefined} onValueChange={rankMatches ? setHighlight : undefined} className="flex min-h-0 w-full flex-1 flex-col">
       <div className={cn('flex items-center border-b border-border-subtle', s.search)}>
         <Search className={cn('shrink-0 text-text-tertiary', s.searchIcon)} />
         <CommandInput
@@ -345,6 +351,7 @@ function ComboboxPanel({
         value={value}
         emptyText={emptyText}
         rankMatches={rankMatches}
+        onFirstRow={rankMatches ? setHighlight : undefined}
         size={size}
         rowIconClassName={rowIconClassName}
         onChoose={onChoose}

@@ -106,7 +106,7 @@ export const ItemPicker = memo(function ItemPicker({
       <SubCard title="Offer Details">
         <div className="space-y-5">
           <div className="flex items-center gap-4">
-            <div className="grid h-[72px] w-[72px] shrink-0 place-items-center overflow-hidden rounded-lg bg-white/[0.035]">
+            <div className="relative grid h-[72px] w-[72px] shrink-0 place-items-center overflow-hidden rounded-lg bg-white/[0.035]">
               <ItemPicture src={picture} name={picked.label} size={128} placeholder="" className="h-[84%] w-[84%]" />
             </div>
             <div className="min-w-0 flex-1">
@@ -143,6 +143,7 @@ export const ItemPicker = memo(function ItemPicker({
         emptyText={(q) => (q ? `No Item Named “${q}”` : 'Type An Item Name')}
         unsorted
         rankMatches
+        searchField
         searchInTrigger
         sheetOnTouch
         sheetSearchFirst

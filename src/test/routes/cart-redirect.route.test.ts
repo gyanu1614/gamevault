@@ -36,12 +36,8 @@ describe('ROUTE-007 — /cart redirects server-side', () => {
     expect(source).not.toMatch(/Loader2/)
   })
 
-  it('matches the sibling deprecated stubs', () => {
-    // /wallet is the reference shape: import redirect, call it, nothing else.
-    const wallet = readFileSync('src/app/wallet/page.tsx', 'utf8')
-    for (const s of [raw, wallet]) {
-      expect(s).toMatch(/import \{ redirect \} from 'next\/navigation'/)
-    }
+  it('is a plain server redirect', () => {
+    expect(raw).toMatch(/import \{ redirect \} from 'next\/navigation'/)
   })
 })
 

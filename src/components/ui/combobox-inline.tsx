@@ -26,6 +26,7 @@ export function InlineCombobox({
   emptyText,
   rankMatches,
   footer,
+  searchField,
   ariaLabel,
   listboxId,
   invalid,
@@ -47,6 +48,8 @@ export function InlineCombobox({
   emptyText: string | ((query: string) => string)
   rankMatches?: boolean
   footer?: (ctx: { query: string; close: () => void }) => React.ReactNode
+  /** A search box, open or closed: the search icon leads, no chevron. */
+  searchField?: boolean
   ariaLabel?: string
   listboxId: string
   invalid?: boolean
@@ -60,6 +63,8 @@ export function InlineCombobox({
 }) {
   const s = SIZES[size]
   const [query, setQuery] = React.useState('')
+  // A ranked search controls the highlight; every other list leaves it to cmdk.
+  const [highlight, setHighlight] = React.useState('')
   const boxRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
@@ -77,7 +82,7 @@ export function InlineCombobox({
 
   return (
     <Popover.Root open={open} onOpenChange={(o) => (o ? openList() : close())}>
-      <Command shouldFilter={false} loop className="relative w-full">
+      <Command shouldFilter={false} loop value={rankMatches ? highlight : undefined} onValueChange={rankMatches ? setHighlight : undefined} className="relative w-full">
         <Popover.Anchor asChild>
           <div
             ref={boxRef}
@@ -117,6 +122,7 @@ export function InlineCombobox({
             )}
           >
             <span className={cn('flex min-w-0 flex-1 items-center', s.triggerGap)}>
+              {searchField ? <Search aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" /> : null}
               {iconInTrigger && selected?.icon_url && !open && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={pictureUrl(selected.icon_url, 'icon')} alt="" aria-hidden className={cn('shrink-0 object-cover', triggerIcon)} />
@@ -146,7 +152,7 @@ export function InlineCombobox({
                 <span className={cn('truncate', !selected && 'font-normal text-text-tertiary')}>{selected?.label ?? placeholder}</span>
               )}
             </span>
-            {open ? (
+            {searchField ? null : open ? (
               <Search aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
             ) : (
               <ChevronDown aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
@@ -180,6 +186,7 @@ export function InlineCombobox({
               value={value}
               emptyText={emptyText}
               rankMatches={rankMatches}
+              onFirstRow={rankMatches ? setHighlight : undefined}
               size={size}
               rowIconClassName={rowIcon}
               onChoose={(v) => {
