@@ -108,7 +108,7 @@ export function buildValueCatalog(
         gameSlug,
         items,
         variants: VARIANTS.map((code) => ({ key: VARIANT_KEY[code], names: VARIANT_ALIASES[code] })),
-        identityKeys: ['pet-name'],
+        identityKeys: ['pet-name', 'egg-name', 'potion-name'],
         variantKeys: ['trait'],
         // Real variants with no value page, and "no potion": not part of a pet's name.
         skipWords: ['nf', 'nr', 'mf', 'mr', 'np', 'potion', 'potions'],
@@ -213,13 +213,10 @@ export async function loadOptionLabels(client: AnyClient, gameCategoryId: string
   const { data: attrs } = await client.from('attributes').select('id, slug').eq('template_id', tpl.id)
   const list = (attrs ?? []) as Array<{ id: string; slug: string }>
   if (list.length === 0) return {}
-  const { data: opts } = await client
-    .from('attribute_options')
-    .select('attribute_id, slug, value, label')
-    .in('attribute_id', list.map((a) => a.id))
+  const opts = await readAllRows(() => client.from('attribute_options').select('attribute_id, slug, value, label').in('attribute_id', list.map((a) => a.id)), 'id')
   const slugById = new Map(list.map((a) => [a.id, a.slug]))
   const out: Record<string, Record<string, string>> = {}
-  for (const o of (opts ?? []) as Array<{ attribute_id: string; slug: string; value: string | null; label: string }>) {
+  for (const o of opts as Array<{ attribute_id: string; slug: string; value: string | null; label: string }>) {
     const attr = slugById.get(o.attribute_id)
     if (!attr) continue
     // Listings store the choice's VALUE (what the sell form writes); it equals

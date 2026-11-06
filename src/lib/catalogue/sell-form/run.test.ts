@@ -25,6 +25,14 @@ describe('syncMessage', () => {
   })
 })
 
+describe('syncMessage: a warning alone', () => {
+  it('still reaches the owner, even with nothing added', () => {
+    expect(syncMessage('Adopt Me', { ...base, warnings: ['2 items of "hat" could not be placed: the form has no list for them'] })).toBe(
+      '⚠️ **Adopt Me** sell form:\n• 2 items of "hat" could not be placed: the form has no list for them',
+    )
+  })
+})
+
 describe('legacyRetirement', () => {
   const config = {
     types: [{ key: 'knife' }, { key: 'gun' }],
