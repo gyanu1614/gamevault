@@ -1,16 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { StockAlertsProvider } from '@/features/items-grid/stock-alerts-context'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
-import { BuyBox, ItemTitle } from './BuyBox'
+import { BuyBox, ItemTitle, type ItemPickerProps } from './BuyBox'
 import { DeliveryNotes } from './DeliveryNotes'
 import { ItemSpecs } from './ItemSpecs'
 import { OffersSection } from './OffersSection'
 import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
 import { TraitField } from './TraitField'
-import { defaultTrait, offerPhotoFor, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
+import { defaultTrait, formPicker, offerPhotoFor, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
 import { sellerExtraTitle } from './model/seller-title'
 import { useBuyOffer } from './use-buy-offer'
 import { ITEM_SECTION_GAP } from './layout'
@@ -23,6 +24,8 @@ export interface ItemBuyClientProps {
   imageUrl: string | null
   noun: 'Trait' | 'Mutation'
   traits: TraitDef[]
+  /** Murder Mystery 2: this item and its Chroma version; picking one opens its page. */
+  forms?: ReadonlyArray<{ slug: string; label: string; href: string; count: number; minPriceUsd: number | null }>
   /** Every live offer of the pet, any trait. */
   offers: ItemOffer[]
   offerVariants: Record<string, string | null>
@@ -67,6 +70,7 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
   const [qty, setQty] = useState(1)
   const { buy, navigating, viewerId } = useBuyOffer(p.gameSlug, p.itemSlug)
 
+  const router = useRouter()
   const options = useMemo(() => traitOptions(traits, offers, offerVariants), [traits, offers, offerVariants])
   const offer = useMemo(() => pickOffer(offers, offerVariants, trait, chosenId), [offers, offerVariants, trait, chosenId])
   const allOffers = useMemo(() => offersOfTrait(offers, offerVariants, null), [offers, offerVariants])
@@ -103,6 +107,13 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
     setChosenId(null)
     setUrlTrait(next)
   }
+  const forms = p.forms ?? []
+  const picker: ItemPickerProps | null =
+    forms.length > 0
+      ? formPicker(forms, p.itemSlug, (href) => router.push(href))
+      : options.length > 0
+        ? { noun: p.noun, options, value: trait, onChange: onTrait }
+        : null
   const onSelectOffer = (o: ItemOffer) => {
     const v = offerVariants[o.id] ?? null
     setTrait(v)
@@ -139,9 +150,9 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
         </div>
         <div className="order-2 min-w-0 lg:flex lg:flex-col lg:[grid-area:pic]">
           <PictureStage imageUrl={photo ?? p.imageUrl} photo={!!photo} name={`${p.gameName} ${named(offerVariant)}`} traitCode={shown?.short ?? null} />
-          {options.length > 0 ? (
+          {picker ? (
             <div className="mt-3 hidden shrink-0 lg:block">
-              <TraitField noun={p.noun} options={options} value={trait} onChange={onTrait} />
+              <TraitField {...picker} />
             </div>
           ) : null}
         </div>
@@ -153,10 +164,8 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
           <BuyBox
             gameSlug={p.gameSlug}
             itemSlug={p.itemSlug}
-            noun={p.noun}
-            traits={options}
+            picker={picker}
             trait={trait}
-            onTrait={onTrait}
             offer={offer}
             wantedName={named(trait)}
             qty={qty}

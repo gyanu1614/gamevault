@@ -124,3 +124,46 @@ describe('buildItemPage — Adopt Me eggs and potions', () => {
     expect(buildItemPage({ ...amBase, itemSlug: 'crystal-egg' })!.similar.map((r) => r.slug)).toEqual(['safari-egg', 'parrot', 'owl'])
   })
 })
+
+describe('buildItemPage: Common and Chroma on Murder Mystery 2', () => {
+  const mm2 = buildValueCatalog('murder-mystery-2', {
+    items: [
+      { slug: 'travelers-gun', name: "Traveler's Gun", rarity: 'Godly' },
+      { slug: 'chroma-travelers-gun', name: "Chroma Traveler's Gun", rarity: 'Chroma' },
+      { slug: 'luger', name: 'Luger', rarity: 'Godly' },
+      { slug: 'chroma-laser', name: 'Chroma Laser', rarity: 'Chroma' },
+    ],
+  })!
+  const offers = [row('a', 'travelers-gun', null, 6), row('b', 'chroma-travelers-gun', null, 40), row('c', 'chroma-travelers-gun', null, 30)]
+  const page = (itemSlug: string, gameSlug = 'murder-mystery-2') => buildItemPage({ gameSlug, categorySlug: 'buy-items', catalog: mm2, itemSlug, variant: null, rows: offers })!
+
+  it('an item with a Chroma version offers both, each with its stock and link', () => {
+    expect(page('travelers-gun').forms).toEqual([
+      { slug: 'travelers-gun', label: 'Common', href: '/murder-mystery-2/buy-items/item/travelers-gun', count: 1, minPriceUsd: 6 },
+      { slug: 'chroma-travelers-gun', label: 'Chroma', href: '/murder-mystery-2/buy-items/item/chroma-travelers-gun', count: 2, minPriceUsd: 30 },
+    ])
+  })
+
+  it('the Chroma page offers the same two', () => {
+    expect(page('chroma-travelers-gun').forms.map((f) => f.slug)).toEqual(['travelers-gun', 'chroma-travelers-gun'])
+  })
+
+  it('each page lists only its own offers', () => {
+    expect(page('chroma-travelers-gun').itemRows.map((r) => r.id)).toEqual(['c', 'b'])
+    expect(page('travelers-gun').itemRows.map((r) => r.id)).toEqual(['a'])
+  })
+
+  it('a version nobody sells has no price, so the picker says Notify Me', () => {
+    const none = buildItemPage({ gameSlug: 'murder-mystery-2', categorySlug: 'buy-items', catalog: mm2, itemSlug: 'travelers-gun', variant: null, rows: [] })!
+    expect(none.forms.map((f) => [f.count, f.minPriceUsd])).toEqual([[0, null], [0, null]])
+  })
+
+  it('no pair, no picker: no Chroma version, or a Chroma with no plain one', () => {
+    expect(page('luger').forms).toEqual([])
+    expect(page('chroma-laser').forms).toEqual([])
+  })
+
+  it('other games never get it', () => {
+    expect(page('travelers-gun', 'adopt-me').forms).toEqual([])
+  })
+})

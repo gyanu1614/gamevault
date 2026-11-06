@@ -43,6 +43,28 @@ export function traitOptions(traits: readonly TraitDef[], offers: readonly Offer
   })
 }
 
+/** An item's Common and Chroma versions in the trait picker's shape: `variant` is the item's slug. */
+export function formOptions(forms: ReadonlyArray<{ slug: string; label: string; count: number; minPriceUsd: number | null }>): TraitOption[] {
+  return forms.map((f) => ({ variant: f.slug, label: f.label, short: null, count: f.count, minPriceUsd: f.minPriceUsd }))
+}
+
+/** The Common / Chroma picker: picking the other version opens its page. */
+export function formPicker(
+  forms: ReadonlyArray<{ slug: string; label: string; href: string; count: number; minPriceUsd: number | null }>,
+  itemSlug: string,
+  go: (href: string) => void,
+) {
+  return {
+    noun: 'Type',
+    options: formOptions(forms),
+    value: itemSlug,
+    onChange: (slug: string) => {
+      const form = forms.find((f) => f.slug === slug)
+      if (form && slug !== itemSlug) go(form.href)
+    },
+  }
+}
+
 /** The buy box's offer: the one the buyer chose from the list while it fits the trait, else the trait's cheapest. */
 export function pickOffer<T extends OfferLike>(
   offers: readonly T[],

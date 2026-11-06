@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { offerPhotoFor } from './offers'
+import { formOptions, formPicker, offerPhotoFor } from './offers'
 import { defaultTrait, offersOfTrait, pickOffer, traitNoun, traitOptions, type TraitDef } from './offers'
 
 const VARIANTS: TraitDef[] = [
@@ -106,5 +106,44 @@ describe('offerPhotoFor', () => {
   })
   it('an Adopt Me trait never swaps the picture', () => {
     expect(offerPhotoFor('Trait', 'neon', 'https://x/a.webp')).toBeNull()
+  })
+})
+
+describe('formOptions', () => {
+  it('fits the picker: the slug is the value, a version with no offers has no price', () => {
+    expect(formOptions([
+      { slug: 'sunrise', label: 'Common', count: 2, minPriceUsd: 16.99 },
+      { slug: 'chroma-sunrise', label: 'Chroma', count: 0, minPriceUsd: null },
+    ])).toEqual([
+      { variant: 'sunrise', label: 'Common', short: null, count: 2, minPriceUsd: 16.99 },
+      { variant: 'chroma-sunrise', label: 'Chroma', short: null, count: 0, minPriceUsd: null },
+    ])
+  })
+})
+
+describe('formPicker', () => {
+  const forms = [
+    { slug: 'travelers-gun', label: 'Common', href: '/mm2/buy-items/item/travelers-gun', count: 1, minPriceUsd: 6 },
+    { slug: 'chroma-travelers-gun', label: 'Chroma', href: '/mm2/buy-items/item/chroma-travelers-gun', count: 2, minPriceUsd: 30 },
+  ]
+
+  it('choosing Chroma on the plain page opens the Chroma page', () => {
+    const went: string[] = []
+    const picker = formPicker(forms, 'travelers-gun', (h) => went.push(h))
+    expect(picker).toMatchObject({ noun: 'Type', value: 'travelers-gun' })
+    picker.onChange('chroma-travelers-gun')
+    expect(went).toEqual(['/mm2/buy-items/item/chroma-travelers-gun'])
+  })
+
+  it('choosing Common on the Chroma page goes back', () => {
+    const went: string[] = []
+    formPicker(forms, 'chroma-travelers-gun', (h) => went.push(h)).onChange('travelers-gun')
+    expect(went).toEqual(['/mm2/buy-items/item/travelers-gun'])
+  })
+
+  it('choosing the page you are on goes nowhere', () => {
+    const went: string[] = []
+    formPicker(forms, 'travelers-gun', (h) => went.push(h)).onChange('travelers-gun')
+    expect(went).toEqual([])
   })
 })

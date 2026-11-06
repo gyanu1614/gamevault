@@ -37,13 +37,20 @@ export function ItemTitle({ itemName, gameName }: { itemName: string; gameName: 
   )
 }
 
+/** The one picker a page has: a trait, a mutation, or Common / Chroma. */
+export interface ItemPickerProps {
+  noun: string
+  options: TraitOption[]
+  value: string | null
+  onChange: (value: string) => void
+}
+
 export interface BuyBoxProps {
   gameSlug: string
   itemSlug: string
-  noun: 'Trait' | 'Mutation'
-  traits: TraitOption[]
+  picker: ItemPickerProps | null
+  /** What Notify Me waits for. */
   trait: string | null
-  onTrait: (variant: string) => void
   offer: ItemOffer | null
   /** "Neon Fly Ride Parrot" — what Notify Me waits for. */
   wantedName: string
@@ -74,9 +81,9 @@ export function BuyBox(p: BuyBoxProps) {
     // Phones: lands under the navbar and the back row, both fixed there.
     <section id="buy-box" aria-labelledby="item-title" className={cn(GLASS, 'scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)] lg:p-6')}>
       <div>
-        {p.traits.length > 0 ? (
+        {p.picker ? (
           <div className="lg:hidden">
-            <TraitField noun={p.noun} options={p.traits} value={p.trait} onChange={p.onTrait} />
+            <TraitField {...p.picker} />
             <div aria-hidden className="my-5 h-px bg-white/[0.08]" />
           </div>
         ) : null}

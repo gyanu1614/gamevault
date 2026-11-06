@@ -57,6 +57,7 @@ export function ItemListingsView({ gameSlug, data, about }: { gameSlug: string; 
           imageUrl={item.imageUrl ?? null}
           noun={traitNoun(gameSlug)}
           traits={traits}
+          forms={model.forms}
           offers={offers}
           offerVariants={offerVariants}
           urlVariant={model.variant}
