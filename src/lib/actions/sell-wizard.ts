@@ -30,6 +30,7 @@ import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
+import { reportNotLinked } from '@/lib/value-listings/not-linked'
 import { insertListing, type ListingsWriter } from '@/lib/listings/create'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { toStoredImage } from '@/lib/images/resize-server'
@@ -718,6 +719,9 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     }
     // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
     const link = await linkListingsToValueItems(getAdminSupabase(), [createdId])
+    // Live with no item page: buyers only find it under More Listings, so say so.
+    const notLinked = finalStatus === 'active' && link.unmatched.length > 0
+    if (notLinked) reportNotLinked(link.unmatched)
 
     revalidatePath('/account/listings')
     // Step 7b — the category page is prerendered (24 h TTL); tell it. The listing
@@ -766,7 +770,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
 
     return {
       success: true,
-      data: { id: createdId, status: finalStatus, path: categoryPath, variantWarning: link.variantMismatches[0]?.text },
+      data: { id: createdId, status: finalStatus, path: categoryPath, variantWarning: link.variantMismatches[0]?.text, notLinked },
     }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -1199,7 +1203,10 @@ export async function bulkPublishListings(
     }
 
     // Bundle 2 — link this seller's new rows (never blocks; see value-listings/link).
-    if (ok > 0) await linkListingsToValueItems(listingsWriter, { sellerId: user.id })
+    if (ok > 0) {
+      const link = await linkListingsToValueItems(listingsWriter, { sellerId: user.id })
+      if (status === 'active') reportNotLinked(link.unmatched)
+    }
 
     revalidatePath('/account/listings')
     // Step 7b — one revalidation per category the batch touched. The listing ids

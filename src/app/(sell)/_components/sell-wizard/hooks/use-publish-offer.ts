@@ -66,7 +66,8 @@ export function usePublishOffer(input: {
         } else if (landed === 'pending_approval') {
           toast.success('Listing submitted — pending review by our team')
         } else {
-          toast.success('Listing published!')
+          const unlinked = 'notLinked' in res.data && res.data.notLinked
+          toast.success('Listing published!', unlinked ? { description: "We couldn't match it to an item page, so buyers will find it under More Listings." } : undefined)
         }
         clearWizardSnapshot()
         // The Offers pages read through react-query; drop their cached rows.
