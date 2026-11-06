@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /** Game logo (or a 2-3 letter monogram when a game has no art, or its art
  *  fails to load — never the browser's broken-image glyph). */
@@ -29,7 +30,7 @@ export function GameMark({
       // eslint-disable-next-line @next/next/no-img-element -- remote game logo
       <img
         ref={imgRef}
-        src={imageUrl}
+        src={pictureUrl(imageUrl, 'thumb')}
         alt={`${name} logo`}
         aria-hidden
         onError={() => setFailed(true)}

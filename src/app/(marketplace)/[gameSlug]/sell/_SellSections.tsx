@@ -7,6 +7,7 @@ import { ValueCallout } from '@/components/values/ValueCallout'
 import { formatUsd } from '@/lib/value-listings/format'
 import type { SellItem } from '@/lib/sell/sell-items'
 import type { SellCategory } from './_sellData'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * The data sections of /[game]/sell (values platform Step E). Each renders
@@ -51,7 +52,7 @@ function SellItemTile({ item, defaultForm }: { item: SellItem; defaultForm: stri
       )}
       {item.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- catalogue art, already 512px WebP
-        <img src={item.imageUrl} alt={item.name} width={88} height={88} loading="lazy" decoding="async" className="h-[72px] w-[72px] object-contain sm:h-[88px] sm:w-[88px]" />
+        <img src={pictureUrl(item.imageUrl, 'card')} alt={item.name} width={88} height={88} loading="lazy" decoding="async" className="h-[72px] w-[72px] object-contain sm:h-[88px] sm:w-[88px]" />
       ) : (
         <span aria-hidden className="h-[72px] w-[72px] bg-[#151B15] sm:h-[88px] sm:w-[88px]" />
       )}

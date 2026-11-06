@@ -16,6 +16,7 @@ import { SilverIcon } from '@/components/ui/silver-icon'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import type { ToolTile } from '../types'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const FADE = '56px'
 
@@ -36,7 +37,7 @@ export function Tile({ tile, art }: { tile: ToolTile; art: string[] }) {
           <span aria-hidden className="flex">
             {art.map((src, i) => (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img key={src} src={src} alt="" width={64} height={64} loading="lazy" decoding="async" className={cn('h-12 w-12 object-contain sm:h-16 sm:w-16', i > 0 && '-ml-3')} />
+              <img key={src} src={pictureUrl(src, 'thumb')} alt="" width={64} height={64} loading="lazy" decoding="async" className={cn('h-12 w-12 object-contain sm:h-16 sm:w-16', i > 0 && '-ml-3')} />
             ))}
           </span>
         )}

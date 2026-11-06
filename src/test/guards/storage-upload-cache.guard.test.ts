@@ -61,7 +61,6 @@ describe('storage upload Cache-Control', () => {
 
   it('the unique-path admin and listing uploads use the one-year cache', () => {
     for (const file of [
-      'src/lib/storage/listing-images.ts',
       'src/lib/actions/admin-category-configs.ts',
       'src/lib/actions/admin-game-wizard.ts',
       'src/lib/actions/admin-template-builder.ts',

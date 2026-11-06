@@ -76,7 +76,7 @@ export async function uploadListingImage(
     if (!screened.ok) return { success: false, error: screened.reason }
 
     // Shrink once before storing (<=1600 px WebP); unique path, cached a year.
-    const stored = await toStoredImage(checked.bytes, checked.image.mime)
+    const stored = await toStoredImage(checked.bytes, checked.image.mime, 'listing')
     const fileName = listingImagePathFor(user.id, stored.ext as typeof checked.image.ext)
     const { data, error } = await supabase.storage
       .from(LISTING_IMAGE_BUCKET)

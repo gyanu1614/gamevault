@@ -3,6 +3,7 @@ import { createValueItemReadClient } from '@/lib/values/read-client'
 import { valuePageVerdict, type ValuePageVerdictReason } from '@/lib/games/indexability'
 
 import { readGateConfig, SEO_GATE_TAG } from './settings'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * What ONE value page needs from the gate, read cookie-free (static-first):
@@ -45,7 +46,8 @@ export async function readValuePageEvidence(gameSlug: string, itemSlug: string):
       isProtected: data.is_protected,
       firstSeenAt: data.first_seen_at ?? null,
     }
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return undefined
   }
 }

@@ -21,6 +21,7 @@ import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
 import { SealCheckIcon } from '@phosphor-icons/react/dist/csr/SealCheck'
 import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 export type StepIcon = 'pass' | 'link' | 'seller' | 'currency' | 'chat' | 'gift' | 'key' | 'store' | 'check' | 'cart'
 
@@ -57,7 +58,7 @@ function StepMark({
   if (step.icon === 'currency' && currencyIconUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded currency icon
-      <img src={currencyIconUrl} alt={currencyName ? `${currencyName} icon` : 'Currency icon'} aria-hidden className="mx-auto h-12 w-12 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" />
+      <img src={pictureUrl(currencyIconUrl, 'thumb')} alt={currencyName ? `${currencyName} icon` : 'Currency icon'} aria-hidden className="mx-auto h-12 w-12 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" />
     )
   }
   const Icon = step.icon && step.icon !== 'currency' ? ICONS[step.icon] : null

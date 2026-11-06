@@ -11,6 +11,7 @@ import { aggregateStock } from './stock'
 import { loadValueCatalog, type LoadedCatalog } from './catalogs'
 import { matchListingToValueItem } from './match'
 import type { ItemStock } from './buy-state'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * DropMarket's own live stock per value item — the source of every value-page
@@ -100,6 +101,7 @@ export async function readValueListings(
   try {
     return await fetchValueListings(pair, itemSlug, hidden, catalog)
   } catch (e) {
+    rethrowFailedRead(e)
     console.error('[value-listings] stock read failed', e instanceof Error ? e.message : e)
     return []
   }
@@ -246,6 +248,7 @@ export const getValueCatalog = requestMemo(async (gameSlug: string): Promise<Loa
       try {
         return await loadValueCatalog(createAnonClient() as any, { id: pair.gameId, slug: gameSlug })
       } catch (e) {
+        rethrowFailedRead(e)
         console.error('[value-listings] catalogue read failed', e instanceof Error ? e.message : e)
         return null
       }

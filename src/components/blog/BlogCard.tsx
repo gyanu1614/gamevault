@@ -20,7 +20,7 @@
  */
 
 import Link from '@/components/navigation/AppLink'
-import { mediaUrl } from '@/lib/images/media-url'
+import { pictureUrl } from '@/lib/images/picture-url'
 import { ArrowUpRight, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { BlogPost } from '@/lib/blog/posts'
@@ -85,7 +85,7 @@ export function BlogCard({
           {post.cover && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={mediaUrl(post.cover) ?? undefined}
+              src={pictureUrl(post.cover, 'big')}
               alt={post.title}
               aria-hidden
               loading="lazy"
@@ -128,7 +128,7 @@ export function BlogCard({
         {post.cover ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={mediaUrl(post.cover) ?? undefined}
+            src={pictureUrl(post.cover, 'big')}
             alt={post.title}
             aria-hidden
             loading="lazy"

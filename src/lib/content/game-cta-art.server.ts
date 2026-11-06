@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { GAME_CTA_BANNERS_TAG } from '@/lib/revalidation/tags'
 import { gameCtaImage } from './game-cta-art'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Every active game's admin CTA banner (games.blog_cta_image_url), keyed by
@@ -26,7 +27,8 @@ const getCtaBannerMap = unstable_cache(
         map[row.slug] = row.blog_cta_image_url
       }
       return map
-    } catch {
+    } catch (e) {
+      rethrowFailedRead(e)
       return {}
     }
   },

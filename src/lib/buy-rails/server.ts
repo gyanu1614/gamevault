@@ -21,6 +21,7 @@ import {
   type RailCard,
   type RailSettings,
 } from './model'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Buy rail reads. All cookie-free (anon), so every page that carries a rail
@@ -63,7 +64,8 @@ export const getRailSettings = unstable_cache(
         .eq('id', 1)
         .maybeSingle()
       return error ? RAILS_ON : parseRailSettings(data)
-    } catch {
+    } catch (e) {
+      rethrowFailedRead(e)
       return RAILS_ON
     }
   },
@@ -124,7 +126,8 @@ const readGameMeta = unstable_cache(
             }
           : null,
       }
-    } catch {
+    } catch (e) {
+      rethrowFailedRead(e)
       return null
     }
   },
@@ -165,7 +168,8 @@ async function statsFor(gameId: string, categoryId: string, hidden: readonly str
         if (error || !data) return { count: 0, lowPrice: null }
         const prices = (data as { price: number | string }[]).map((r) => Number(r.price)).filter((p) => p > 0)
         return { count: prices.length, lowPrice: prices.length ? Math.min(...prices) : null }
-      } catch {
+      } catch (e) {
+        rethrowFailedRead(e)
         return { count: 0, lowPrice: null }
       }
     },

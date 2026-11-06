@@ -53,6 +53,7 @@ import {
   type Channel,
   type CopyCtx,
 } from './_codesCopy'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * /[game]/codes — "MM2 Codes (<month>): Every Code and If Any Work". The
@@ -389,7 +390,7 @@ function PromoRow({
       style={{ background: `radial-gradient(closest-side, rgba(${rgb},0.28), rgba(${rgb},0.06) 70%, rgba(255,255,255,0.03))` }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is */}
-      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-9 w-9 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" />
+      <img src={pictureUrl(item.imageUrl, 'thumb')} alt={item.name} loading="lazy" decoding="async" className="h-9 w-9 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" />
     </span>
   ) : (
     <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-white/[0.05] text-text-tertiary">

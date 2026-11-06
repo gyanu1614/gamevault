@@ -1,3 +1,7 @@
+// The same list as src/lib/images/picture-url.ts; picture-url.test.ts pins them.
+const PICTURE_BUCKETS = ['sab-brainrots', 'values-items', 'adopt-me-pets', 'category-icons', 'game-covers', 'listing-images', 'blog-images', 'attribute-icons']
+const SUPABASE_URL = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://cserfvellsliylifjkos.supabase.co')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // PostHog's endpoints end in "/" (`/ingest/i/v0/e/`); Next's built-in
@@ -71,36 +75,31 @@ const nextConfig = {
   ignoreDuringBuilds: true,
 },
   images: {
-    // 2026-09-28: Vercel's optimizer answered 402
-    // OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED (plan quota used up), so every
-    // uncached <Image> on the site rendered broken. Serve the source files
-    // directly instead: no /_next/image requests, no quota. The size ladders
-    // below are kept for when optimization is turned back on.
-    unoptimized: true,
-    // Transformation budget (build audit 2026-09-22, §6). Vercel bills per
-    // unique (source, width, quality, format). `formats` and `quality` are left
-    // at their defaults (webp / 75), so WIDTH is the only axis that multiplies
-    // — trimming the ladder is the highest-leverage change available.
-    //
-    // Next's default deviceSizes is [640,750,828,1080,1200,1920,2048,3840].
-    // Nothing here is ever displayed above 1120px CSS px (the widest `sizes`
-    // in the tree is the hero's "(max-width:1120px) 100vw, 1120px"), so 2048
-    // is the 2×-DPR ceiling that matters and 3840 only ever billed 4K/5K
-    // re-encodes of images shown at a fraction of that. 750 and 1200 are
-    // dropped as near-duplicates of 828 and 1080.
-    deviceSizes: [640, 828, 1080, 1920, 2048],
-    // Widths for `sizes`-bearing and fixed-width images: game marks, avatars,
-    // card thumbnails and the 220/124px cover art. Default drops 16 and 48,
-    // which nothing requests, and adds 220 to match the two card ladders.
-    imageSizes: [32, 64, 96, 128, 220, 256, 384],
+    // The optimizer's cache is keyed by project, not deployment, so pictures
+    // survive a release (src/lib/images/picture-url.ts). It was off from
+    // 2026-09-28 (402 on the Hobby plan's quota); Pro, since 2026-10-03, bills
+    // instead of blocking. Vercel bills per unique (source, width, quality,
+    // format), so all three stay few: one format, one quality, these widths.
+    formats: ['image/webp'],
+    qualities: [75],
+    // 31 days, Vercel's longest. Files in PICTURE_BUCKETS never change at a path.
+    minimumCacheTTL: 2678400,
+    // Together these are every width a picture can be made at, and they hold
+    // PICTURE_WIDTHS. Nothing is shown above 1120px; 1920 serves a 2x phone hero.
+    deviceSizes: [640, 1200, 1920],
+    imageSizes: [64, 128, 256],
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Of our storage, only the public picture buckets, so a private bucket can
+    // never reach the public cache. Plus the two avatar hosts below.
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-      },
+      ...PICTURE_BUCKETS.map((bucket) => ({
+        protocol: SUPABASE_URL.protocol.replace(':', ''),
+        hostname: SUPABASE_URL.hostname,
+        port: SUPABASE_URL.port,
+        pathname: `/storage/v1/object/public/${bucket}/**`,
+      })),
       {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',

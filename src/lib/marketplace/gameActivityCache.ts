@@ -5,6 +5,7 @@ import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
 import { getTestSellerIds } from '@/lib/seo/public-hygiene'
 import { type FooterGameSignals } from './footerGameRanking'
 import { GAME_DIRECTORY_TAG as ADMIN_GAME_DIRECTORY_TAG } from './gameDirectoryCache'
+import { rethrowFailedRead, strictReads } from '@/lib/supabase/failed-read'
 
 /**
  * Per-game marketplace activity for the footer directory order
@@ -34,7 +35,7 @@ export async function readGameActivity(
   testSellerIds?: readonly string[],
 ): Promise<FooterGameSignals> {
   try {
-    const db = createServiceRoleClient()
+    const db = strictReads(createServiceRoleClient())
     const testSellers = testSellerIds ?? (await getTestSellerIds())
     const since = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
@@ -71,13 +72,14 @@ export async function readGameActivity(
 
     return { orders30d, activeListings, trendPeak }
   } catch (e) {
+    rethrowFailedRead(e)
     console.error('[footer] game activity read failed; using curated order', e)
     return {}
   }
 }
 
 export async function getCachedGameActivity(): Promise<FooterGameSignals> {
-  const testSellers = await getTestSellerIds().catch((): string[] => []) // fails open, as before
+  const testSellers = await getTestSellerIds()
   return unstable_cache(() => readGameActivity(new Date(), testSellers), ['footer-game-activity'], {
     tags: [GAME_DIRECTORY_TAG, ADMIN_GAME_DIRECTORY_TAG],
     revalidate: 86400,

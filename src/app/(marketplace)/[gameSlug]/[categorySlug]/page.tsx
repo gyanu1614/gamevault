@@ -27,7 +27,7 @@ import {
   getActiveGame,
   getEnabledCategory,
 } from './_routeGate'
-import { getAllEnabledCategoryPairs } from '@/lib/seo/category-pairs'
+import { getIndexableCategoryPairs } from '@/lib/seo/category-pairs'
 import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
 import RouteSkeleton from './_RouteSkeleton'
 import ItemsSkeleton from './_ItemsSkeleton'
@@ -85,7 +85,7 @@ import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
 import { VALUE_CATALOG_GAMES } from '@/lib/value-listings/catalogs'
 import { getItemsGridFeed } from '@/lib/value-listings/feed'
-import { filterOptions, toGridItems } from '@/features/items-grid/model/grid'
+import { filterOptions, gridItemBase, toGridItems, toGridRows } from '@/features/items-grid/model/grid'
 import { itemNoun } from '@/features/game-home/model/item-noun'
 const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
 const ItemsGridClient = dynamic(() => import('@/features/items-grid/ItemsGridClient'))
@@ -111,9 +111,9 @@ import { activeDeliveryMethods } from '@/lib/currency/delivery-methods'
  */
 export const revalidate = 86400
 
-/** Every enabled (active game, enabled category) pair — see lib/seo/category-pairs. */
+/** The sitemap's pairs. Any other enabled pair renders on its first visit into the same cache. */
 export async function generateStaticParams() {
-  return getAllEnabledCategoryPairs()
+  return getIndexableCategoryPairs()
 }
 
 interface PageProps {
@@ -904,7 +904,8 @@ async function CategoryBrowsePage({ params }: PageProps) {
               gameSlug={gameSlug}
               gameName={game.name}
               itemNoun={itemNoun(gameSlug)}
-              items={gridItems}
+              rows={toGridRows(gridItems)}
+              itemBase={gridItemBase(gameSlug, category.slug)}
               options={filterOptions(gameSlug, gridItems)}
               stats={stats}
               introLine={introLine}

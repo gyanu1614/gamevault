@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { filterOptions, indexOptions } from './combobox-filter'
 import { SIZES } from './combobox-sizes'
 import type { ComboboxOption } from './combobox'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /** The filtered, capped rows (inside a cmdk Command, which owns the keyboard). */
 export function OptionList({
@@ -55,7 +56,7 @@ export function OptionList({
             >
               {o.icon_url && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={o.icon_url} alt={o.label} aria-hidden loading="lazy" className={cn('shrink-0 object-cover', rowIconClassName)} />
+                <img src={pictureUrl(o.icon_url, 'icon')} alt={o.label} aria-hidden loading="lazy" className={cn('shrink-0 object-cover', rowIconClassName)} />
               )}
               <span className="flex-1 truncate">{o.label}</span>
               {isChecked && <Check className={cn('text-lime-text', s.check)} />}

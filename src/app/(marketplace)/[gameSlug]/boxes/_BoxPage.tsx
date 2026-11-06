@@ -63,6 +63,7 @@ import {
 } from './_boxesCopy'
 import { boxesCopyCtx, loadBoxes, shopOddsFor } from './_boxesData'
 import { BoxPageSkeleton } from './_BoxesSkeleton'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * /[game]/boxes/[boxSlug] — one box: H1 = the search ("MM2 Knife Box 4:
@@ -210,7 +211,7 @@ async function BoxBody({
           {v.art && (
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
-              src={v.art}
+              src={pictureUrl(v.art, 'big')}
               alt={`${v.box.name} artwork`}
               aria-hidden
               loading="lazy"
@@ -227,7 +228,7 @@ async function BoxBody({
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is */}
                   <img
-                    src={v.art}
+                    src={pictureUrl(v.art, 'thumb')}
                     alt={v.godly ? `${v.godly.name}, the Godly in ${b.name}` : b.name}
                     loading="lazy"
                     decoding="async"

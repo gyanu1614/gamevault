@@ -23,6 +23,7 @@ import { getAdoptMePets } from '../values/_adoptMeData'
 import { getSabBrainrots } from '../values/_sabBrainrots'
 import { getValueListRows } from '../values/_generic/valueListRows'
 import { valueListKind } from '../values/_listRows'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * Everything /[game]/sell shows (values platform Step E), read once per render
@@ -113,6 +114,7 @@ async function getSellPlayers(gameId: string) {
   try {
     return await readPlayers(gameId)
   } catch (e) {
+    rethrowFailedRead(e)
     console.error('[sell] players read failed', e instanceof Error ? e.message : e)
     return null
   }

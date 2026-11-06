@@ -24,6 +24,7 @@ import GameSubNav from '@/components/marketplace/GameSubNav'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { hubNavExtras } from './values/_HubNavExtras'
 import { seoMeta } from '@/lib/seo/fit'
+import { getIndexableGameSlugs } from '@/lib/seo/indexable-games'
 import { getGameData } from '@/features/game-home/load/game'
 import { loadGameHome } from '@/features/game-home/load/load-game-home'
 import { buildGameHome } from '@/features/game-home/model/build'
@@ -42,13 +43,11 @@ interface PageProps {
 export const revalidate = 86400
 
 /**
- * Prerender every active game's storefront. Cookie-free read; games added
- * later still render on demand and are picked up by the window above.
+ * Prerender the games the sitemap lists. Any other game renders on its first
+ * visit and is picked up by the window above.
  */
 export async function generateStaticParams() {
-  const supabase = createAnonClient()
-  const { data } = await supabase.from('games').select('slug').eq('is_active', true)
-  return ((data ?? []) as { slug: string }[]).map((g) => ({ gameSlug: g.slug }))
+  return (await getIndexableGameSlugs()).map((gameSlug) => ({ gameSlug }))
 }
 
 async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {

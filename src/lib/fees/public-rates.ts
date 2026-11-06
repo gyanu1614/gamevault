@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { FEE_RULES_TAG } from '@/lib/revalidation/tags'
+import { strictReads } from '@/lib/supabase/failed-read'
 
 /**
  * Public, cookie-free, cached reads of the seller commission table
@@ -245,7 +246,7 @@ async function loadWithdrawalTerms(): Promise<PublicWithdrawalTerms> {
   const client = createAnonClient()
   // order_completion_windows is service-role only (PR 7 grants follow-up):
   // this runs at build / revalidate time on the server, never in a browser.
-  const service = createServiceRoleClient()
+  const service = strictReads(createServiceRoleClient())
   const [methodsRes, settingsRes, windowsRes] = await Promise.all([
     client.from('withdrawal_methods').select('method_name, display_name, method_type, fee_percentage, fee_fixed, fee_min, min_withdrawal, max_withdrawal, is_active, coming_soon, sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
     client.from('platform_fee_settings').select('completion_hold_hours, dispute_window_days, withdrawal_min_account_age_days, payout_details_freeze_hours').eq('id', true).maybeSingle(),

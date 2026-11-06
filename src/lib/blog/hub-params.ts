@@ -1,6 +1,7 @@
 import { CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
 import { contentHubSlugs } from '@/lib/content/hub-games'
 import { getAllGames } from '@/lib/utils/games'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /** The games an admin has switched on (games.content_hub_enabled). Cached with the game directory. */
 export async function getContentHubGameSlugs(): Promise<string[]> {
@@ -10,9 +11,9 @@ export async function getContentHubGameSlugs(): Promise<string[]> {
 /**
  * Every game with a blog hub: the games switched on in admin (Blog v2,
  * 2026-10-13 — a post alone no longer opens a hub). This is the prerender set
- * for `/[gameSlug]/blog`, a closed set (`dynamicParams = false`), so a read
- * failure at build time falls back to the compile-time hub games rather than
- * 404 a live hub until the next deploy. (getAllGames returns [] on an error.)
+ * for `/[gameSlug]/blog`, a closed set (`dynamicParams = false`). A failed read
+ * stops the build, which leaves the live site as it is; with no games switched
+ * on, it falls back to the compile-time hub games.
  */
 export async function getBlogHubGameSlugs(
   loadEnabled: () => Promise<string[]> = getContentHubGameSlugs,
@@ -21,7 +22,8 @@ export async function getBlogHubGameSlugs(
   let slugs: string[] = []
   try {
     slugs = await loadEnabled()
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     slugs = []
   }
   return [...new Set(slugs.length ? slugs : fallback)].sort()

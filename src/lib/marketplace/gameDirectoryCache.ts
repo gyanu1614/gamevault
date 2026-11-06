@@ -1,5 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 /**
  * Shared cache tag + cached reader for the public game/category directory.
@@ -15,14 +15,6 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
  * directory picks up edits immediately instead of waiting out the hour.
  */
 export const GAME_DIRECTORY_TAG = 'game-directory'
-
-function anonClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
-}
 
 export interface DirectoryGameRow {
   id: string
@@ -46,7 +38,7 @@ export interface DirectoryCategoryRow {
  */
 export const getCachedGameDirectory = unstable_cache(
   async (): Promise<{ games: DirectoryGameRow[]; categories: DirectoryCategoryRow[] }> => {
-    const supabase = anonClient()
+    const supabase = createAnonClient()
     const [gamesResult, categoriesResult] = await Promise.all([
       supabase
         .from('games')

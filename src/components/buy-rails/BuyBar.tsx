@@ -10,6 +10,7 @@ import { track } from '@/lib/analytics/client'
 import { safeSession } from '@/lib/safe-storage'
 import { barVisible, type RailCard, type RailSurface } from '@/lib/buy-rails/model'
 import { useSellHref } from './useSellHref'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * The phone + tablet buy bar (<1280px): one slim bar docked at the bottom —
@@ -169,7 +170,7 @@ export function BuyBar({
                   {card.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={card.image.src}
+                      src={pictureUrl(card.image.src, 'thumb')}
                       alt=""
                       width={48}
                       height={48}

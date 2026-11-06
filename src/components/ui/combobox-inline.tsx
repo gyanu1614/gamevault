@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { OptionList } from './combobox-list'
 import { SIZES } from './combobox-sizes'
 import type { ComboboxOption } from './combobox'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * The search-in-the-field variant: the box turns into the search input when
@@ -114,7 +115,7 @@ export function InlineCombobox({
             <span className={cn('flex min-w-0 flex-1 items-center', s.triggerGap)}>
               {iconInTrigger && selected?.icon_url && !open && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={selected.icon_url} alt="" aria-hidden className={cn('shrink-0 object-cover', triggerIcon)} />
+                <img src={pictureUrl(selected.icon_url, 'icon')} alt="" aria-hidden className={cn('shrink-0 object-cover', triggerIcon)} />
               )}
               {open ? (
                 <CommandInput

@@ -1,6 +1,7 @@
 import 'server-only'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import { changesBetween, trendWindowStart } from '@/lib/values/trends'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * The 7-day change behind the Steal a Brainrot and Adopt Me cards (MM2 reads
@@ -49,6 +50,7 @@ export async function getSabTrends(db: Db): Promise<Map<string, number>> {
     if (res.error) throw new Error(`sab_price_history: ${(res.error as { message?: string }).message ?? res.error}`)
     return changesBetween(res.data ?? [], { ...days, keyOf: (r) => r.brainrot_id, dateOf: (r) => r.history_date, valueOf: (r) => num(r.median_usd) })
   } catch (e) {
+    rethrowFailedRead(e)
     console.error('[values] SAB trends unavailable:', e instanceof Error ? e.message : e)
     return new Map()
   }
@@ -73,6 +75,7 @@ export async function getAdoptMeTrends(db: Db): Promise<Map<string, number>> {
     if (res.error) throw new Error(`adopt_me_price_history: ${(res.error as { message?: string }).message ?? res.error}`)
     return changesBetween(res.data ?? [], { ...days, keyOf: (r) => `${r.pet_id}|${r.variant}`, dateOf: (r) => r.history_date, valueOf: (r) => num(r.cash_value_usd) })
   } catch (e) {
+    rethrowFailedRead(e)
     console.error('[values] Adopt Me trends unavailable:', e instanceof Error ? e.message : e)
     return new Map()
   }

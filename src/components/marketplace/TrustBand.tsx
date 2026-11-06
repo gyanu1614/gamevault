@@ -18,6 +18,7 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const TRUST_ITEMS: Array<{
   key: string
@@ -74,7 +75,7 @@ export function TrustBand({ className }: { className?: string }) {
                     the dark grounding. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.img}
+                  src={pictureUrl(item.img, 'icon')}
                   alt={`${item.label} icon`}
                   aria-hidden
                   loading="lazy"

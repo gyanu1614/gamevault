@@ -22,6 +22,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { SELL_TEMPLATE_TAG } from '@/lib/sell/template-tags'
 import { guardChoiceCodeChange, guardChoiceDelete, guardFieldDelete } from '@/lib/listings/choice-usage'
 import { guardManagedFieldEdit } from '@/lib/catalogue/sell-form/managed'
+import { toStoredImage } from '@/lib/images/resize-server'
 
 /** Admin pages + the seller form's cached template (getSellTemplate). */
 function refreshTemplates() {
@@ -781,9 +782,8 @@ export async function uploadOptionIcon(
     }
     const commaIdx = fileData.base64.indexOf(',')
     const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
-    const buffer = Buffer.from(base64Data, 'base64')
-    const ext = (fileData.name.split('.').pop() || 'png').toLowerCase()
-    const path = `options/${optionId}-${Date.now()}.${ext}`
+    const stored = await toStoredImage(new Uint8Array(Buffer.from(base64Data, 'base64')), fileData.type, 'icon')
+    const path = `options/${optionId}-${Date.now()}.${stored.ext}`
 
     // Best-effort cleanup of the previous icon for this option
     const { data: existing } = await supabase
@@ -806,7 +806,7 @@ export async function uploadOptionIcon(
     const { error: upErr } = await supabase.storage
       .from('attribute-icons')
       // Unique path per upload (`options/{optionId}-{Date.now()}`): immutable.
-      .upload(path, buffer, { contentType: fileData.type, cacheControl: '31536000', upsert: true })
+      .upload(path, stored.bytes, { contentType: stored.mime, cacheControl: '31536000', upsert: true })
     if (upErr) return { success: false, error: upErr.message }
 
     const { data: urlData } = supabase.storage.from('attribute-icons').getPublicUrl(path)

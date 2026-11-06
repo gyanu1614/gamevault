@@ -1,9 +1,10 @@
 import type { SeoGateMode } from '@/lib/games/indexability'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
- * seo_settings (one row) and seo_index_overrides. Every read FAILS OPEN: a
- * failed read means report mode and no overrides, so a database hiccup can
- * never noindex the site.
+ * seo_settings (one row) and seo_index_overrides. A database hiccup can never
+ * noindex the site: on a public page a failed read throws and the page keeps
+ * its last copy; on any other client it means report mode and no overrides.
  */
 type Db = any
 
@@ -24,7 +25,8 @@ export async function readGateMode(db: Db): Promise<SeoGateMode> {
   try {
     const { data, error } = await db.from('seo_settings').select('gate_mode').eq('id', 1).maybeSingle()
     return !error && data?.gate_mode === 'enforce' ? 'enforce' : 'report'
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return 'report'
   }
 }
@@ -42,7 +44,8 @@ export async function readGateConfig(db: Db): Promise<GateConfig> {
       enforcedSince: settings.data?.enforced_since ?? null,
       overrides: new Map(((overrides.data ?? []) as { path: string; verdict: 'index' | 'noindex' }[]).map((o) => [o.path, o.verdict])),
     }
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return REPORT_ONLY
   }
 }

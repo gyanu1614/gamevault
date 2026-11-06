@@ -29,6 +29,7 @@ import { ArrowLeft, Search } from 'lucide-react'
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { navCategoriesQuery, type NavCategoryRow } from '@/lib/nav/nav-categories-query'
 import { GAME_ICONS } from '../lib/game-icons'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const EXAMPLES = ['Valorant Accounts', 'Robux', 'V-Bucks', 'GTA Accounts', 'CS2 Skins', 'Steal a Brainrot']
 
@@ -274,7 +275,7 @@ export function HeroSearch() {
                   <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-white/[0.06]">
                     {g.icon ? (
                       // eslint-disable-next-line @next/next/no-img-element -- DB image URLs from several hosts; tiny thumbnails.
-                      <img src={g.icon} alt={`${g.name} logo`} aria-hidden className="h-full w-full object-cover" loading="lazy" />
+                      <img src={pictureUrl(g.icon, 'icon')} alt={`${g.name} logo`} aria-hidden className="h-full w-full object-cover" loading="lazy" />
                     ) : (
                       <span className="text-[12px] font-semibold text-text-secondary">{g.name.charAt(0)}</span>
                     )}

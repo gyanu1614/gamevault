@@ -14,6 +14,7 @@
 
 import { useRef, type PointerEvent, type ReactNode } from 'react'
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const SPRING = { stiffness: 140, damping: 18, mass: 0.6 }
 
@@ -51,7 +52,7 @@ export function CurrencyCoinArt({
   return (
     <div ref={ref} onPointerMove={onMove} onPointerLeave={onLeave} className={className} style={{ perspective: 900 }}>
       <motion.img
-        src={src}
+        src={pictureUrl(src, 'card')}
         alt={alt}
         aria-hidden
         draggable={false}

@@ -13,6 +13,7 @@
 import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /** The card colour at an alpha — fade stops must equal the block background. */
 const card = (a: number) => `rgba(var(--color-bg-raised-rgb), ${a})`
@@ -67,7 +68,7 @@ export function FeaturedGuide({
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element -- remote cover art
             <img
-              src={cover}
+              src={pictureUrl(cover, 'full')}
               alt={title}
               aria-hidden
               // object-position ~35% (left of centre) so a centred-subject cover

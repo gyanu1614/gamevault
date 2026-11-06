@@ -32,6 +32,7 @@ import { hubFaq, hubLead, hubTitle, upcomingDateLine, type CopyCtx } from './_ev
 import { EventsTimeline, type TimelineRow } from './_EventsTimeline'
 import { EventSeasonTile } from './_EventSeasonTile'
 import { EventsHubSkeleton, HubLeadSkeleton } from './_EventsSkeleton'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * /[game]/events — the events archive hub (MM2 first): H1 = the search
@@ -216,7 +217,7 @@ function FeaturedEvent({
       {art?.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
         <img
-          src={art.imageUrl}
+          src={pictureUrl(art.imageUrl, 'big')}
           alt={`${art.name} artwork`}
           aria-hidden
           loading="lazy"

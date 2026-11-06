@@ -4,6 +4,7 @@ import { MARKET_CARD } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import type { MoverRow, PriceMovesModel } from '../types'
 import { SectionHeading } from './SectionHeading'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * Biggest Price Moves This Week: two lists on the marketplace fill (10px,
@@ -17,7 +18,7 @@ function Row({ row, up }: { row: MoverRow; up: boolean }) {
       <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-white/[0.04]">
         {row.imageUrl && (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={row.imageUrl} alt="" width={36} height={36} loading="lazy" decoding="async" className="h-9 w-9 object-contain" />
+          <img src={pictureUrl(row.imageUrl, 'thumb')} alt="" width={36} height={36} loading="lazy" decoding="async" className="h-9 w-9 object-contain" />
         )}
       </span>
       <span className="min-w-0 flex-1">

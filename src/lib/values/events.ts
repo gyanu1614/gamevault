@@ -1,5 +1,5 @@
 import 'server-only'
-import { createValuesReadClient } from '@/lib/values/read-client'
+import { createValueGameSharedReadClient, createValuesReadClient } from '@/lib/values/read-client'
 import { getValueItems, type ValueItem } from '@/lib/values/data'
 import { parseHowToGet } from '@/lib/values/how-to-get'
 import { valueItemHasPage } from '@/lib/values/hub-config'
@@ -47,10 +47,9 @@ const EVENT_COLS =
 
 const STATUSES = new Set<EventStatus>(['ended', 'live', 'upcoming'])
 
-type ReadClient = ReturnType<typeof createValuesReadClient>
-
-async function gameIdFor(supabase: ReadClient, slug: string): Promise<string | null> {
-  const { data } = await (supabase as any).from('games').select('id').eq('slug', slug).maybeSingle()
+/** One read per game, not one per item page: under the shared tags, every page reuses it. */
+async function gameIdFor(slug: string): Promise<string | null> {
+  const { data } = await (createValueGameSharedReadClient(slug) as any).from('games').select('id').eq('slug', slug).maybeSingle()
   return data?.id ?? null
 }
 
@@ -69,7 +68,7 @@ function itemRows(raw: unknown): EventItemRow[] {
 
 async function readEventRows(gameSlug: string): Promise<EventRow[]> {
   const supabase = createValuesReadClient({ gameSlug })
-  const gameId = await gameIdFor(supabase, gameSlug)
+  const gameId = await gameIdFor(gameSlug)
   if (!gameId) return []
   const { data, error } = await (supabase as any)
     .from('values_events')
@@ -90,7 +89,7 @@ async function howToGetStatuses(gameSlug: string, slugs: string[]): Promise<Map<
   const out = new Map<string, EventItemView['howToGetStatus']>()
   if (slugs.length === 0) return out
   const supabase = createValuesReadClient({ gameSlug })
-  const gameId = await gameIdFor(supabase, gameSlug)
+  const gameId = await gameIdFor(gameSlug)
   if (!gameId) return out
   const { data, error } = await (supabase as any)
     .from('values_items')
@@ -217,7 +216,7 @@ export async function getValueItemEvent(
   itemSlug: string,
 ): Promise<{ slug: string; name: string } | null> {
   const supabase = createValuesReadClient({ gameSlug, itemSlug })
-  const gameId = await gameIdFor(supabase, gameSlug)
+  const gameId = await gameIdFor(gameSlug)
   if (!gameId) return null
   const { data, error } = await (supabase as any)
     .from('values_events')

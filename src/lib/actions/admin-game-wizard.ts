@@ -29,6 +29,7 @@ import {
   type GameContentTier,
   type GameEcosystem,
 } from '@/lib/games/validate-game'
+import { toStoredImage } from '@/lib/images/resize-server'
 
 /**
  * CTA banners are AVIF (≤100 KB, encodeAvifUnder). The game-covers bucket only
@@ -355,10 +356,9 @@ export async function uploadGameLogoV2(
     // base64 may or may not include a "data:...;base64," prefix
     const commaIdx = fileData.base64.indexOf(',')
     const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
-    const buffer = Buffer.from(base64Data, 'base64')
+    const stored = await toStoredImage(new Uint8Array(Buffer.from(base64Data, 'base64')), fileData.type, 'icon')
 
-    const fileExt = (fileData.name.split('.').pop() || 'png').toLowerCase()
-    const filePath = `games/${gameId}-${Date.now()}.${fileExt}`
+    const filePath = `games/${gameId}-${Date.now()}.${stored.ext}`
 
     // Try to clean up the previous logo, but don't fail the upload if cleanup misses.
     const { data: existing } = await supabase
@@ -380,8 +380,8 @@ export async function uploadGameLogoV2(
 
     const { error: upErr } = await supabase.storage
       .from('category-icons')
-      .upload(filePath, buffer, {
-        contentType: fileData.type,
+      .upload(filePath, stored.bytes, {
+        contentType: stored.mime,
         cacheControl: '31536000', // unique path per upload: immutable
         upsert: true,
       })
@@ -429,10 +429,9 @@ export async function uploadGameCoverV2(
 
     const commaIdx = fileData.base64.indexOf(',')
     const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
-    const buffer = Buffer.from(base64Data, 'base64')
+    const stored = await toStoredImage(new Uint8Array(Buffer.from(base64Data, 'base64')), fileData.type, 'cover')
 
-    const ext = (fileData.name.split('.').pop() || 'jpg').toLowerCase()
-    const path = `covers/${gameId}-${Date.now()}.${ext}`
+    const path = `covers/${gameId}-${Date.now()}.${stored.ext}`
 
     const { data: existing } = await supabase
       .from('games')
@@ -454,7 +453,7 @@ export async function uploadGameCoverV2(
     const { error: upErr } = await supabase.storage
       .from('game-covers')
       // Unique path per upload (`covers/{gameId}-{Date.now()}`): immutable.
-      .upload(path, buffer, { contentType: fileData.type, cacheControl: '31536000', upsert: true })
+      .upload(path, stored.bytes, { contentType: stored.mime, cacheControl: '31536000', upsert: true })
     if (upErr) return { success: false, error: upErr.message }
 
     const { data: urlData } = supabase.storage.from('game-covers').getPublicUrl(path)

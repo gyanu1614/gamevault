@@ -1,5 +1,7 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
+import { fetchWithReadRetry, strictReads } from './failed-read'
+
 /**
  * Cookie-free anon Supabase client, for reads of PUBLIC data only.
  *
@@ -8,6 +10,10 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
  * to memoize. Public reads that want ISR or unstable_cache must go through
  * this client instead — it carries no session, so it sees exactly what an
  * anonymous visitor sees under RLS.
+ *
+ * A failed read THROWS (./failed-read.ts), so an outage keeps the last good
+ * page instead of saving an empty one. A catch on the way up must start with
+ * rethrowFailedRead(e).
  *
  * Do NOT use this for anything user-specific: with no session it has no auth
  * context, so RLS policies keyed on auth.uid() will (correctly) return nothing.
@@ -18,10 +24,15 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
  * Callers keep the explicit row types / casts they already carry.
  */
 export function createAnonClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
+  return strictReads(
+    createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: fetchWithReadRetry },
+      },
+    ),
   )
 }
 
@@ -87,12 +98,14 @@ export function taggedFetch(
  * `unstable_cache` entry instead.
  */
 export function createTaggedAnonClient(options: TaggedFetchOptions) {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: taggedFetch(options) },
-    },
+  return strictReads(
+    createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: taggedFetch(options, fetchWithReadRetry) },
+      },
+    ),
   )
 }

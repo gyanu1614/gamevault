@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { filterGrid, filterOptions, formsForLetters, sortGrid, splitByForm, toGridItems, toggleGridLetter, EMPTY_FILTERS, type GridItem } from './grid'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { filterGrid, filterOptions, formsForLetters, fromGridRows, gridItemBase, sortGrid, splitByForm, toGridItems, toGridRows, toggleGridLetter, EMPTY_FILTERS, type GridItem } from './grid'
 import type { FeedItem, ValuesFeed } from '@/lib/value-listings/feed/types'
 
 const item = (slug: string, over: Partial<FeedItem> = {}): FeedItem => ({
@@ -214,5 +214,54 @@ describe('the Items page trait letters', () => {
     expect(toggleGridLetter(['N', 'F'], 'M')).toEqual(['F', 'M'])
     expect(toggleGridLetter(['M'], 'N')).toEqual(['N'])
     expect(toggleGridLetter(['F', 'R'], 'F')).toEqual(['R'])
+  })
+})
+
+describe('toGridRows and fromGridRows', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  const stored = (slug: string) => `https://abc.supabase.co/storage/v1/object/public/values-items/${slug}.webp`
+  const base = gridItemBase('adopt-me', 'buy-items')
+  const full = (items: FeedItem[], stock = {}, formStock?: ValuesFeed['formStock']) =>
+    toGridItems('adopt-me', { ...feed(items, stock), formStock }, 'buy-items')
+
+  it('the browser rebuilds exactly the cards the server had, in stock', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abc.supabase.co')
+    const items = full(
+      [item('parrot', { imageUrl: stored('parrot'), popularRank: 3, isNew: true, itemType: 'Pets' })],
+      { parrot: [4, 12.5, ['FR', 'NFR']] },
+      { parrot: [
+        { variant: 'fly-ride', label: 'FR', count: 3, minPrice: 12.5 },
+        { variant: 'neon-fly-ride', label: 'NFR', count: 1, minPrice: 40 },
+      ] },
+    )
+    expect(fromGridRows(toGridRows(items), base)).toEqual(items)
+  })
+
+  it('the browser rebuilds exactly the cards the server had, out of stock with no picture', () => {
+    const items = full([item('brew', { imageUrl: '/games/brew.png', rarityKey: null, valueUsd: null })])
+    expect(fromGridRows(toGridRows(items), base)).toEqual(items)
+  })
+
+  it('keeps forms that differ from the forms with their own stock', () => {
+    const items = full([item('owl')], { owl: [1, 5, ['FR']] })
+    expect(fromGridRows(toGridRows(items), base)[0].forms).toEqual(['FR'])
+  })
+
+  it('sends only what cards use: no links, no empty fields, no repeated storage address', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abc.supabase.co')
+    const [row] = toGridRows(full([item('owl', { imageUrl: stored('owl'), rarityKey: null, valueUsd: null })]))
+    expect(row).toEqual({ slug: 'owl', name: 'owl', image: 'values-items/owl.webp' })
+  })
+
+  it('a value only orders the cards, so two decimals are enough', () => {
+    const [row] = toGridRows(full([item('owl', { valueUsd: 12.3456789 })]))
+    expect(row.value).toBe(12.35)
+  })
+
+  it('a thousand cards take less than half the room', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abc.supabase.co')
+    const items = full(Array.from({ length: 1000 }, (_, i) => item(`chroma-item-${i}`, { name: `Chroma Item ${i}`, imageUrl: stored(`chroma-item-${i}`), valueUsd: 12.3456789 })))
+    expect(JSON.stringify(toGridRows(items)).length).toBeLessThan(JSON.stringify(items).length * 0.4)
   })
 })

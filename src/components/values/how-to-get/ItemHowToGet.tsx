@@ -18,6 +18,7 @@ import { WAY_STEP_COLS, WaySectionHead } from './WaySectionHead'
 import { cn } from '@/lib/utils'
 import { HowToGetFastWay, type ItemBuy } from './HowToGetFastWay'
 import { howToGetWays, type FreeWay, type WayIcon } from '@/lib/values/how-to-get-copy'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const FREE_ICONS: Partial<Record<WayIcon, ComponentType<IconProps>>> = {
   coins: CoinsIcon,
@@ -93,7 +94,7 @@ export function ItemHowToGet({
       {imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
         <img
-          src={imageUrl}
+          src={pictureUrl(imageUrl, 'big')}
           alt={`${itemName} artwork`}
           aria-hidden
           loading="lazy"
@@ -111,7 +112,7 @@ export function ItemHowToGet({
               style={{ background: `radial-gradient(closest-side, rgba(${rgb},0.28), rgba(${rgb},0.06) 70%, rgba(255,255,255,0.03))` }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is */}
-              <img src={imageUrl} alt={itemName} loading="lazy" decoding="async" className="h-[56px] w-[56px] object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
+              <img src={pictureUrl(imageUrl, 'thumb')} alt={itemName} loading="lazy" decoding="async" className="h-[56px] w-[56px] object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
             </div>
           )}
           <div className="min-w-0">

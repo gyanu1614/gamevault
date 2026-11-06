@@ -53,6 +53,7 @@ import {
 } from './_boxesCopy'
 import { boxesCopyCtx, loadBoxes, shopOddsFor } from './_boxesData'
 import { BoxesHubSkeleton } from './_BoxesSkeleton'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * /[game]/boxes — MM2 Box Odds. H1 = the search ("MM2 Box Odds: Every Murder
@@ -178,7 +179,7 @@ async function BoxesBody({ gameSlug, ctx, o, buyHref }: { gameSlug: string; ctx:
           {art && (
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
-              src={art}
+              src={pictureUrl(art, 'big')}
               alt="Box item artwork"
               aria-hidden
               loading="lazy"

@@ -10,6 +10,7 @@ import { ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock'
 import { VALUE_SURFACE_LINK } from '@/components/values/styles'
 import type { DbBlogPost as BlogPost } from '@/lib/blog/db'
 import { postHref } from '@/lib/blog/post-url'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 export interface ArticleCardData {
   slug: string
@@ -88,7 +89,7 @@ export function GuideCard({ post }: { post: ArticleCardData }) {
         {post.cover ? (
           // eslint-disable-next-line @next/next/no-img-element -- remote cover art
           <img
-            src={post.cover}
+            src={pictureUrl(post.cover, 'big')}
             alt={post.title}
             aria-hidden
             loading="lazy"

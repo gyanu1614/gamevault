@@ -75,7 +75,7 @@ export async function loadItemsTaxonomy(
 ): Promise<ItemsTaxonomy> {
   const empty: ItemsTaxonomy = { filters: [], categories: [], mutations: [] }
   // Cached under SELL_TEMPLATE_TAG, so an admin edit or a sell-form sync reaches the filters at once.
-  const template = await getItemsFilterTemplate(gameId, globalCategorySlug).catch(() => null)
+  const template = await getItemsFilterTemplate(gameId, globalCategorySlug)
   if (!template) return empty
 
   const attrs = (template.attributes ?? []).filter(

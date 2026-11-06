@@ -206,28 +206,39 @@ export async function getGamesForGlobalCategory(globalCategorySlug: string): Pro
   } catch (e) { return fail(e) }
 }
 
+/**
+ * Slug to id never changes once a category exists, and every category page asks
+ * (1,150 reads a release, 2026-11-05), inside unstable_cache where Next caches
+ * nothing. Once per server process. A category not created yet is asked about again.
+ */
+const globalCategoryIds = new Map<string, string>()
+
+async function globalCategoryIdFor(slug: string): Promise<string | null> {
+  const known = globalCategoryIds.get(slug)
+  if (known) return known
+  const { data, error } = await createAnonClient().from('global_categories').select('id').eq('slug', slug).maybeSingle()
+  if (error) throw error
+  const id = (data as { id: string } | null)?.id ?? null
+  if (id) globalCategoryIds.set(slug, id)
+  return id
+}
+
 /** Resolve a (game_id, global_category_slug) pair to its game_categories row. */
 export async function getGameCategoryByPair(
   gameId: string,
   globalCategorySlug: string,
 ): Promise<Result<GameCategory | null>> {
   try {
-    const supabase = createAnonClient()
-    const { data: gc, error: gcErr } = await supabase
-      .from('global_categories')
-      .select('id')
-      .eq('slug', globalCategorySlug)
-      .maybeSingle()
-    if (gcErr) throw gcErr
-    if (!gc) return ok(null)
-    const { data, error } = await supabase
+    const globalCategoryId = await globalCategoryIdFor(globalCategorySlug)
+    if (!globalCategoryId) return ok(null)
+    const { data, error } = await createAnonClient()
       .from('game_categories')
       .select(`
         *,
         global_category:global_categories!game_categories_global_category_id_fkey(*)
       `)
       .eq('game_id', gameId)
-      .eq('global_category_id', (gc as { id: string }).id)
+      .eq('global_category_id', globalCategoryId)
       .maybeSingle()
     if (error) throw error
     return ok((data ?? null) as unknown as GameCategory | null)

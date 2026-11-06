@@ -13,6 +13,7 @@ import { createAnonClient } from '@/lib/supabase/anon'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { getValueItems } from '@/lib/values/data'
 import { itemKey } from '@/lib/blog/render/outline'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 export interface CatalogItem {
   slug: string
@@ -45,7 +46,10 @@ export async function searchCatalog(gameSlug: string, q: string): Promise<Catalo
     const { data } = await query.ilike('name', `%${q.replace(/[%_]/g, '')}%`).limit(40)
     return ((data ?? []) as Row[]).map(toItem)
   }
-  const items = await getValueItems(gameSlug).catch(() => [])
+  const items = await getValueItems(gameSlug).catch((e) => {
+    rethrowFailedRead(e)
+    return []
+  })
   return items.map((i) => ({ slug: i.slug, name: i.name, imageUrl: i.imageUrl }))
 }
 
@@ -62,7 +66,10 @@ export async function findCatalogItems(gameSlug: string, names: readonly string[
     const { data } = await query.or(names.map((n) => `name.ilike.${literal(n)}`).join(',')).limit(80)
     rows = ((data ?? []) as Row[]).map(toItem)
   } else {
-    rows = (await getValueItems(gameSlug).catch(() => [])).map((i) => ({ slug: i.slug, name: i.name, imageUrl: i.imageUrl }))
+    rows = (await getValueItems(gameSlug).catch((e) => {
+      rethrowFailedRead(e)
+      return []
+    })).map((i) => ({ slug: i.slug, name: i.name, imageUrl: i.imageUrl }))
   }
   for (const r of rows) {
     const k = itemKey(r.name)

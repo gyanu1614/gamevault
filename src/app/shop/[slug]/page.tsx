@@ -31,12 +31,12 @@ import {
 } from '@/lib/shop/storefront-model'
 import { resolveStoreBanner } from '@/lib/shop/store-banner'
 import { currencyOfferTitle, type CurrencyTitleConfig } from '@/lib/orders/display-title'
+import { strictReads } from '@/lib/supabase/failed-read'
 
 // Public page — use service role to bypass RLS on seller_applications
 function getServiceClient() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  return strictReads(
+    createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!),
   )
 }
 

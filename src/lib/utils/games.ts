@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 // Game mapping type
 export interface Game {
@@ -44,6 +45,7 @@ export const getAllGames = unstable_cache(
 
       return (data ?? []) as unknown as Game[]
     } catch (error) {
+      rethrowFailedRead(error)
       console.error('Error in getAllGames:', error)
       return []
     }

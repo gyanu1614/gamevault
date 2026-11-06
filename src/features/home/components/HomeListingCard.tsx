@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { formatUnitPrice } from '@/lib/currency/price-format'
 import type { LatestListing } from '../lib/latest-listings'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 const TRAY = 'bg-[#24252B]'
 
@@ -36,7 +37,7 @@ function Art({ listing }: { listing: LatestListing }) {
     return (
       /* eslint-disable-next-line @next/next/no-img-element */
       <img
-        src={src}
+        src={pictureUrl(src, 'card')}
         alt={listing.title}
         aria-hidden
         loading="lazy"
@@ -49,7 +50,7 @@ function Art({ listing }: { listing: LatestListing }) {
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
-      src={src}
+      src={pictureUrl(src, 'big')}
       alt={listing.title}
       aria-hidden
       loading="lazy"

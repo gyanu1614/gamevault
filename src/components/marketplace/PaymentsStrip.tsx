@@ -8,9 +8,13 @@
 
 import { getPublicBuyerFees } from '@/lib/fees/buyer-public-rates'
 import { PaymentsMarquee } from './PaymentsMarquee'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 export async function PaymentsStrip({ disclaimer }: { disclaimer?: string | null }) {
-  const rows = await getPublicBuyerFees().catch(() => [])
+  const rows = await getPublicBuyerFees().catch((e) => {
+    rethrowFailedRead(e)
+    return []
+  })
   const live = rows.filter((r) => r.selectable).map((r) => r.method)
   return <PaymentsMarquee disclaimer={disclaimer} live={live} />
 }

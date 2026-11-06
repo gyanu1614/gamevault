@@ -1,6 +1,7 @@
 import Link from '@/components/navigation/AppLink'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { usd, vsRows, vsVerdict, worthSameSentence, type CompareItem } from '@/lib/values/compare'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * "How <Item> Compares" — the same section on every value item page (MM2,
@@ -93,7 +94,7 @@ export function ValueCompare({
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white/[0.04]">
                       {w.imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
-                        <img src={w.imageUrl} alt="" loading="lazy" decoding="async" className="h-7 w-7 object-contain" />
+                        <img src={pictureUrl(w.imageUrl, 'icon')} alt="" loading="lazy" decoding="async" className="h-7 w-7 object-contain" />
                       )}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-body-sm font-medium text-text-primary group-hover:text-white">{w.name}</span>

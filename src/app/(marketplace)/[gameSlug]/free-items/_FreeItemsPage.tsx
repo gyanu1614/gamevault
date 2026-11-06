@@ -61,6 +61,7 @@ import {
   type WayRow,
 } from './_freeItemsCopy'
 import { FreeItemsSkeleton } from './_FreeItemsSkeleton'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * /[game]/free-items — the honest "how to get free Godlies and items" guide
@@ -256,7 +257,7 @@ async function FreeItemsBody({
           {seer?.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
-              src={seer.imageUrl}
+              src={pictureUrl(seer.imageUrl, 'big')}
               alt={`${seer.name} artwork`}
               aria-hidden
               loading="lazy"
@@ -501,7 +502,7 @@ function FeaturedArt({ gameSlug, item }: { gameSlug: string; item: Shown }) {
         style={{ background: `radial-gradient(closest-side, rgba(${rgb},0.30), rgba(${rgb},0.06) 70%, rgba(255,255,255,0.03))` }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is */}
-        <img src={item.imageUrl!} alt={item.name} loading="lazy" decoding="async" className="h-10 w-10 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" />
+        <img src={pictureUrl(item.imageUrl!, 'thumb')} alt={item.name} loading="lazy" decoding="async" className="h-10 w-10 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" />
       </span>
       <span className="mt-1 block max-w-[64px] truncate text-center text-[11px] font-medium leading-4 text-text-secondary group-hover:text-text-primary">
         {item.cheapestUsd != null ? usd(item.cheapestUsd) : item.name}

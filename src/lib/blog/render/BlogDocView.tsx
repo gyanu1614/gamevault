@@ -20,6 +20,7 @@ import { safeColor } from '@/lib/blog/doc/color'
 import { itemKey } from './outline'
 import type { LinkedItem } from '@/lib/blog/item-catalog'
 import { CalloutView, CodesView, CtaView, FaqView, FigureView, ImagePairView, ItemCardView, YouTubeView } from './nodes'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 type PmNode = {
   attrs: Record<string, unknown>
@@ -99,7 +100,7 @@ export function BlogDocView({
               <span className="bp-cell-item">
                 <Link href={item.href} aria-hidden tabIndex={-1}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, fixed 40px square */}
-                  <img data-cell-image="" src={item.imageUrl} alt="" width={40} height={40} loading="lazy" decoding="async" />
+                  <img data-cell-image="" src={pictureUrl(item.imageUrl, 'thumb')} alt="" width={40} height={40} loading="lazy" decoding="async" />
                 </Link>
                 <span>{children}</span>
               </span>
@@ -108,7 +109,7 @@ export function BlogDocView({
         },
         cellImage: ({ node }: Props) => (
           // eslint-disable-next-line @next/next/no-img-element -- an uploaded table picture, fixed 40px square
-          <img data-cell-image="" src={String(node.attrs.src ?? '')} alt={String(node.attrs.alt ?? '')} width={40} height={40} loading="lazy" decoding="async" />
+          <img data-cell-image="" src={pictureUrl(String(node.attrs.src ?? ''), 'thumb')} alt={String(node.attrs.alt ?? '')} width={40} height={40} loading="lazy" decoding="async" />
         ),
         figure: ({ node }: Props) => <FigureView attrs={node.attrs} />,
         imagePair: ({ node }: Props) => <ImagePairView attrs={node.attrs} />,

@@ -77,7 +77,7 @@ const BELOW_THE_FOLD: { file: string; eagerOk?: string[] }[] = [
   { file: 'src/components/content/HubCtaBand.tsx' },
   // Game home (/[gameSlug]): the hero logo is the first thing on the page;
   // every other picture sits below the fold.
-  { file: 'src/features/game-home/sections/Header.tsx', eagerOk: ['src={gameImageUrl}'] },
+  { file: 'src/features/game-home/sections/Header.tsx', eagerOk: ['src={pictureUrl(gameImageUrl'] },
   { file: 'src/features/game-home/sections/HotNew.tsx' },
   { file: 'src/features/game-home/sections/PriceMoves.tsx' },
   { file: 'src/features/game-home/sections/ToolsRail.client.tsx' },

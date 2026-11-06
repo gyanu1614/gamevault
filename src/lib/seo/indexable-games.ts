@@ -1,12 +1,13 @@
 import { createAnonClient } from '@/lib/supabase/anon'
 import { isGameHubIndexable } from '@/lib/games/indexability'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
- * Game hubs the sitemap advertises — the prerender set for
- * `/[gameSlug]/opengraph-image` (Step 7a). Same rule and inputs as
+ * Game hubs the sitemap advertises: the prerender set for `/[gameSlug]` and its
+ * opengraph-image. Any other game renders on its first visit. Same rule and inputs as
  * src/app/sitemap.ts: isGameHubIndexable over (content_tier, active non-test
- * listing count, curated currency config, admin override). Cookie-free; [] on
- * any read failure (the long tail renders on demand into the same cache).
+ * listing count, curated currency config, admin override). Cookie-free. A failed
+ * read stops the build, which leaves the live site as it is.
  */
 export async function getIndexableGameSlugs(): Promise<string[]> {
   try {
@@ -44,24 +45,8 @@ export async function getIndexableGameSlugs(): Promise<string[]> {
       )
       .map((g) => g.slug)
       .sort()
-  } catch {
-    return []
-  }
-}
-
-/**
- * Every active game slug — the prerender set for `/[gameSlug]/opengraph-image`
- * (Step 7b: all game images are built at deploy, so a scraper never pays a
- * Satori render for one). [] on failure: the rest renders on demand.
- */
-export async function getActiveGameSlugs(): Promise<string[]> {
-  try {
-    const supabase = createAnonClient()
-    const { data } = (await supabase.from('games').select('slug').eq('is_active', true)) as unknown as {
-      data: { slug: string }[] | null
-    }
-    return (data ?? []).map((g) => g.slug).sort()
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return []
   }
 }

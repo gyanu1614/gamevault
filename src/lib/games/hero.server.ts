@@ -3,8 +3,9 @@ import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { gameHeroTag } from '@/lib/revalidation/tags'
-import { mediaUrl } from '@/lib/images/media-url'
+import { pictureUrl } from '@/lib/images/picture-url'
 import { GAME_HERO_COLUMNS, heroSrcSetAttr, resolveGameHero, type GameHero, type GameHeroRow } from './hero'
+import { rethrowFailedRead } from '@/lib/supabase/failed-read'
 
 /**
  * The hero background for one game — the read behind GameHeroBackdrop.
@@ -15,8 +16,8 @@ import { GAME_HERO_COLUMNS, heroSrcSetAttr, resolveGameHero, type GameHero, type
  * lands on every page that renders the backdrop, so the admin upload's
  * `revalidateTag(gameHeroTag(slug))` refreshes exactly that game's pages.
  *
- * A read error (e.g. the columns not pushed yet) or an unknown game resolves
- * to the static art / neutral fallback — never a 500.
+ * An unknown game resolves to the static art / neutral fallback. A failed read
+ * throws, so the page keeps its last copy and never saves the wrong hero.
  */
 async function readHeroRow(slug: string): Promise<GameHeroRow | null> {
   try {
@@ -28,7 +29,8 @@ async function readHeroRow(slug: string): Promise<GameHeroRow | null> {
       .maybeSingle()
     if (error || !data) return null
     return data as GameHeroRow
-  } catch {
+  } catch (e) {
+    rethrowFailedRead(e)
     return null
   }
 }
@@ -49,7 +51,7 @@ export const getGameHero = cache(async function getGameHero(slug: string): Promi
 export function heroViaMedia(hero: GameHero): GameHero {
   if (hero.kind !== 'upload') return hero
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const via = (url: string) => mediaUrl(url, supabaseUrl)
+  const via = (url: string) => pictureUrl(url, 'original', supabaseUrl)
   return {
     ...hero,
     src: via(hero.src),

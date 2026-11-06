@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { NotifyMeButton } from '@/features/items-grid/NotifyMeButton'
 import type { HotNewCard, HotNewModel } from '../types'
 import { SectionHeading } from './SectionHeading'
+import { pictureUrl } from '@/lib/images/picture-url'
 
 /**
  * Hot New {Game} {Items}: the game's newest items ranked by our own offers
@@ -30,7 +31,7 @@ function Card({ card, gameSlug, sellHref }: { card: HotNewCard; gameSlug: string
           <span className="mt-2 grid h-[104px] w-full place-items-center sm:h-[120px]">
             {card.imageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={card.imageUrl} alt={card.name} width={112} height={112} loading="lazy" decoding="async" className="h-[96px] w-[96px] object-contain sm:h-[112px] sm:w-[112px]" />
+              <img src={pictureUrl(card.imageUrl, 'card')} alt={card.name} width={112} height={112} loading="lazy" decoding="async" className="h-[96px] w-[96px] object-contain sm:h-[112px] sm:w-[112px]" />
             ) : (
               <span className="font-medium uppercase tracking-wider text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
                 No image

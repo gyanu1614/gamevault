@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { PICTURE_WIDTHS, pictureUrl } from '@/lib/images/picture-url'
+
 /** Never blow the art up beyond this many times its own pixels (it blurs). */
 const MAX_UPSCALE = 1.5
 /** A failed picture gets these two more tries: the image route answers 502 (never cached) when Storage is slow. */
@@ -73,7 +75,7 @@ export function ItemPicture({
       // A new element per try: the browser really asks again.
       key={attempt}
       ref={ref}
-      src={src}
+      src={pictureUrl(src, size > PICTURE_WIDTHS.card ? 'big' : 'card')}
       alt={name}
       width={size}
       height={size}
