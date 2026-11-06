@@ -35,7 +35,7 @@ export interface SellFormConfig {
   /**
    * Fields that say nothing the chain doesn't. Unlike a legacy field their answer
    * is never read as the item: repairs drop it, and the field goes once no live
-   * listing has it. The sell form stops asking at once (lib/sell/item-search).
+   * listing has it. The sell form stops asking at once (sell-wizard/item-search).
    */
   retiredFields?: string[]
 }

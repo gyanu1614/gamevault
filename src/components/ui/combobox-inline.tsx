@@ -24,6 +24,8 @@ export function InlineCombobox({
   onChoose,
   placeholder,
   emptyText,
+  rankMatches,
+  footer,
   ariaLabel,
   listboxId,
   invalid,
@@ -42,7 +44,9 @@ export function InlineCombobox({
   value: string
   onChoose: (v: string) => void
   placeholder: string
-  emptyText: string
+  emptyText: string | ((query: string) => string)
+  rankMatches?: boolean
+  footer?: (ctx: { query: string; close: () => void }) => React.ReactNode
   ariaLabel?: string
   listboxId: string
   invalid?: boolean
@@ -175,6 +179,7 @@ export function InlineCombobox({
               query={query}
               value={value}
               emptyText={emptyText}
+              rankMatches={rankMatches}
               size={size}
               rowIconClassName={rowIcon}
               onChoose={(v) => {
@@ -184,6 +189,7 @@ export function InlineCombobox({
               }}
               className="max-h-[min(22rem,var(--radix-popover-content-available-height))]"
             />
+            {footer?.({ query, close })}
           </Popover.Content>
         </Popover.Portal>
       </Command>

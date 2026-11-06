@@ -32,6 +32,19 @@ import { scrollToStep } from '@/lib/ui/scroll-into-step'
 
 import { buildChildIndex, collectDescendantIds } from './sell-wizard/attribute-tree'
 import { EMPTY_OFFER_FORM, hasDetailsInput, offerFormFromListing } from './sell-wizard/offer-form'
+import {
+  buildItemRows,
+  initialItemEntry,
+  itemChainIds,
+  itemListIds,
+  itemSearchGame,
+  itemTitle,
+  nextTitle,
+  pickedRow,
+  valuesForPick,
+  withoutIds,
+  type ItemRow,
+} from './sell-wizard/item-search'
 import { canContinue, canPublishOffer, priceHintInputFor, requiredAttributesFilled } from './sell-wizard/offer-rules'
 import { useOfferForm } from './sell-wizard/hooks/use-offer-form'
 import { useWizardSteps, type WizardStep } from './sell-wizard/hooks/use-wizard-steps'
@@ -48,6 +61,7 @@ import { GoBackDialog } from './sell-wizard/GoBackDialog'
 import { Step1Category } from './sell-wizard/steps/Step1Category'
 import { Step2Game } from './sell-wizard/steps/Step2Game'
 import { Step3Details } from './sell-wizard/steps/Step3Details'
+import { ItemPicker } from './sell-wizard/steps/ItemPicker'
 import { useTraitHint } from './sell-wizard/hooks/use-trait-hint'
 import { Step4Publish } from './sell-wizard/steps/Step4Publish'
 
@@ -73,7 +87,16 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
   const startCategory = !prefill && !isEditMode && start ? categories.find((c) => c.slug === start.categorySlug) ?? null : null
   const [category, setCategory] = useState<GlobalCategory | null>(prefillCategory ?? startCategory)
   const [game, setGame] = useState<SellGameOption | null>(prefillCategory ? prefill?.game ?? null : startCategory ? start?.game ?? null : null)
-  const { form, setForm, update, setters } = useOfferForm(() => (prefill && prefillCategory ? offerFormFromListing(prefill.listing, prefill.template) : EMPTY_OFFER_FORM))
+  const { form, setForm, update, setters } = useOfferForm(() => {
+    if (!prefill || !prefillCategory) return EMPTY_OFFER_FORM
+    const opened = offerFormFromListing(prefill.listing, prefill.template)
+    // An existing listing opens on its item, or on its manual fields if it sells something we don't list.
+    const opening = itemSearchGame(prefill.game?.game_slug, prefillCategory.slug)
+    if (!opening || !prefill.template) return opened
+    const attrs = prefill.template.attributes
+    const row = pickedRow(buildItemRows(opening, attrs), attrs, opened.fieldValues)
+    return { ...opened, itemEntry: initialItemEntry(row, itemChainIds(opening, attrs), opened.fieldValues) }
+  })
   const { step, setStep, direction } = useWizardSteps({
     initialStep: prefillCategory || startCategory ? 3 : 1,
     historyEnabled: !isEditMode,
@@ -139,9 +162,24 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
   }, [game, update])
 
   const { topLevel, childrenOf } = useMemo(() => buildChildIndex(template?.attributes ?? []), [template])
+
+  // The search-first picker: on for a game with a catalogue whose form has loaded with item lists.
+  const searchGame = useMemo(() => itemSearchGame(game?.game_slug, category?.slug), [game, category])
+  const attributes = useMemo(() => template?.attributes ?? [], [template])
+  const itemRows = useMemo(() => (searchGame ? buildItemRows(searchGame, attributes) : []), [searchGame, attributes])
+  const usesSearch = !!searchGame && itemRows.length > 0
+  const manualItem = usesSearch && form.itemEntry === 'manual'
+  const picked = useMemo(() => (usesSearch ? pickedRow(itemRows, attributes, form.fieldValues) : null), [usesSearch, itemRows, attributes, form.fieldValues])
+  const listIds = useMemo(() => (searchGame ? itemListIds(searchGame, attributes) : new Set<string>()), [searchGame, attributes])
+  const manualHiddenIds = useMemo(() => {
+    const hidden = new Set(listIds)
+    for (const a of attributes) if (searchGame?.hidden.includes(a.slug)) hidden.add(a.id)
+    return hidden
+  }, [listIds, attributes, searchGame])
+
   const attributesFilled = useMemo(
-    () => requiredAttributesFilled(template, form.fieldValues, topLevel, childrenOf),
-    [template, form.fieldValues, topLevel, childrenOf],
+    () => requiredAttributesFilled(template, form.fieldValues, topLevel, childrenOf, manualItem ? manualHiddenIds : undefined),
+    [template, form.fieldValues, topLevel, childrenOf, manualItem, manualHiddenIds],
   )
   const deliveryMethods = useMemo(
     () => (category?.slug === 'currency' ? activeDeliveryMethods(currencyConfig) : []),
@@ -172,14 +210,71 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     [template, update],
   )
 
+  const gameName = game?.game_name ?? ''
+  const pickItem = useCallback(
+    (row: ItemRow) => {
+      if (!searchGame) return
+      const auto = itemTitle(row.label, gameName)
+      setForm((prev) => ({
+        ...prev,
+        fieldValues: valuesForPick(searchGame, attributes, row, prev.fieldValues),
+        title: nextTitle(prev.title, prev.autoTitle, auto),
+        autoTitle: auto,
+      }))
+    },
+    [searchGame, attributes, gameName, setForm],
+  )
+  const changeItem = useCallback(() => {
+    if (!searchGame) return
+    update('fieldValues', (prev) => withoutIds(prev, itemChainIds(searchGame, attributes)))
+  }, [searchGame, attributes, update])
+  const setManualName = useCallback(
+    (name: string) => {
+      const auto = itemTitle(name, gameName)
+      setForm((prev) => ({ ...prev, manualItemName: name, title: nextTitle(prev.title, prev.autoTitle, auto), autoTitle: auto }))
+    },
+    [gameName, setForm],
+  )
+  const enterManually = useCallback(
+    (typed: string) => {
+      if (!searchGame) return
+      const auto = itemTitle(typed, gameName)
+      setForm((prev) => ({
+        ...prev,
+        itemEntry: 'manual',
+        manualItemName: typed,
+        fieldValues: withoutIds(prev.fieldValues, itemChainIds(searchGame, attributes)),
+        title: nextTitle(prev.title, prev.autoTitle, auto),
+        autoTitle: auto,
+      }))
+    },
+    [searchGame, attributes, gameName, setForm],
+  )
+  const backToSearch = useCallback(() => {
+    if (!searchGame) return
+    setForm((prev) => ({
+      ...prev,
+      itemEntry: 'search',
+      manualItemName: '',
+      fieldValues: withoutIds(prev.fieldValues, itemChainIds(searchGame, attributes)),
+      title: nextTitle(prev.title, prev.autoTitle, ''),
+      autoTitle: '',
+    }))
+  }, [searchGame, attributes, setForm])
+
   // Adopt Me: the title's variant pre-selects or flags the Trait pick.
   const traitHint = useTraitHint({ gameSlug: game?.game_slug, template, title: form.title, values: form.fieldValues, onFieldChange })
+
+  /** A new game or category starts the item over; a title the seller wrote stays. */
+  const resetItem = () => {
+    setForm((prev) => ({ ...prev, fieldValues: {}, itemEntry: 'search', manualItemName: '', title: nextTitle(prev.title, prev.autoTitle, ''), autoTitle: '' }))
+  }
 
   const selectCategory = (c: GlobalCategory) => {
     setCategory(c)
     setGame(null)
     catalog.clearTemplate()
-    update('fieldValues', {})
+    resetItem()
   }
 
   const selectGame = async (g: SellGameOption) => {
@@ -193,6 +288,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
         return
       }
     }
+    if (g.game_id !== game?.game_id) resetItem()
     setGame(g)
     remember(g.game_id)
     setStep(3)
@@ -285,15 +381,38 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
                   <ChangesRequestedBanner notes={prefill.listing.moderation_notes} />
                 )}
                 <PolicyBanner policy={policy} />
-                <Step3Details
-                  templateLoading={catalog.templateLoading}
-                  template={template}
-                  topLevel={topLevel}
-                  childrenOf={childrenOf}
-                  values={form.fieldValues}
-                  onChange={onFieldChange}
-                  hint={traitHint}
-                />
+                {usesSearch && searchGame ? (
+                  <ItemPicker
+                    game={searchGame}
+                    gameSlug={game.game_slug}
+                    rows={itemRows}
+                    picked={picked}
+                    attributes={attributes}
+                    values={form.fieldValues}
+                    topLevel={topLevel}
+                    childrenOf={childrenOf}
+                    manual={manualItem}
+                    manualItemName={form.manualItemName}
+                    hiddenIds={manualHiddenIds}
+                    hint={traitHint}
+                    onPick={pickItem}
+                    onChange={changeItem}
+                    onFieldChange={onFieldChange}
+                    onManual={enterManually}
+                    onManualName={setManualName}
+                    onBackToSearch={backToSearch}
+                  />
+                ) : (
+                  <Step3Details
+                    templateLoading={catalog.templateLoading}
+                    template={template}
+                    topLevel={topLevel}
+                    childrenOf={childrenOf}
+                    values={form.fieldValues}
+                    onChange={onFieldChange}
+                    hint={traitHint}
+                  />
+                )}
                 <Step4Publish
                   title={form.title}
                   setTitle={setters.setTitle}

@@ -32,6 +32,12 @@ export interface OfferForm {
   fieldValues: Record<string, unknown>
   agreeSellerRules: boolean
   agreeTos: boolean
+  /** The search, or the manual fields for an item we don't list. */
+  itemEntry: 'search' | 'manual'
+  /** Item Name, on the manual fields: it only ever sets the title. */
+  manualItemName: string
+  /** The last title we filled in, so one the seller wrote is never replaced. */
+  autoTitle: string
 }
 
 export const EMPTY_OFFER_FORM: OfferForm = {
@@ -52,6 +58,9 @@ export const EMPTY_OFFER_FORM: OfferForm = {
   fieldValues: {},
   agreeSellerRules: false,
   agreeTos: false,
+  itemEntry: 'search',
+  manualItemName: '',
+  autoTitle: '',
 }
 
 /**
@@ -99,6 +108,9 @@ export function offerFormFromSnapshot(s: Partial<WizardSnapshot>): OfferForm {
     fieldValues: s.fieldValues ?? {},
     agreeSellerRules: !!s.agreeSellerRules,
     agreeTos: !!s.agreeTos,
+    itemEntry: s.itemEntry === 'manual' ? 'manual' : 'search',
+    manualItemName: s.manualItemName ?? '',
+    autoTitle: s.autoTitle ?? '',
   }
 }
 

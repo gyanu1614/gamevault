@@ -16,6 +16,9 @@ export const RECENT_GAMES_KEY = 'gv_sell_recent_games'
 export const WIZARD_SNAPSHOT_KEY = 'gv_sell_wizard_snapshot'
 
 export interface WizardSnapshot {
+  itemEntry?: 'search' | 'manual'
+  manualItemName?: string
+  autoTitle?: string
   step: number
   categoryId: string | null
   gameId: string | null

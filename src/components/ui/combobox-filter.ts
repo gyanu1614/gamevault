@@ -25,17 +25,29 @@ export function indexOptions<T extends SearchableOption>(options: readonly T[]):
   }))
 }
 
+/** 0: the name starts with the query. 1: a word in it does. 2: it's somewhere in the name or keywords. */
+function matchRank(label: string, q: string): number {
+  const name = label.toLowerCase()
+  if (name.startsWith(q)) return 0
+  return name.includes(` ${q}`) ? 1 : 2
+}
+
 export function filterOptions<T extends SearchableOption>(
   index: readonly IndexedOption<T>[],
   query: string,
+  options: { rank?: boolean } = {},
 ): { items: T[]; more: number } {
   const q = query.trim().toLowerCase()
-  const items: T[] = []
-  let total = 0
+  // Every word, in any order: "emberbow chroma" finds Chroma Emberbow.
+  const words = q.split(/\s+/).filter(Boolean)
+  const matches: T[] = []
   for (const { option, hay } of index) {
-    if (q && !hay.includes(q)) continue
-    total += 1
-    if (items.length < RENDER_CAP) items.push(option)
+    if (words.every((w) => hay.includes(w))) matches.push(option)
   }
-  return { items, more: total - items.length }
+  if (options.rank && q) {
+    const rank = new Map(matches.map((o) => [o, matchRank(o.label, q)]))
+    matches.sort((a, b) => rank.get(a)! - rank.get(b)! || a.label.length - b.label.length)
+  }
+  const items = matches.slice(0, RENDER_CAP)
+  return { items, more: matches.length - items.length }
 }

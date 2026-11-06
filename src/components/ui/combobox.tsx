@@ -46,6 +46,8 @@ export interface ComboboxOption {
   icon_url?: string | null
   /** Optional secondary search keywords */
   keywords?: string[]
+  /** A second line under the label. */
+  meta?: React.ReactNode
 }
 
 export interface ComboboxProps {
@@ -53,7 +55,13 @@ export interface ComboboxProps {
   onChange: (v: string) => void
   options: ComboboxOption[]
   placeholder?: string
-  emptyText?: string
+  emptyText?: string | ((query: string) => string)
+  /** Best matches first while searching (name starts with it, then a word does). */
+  rankMatches?: boolean
+  /** Under the list, in the popover and the sheet. `query` is what's typed. */
+  footer?: (ctx: { query: string; close: () => void }) => React.ReactNode
+  /** Touch: open the sheet with the keyboard up, for a list you search rather than browse. */
+  sheetSearchFirst?: boolean
   disabled?: boolean
   className?: string
   /** Aria label when no visible label is paired */
@@ -97,6 +105,9 @@ export function Combobox({
   options,
   placeholder = 'Choose…',
   emptyText = 'No matches.',
+  rankMatches = false,
+  footer,
+  sheetSearchFirst = false,
   disabled,
   className,
   ariaLabel,
@@ -145,6 +156,8 @@ export function Combobox({
         onChoose={choose}
         placeholder={placeholder}
         emptyText={emptyText}
+        rankMatches={rankMatches}
+        footer={footer}
         ariaLabel={ariaLabel}
         listboxId={listboxId}
         invalid={invalid}
@@ -216,7 +229,10 @@ export function Combobox({
       options={sortedOptions}
       value={value}
       emptyText={emptyText}
-      autoFocusSearch={!coarse}
+      rankMatches={rankMatches}
+      footer={footer}
+      close={() => setOpen(false)}
+      autoFocusSearch={!coarse || sheetSearchFirst}
       size={size}
       rowIconClassName={rowIcon}
       onChoose={choose}
@@ -284,6 +300,9 @@ function ComboboxPanel({
   options,
   value,
   emptyText,
+  rankMatches,
+  footer,
+  close,
   autoFocusSearch,
   size,
   rowIconClassName,
@@ -292,7 +311,10 @@ function ComboboxPanel({
   listboxId: string
   options: ComboboxOption[]
   value: string
-  emptyText: string
+  emptyText: string | ((query: string) => string)
+  rankMatches: boolean
+  footer?: (ctx: { query: string; close: () => void }) => React.ReactNode
+  close: () => void
   autoFocusSearch: boolean
   size: 'md' | 'lg'
   rowIconClassName: string
@@ -322,10 +344,12 @@ function ComboboxPanel({
         query={query}
         value={value}
         emptyText={emptyText}
+        rankMatches={rankMatches}
         size={size}
         rowIconClassName={rowIconClassName}
         onChoose={onChoose}
       />
+      {footer?.({ query, close })}
     </Command>
   )
 }

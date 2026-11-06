@@ -18,3 +18,23 @@ describe('combobox filter', () => {
     expect(filterOptions(idx, 'zzz')).toEqual({ items: [], more: 0 })
   })
 })
+
+describe('filterOptions: the item search', () => {
+  const index = indexOptions(['Chroma Emberbow', 'Blue Emberbow', 'Emberbow', 'Member Knife', 'Emberknife'].map((label) => ({ value: label, label })))
+
+  it('finds every word, in any order', () => {
+    expect(filterOptions(index, 'emberbow chroma').items.map((o) => o.label)).toEqual(['Chroma Emberbow'])
+  })
+
+  it('keeps the list order unless asked to rank', () => {
+    expect(filterOptions(index, 'emberbow').items.map((o) => o.label)).toEqual(['Chroma Emberbow', 'Blue Emberbow', 'Emberbow'])
+  })
+
+  it('ranked: name starts with it, then a word does, then anywhere; shorter first', () => {
+    expect(filterOptions(index, 'ember', { rank: true }).items.map((o) => o.label)).toEqual(['Emberbow', 'Emberknife', 'Blue Emberbow', 'Chroma Emberbow', 'Member Knife'])
+  })
+
+  it('an empty search keeps the list order', () => {
+    expect(filterOptions(index, '', { rank: true }).items[0].label).toBe('Chroma Emberbow')
+  })
+})

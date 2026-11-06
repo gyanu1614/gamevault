@@ -73,21 +73,24 @@ export const Step3Details = memo(function Step3Details({
  * indented INSIDE this card.
  */
 export function FieldCard({
-  attribute, values, onChange, childrenOf, hint = null,
+  attribute, values, onChange, childrenOf, hint = null, hiddenIds,
 }: {
   attribute: Attribute
   values: Record<string, unknown>
   onChange: (id: string, value: unknown) => void
   childrenOf: Map<string, Map<string, Attribute[]>>
   hint?: FieldHint | null
+  /** Sub-fields not asked (the item lists, on the manual path). */
+  hiddenIds?: ReadonlySet<string>
 }) {
   if (!isVisible(attribute, values)) return null
 
   const inner = childrenOf.get(attribute.id)
   const currentValue = values[attribute.id]
-  const revealedKids = inner && typeof currentValue === 'string' && currentValue
+  const revealedKids = (inner && typeof currentValue === 'string' && currentValue
     ? inner.get(currentValue) ?? []
     : []
+  ).filter((kid) => !hiddenIds?.has(kid.id))
 
   return (
     // No `layout`: it measured the whole card on every keystroke.
@@ -132,6 +135,7 @@ export function FieldCard({
                     onChange={onChange}
                     childrenOf={childrenOf}
                     hint={hint}
+                    hiddenIds={hiddenIds}
                   />
                 ))}
               </div>
