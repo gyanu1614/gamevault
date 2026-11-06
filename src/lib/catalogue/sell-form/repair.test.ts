@@ -70,3 +70,31 @@ describe('planListingRepairs: a listing follows its item', () => {
     expect(out[0].itemSlug).toBe('hallowscythe')
   })
 })
+
+// 2026-11-05: Item Properties (Common/Chroma) on MM2 says nothing the catalogue
+// doesn't: a Chroma item is its own item. Its answer goes, whatever else happens.
+describe('retired fields', () => {
+  const config: SellFormConfig = { ...CONFIG, retiredFields: ['item-properties'] }
+  const run = (rows: ListingRow[]) => planListingRepairs(config, ITEMS, planSellForm(config, ITEMS, empty()), rows)
+
+  it('strips the answer from a listing of a catalogue item', () => {
+    const [r] = run([listing('a', { 'item-type': 'guns', 'rarity-gun': 'ancient', 'gun-ancient': 'emberbow', 'item-properties': 'common' }, 'emberbow')])
+    expect(r.templateData).not.toHaveProperty('item-properties')
+    expect(r.templateData).toMatchObject({ 'gun-ancient': 'emberbow' })
+  })
+
+  it('strips the answer from a listing with no catalogue item, and leaves its other answers', () => {
+    const [r] = run([listing('b', { 'item-type': 'effects', 'item-properties': 'chroma', colour: 'red' })])
+    expect(r.templateData).toEqual({ 'item-type': 'effects', colour: 'red' })
+    expect(r.itemSlug).toBeNull()
+  })
+
+  it('leaves a listing without the answer alone', () => {
+    expect(run([listing('c', { 'item-type': 'effects' })])).toEqual([])
+  })
+
+  it('is never read as the item', () => {
+    const [r] = run([listing('d', { 'item-properties': 'emberbow' })])
+    expect(r.itemSlug).toBeNull()
+  })
+})

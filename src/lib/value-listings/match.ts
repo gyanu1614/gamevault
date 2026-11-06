@@ -202,15 +202,16 @@ export function matchListingToValueItem(
   const tokens = titleTokens(listing.title ?? '')
 
   // 1. Identity: the template field, unless the title names the same item
-  // only as part of a longer, different name (the seller picked the nearest
-  // catalogue item for one we don't list).
+  // only as part of a longer, different name. Then the title decides: the
+  // seller picked the nearest item for "Chroma Embersickle" (we list it) or
+  // "Fairy Bat Dragon" (we don't, so it links to nothing).
   let item: ValueCatalog['items'][number] | undefined
   for (const key of catalog.identityKeys ?? []) {
     const raw = templateString(listing.templateData, key)
     if (!raw) continue
     const hit = p.bySlug.get(slugifyValue(raw))
     if (!hit) continue
-    if (nameOccurrence(tokens, hit.words, p) === 'foreign') return null
+    if (nameOccurrence(tokens, hit.words, p) === 'foreign') break
     item = hit.item
     break
   }

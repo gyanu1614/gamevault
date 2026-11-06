@@ -59,8 +59,9 @@ export function legacyRetirement(
   const retire: { id: string; slug: string }[] = []
   const inUse: string[] = []
   const chainComplete = config.types.every((t) => plan.typeValues[t.key])
+  const retiring = new Set([...config.legacyFields, ...(config.retiredFields ?? [])])
   for (const f of form.fields) {
-    if (!config.legacyFields.includes(f.slug)) continue
+    if (!retiring.has(f.slug)) continue
     if (!chainComplete) {
       inUse.push(f.slug)
       continue

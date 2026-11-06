@@ -32,6 +32,12 @@ export interface SellFormConfig {
    * the fields themselves are retired only by the explicit cutover step.
    */
   legacyFields: string[]
+  /**
+   * Fields that say nothing the chain doesn't. Unlike a legacy field their answer
+   * is never read as the item: repairs drop it, and the field goes once no live
+   * listing has it. The sell form stops asking at once (lib/sell/item-search).
+   */
+  retiredFields?: string[]
 }
 
 /** The marker on every option the sync owns (attribute_options.metadata.catalogue). */
