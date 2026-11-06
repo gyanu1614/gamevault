@@ -8,7 +8,7 @@ import { requestMemo } from '@/lib/revalidation/request-memo'
 import { valuesTag } from '@/lib/values/revalidation'
 import { valueItemStockTag, valueStockTag } from './tags'
 import { aggregateStock } from './stock'
-import { loadValueCatalog, type LoadedCatalog } from './catalogs'
+import { catalogHasItem, loadValueCatalog, type LoadedCatalog } from './catalogs'
 import { matchListingToValueItem } from './match'
 import type { ItemStock } from './buy-state'
 import { rethrowFailedRead } from '@/lib/supabase/failed-read'
@@ -57,30 +57,54 @@ export interface ItemsPair {
   categorySlug: string
 }
 
+async function readItemsPair(gameSlug: string): Promise<ItemsPair | null> {
+  const sb = createAnonClient() as any
+  const { data: game } = await sb.from('games').select('id, name, image_url').eq('slug', gameSlug).eq('is_active', true).maybeSingle()
+  if (!game) return null
+  const { data: pair } = await sb
+    .from('game_categories')
+    .select('id, slug, type')
+    .eq('game_id', game.id)
+    .eq('type', 'items')
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (!pair) return null
+  return { gameId: game.id, gameName: game.name, gameImageUrl: game.image_url ?? null, pairId: pair.id, categorySlug: pair.slug }
+}
+
 /** The game's "items" pair (e.g. /adopt-me/buy-items). */
 export const getItemsPair = unstable_cache(
-  async (gameSlug: string): Promise<ItemsPair | null> => {
-    const sb = createAnonClient() as any
-    const { data: game } = await sb.from('games').select('id, name, image_url').eq('slug', gameSlug).eq('is_active', true).maybeSingle()
-    if (!game) return null
-    const { data: pair } = await sb
-      .from('game_categories')
-      .select('id, slug, type')
-      .eq('game_id', game.id)
-      .eq('type', 'items')
-      .eq('is_enabled', true)
-      .order('sort_order', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-    if (!pair) return null
-    return { gameId: game.id, gameName: game.name, gameImageUrl: game.image_url ?? null, pairId: pair.id, categorySlug: pair.slug }
-  },
+  readItemsPair,
   ['value-items-pair'],
   // 7 days + the directory tag (admin game/category edits, nightly backstop):
   // value item pages call this, and a shorter window here would cap their
   // 7-day ISR interval at it — Next uses the minimum across a render's reads.
   { revalidate: 604800, tags: [GAME_DIRECTORY_TAG] },
 )
+
+/**
+ * The database's own answer, past every saved copy: does this item have a page?
+ * Only for the moment a page is about to answer 404, because a saved 404 stays
+ * until the next release (2026-11-06: emberbow).
+ *
+ * The key is new every time on purpose. A plain read on a static route can be
+ * served from the Data Cache, and `no-store` would turn the whole route dynamic;
+ * inside an unstable_cache callback Next reads with no cache, so a key that never
+ * matches means a real read and a static page.
+ */
+export async function itemPageExistsFresh(gameSlug: string, categorySlug: string, itemSlug: string): Promise<boolean> {
+  return unstable_cache(
+    async (): Promise<boolean> => {
+      const pair = await readItemsPair(gameSlug)
+      if (!pair || pair.categorySlug !== categorySlug) return false
+      return catalogHasItem(createAnonClient() as any, { id: pair.gameId, slug: gameSlug }, itemSlug)
+    },
+    ['item-page-exists', gameSlug, categorySlug, itemSlug, String(Date.now())],
+    { revalidate: 86400 },
+  )()
+}
 
 /**
  * Live, linked listings of the game — all of them, or one item's.
@@ -191,8 +215,13 @@ export async function getValueItemListings(
  * description), for the pet page's buy panel. Kept out of
  * VALUE_LISTING_SELECT so the per-game cache entry stays small; cached and
  * tagged like getValueItemListings (the item's own stock tag).
+ *
+ * Keyed by the offers on the page, because the offers come from the per-GAME
+ * read, which refreshes on any listing change, and this one doesn't. A new offer
+ * must never be handed a copy saved before it existed: it would show the stock
+ * hand-over text instead of the seller's own (2026-11-06: Sunrise).
  */
-export async function getValueItemDescriptions(gameSlug: string, itemSlug: string): Promise<Record<string, string>> {
+export async function getValueItemDescriptions(gameSlug: string, itemSlug: string, listingIds: readonly string[]): Promise<Record<string, string>> {
   const pair = await getItemsPair(gameSlug)
   if (!pair) return {}
   return unstable_cache(
@@ -215,7 +244,7 @@ export async function getValueItemDescriptions(gameSlug: string, itemSlug: strin
       }
       return out
     },
-    ['value-item-descriptions', gameSlug, pair.pairId, itemSlug],
+    ['value-item-descriptions', gameSlug, pair.pairId, itemSlug, [...listingIds].sort().join(',')],
     { revalidate: 86400, tags: [valueItemStockTag(gameSlug, itemSlug), valuesTag(gameSlug)] },
   )()
 }

@@ -720,9 +720,11 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const link = await linkListingsToValueItems(getAdminSupabase(), [createdId])
 
     revalidatePath('/account/listings')
-    // Step 7b — the category page is prerendered (24 h TTL); tell it.
+    // Step 7b — the category page is prerendered (24 h TTL); tell it. The listing
+    // id also names its value item, so that item's pages follow straight away.
     await revalidateListingSurfaces(getAdminSupabase() as never, {
       gameCategoryIds: [gameCategory.id],
+      listingIds: createdId ? [createdId] : [],
     })
 
     // SEO — IndexNow for the freshly published listing + the pages it appears
@@ -1138,6 +1140,7 @@ export async function bulkPublishListings(
     // gate + policy decision; seller_id is pinned to the session user.
     const listingsWriter = getAdminSupabase()
     const touchedCategoryIds = new Set<string>()
+    const createdIds: string[] = []
 
     for (const r of rows) {
       try {
@@ -1188,6 +1191,7 @@ export async function bulkPublishListings(
           continue
         }
         ok++
+        if (created.id) createdIds.push(created.id)
         touchedCategoryIds.add(gameCategory.id)
       } catch (e: any) {
         failed.push({ line: r.line, error: e?.message ?? 'Unknown error' })
@@ -1198,10 +1202,12 @@ export async function bulkPublishListings(
     if (ok > 0) await linkListingsToValueItems(listingsWriter, { sellerId: user.id })
 
     revalidatePath('/account/listings')
-    // Step 7b — one revalidation per category the batch touched.
+    // Step 7b — one revalidation per category the batch touched. The listing ids
+    // also name their value items, so those items' pages follow straight away.
     if (touchedCategoryIds.size > 0) {
       await revalidateListingSurfaces(listingsWriter as never, {
         gameCategoryIds: [...touchedCategoryIds],
+        listingIds: createdIds,
       })
     }
 

@@ -182,6 +182,25 @@ export async function loadValueCatalog(client: AnyClient, game: { id: string; sl
   return null
 }
 
+/**
+ * Is this item in the game's catalogue? One row from the table loadValueCatalog
+ * reads, under the same rules, for the check before an item page saves a 404.
+ */
+export async function catalogHasItem(client: AnyClient, game: { id: string; slug: string }, itemSlug: string): Promise<boolean> {
+  const query =
+    game.slug === 'steal-a-brainrot'
+      ? client.from('sab_brainrot_market_catalog').select('slug')
+      : game.slug === 'adopt-me'
+        ? client.from('adopt_me_pets').select('slug')
+        : VALUES_PIPELINE_GAMES.has(game.slug)
+          ? client.from('values_items').select('slug').eq('game_id', game.id).not('is_enabled', 'is', false)
+          : null
+  if (!query) return false
+  const { data, error } = await query.eq('slug', itemSlug).limit(1)
+  if (error) throw error
+  return (data ?? []).length > 0
+}
+
 /** attribute slug → option slug → label, for one game category's template. */
 export async function loadOptionLabels(client: AnyClient, gameCategoryId: string): Promise<Record<string, Record<string, string>>> {
   const { data: tpl } = await client

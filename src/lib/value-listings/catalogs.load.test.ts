@@ -5,9 +5,53 @@
  * pages through every row, for every game.
  */
 import { describe, it, expect } from 'vitest'
-import { loadValueCatalog } from './catalogs'
+import { catalogHasItem, loadValueCatalog } from './catalogs'
 
 const SERVER_CAP = 1000
+
+/** The check before an item page saves a 404: one row, from the table the catalogue itself reads. */
+describe('catalogHasItem', () => {
+  function client(found: boolean, error: unknown = null) {
+    const asked: string[] = []
+    const b: Record<string, unknown> = {
+      select: () => b,
+      eq: (c: string, v: unknown) => { asked.push(`${c}=${v}`); return b },
+      not: (c: string, op: string, v: unknown) => { asked.push(`${c} not ${op} ${v}`); return b },
+      limit: () => b,
+      then: (resolve: (v: unknown) => unknown) => resolve({ data: found ? [{ slug: 'x' }] : [], error }),
+    }
+    return { asked, client: { from: (t: string) => { asked.push(t); return b } } }
+  }
+
+  it.each([
+    ['steal-a-brainrot', 'sab_brainrot_market_catalog'],
+    ['adopt-me', 'adopt_me_pets'],
+    ['murder-mystery-2', 'values_items'],
+  ])('%s asks %s for the one slug', async (slug, table) => {
+    const c = client(true)
+    await expect(catalogHasItem(c.client, { id: 'g1', slug }, 'x')).resolves.toBe(true)
+    expect(c.asked).toContain(table)
+    expect(c.asked).toContain('slug=x')
+    expect(c.asked).toHaveLength(slug === 'murder-mystery-2' ? 4 : 2)
+  })
+
+  it('a values game keeps the catalogue’s own rule: its game only, and not switched off', async () => {
+    const c = client(false)
+    await expect(catalogHasItem(c.client, { id: 'g1', slug: 'murder-mystery-2' }, 'x')).resolves.toBe(false)
+    expect(c.asked).toEqual(expect.arrayContaining(['game_id=g1', 'is_enabled not is false']))
+  })
+
+  it('a game with no catalogue has no items and asks nothing', async () => {
+    const c = client(true)
+    await expect(catalogHasItem(c.client, { id: 'g1', slug: 'fortnite' }, 'x')).resolves.toBe(false)
+    expect(c.asked).toEqual([])
+  })
+
+  it('a failed read throws, it does not become "no such item"', async () => {
+    const c = client(false, { message: 'down' })
+    await expect(catalogHasItem(c.client, { id: 'g1', slug: 'adopt-me' }, 'x')).rejects.toMatchObject({ message: 'down' })
+  })
+})
 
 /** A client that behaves like PostgREST: never more than 1,000 rows a request, rows in a stable order. */
 function cappedClient(tables: Record<string, Array<Record<string, unknown>>>) {

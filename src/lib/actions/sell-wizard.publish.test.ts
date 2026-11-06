@@ -26,9 +26,14 @@ type Res = { data: unknown; error: unknown }
 const h = vi.hoisted(() => ({
   session: null as any,
   admin: null as any,
+  revalidate: vi.fn(async (..._args: unknown[]) => ({ tags: [] })),
 }))
 
 vi.mock('server-only', () => ({}))
+vi.mock('@/lib/revalidation/listings', async (original) => ({
+  ...(await original<typeof import('@/lib/revalidation/listings')>()),
+  revalidateListingSurfaces: h.revalidate,
+}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/seo/indexnow', () => ({ snapshotListings: vi.fn(async () => new Map()), submitListingChanges: vi.fn(async () => undefined), logUrlEvents: vi.fn(async () => undefined) }))
 vi.mock('@/lib/actions/new-schema', () => ({
@@ -212,6 +217,39 @@ describe('AUTH-031 — the service-role listing insert is pinned to the session 
     expect(ins).toHaveLength(2)
     for (const c of ins) expect((c.args[0] as any).seller_id).toBe(USER.id)
     expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
+  })
+})
+
+// 2026-11-06: a new offer's description and its value page's stock stayed old for
+// up to a day. Only listing ids name the item, so the category alone isn't enough.
+describe('a new listing refreshes the pages of the item it sells', () => {
+  const enabledItems = () => sessionWith({
+    profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+    global_categories: [{ data: { id: 'gc-items' }, error: null }],
+    game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+  })
+
+  it('publishListing names the listing and its category', async () => {
+    h.revalidate.mockClear()
+    h.session = enabledItems()
+    h.admin = mockClient({ listings: [{ data: { id: 'new-1', slug: 'sunrise' }, error: null }] })
+    const res = await publishListing(INPUT)
+    expect(res.success).toBe(true)
+    expect(h.revalidate.mock.calls[0][1]).toEqual({ gameCategoryIds: ['pair-1'], listingIds: ['new-1'] })
+  })
+
+  it('bulkPublishListings names every new listing and the category', async () => {
+    h.revalidate.mockClear()
+    h.session = enabledItems()
+    h.admin = mockClient({
+      listings: [{ data: { id: 'bulk-1', slug: 'a' }, error: null }, { data: { id: 'bulk-2', slug: 'b' }, error: null }],
+    })
+    const res = await bulkPublishListings('game-1', 'items', [
+      { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+      { line: 2, title: 'Bravo item', price: 2, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+    ])
+    expect(res.success).toBe(true)
+    expect(h.revalidate.mock.calls[0][1]).toEqual({ gameCategoryIds: ['pair-1'], listingIds: ['bulk-1', 'bulk-2'] })
   })
 })
 
