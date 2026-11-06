@@ -42,7 +42,7 @@ export function CongratsDialog({
   useEffect(() => {
     if (!open || fired.current || reduce) return
     fired.current = true
-    const colors = ['#56B87F', '#A3E635', '#F5C451', '#E9EDF2']
+    const colors = ['#56B87F', '#A3E635', '#F5C451', '#FFFFFF']
     const burst = (x: number, angle: number) =>
       confetti({ particleCount: 70, spread: 60, startVelocity: 42, angle, origin: { x, y: 0.6 }, colors, ticks: 220, scalar: 0.9, disableForReducedMotion: true })
     const t1 = setTimeout(() => { burst(0.2, 60); burst(0.8, 120) }, 120)

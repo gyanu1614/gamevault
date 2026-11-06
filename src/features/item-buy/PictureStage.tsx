@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ItemPicture } from '@/features/items-grid/ItemPicture'
+import { pictureUrl } from '@/lib/images/picture-url'
 import { cn } from '@/lib/utils'
 import { GLASS } from './layout'
 import { TraitMarks } from './TraitMarks'
@@ -13,6 +14,9 @@ import { TraitMarks } from './TraitMarks'
  * The picture keeps near its real resolution once loaded so small catalogue
  * art stays sharp. The picked trait's badges sit top-right and pop in on a
  * change on phones; on desktop the trait picker right under it shows them.
+ *
+ * A seller's own screenshot comes in any shape, so it fills the tile whole over a
+ * blurred copy of itself: no empty sides, nothing cut off (owner, 2026-11-06).
  */
 export function PictureStage({
   imageUrl,
@@ -35,6 +39,13 @@ export function PictureStage({
     // instructions doesn't move the picture or the picker.
     <div className={cn(GLASS, 'overflow-hidden rounded-lg bg-[linear-gradient(180deg,#2B2C33_0%,#232429_100%)] max-lg:shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] lg:relative lg:max-h-[400px] lg:min-h-[200px] lg:flex-1 lg:bg-none')}>
       <div className="relative grid h-[200px] w-full place-items-center sm:h-[240px] lg:absolute lg:inset-0 lg:h-auto">
+        {photo && imageUrl ? (
+          <div
+            aria-hidden
+            className="absolute inset-0 scale-125 bg-cover bg-center opacity-55 blur-2xl"
+            style={{ backgroundImage: `url("${pictureUrl(imageUrl, 'thumb')}")` }}
+          />
+        ) : null}
         <ItemPicture
           key={imageUrl ?? 'none'}
           src={imageUrl}
@@ -42,7 +53,7 @@ export function PictureStage({
           size={512}
           priority
           placeholder="Picture Coming Soon"
-          className={photo ? 'h-[92%] w-[92%]' : 'h-[74%] w-[74%] drop-shadow-[0_18px_22px_rgba(0,0,0,0.45)] lg:h-[78%] lg:w-[78%]'}
+          className={photo ? 'h-full w-full' : 'h-[74%] w-[74%] drop-shadow-[0_18px_22px_rgba(0,0,0,0.45)] lg:h-[78%] lg:w-[78%]'}
         />
 
         <AnimatePresence mode="popLayout" initial={false}>

@@ -808,7 +808,7 @@ function OrdersContent() {
               <div className="overflow-x-auto overscroll-x-contain">
                 <table className="w-full min-w-[860px] border-collapse text-left">
                   <thead>
-                    <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+                    <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary">
                       <th className="min-w-[230px] px-4 py-3">Item</th>
                       <th className="px-3 py-2">ID</th>
                       <th className="px-3 py-2">Status</th>

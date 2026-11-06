@@ -336,7 +336,7 @@ function CreateAccountModal({
           value={storeName}
           onChange={(e) => setStoreName(e.target.value)}
           placeholder="e.g. ForestPets"
-          className="w-full rounded-md border px-3.5 outline-none placeholder:text-[#9AA095]"
+          className="w-full rounded-md border px-3.5 outline-none placeholder:text-text-secondary"
           style={{ height: 46, borderColor: PALETTE.line, fontSize: 15, color: PALETTE.ink, backgroundColor: '#FFFFFF' }}
           onFocus={(e) => (e.target.style.borderColor = PALETTE.forest)}
           onBlur={(e) => (e.target.style.borderColor = PALETTE.line)}
@@ -355,7 +355,7 @@ function CreateAccountModal({
               onKeyDown={(e) => { if (e.key === 'Enter') void submit() }}
               placeholder="At least 8 characters"
               autoComplete="new-password"
-              className="w-full rounded-md border px-3.5 outline-none placeholder:text-[#9AA095]"
+              className="w-full rounded-md border px-3.5 outline-none placeholder:text-text-secondary"
               style={{ height: 46, borderColor: PALETTE.line, fontSize: 15, color: PALETTE.ink, backgroundColor: '#FFFFFF' }}
               onFocus={(e) => (e.target.style.borderColor = PALETTE.forest)}
               onBlur={(e) => (e.target.style.borderColor = PALETTE.line)}

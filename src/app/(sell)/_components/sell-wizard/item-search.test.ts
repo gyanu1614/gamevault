@@ -10,6 +10,7 @@ import {
   itemTitle,
   nextTitle,
   pickHasNoTrait,
+  pickUsesItemPicture,
   pickedRow,
   valuesForPick,
   type ItemSearchGame,
@@ -216,5 +217,20 @@ describe('pickHasNoTrait', () => {
   })
   it('a game without traits never says so', () => {
     expect(pickHasNoTrait(MM2, MM2_ATTRS, row(MM2, MM2_ATTRS, 'sunrise'))).toBe(false)
+  })
+})
+
+describe('pickUsesItemPicture', () => {
+  const picked = { value: 'x', label: 'X', attributeId: 'a', type: 'Pet' }
+  it('a picked Adopt Me or Murder Mystery 2 item uses its catalogue picture', () => {
+    expect(pickUsesItemPicture(AM, picked)).toBe(true)
+    expect(pickUsesItemPicture(MM2, picked)).toBe(true)
+  })
+  it('a Steal a Brainrot offer keeps its photos: income and mutation differ per offer', () => {
+    expect(pickUsesItemPicture(SAB, picked)).toBe(false)
+  })
+  it('nothing picked yet, or no search on this game, still asks for photos', () => {
+    expect(pickUsesItemPicture(AM, null)).toBe(false)
+    expect(pickUsesItemPicture(null, picked)).toBe(false)
   })
 })

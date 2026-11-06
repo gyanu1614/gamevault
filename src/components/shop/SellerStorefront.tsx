@@ -15,7 +15,7 @@
  */
 
 import { sellerShopSlug } from '@/lib/seller/identity'
-import { useLayoutEffect, useState } from 'react'
+import { useState } from 'react'
 import { CalendarBlankIcon } from '@phosphor-icons/react/dist/csr/CalendarBlank'
 import { GameControllerIcon } from '@phosphor-icons/react/dist/csr/GameController'
 import { LightningIcon } from '@phosphor-icons/react/dist/csr/Lightning'
@@ -60,12 +60,6 @@ type Tab = 'offers' | 'reviews' | 'about'
 export default function SellerStorefront({ seller }: SellerStorefrontProps) {
   const [tab, setTab] = useState<Tab>('offers')
   const { profile, offers, reviews, breakdown, banner, isPaused, stats } = seller
-
-  // V17k — land at the top of the shop. Pairs with `scroll={false}` on the
-  // seller chip in _ItemCard; layout effect so there is no flash.
-  useLayoutEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-  }, [])
 
   const displayName = sellerDisplayName(profile) || profile.business_name || 'Seller'
   const tier = tierByKey(profile.seller_tier)

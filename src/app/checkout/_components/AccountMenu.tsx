@@ -19,7 +19,6 @@ import { useUnreadMessagesCount } from '@/hooks/use-unread-messages'
 import { beginLogout } from '@/lib/auth/logout-signal'
 import { NavAccountButton, NavPanel } from '@/components/navbar/NavChrome'
 import { ProfileMenu } from '@/components/navbar/ProfileMenu'
-import { useNavWalletBalance, useStoreOfflineMode } from '@/components/navbar/use-profile-menu-data'
 
 export function AccountMenu() {
   const { user, loading } = useAuth()
@@ -29,8 +28,6 @@ export function AccountMenu() {
   const ref = useRef<HTMLDivElement>(null)
   const isAdmin = useIsAdmin(user?.id)
   const unreadMessages = useUnreadMessagesCount(user?.id)
-  const walletBalance = useNavWalletBalance(user)
-  const { offlineMode, pendingOffline, toggleOfflineMode } = useStoreOfflineMode(user)
 
   // A tap or click outside, or Escape, closes it (the site bar's rule).
   useEffect(() => {
@@ -80,11 +77,7 @@ export function AccountMenu() {
           <ProfileMenu
             user={user}
             isAdmin={isAdmin}
-            walletBalance={walletBalance}
             unreadMessages={unreadMessages}
-            offlineMode={offlineMode}
-            pendingOffline={pendingOffline}
-            onToggleOffline={toggleOfflineMode}
             onNavigate={() => setOpen(false)}
             onLogout={() => void logout()}
           />

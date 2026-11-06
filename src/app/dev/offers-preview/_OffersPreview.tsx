@@ -373,7 +373,7 @@ function OffersTable({ title, rows }: { title: string; rows: MockOffer[] }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1120px] border-collapse text-left">
             <thead>
-              <tr className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+              <tr className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary">
                 <th className="w-12 py-3 pl-5 pr-2">
                   <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
                 </th>

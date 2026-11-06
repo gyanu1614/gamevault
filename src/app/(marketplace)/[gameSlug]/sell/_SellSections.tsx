@@ -16,8 +16,8 @@ import { pictureUrl } from '@/lib/images/picture-url'
  * Server components, no client JS; the page's forest palette.
  */
 
-const H2 = 'text-center text-heading font-bold tracking-tight text-[#F2F6F0]'
-const SUB = 'mt-2 text-center text-[13.5px] text-[#98A398] text-balance'
+const H2 = 'text-center text-heading font-bold tracking-tight text-text-primary'
+const SUB = 'mt-2 text-center text-[13.5px] text-text-secondary text-balance'
 const SURFACE = 'border border-[#1A211A] bg-[#0B0F0C]/60 backdrop-blur-md'
 const count = (n: number) => n.toLocaleString('en-US')
 
@@ -31,8 +31,8 @@ export function SellPlayers({ players }: { players: { playingNow: number | null;
     <dl className={`mx-auto mt-10 grid max-w-md divide-x divide-white/[0.07] ${SURFACE}`} style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
       {stats.map((s) => (
         <div key={s.label} className="px-4 py-3.5 text-center">
-          <dd className="text-[22px] font-bold tabular-nums leading-none text-[#F1F3F1]">{s.value}</dd>
-          <dt className="mt-1.5 text-[12.5px] text-[#98A398]">{s.label}</dt>
+          <dd className="text-[22px] font-bold tabular-nums leading-none text-text-primary">{s.value}</dd>
+          <dt className="mt-1.5 text-[12.5px] text-text-secondary">{s.label}</dt>
         </div>
       ))}
     </dl>
@@ -56,9 +56,9 @@ function SellItemTile({ item, defaultForm }: { item: SellItem; defaultForm: stri
       ) : (
         <span aria-hidden className="h-[72px] w-[72px] bg-[#151B15] sm:h-[88px] sm:w-[88px]" />
       )}
-      <p className="mt-3 line-clamp-1 w-full text-[13.5px] font-semibold text-[#E4EAE2]">{item.name}</p>
-      {item.form && item.form !== defaultForm && <p className="text-[11.5px] text-[#7E8A80]">{item.form}</p>}
-      <p className="mt-1 text-[13px] text-[#98A398]">
+      <p className="mt-3 line-clamp-1 w-full text-[13.5px] font-semibold text-text-primary">{item.name}</p>
+      {item.form && item.form !== defaultForm && <p className="text-[11.5px] text-text-tertiary">{item.form}</p>}
+      <p className="mt-1 text-[13px] text-text-secondary">
         {item.priceUsd != null ? (
           <>
             Sells For <span className="font-semibold tabular-nums text-[#8FBF9C]">{formatUsd(item.priceUsd)}</span>
@@ -102,7 +102,7 @@ export function CheckYourPrice({ gameSlug, name, noun, pricedCount, accent }: { 
           Search {name} {noun.toLowerCase()}
         </label>
         <div className="relative min-w-0 flex-1">
-          <MagnifyingGlassIcon aria-hidden size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6B776D]" />
+          <MagnifyingGlassIcon aria-hidden size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
           {/* 16px text: no zoom on focus on iPhone. */}
           <input
             id="sell-check-price"
@@ -111,7 +111,7 @@ export function CheckYourPrice({ gameSlug, name, noun, pricedCount, accent }: { 
             required
             autoComplete="off"
             placeholder={`Search ${noun.toLowerCase()}`}
-            className="h-12 w-full border border-[#1E2723] bg-[#0B0F0C] pl-10 pr-3 text-base text-[#F1F3F1] placeholder:text-[#6B776D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="h-12 w-full border border-[#1E2723] bg-[#0B0F0C] pl-10 pr-3 text-base text-text-primary placeholder:text-text-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           />
         </div>
         <button
@@ -144,8 +144,8 @@ export function SellCategories({ gameSlug, name, categories }: { gameSlug: strin
             href={`/${gameSlug}/${c.slug}`}
             className="group flex items-center justify-between gap-4 border-t border-white/[0.07] px-5 py-3.5 transition-colors first:border-t-0 hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
           >
-            <span className="min-w-0 truncate text-[14.5px] font-semibold text-[#F1F3F1]">{c.name}</span>
-            <span className="flex shrink-0 items-center gap-1.5 text-[13.5px] tabular-nums text-[#98A398]">
+            <span className="min-w-0 truncate text-[14.5px] font-semibold text-text-primary">{c.name}</span>
+            <span className="flex shrink-0 items-center gap-1.5 text-[13.5px] tabular-nums text-text-secondary">
               {c.count > 0 ? (
                 <>
                   {count(c.count)} {c.count === 1 ? 'Offer' : 'Offers'}

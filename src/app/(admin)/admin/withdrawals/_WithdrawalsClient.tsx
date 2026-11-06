@@ -41,6 +41,8 @@ import {
 } from '@/lib/actions/withdrawals'
 
 type RequestRow = {
+  /** Asked for during the wait after a payout change: can't be approved before this. */
+  send_after?: string | null
   id: string
   user_id: string
   amount: number
@@ -157,6 +159,7 @@ export default function WithdrawalsClient({
 
   const actions = (row: RequestRow, full?: boolean) => {
     if (row.status === 'pending') {
+      const waiting = !!row.send_after && new Date(row.send_after).getTime() > Date.now()
       return (
         <div className={cn('flex gap-2', full && 'w-full')}>
           <button
@@ -170,10 +173,13 @@ export default function WithdrawalsClient({
           <button
             type="button"
             className={cn(adminBtnSm.secondary, full && 'flex-1')}
-            disabled={busy}
+            disabled={busy || waiting}
+            title={waiting ? 'The seller recently changed their payout details.' : undefined}
             onClick={() => setDialog({ kind: 'approve', row })}
           >
-            Approve
+            {waiting
+              ? `Wait Until ${new Date(row.send_after!).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+              : 'Approve'}
           </button>
         </div>
       )

@@ -8,6 +8,7 @@ import { HandshakeIcon } from '@phosphor-icons/react/dist/csr/Handshake'
 import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package'
 import { SketchLogoIcon } from '@phosphor-icons/react/dist/csr/SketchLogo'
 import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_itemsTypes'
+import { ChromaWord } from '@/components/values/ChromaWord'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 
 export interface ItemSpecsProps {
@@ -30,7 +31,9 @@ export function ItemSpecs(p: ItemSpecsProps) {
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
   const cells: Array<{ label: string; value: ReactNode; key: string; Icon: PhosphorIcon }> = [
-    ...(p.rarity ? [{ label: 'Rarity', value: <span style={{ color: p.rarity.color }}>{p.rarity.label}</span>, key: p.rarity.label, Icon: SketchLogoIcon }] : []),
+    ...(p.rarity
+      ? [{ label: 'Rarity', value: p.rarity.label === 'Chroma' ? <ChromaWord>Chroma</ChromaWord> : <span style={{ color: p.rarity.color }}>{p.rarity.label}</span>, key: p.rarity.label, Icon: SketchLogoIcon }]
+      : []),
     ...(offer ? [{ label: 'Delivery Time', value: formatDeliveryLabel(offer.deliveryTime), key: `t:${offer.deliveryTime}`, Icon: ClockCountdownIcon }] : []),
     { label: 'Delivery Method', value: p.deliveryMethod, key: p.deliveryMethod, Icon: HandshakeIcon },
     ...(offer ? [{ label: 'In Stock', value: stockLabel(offer), key: `s:${offer.id}`, Icon: PackageIcon }] : []),

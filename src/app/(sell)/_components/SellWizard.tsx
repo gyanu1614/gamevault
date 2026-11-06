@@ -42,6 +42,7 @@ import {
   itemTitle,
   nextTitle,
   pickHasNoTrait,
+  pickUsesItemPicture,
   pickedRow,
   valuesForPick,
   withoutIds,
@@ -141,17 +142,6 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     setForm,
   })
 
-  const { submitting, publish, uploading, uploadImages } = usePublishOffer({
-    form,
-    game,
-    categorySlug: category?.slug,
-    template,
-    currencyConfig,
-    editListingId,
-    editStatus: isEditMode ? prefill?.listing.status ?? null : null,
-    addImages: setters.addImages,
-  })
-
   // One notice per mount: a copied listing, or why the copy failed.
   useEffect(() => {
     if (prefillError) toast.error(prefillError)
@@ -178,18 +168,31 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
   const picked = useMemo(() => (usesSearch ? pickedRow(itemRows, attributes, form.fieldValues) : null), [usesSearch, itemRows, attributes, form.fieldValues])
   const listIds = useMemo(() => (searchGame ? itemListIds(searchGame, attributes) : new Set<string>()), [searchGame, attributes])
   const retiredIds = useMemo(() => new Set(attributes.filter((a) => searchGame?.hidden.includes(a.slug)).map((a) => a.id)), [attributes, searchGame])
-  const manualHiddenIds = useMemo(() => new Set([...listIds, ...retiredIds]), [listIds, retiredIds])
+  const notAskedUnderPick = useMemo(() => new Set([...listIds, ...retiredIds]), [listIds, retiredIds])
+  const itemPicture = usesSearch && pickUsesItemPicture(searchGame, picked)
 
-  // Never require what isn't on screen: a retired field, and on the manual path the lists.
+  const { submitting, publish, uploading, uploadImages } = usePublishOffer({
+    form,
+    game,
+    categorySlug: category?.slug,
+    template,
+    currencyConfig,
+    editListingId,
+    editStatus: isEditMode ? prefill?.listing.status ?? null : null,
+    addImages: setters.addImages,
+    useItemPicture: itemPicture,
+  })
+
+  // Never require what isn't on screen: a retired field. Entering manually asks no fields at all.
   const attributesFilled = useMemo(
-    () => requiredAttributesFilled(template, form.fieldValues, topLevel, childrenOf, !usesSearch ? undefined : manualItem ? manualHiddenIds : retiredIds),
-    [template, form.fieldValues, topLevel, childrenOf, usesSearch, manualItem, manualHiddenIds, retiredIds],
+    () => manualItem || requiredAttributesFilled(template, form.fieldValues, topLevel, childrenOf, usesSearch ? retiredIds : undefined),
+    [template, form.fieldValues, topLevel, childrenOf, usesSearch, manualItem, retiredIds],
   )
   const deliveryMethods = useMemo(
     () => (category?.slug === 'currency' ? activeDeliveryMethods(currencyConfig) : []),
     [category, currencyConfig],
   )
-  const canPublish = canPublishOffer({ form, attributesFilled, categorySlug: category?.slug, currencyConfig, deliveryMethods, policy, templateLoading: catalog.templateLoading })
+  const canPublish = canPublishOffer({ form, attributesFilled, categorySlug: category?.slug, currencyConfig, deliveryMethods, policy, templateLoading: catalog.templateLoading, photosNotAsked: itemPicture })
   const priceHintInput = useMemo(
     () => priceHintInputFor({ game, category, template, values: form.fieldValues, bundleId: form.bundleId }),
     [game, category, template, form.fieldValues, form.bundleId],
@@ -232,13 +235,6 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     if (!searchGame) return
     update('fieldValues', (prev) => withoutIds(prev, itemChainIds(searchGame, attributes)))
   }, [searchGame, attributes, update])
-  const setManualName = useCallback(
-    (name: string) => {
-      const auto = itemTitle(name, gameName)
-      setForm((prev) => ({ ...prev, manualItemName: name, title: nextTitle(prev.title, prev.autoTitle, auto), autoTitle: auto }))
-    },
-    [gameName, setForm],
-  )
   const enterManually = useCallback(
     (typed: string) => {
       if (!searchGame) return
@@ -246,7 +242,6 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
       setForm((prev) => ({
         ...prev,
         itemEntry: 'manual',
-        manualItemName: typed,
         fieldValues: withoutIds(prev.fieldValues, itemChainIds(searchGame, attributes)),
         title: nextTitle(prev.title, prev.autoTitle, auto),
         autoTitle: auto,
@@ -259,7 +254,6 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     setForm((prev) => ({
       ...prev,
       itemEntry: 'search',
-      manualItemName: '',
       fieldValues: withoutIds(prev.fieldValues, itemChainIds(searchGame, attributes)),
       title: nextTitle(prev.title, prev.autoTitle, ''),
       autoTitle: '',
@@ -279,7 +273,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
 
   /** A new game or category starts the item over; a title the seller wrote stays. */
   const resetItem = () => {
-    setForm((prev) => ({ ...prev, fieldValues: {}, itemEntry: 'search', manualItemName: '', title: nextTitle(prev.title, prev.autoTitle, ''), autoTitle: '' }))
+    setForm((prev) => ({ ...prev, fieldValues: {}, itemEntry: 'search', title: nextTitle(prev.title, prev.autoTitle, ''), autoTitle: '' }))
   }
 
   const selectCategory = (c: GlobalCategory) => {
@@ -393,7 +387,8 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
                   <ChangesRequestedBanner notes={prefill.listing.moderation_notes} />
                 )}
                 <PolicyBanner policy={policy} />
-                {usesSearch && searchGame ? (
+                {/* Entering manually asks nothing here: what they're selling goes in the title. */}
+                {manualItem ? null : usesSearch && searchGame ? (
                   <ItemPicker
                     game={searchGame}
                     gameSlug={game.game_slug}
@@ -401,18 +396,13 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
                     picked={picked}
                     attributes={attributes}
                     values={form.fieldValues}
-                    topLevel={topLevel}
                     childrenOf={childrenOf}
-                    manual={manualItem}
-                    manualItemName={form.manualItemName}
-                    hiddenIds={manualHiddenIds}
+                    hiddenIds={notAskedUnderPick}
                     hint={traitHint}
                     onPick={pickItem}
                     onChange={changeItem}
                     onFieldChange={onFieldChange}
                     onManual={enterManually}
-                    onManualName={setManualName}
-                    onBackToSearch={backToSearch}
                   />
                 ) : (
                   <Step3Details
@@ -443,6 +433,8 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
                   deliveryTime={form.deliveryTime}
                   setDeliveryTime={setters.setDeliveryTime}
                   allowedDeliveryModes={game.delivery_modes}
+                  hidePhotos={itemPicture}
+                  onBackToSearch={manualItem ? backToSearch : undefined}
                   images={form.images}
                   onUpload={uploadImages}
                   onRemoveImage={setters.removeImage}

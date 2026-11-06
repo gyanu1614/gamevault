@@ -44,10 +44,10 @@ export function SellChoiceModal({
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#F5C451]">
             Two ways in
           </p>
-          <DialogTitle className="mt-2 text-[22px] font-bold tracking-[-0.02em] text-[#F1F3F1]">
+          <DialogTitle className="mt-2 text-[22px] font-bold tracking-[-0.02em] text-text-primary">
             Start selling {gameName}
           </DialogTitle>
-          <p className="mt-2 max-w-[46ch] text-[13px] leading-relaxed text-[#98A398]">
+          <p className="mt-2 max-w-[46ch] text-[13px] leading-relaxed text-text-secondary">
             Pick the path that fits — both keep the same low founding fees.
           </p>
         </div>
@@ -69,16 +69,16 @@ export function SellChoiceModal({
               className="absolute inset-0 z-10"
             />
             <div className="relative z-[1] flex flex-col gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center border border-[#1E2723] bg-[#10160F] text-[#C7D0C7]">
+              <span className="flex h-8 w-8 items-center justify-center border border-[#1E2723] bg-[#10160F] text-text-secondary">
                 <IconRosetteDiscountCheck className="h-[17px] w-[17px]" stroke={2} />
               </span>
-              <span className="text-[14px] font-semibold text-[#F1F3F1]">
+              <span className="text-[14px] font-semibold text-text-primary">
                 Founding waitlist
               </span>
-              <span className="flex-1 text-[12px] leading-relaxed text-[#98A398]">
+              <span className="flex-1 text-[12px] leading-relaxed text-text-secondary">
                 Reserve a first-100 spot. We onboard in batches.
               </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-[#7E8A7E]">
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-text-tertiary">
                 <IconClock className="h-3.5 w-3.5" stroke={2} /> Around 1 week
               </span>
               <span className="mt-2 inline-flex items-center gap-1.5 border-t border-[#1A211A] pt-3 text-[12.5px] font-semibold text-[#E6C878]">
@@ -99,16 +99,16 @@ export function SellChoiceModal({
               className="absolute inset-0 z-10"
             />
             <div className="relative z-[1] flex flex-col gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center border border-[#1E2723] bg-[#10160F] text-[#C7D0C7]">
+              <span className="flex h-8 w-8 items-center justify-center border border-[#1E2723] bg-[#10160F] text-text-secondary">
                 <IconBolt className="h-[17px] w-[17px]" stroke={2} />
               </span>
-              <span className="text-[14px] font-semibold text-[#F1F3F1]">
+              <span className="text-[14px] font-semibold text-text-primary">
                 Sign up and apply
               </span>
-              <span className="flex-1 text-[12px] leading-relaxed text-[#98A398]">
+              <span className="flex-1 text-[12px] leading-relaxed text-text-secondary">
                 Create an account and apply to sell right now.
               </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-[#7E8A7E]">
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-text-tertiary">
                 <IconClock className="h-3.5 w-3.5" stroke={2} /> Around 12 hours
               </span>
               <span className="mt-2 inline-flex items-center gap-1.5 border-t border-[#1A211A] pt-3 text-[12.5px] font-semibold text-[#9FD3B0]">

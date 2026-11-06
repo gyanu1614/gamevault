@@ -48,11 +48,14 @@ function Choice({ selected, onClick, children }: { selected: boolean; onClick: (
 
 type PendingSave = { kind: 'crypto' } | { kind: 'payoneer' }
 
-export default function PayoutDetailsSection() {
+/** Opened from a withdrawal: only the way of being paid just picked, then back to the withdrawal. */
+export type PayoutDetailsFor = { kind: 'crypto'; coin: string; chain: string } | { kind: 'payoneer' }
+
+export default function PayoutDetailsSection({ only, onSaved }: { only?: PayoutDetailsFor; onSaved?: () => void } = {}) {
   const [details, setDetails] = useState<PayoutDetails | null>(null)
   const [loading, setLoading] = useState(true)
-  const [coin, setCoin] = useState('usdt')
-  const [chain, setChain] = useState<string>('tron')
+  const [coin, setCoin] = useState(only?.kind === 'crypto' ? only.coin : 'usdt')
+  const [chain, setChain] = useState<string>(only?.kind === 'crypto' ? only.chain : 'tron')
   const [address, setAddress] = useState('')
   const [email, setEmail] = useState('')
   const [saving, setSaving] = useState<PendingSave['kind'] | null>(null)
@@ -65,8 +68,11 @@ export default function PayoutDetailsSection() {
       if (cancelled) return
       if (r.success && r.details) {
         setDetails(r.details)
-        if (r.details.cryptoCoin) setCoin(r.details.cryptoCoin)
-        if (r.details.cryptoChain) setChain(r.details.cryptoChain)
+        // A picked coin and network win over the saved ones: that's what is being set up.
+        if (only?.kind !== 'crypto') {
+          if (r.details.cryptoCoin) setCoin(r.details.cryptoCoin)
+          if (r.details.cryptoChain) setChain(r.details.cryptoChain)
+        }
         setAddress(r.details.cryptoAddress ?? '')
         setEmail(r.details.payoneerEmail ?? '')
       }
@@ -75,6 +81,7 @@ export default function PayoutDetailsSection() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- read once, when the form opens
   }, [])
 
   const hours = details?.freezeHours ?? 24
@@ -99,7 +106,8 @@ export default function PayoutDetailsSection() {
     )
     setSaving(null)
     if (!r.success) return void toast.error(r.error || 'Could not save. Please try again.')
-    toast.success(r.changed ? `Payout details saved. Withdrawals resume in ${hours} hours.` : 'No changes to save.')
+    toast.success(r.changed ? `Payout details saved. We send withdrawals after ${hours} hours.` : 'No changes to save.')
+    if (r.changed && onSaved) return onSaved()
     const fresh = await getMyPayoutDetails()
     if (fresh.success && fresh.details) setDetails(fresh.details)
   }
@@ -135,11 +143,11 @@ export default function PayoutDetailsSection() {
       {frozen && (
         <div className="flex items-center gap-3 rounded-lg bg-warning-bg p-4 text-[13px] leading-relaxed text-text-secondary">
           <IconTile tone="attention"><ShieldWarningIcon size={22} weight="duotone" /></IconTile>
-          <p>Payout details changed {fmt(details?.detailsChangedAt)}. Withdrawals resume {fmt(details?.freezeUntil)}.</p>
+          <p>Payout details changed {fmt(details?.detailsChangedAt)}. We send withdrawals after {fmt(details?.freezeUntil)}.</p>
         </div>
       )}
 
-      <SettingsCard
+      {only?.kind !== 'payoneer' && <SettingsCard
         title="Crypto Wallet"
         description="Your wallet for crypto withdrawals."
         icon={<CurrencyCircleDollarIcon size={22} weight="duotone" />}
@@ -199,15 +207,15 @@ export default function PayoutDetailsSection() {
             />
           </Field>
         </div>
-      </SettingsCard>
+      </SettingsCard>}
 
-      <SettingsCard
+      {only?.kind !== 'crypto' && <SettingsCard
         title="Payoneer"
         description="The email your Payoneer account is registered with."
         icon={<EnvelopeSimpleIcon size={22} weight="duotone" />}
         iconTone="trust"
         aside={<StatusPill tone={emailSaved ? 'money' : 'neutral'}>{emailSaved ? 'Saved' : 'Not Set Up'}</StatusPill>}
-        footerHint={`Changing it pauses withdrawals for ${hours} hours.`}
+        footerHint={`After you change it, we send withdrawals after ${hours} hours.`}
         footerAction={
           <button type="button" onClick={() => requestSave('payoneer')} disabled={saving === 'payoneer' || !email.trim() || !emailChanged} className={accountBtn.primary}>
             {saving === 'payoneer' && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
@@ -228,13 +236,13 @@ export default function PayoutDetailsSection() {
             className={accountInputCls}
           />
         </Field>
-      </SettingsCard>
+      </SettingsCard>}
 
       <Dialog open={!!confirm} onOpenChange={(open) => !open && setConfirm(null)}>
         <DialogContent className="max-w-[420px] p-5 sm:p-6">
           <DialogTitle className="pr-8 text-base font-semibold">Change Payout Details?</DialogTitle>
           <DialogDescription>
-            For your security, withdrawals are paused for {hours} hours after a change. We’ll notify you by email.
+            For your security, we send withdrawals {hours} hours after a change. We’ll notify you by email.
           </DialogDescription>
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => setConfirm(null)} className={accountBtn.secondary}>Cancel</button>

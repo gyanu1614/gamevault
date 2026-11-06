@@ -23,7 +23,7 @@ import CoinBadge from '@/components/wallet/CoinBadge'
 import { cancelWithdrawalRequest, type WithdrawalRequest } from '@/lib/actions/withdrawals'
 import { cn } from '@/lib/utils'
 
-const STATUS: Record<string, { label: string; tone: IconTileTone }> = {
+export const WITHDRAWAL_STATUS: Record<string, { label: string; tone: IconTileTone }> = {
   pending: { label: 'Pending', tone: 'trust' },
   approved: { label: 'Approved', tone: 'trust' },
   processing: { label: 'Processing', tone: 'speed' },
@@ -31,6 +31,15 @@ const STATUS: Record<string, { label: string; tone: IconTileTone }> = {
   rejected: { label: 'Declined', tone: 'danger' },
   cancelled: { label: 'Cancelled', tone: 'neutral' },
   failed: { label: 'Failed', tone: 'danger' },
+}
+
+/** Asked for during the wait after a payout change, and that wait isn't over. */
+const isScheduled = (request: Pick<WithdrawalRequest, 'status' | 'send_after'>) =>
+  request.status === 'pending' && !!request.send_after && new Date(request.send_after).getTime() > Date.now()
+
+export function withdrawalStatus(request: Pick<WithdrawalRequest, 'status' | 'send_after'>): { label: string; tone: IconTileTone } {
+  if (isScheduled(request)) return { label: 'Scheduled', tone: 'trust' }
+  return WITHDRAWAL_STATUS[request.status] ?? { label: request.status, tone: 'neutral' }
 }
 
 const money = (n: number) => `$${Number(n).toFixed(2)}`
@@ -58,6 +67,9 @@ function timeline(request: WithdrawalRequest): { label: string; at?: string | nu
     case 'processing':
       return [submitted, { label: 'Reviewed', at: request.approved_at, state: 'done' }, { label: 'Processing Payment', state: 'current' }]
     default:
+      if (isScheduled(request)) {
+        return [submitted, { label: 'Scheduled To Send', at: request.send_after, state: 'current' }, { label: 'In Review', state: 'upcoming' }, { label: 'Paid', state: 'upcoming' }]
+      }
       return [submitted, { label: 'In Review', state: 'current' }, { label: 'Paid', state: 'upcoming' }]
   }
 }
@@ -101,44 +113,11 @@ interface WithdrawalRequestCardProps {
 
 export default function WithdrawalRequestCard({ request, onUpdate, table }: WithdrawalRequestCardProps) {
   const [open, setOpen] = useState(false)
-  const [confirming, setConfirming] = useState(false)
-  const [cancelling, setCancelling] = useState(false)
 
-  const status = STATUS[request.status] ?? { label: request.status, tone: 'neutral' as const }
+  const status = withdrawalStatus(request)
   const name = request.method?.display_name ?? request.method_name
   const coin = request.method?.coin ?? null
   const netAmount = Number(request.net_amount)
-
-  const openChange = (next: boolean) => {
-    if (cancelling) return
-    setOpen(next)
-    if (!next) setConfirming(false)
-  }
-
-  const cancel = async () => {
-    setCancelling(true)
-    try {
-      const result = await cancelWithdrawalRequest(request.id)
-      if (!result.success) throw new Error(result.error || 'Could not cancel this withdrawal.')
-      toast.success('Withdrawal cancelled. The amount has returned to your balance.')
-      setOpen(false)
-      setConfirming(false)
-      onUpdate?.()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not cancel this withdrawal.')
-    } finally {
-      setCancelling(false)
-    }
-  }
-
-  const copyTransaction = async () => {
-    try {
-      await navigator.clipboard.writeText(request.transaction_hash ?? '')
-      toast.success('Transaction ID copied')
-    } catch {
-      toast.error('Could not copy. Select the ID and copy it instead.')
-    }
-  }
 
   return (
     <>
@@ -169,6 +148,53 @@ export default function WithdrawalRequestCard({ request, onUpdate, table }: With
         {table && <CaretRightIcon size={14} weight="bold" aria-hidden className="hidden text-text-tertiary transition-colors group-hover:text-text-secondary md:block" />}
       </button>
 
+      <WithdrawalDetails request={request} open={open} onOpenChange={setOpen} onUpdate={onUpdate} />
+    </>
+  )
+}
+
+/** One withdrawal in full: the timeline, the sum, the transaction ID, any note, Cancel while pending. */
+export function WithdrawalDetails({ request, open, onOpenChange, onUpdate }: { request: WithdrawalRequest; open: boolean; onOpenChange: (open: boolean) => void; onUpdate?: () => void }) {
+  const [confirming, setConfirming] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+
+  const status = withdrawalStatus(request)
+  const name = request.method?.display_name ?? request.method_name
+  const coin = request.method?.coin ?? null
+  const netAmount = Number(request.net_amount)
+
+  const openChange = (next: boolean) => {
+    if (cancelling) return
+    onOpenChange(next)
+    if (!next) setConfirming(false)
+  }
+
+  const cancel = async () => {
+    setCancelling(true)
+    try {
+      const result = await cancelWithdrawalRequest(request.id)
+      if (!result.success) throw new Error(result.error || 'Could not cancel this withdrawal.')
+      toast.success('Withdrawal cancelled. The amount has returned to your balance.')
+      onOpenChange(false)
+      setConfirming(false)
+      onUpdate?.()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not cancel this withdrawal.')
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  const copyTransaction = async () => {
+    try {
+      await navigator.clipboard.writeText(request.transaction_hash ?? '')
+      toast.success('Transaction ID copied')
+    } catch {
+      toast.error('Could not copy. Select the ID and copy it instead.')
+    }
+  }
+
+  return (
       <Dialog open={open} onOpenChange={openChange}>
         <DialogContent className="max-w-[440px] gap-0 overflow-hidden p-0">
           {confirming ? (
@@ -258,6 +284,5 @@ export default function WithdrawalRequestCard({ request, onUpdate, table }: With
           )}
         </DialogContent>
       </Dialog>
-    </>
   )
 }

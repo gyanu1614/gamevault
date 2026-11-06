@@ -70,3 +70,29 @@ export function toRefundToCardRow(r: RefundToCardQuoteRow, walletBalanceMinor: n
     state,
   }
 }
+
+const money = (minor: number) => `$${(minor / 100).toFixed(2)}`
+
+/** Rows worth showing: a choice to make or a request under way. Nothing to do means no row. */
+export const refundRowsToShow = (rows: readonly RefundToCardRow[]): RefundToCardRow[] =>
+  rows.filter((r) => r.state !== 'store_credit_only' && r.state !== 'credit_spent')
+
+/** One plain sentence per refund. `#order` is in there so the row can link it. */
+export function refundSentence(row: RefundToCardRow): string {
+  const method = row.methodLabel ?? 'your payment method'
+  const order = `#${row.orderNumber}`
+  switch (row.state) {
+    case 'available':
+      return `Your refund for order ${order} is in your balance as ${money(row.creditMinor)} store credit. Want it back on ${method} instead? You'd get ${money(row.totalMinor)}, service fee included.`
+    case 'requested':
+      return `We're sending ${money(row.totalMinor)} back to ${method} for order ${order}. Support reviews it within 48 hours.`
+    case 'sent':
+      return `We sent ${money(row.totalMinor)} back to ${method} for order ${order}.`
+    case 'rejected':
+      return `We couldn't send your refund for order ${order} back to ${method}, so ${money(row.creditMinor)} stays in your balance as store credit.`
+    case 'failed':
+      return `Sending your refund for order ${order} back to ${method} didn't go through. Please contact Support.`
+    default:
+      return ''
+  }
+}

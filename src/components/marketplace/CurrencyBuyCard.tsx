@@ -44,7 +44,7 @@ export function CurrencyBuyCard({
   avgDelivery: string | null
   className?: string
 }) {
-  const rgb = accent ?? '233,237,242'
+  const rgb = accent ?? '255,255,255'
   const body = (
       <div className="flex min-h-[176px] flex-col justify-center gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div className="min-w-0 max-w-[30rem]">

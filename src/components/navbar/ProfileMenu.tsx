@@ -7,24 +7,23 @@
  *   Seller header: avatar + name + blue VerifiedBadge (→ shop), the tier as a
  *   small chip "🥇 Gold Seller ›" (→ /account/tiers), then two equal actions:
  *   Sell (the one green CTA in the menu) and View Shop.
- *   Rows: one 40px row style for everything, Seller Dashboard included (it
- *   leads the list instead of wearing its own bordered block). Wallet shows
- *   the live balance, Messages the unread count, Offline Mode a real switch.
+ *   Rows: one row style for everything. Offers always shows what's under it, so
+ *   a new seller sees they can sell items, accounts and currency (owner,
+ *   2026-11-06, who also took the balance, the store pause, Feedback and Seller
+ *   Dashboard out of this menu: the pause lives in Settings, the rest in the
+ *   sidebar). Messages shows the unread count.
  *   Buyer header: avatar + username + Rookie chip + member-since line.
  *
- * State (offline mode, balance, unread) lives in the Navbar, which passes it
- * in; this file only draws it.
+ * The unread count lives in the Navbar, which passes it in.
  */
 
 import Link from '@/components/navigation/AppLink'
 import {
   SquaresFourIcon,
-  ReceiptIcon,
+  PackageIcon,
   TagIcon,
   WalletIcon,
-  PowerIcon,
-  ChatCircleDotsIcon,
-  StarIcon,
+  ChatTextIcon,
   GearSixIcon,
   LifebuoyIcon,
   SignOutIcon,
@@ -33,6 +32,7 @@ import {
   StorefrontIcon,
   CaretRightIcon,
   SparkleIcon,
+  HourglassMediumIcon,
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
@@ -49,11 +49,9 @@ const ICON = 18
 interface ProfileMenuProps {
   user: any
   isAdmin: boolean
-  walletBalance: number | null
   unreadMessages: number
-  offlineMode: boolean
-  pendingOffline: boolean
-  onToggleOffline: () => void
+  /** Orders not completed yet: a blue marker on the Orders row. */
+  pendingOrders?: number
   /** Closes the menu after a navigation. */
   onNavigate: () => void
   onLogout: () => void
@@ -67,7 +65,7 @@ function Row({
   trailing,
 }: {
   href: string
-  icon: typeof ReceiptIcon
+  icon: typeof PackageIcon
   label: string
   onNavigate: () => void
   trailing?: React.ReactNode
@@ -81,14 +79,29 @@ function Row({
   )
 }
 
-function Trailing({ children }: { children: React.ReactNode }) {
-  return <span className="ml-auto text-[13.5px] font-semibold tabular-nums text-text-primary">{children}</span>
+/** Under Offers, lined up with its label: the row's padding, icon and gap. */
+function SubRow({ href, label, onNavigate }: { href: string; label: string; onNavigate: () => void }) {
+  return (
+    <Link href={href} onClick={onNavigate} className={cn(navMenuRowCls, 'h-9 pl-[42px] text-[13px]')}>
+      <span className="truncate">{label}</span>
+    </Link>
+  )
 }
 
 function UnreadCount({ count }: { count: number }) {
   if (count <= 0) return null
   return (
     <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/[0.09] px-1.5 text-[11.5px] font-semibold tabular-nums text-text-primary">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
+function PendingOrders({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span aria-label={`${count} pending`} className="ml-auto inline-flex h-5 items-center gap-1 rounded-full bg-[rgba(106,168,255,0.16)] px-1.5 text-[12px] font-semibold tabular-nums text-[#6AA8FF]">
+      <HourglassMediumIcon size={12} weight="fill" aria-hidden />
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -176,54 +189,15 @@ function BuyerHeader({ user }: { user: any }) {
   )
 }
 
-function OfflineSwitch({ on, pending, onToggle }: { on: boolean; pending: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      disabled={pending}
-      onClick={onToggle}
-      className={cn(navMenuRowCls, 'h-auto min-h-10 py-2 disabled:opacity-60')}
-    >
-      <PowerIcon size={ICON} weight="bold" aria-hidden className={cn(navMenuIconCls, on && 'text-amber-400 group-hover:text-amber-400')} />
-      <span className="flex min-w-0 flex-col items-start text-left">
-        <span className="leading-tight">Offline Mode</span>
-        <span className="mt-0.5 text-[12px] font-normal leading-tight text-text-tertiary">
-          {on ? 'Offers hidden from buyers' : 'Your offers are live'}
-        </span>
-      </span>
-      <span
-        aria-hidden
-        className={cn(
-          'ml-auto flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200',
-          on ? 'bg-amber-400' : 'bg-white/[0.14]',
-        )}
-      >
-        <span
-          className={cn(
-            'h-4 w-4 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-transform duration-200 ease-out',
-            on ? 'translate-x-4' : 'translate-x-0',
-          )}
-        />
-      </span>
-    </button>
-  )
-}
-
 export function ProfileMenu({
   user,
   isAdmin,
-  walletBalance,
   unreadMessages,
-  offlineMode,
-  pendingOffline,
-  onToggleOffline,
+  pendingOrders = 0,
   onNavigate,
   onLogout,
 }: ProfileMenuProps) {
   const isSeller = Boolean(user.isApprovedSeller)
-  const balance = walletBalance != null ? `$${walletBalance.toFixed(2)}` : null
 
   return (
     <div className="min-h-0 overflow-y-auto overscroll-contain">
@@ -241,27 +215,20 @@ export function ProfileMenu({
 
         {isSeller ? (
           <>
-            <Row href="/account/dashboard" icon={SquaresFourIcon} label="Seller Dashboard" onNavigate={onNavigate} />
-            <Row href="/account/orders" icon={ReceiptIcon} label="Orders" onNavigate={onNavigate} />
-            <Row href="/account/listings" icon={TagIcon} label="Offers" onNavigate={onNavigate} />
-            <Row
-              href="/account/wallet"
-              icon={WalletIcon}
-              label="Wallet"
-              onNavigate={onNavigate}
-              trailing={balance && <Trailing>{balance}</Trailing>}
-            />
-            <NavMenuDivider />
-            <OfflineSwitch on={offlineMode} pending={pendingOffline} onToggle={onToggleOffline} />
+            <Row href="/account/orders" icon={PackageIcon} label="Orders" onNavigate={onNavigate} trailing={<PendingOrders count={pendingOrders} />} />
+            <Row href="/account/listings?type=items" icon={TagIcon} label="Offers" onNavigate={onNavigate} />
+            <SubRow href="/account/listings?type=items" label="Items" onNavigate={onNavigate} />
+            <SubRow href="/account/listings?type=accounts" label="Accounts" onNavigate={onNavigate} />
+            <SubRow href="/account/listings?type=currency" label="Currency" onNavigate={onNavigate} />
+            <Row href="/account/wallet" icon={WalletIcon} label="Wallet" onNavigate={onNavigate} />
             <NavMenuDivider />
             <Row
               href="/account/messages"
-              icon={ChatCircleDotsIcon}
+              icon={ChatTextIcon}
               label="Messages"
               onNavigate={onNavigate}
               trailing={<UnreadCount count={unreadMessages} />}
             />
-            <Row href="/account/reviews" icon={StarIcon} label="Feedback" onNavigate={onNavigate} />
             <Row href="/account/settings" icon={GearSixIcon} label="Settings" onNavigate={onNavigate} />
             <Row href="/support" icon={LifebuoyIcon} label="Support" onNavigate={onNavigate} />
           </>
@@ -270,18 +237,12 @@ export function ProfileMenu({
             <Row href="/account/dashboard" icon={SquaresFourIcon} label="Dashboard" onNavigate={onNavigate} />
             <BecomeSellerCta variant="menu" onNavigate={onNavigate} />
             <NavMenuDivider />
-            <Row href="/account/orders" icon={ReceiptIcon} label="Orders" onNavigate={onNavigate} />
-            <Row
-              href="/account/wallet"
-              icon={WalletIcon}
-              label="Wallet"
-              onNavigate={onNavigate}
-              trailing={balance && <Trailing>{balance}</Trailing>}
-            />
+            <Row href="/account/orders" icon={PackageIcon} label="Orders" onNavigate={onNavigate} trailing={<PendingOrders count={pendingOrders} />} />
+            <Row href="/account/wallet" icon={WalletIcon} label="Wallet" onNavigate={onNavigate} />
             <NavMenuDivider />
             <Row
               href="/account/messages"
-              icon={ChatCircleDotsIcon}
+              icon={ChatTextIcon}
               label="Messages"
               onNavigate={onNavigate}
               trailing={<UnreadCount count={unreadMessages} />}

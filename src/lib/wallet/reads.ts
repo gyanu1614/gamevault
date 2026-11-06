@@ -52,7 +52,7 @@ export async function readPayoutDetails(userId: string): Promise<PayoutDetails> 
     service.from('platform_fee_settings').select('payout_details_freeze_hours').eq('id', true).maybeSingle(),
   ])
   const changed = row?.details_changed_at ? new Date(row.details_changed_at) : null
-  const freezeHours = Number(settings?.payout_details_freeze_hours ?? 48)
+  const freezeHours = Number(settings?.payout_details_freeze_hours ?? 24)
   return {
     cryptoCoin: row?.crypto_coin ?? null,
     cryptoChain: row?.crypto_chain ?? null,

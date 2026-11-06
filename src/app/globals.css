@@ -477,8 +477,8 @@
     radial-gradient(52% 50% at 50% 48%, rgba(23, 27, 33, 0.55), rgba(23, 27, 33, 0) 100%),
     radial-gradient(90% 80% at 50% 45%, rgba(23, 27, 33, 0.72), rgba(23, 27, 33, 0.9) 80%);
   --hero-light:
-    radial-gradient(48% 58% at 70% 0%, rgba(233, 237, 242, 0.09), transparent 72%),
-    radial-gradient(36% 44% at 22% 12%, rgba(233, 237, 242, 0.04), transparent 70%);
+    radial-gradient(48% 58% at 70% 0%, rgba(255, 255, 255, 0.09), transparent 72%),
+    radial-gradient(36% 44% at 22% 12%, rgba(255, 255, 255, 0.04), transparent 70%);
 }
 
 /* GameHeroBackdrop — the game's ONE hero image behind the top of every page
@@ -543,7 +543,7 @@
   inset: 0;
   filter: none;
   background:
-    radial-gradient(70% 60% at 50% 0%, rgba(233, 237, 242, 0.06), transparent 70%),
+    radial-gradient(70% 60% at 50% 0%, rgba(255, 255, 255, 0.06), transparent 70%),
     linear-gradient(180deg, var(--color-bg-raised), var(--color-bg-base));
 }
 .game-hero__art {
@@ -756,7 +756,7 @@
 .hero-film__sub-promise {
   font-size: 16px;
   font-weight: 500;
-  color: #c3cad4;
+  color: var(--color-text-secondary);
 }
 @media (max-width: 639px) {
   .hero-film__sub { font-size: 16px; }
@@ -823,7 +823,7 @@
   height: 74px;
   overflow: hidden;
   border-radius: 21px;
-  border: 1px solid rgba(233, 237, 242, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
     radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.02) 58%),
     rgba(23, 27, 33, 0.6);
@@ -887,7 +887,7 @@
   height: 16px;
   margin-left: -34px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(233, 237, 242, 0.14), transparent);
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.14), transparent);
   filter: blur(4px);
   opacity: 0.6;
   transition: opacity 300ms ease-out, transform 500ms cubic-bezier(0.2, 0.9, 0.25, 1.2);
@@ -903,7 +903,7 @@
 .hero-cat:hover .hero-cat__orb,
 .hero-cat:focus-visible .hero-cat__orb {
   transform: translateY(-6px);
-  border-color: rgba(233, 237, 242, 0.28);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 .hero-cat:hover .hero-cat__orb::before,
 .hero-cat:focus-visible .hero-cat__orb::before {
@@ -962,7 +962,7 @@
   height: 60px;
   padding: 0 8px 0 18px;
   border-radius: 12px;
-  border: 1px solid rgba(233, 237, 242, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(31, 36, 44, 0.72);
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
@@ -985,7 +985,7 @@
   overscroll-behavior: contain;
   padding: 4px;
   border-radius: 12px;
-  border: 1px solid rgba(233, 237, 242, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(23, 27, 33, 0.96);
   backdrop-filter: blur(18px) saturate(1.2);
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
@@ -1005,15 +1005,15 @@
   border-radius: 8px;
   transition: background-color 150ms ease-out;
 }
-.hero-search__row[data-active] { background: rgba(233, 237, 242, 0.05); }
+.hero-search__row[data-active] { background: rgba(255, 255, 255, 0.05); }
 .hero-search__tab {
   display: inline-flex;
   align-items: center;
   height: 22px;
   padding: 0 8px;
   border-radius: 5px;
-  border: 1px solid rgba(233, 237, 242, 0.08);
-  background: rgba(233, 237, 242, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   font-size: 12px;
   font-weight: 500;
   color: var(--color-text-primary);
@@ -1024,8 +1024,8 @@
   .hero-search__tab { height: 30px; padding: 0 10px; }
 }
 .hero-search__tab:hover {
-  background: rgba(233, 237, 242, 0.12);
-  border-color: rgba(233, 237, 242, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Hero shortcuts: rectangular, grey-filled, each with its category glyph.
@@ -1059,8 +1059,8 @@
   height: 36px;
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid rgba(233, 237, 242, 0.09);
-  background: linear-gradient(180deg, rgba(233, 237, 242, 0.1), rgba(233, 237, 242, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   font-size: 13px;
   font-weight: 600;
@@ -1071,8 +1071,8 @@
     transform 200ms cubic-bezier(0.2, 0.9, 0.25, 1.2);
 }
 .hero-shortcut:hover {
-  border-color: rgba(233, 237, 242, 0.2);
-  background: linear-gradient(180deg, rgba(233, 237, 242, 0.16), rgba(233, 237, 242, 0.08));
+  border-color: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
   transform: translateY(-1px);
 }
 .hero-shortcut:active { transform: translateY(0) scale(0.98); }
@@ -1972,6 +1972,12 @@
   height: calc(100% + var(--hero-offset, 0px));
 }
 
+/* Account pages: the art is as tall as it likes on a long page, and never taller than
+   a short one, so a page with little on it doesn't scroll (owner, 2026-11-06). */
+.hero-clip > .hero-backdrop {
+  height: min(var(--hero-height), calc(100% + var(--hero-offset, 0px)));
+}
+
 /* The dims fade out over the hero's lower part. The image already melts into
    the page ground there; a flat dim on top left its bottom edge a shade darker
    than the page below, a hard seam across the screen (owner, 2026-10-10). */
@@ -2536,16 +2542,16 @@
     radial-gradient(120% 90% at 0% 0%, rgba(46, 155, 255, 0.12) 0%, rgba(46, 155, 255, 0.03) 38%, transparent 62%),
     linear-gradient(180deg, #22232A 0%, #1A1B1F 100%);
   box-shadow:
-    inset 0 1px 0 0 rgba(233, 237, 242, 0.07),
-    0 0 0 1px rgba(233, 237, 242, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
     0 18px 40px -24px rgba(0, 0, 0, 0.75);
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 .hiw-tile:hover {
   transform: translateY(-2px);
   box-shadow:
-    inset 0 1px 0 0 rgba(233, 237, 242, 0.09),
-    0 0 0 1px rgba(233, 237, 242, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
     0 22px 44px -22px rgba(0, 0, 0, 0.8);
 }
 .hiw-tile--safe {
@@ -2637,7 +2643,7 @@
   /* 0.20, not 0.07: measured off the reference, its numeral sits at 3.79x
      the page luminance while 0.07 gave only 1.71x — a smudge rather than a
      shape. 0.20 lands in the same band. */
-  color: rgba(233, 237, 242, 0.2);
+  color: rgba(255, 255, 255, 0.2);
   /* Two-axis fade: solid at the top-left where the sliver is exposed, and
      dissolving down-and-right into the region the card covers. A single
      vertical ramp left the hidden part as bright as the visible part, so
@@ -2664,14 +2670,14 @@
   /* Genuinely translucent, so the numeral shows THROUGH the card rather
      than being covered by it. The blur is what separates the two layers —
      without it the numeral reads as sitting on the card, not behind it. */
-  background-color: rgba(233, 237, 242, 0.045);
-  border: 1px solid rgba(233, 237, 242, 0.07);
+  background-color: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   /* Inset highlight along the top edge only — the light source is above,
      matching the rest of the page. */
   box-shadow:
-    inset 0 1px 0 0 rgba(233, 237, 242, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
     0 18px 40px -24px rgba(0, 0, 0, 0.7);
 }
 
@@ -2831,15 +2837,15 @@
   border-radius: 10px;
   background: linear-gradient(
     180deg,
-    rgba(233, 237, 242, 0.055) 0%,
-    rgba(233, 237, 242, 0.02) 55%,
-    rgba(233, 237, 242, 0.008) 100%
+    rgba(255, 255, 255, 0.055) 0%,
+    rgba(255, 255, 255, 0.02) 55%,
+    rgba(255, 255, 255, 0.008) 100%
   );
   -webkit-backdrop-filter: blur(20px) saturate(1.15);
   backdrop-filter: blur(20px) saturate(1.15);
   /* Lit top edge only — no side or bottom stroke. */
   box-shadow:
-    inset 0 1px 0 0 rgba(233, 237, 242, 0.13),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.13),
     0 12px 30px -26px rgba(0, 0, 0, 0.75);
   transition:
     background 280ms ease,
@@ -2888,9 +2894,9 @@
   background: linear-gradient(
     105deg,
     transparent 34%,
-    rgba(233, 237, 242, 0.06) 47%,
-    rgba(233, 237, 242, 0.1) 50%,
-    rgba(233, 237, 242, 0.06) 53%,
+    rgba(255, 255, 255, 0.06) 47%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.06) 53%,
     transparent 66%
   );
   background-size: 220% 100%;
@@ -2903,12 +2909,12 @@
 .faq-glass:hover {
   background: linear-gradient(
     180deg,
-    rgba(233, 237, 242, 0.085) 0%,
-    rgba(233, 237, 242, 0.032) 55%,
-    rgba(233, 237, 242, 0.014) 100%
+    rgba(255, 255, 255, 0.085) 0%,
+    rgba(255, 255, 255, 0.032) 55%,
+    rgba(255, 255, 255, 0.014) 100%
   );
   box-shadow:
-    inset 0 1px 0 0 rgba(233, 237, 242, 0.18),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
     0 16px 34px -28px rgba(0, 0, 0, 0.8);
   transform: translateX(2px);
 }
@@ -2927,12 +2933,12 @@
 .faq-glass--open {
   background: linear-gradient(
     180deg,
-    rgba(233, 237, 242, 0.09) 0%,
-    rgba(233, 237, 242, 0.035) 55%,
-    rgba(233, 237, 242, 0.015) 100%
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.035) 55%,
+    rgba(255, 255, 255, 0.015) 100%
   );
   box-shadow:
-    inset 0 1px 0 0 rgba(233, 237, 242, 0.16),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
     0 18px 38px -30px rgba(0, 0, 0, 0.85);
 }
 

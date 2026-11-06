@@ -114,6 +114,17 @@ export function maxWithdrawable(method: WithdrawalMethod, available: number): nu
   return Math.max(0, Math.min(cap, available))
 }
 
+/** Max as the amount box shows it, rounded down so it never asks for more than there is. */
+export function maxAmount(method: WithdrawalMethod, available: number): string {
+  return (Math.floor(maxWithdrawable(method, available) * 100) / 100).toFixed(2)
+}
+
+/** Digits and one point, two decimals at most. */
+export function cleanAmount(raw: string): string {
+  const [whole, ...rest] = raw.replace(/[^\d.]/g, '').split('.')
+  return rest.length ? `${whole}.${rest.join('').slice(0, 2)}` : whole
+}
+
 export function shortAddress(address: string): string {
   return address.length > 14 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address
 }
@@ -153,15 +164,25 @@ export function gateMessage(overview: WalletOverview | null, timeZone?: string):
     if (gate.reason === 'account_age') {
       return `Withdrawals open ${gate.minAgeDays} days after your seller account is approved, on ${fmtDate(gate.unlockAt, timeZone)}.`
     }
-    if (gate.reason === 'payout_details_freeze') {
-      return `You changed your payout details recently. Withdrawals resume ${fmtDateTime(gate.freezeUntil, timeZone)}.`
-    }
+    // The 24-hour wait doesn't stop a request: see waitMessage.
+    if (gate.reason === 'payout_details_freeze') return null
     return gate.message || 'Withdrawals are not available on this account yet.'
   }
   if (overview?.negative) {
     return 'Your balance is below zero after a refund. Withdrawals resume once new sales bring it above zero.'
   }
   return null
+}
+
+/** The wait after adding or changing a payout method. A request is still welcome: we send it when the wait ends. */
+export function waitMessage(overview: WalletOverview | null, timeZone?: string): string | null {
+  const gate = overview?.gate
+  if (!gate || gate.eligible || gate.reason !== 'payout_details_freeze') return null
+  return `You added or changed a payout method, so for your security we send withdrawals after ${fmtDateTime(gate.freezeUntil, timeZone)}. You can still request one now.`
+}
+
+export function sendAfterLabel(iso: string, timeZone?: string): string {
+  return fmtDateTime(iso, timeZone)
 }
 
 /** Refusals shown elsewhere on the page already: the gate block and the destination step. */

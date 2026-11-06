@@ -903,7 +903,7 @@ function OffersContent() {
           <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
-              <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+              <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary">
                 {selecting && (
                   <th className="w-12 py-3 pl-5 pr-2 max-sm:hidden">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
@@ -1066,7 +1066,7 @@ function OffersContent() {
             table, stacked so nothing hides off-screen on phones. ── */}
         <div className="hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-1">
-            <label className="-ml-2 flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+            <label className="-ml-2 flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary">
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
               Select All
             </label>

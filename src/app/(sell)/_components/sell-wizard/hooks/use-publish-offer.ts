@@ -34,6 +34,7 @@ export function usePublishOffer(input: {
   editListingId: string | null
   editStatus: string | null
   addImages: (urls: string[]) => void
+  useItemPicture?: boolean
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -41,7 +42,7 @@ export function usePublishOffer(input: {
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const submittingRef = useRef(false)
-  const { form, game, categorySlug, template, currencyConfig, editListingId, editStatus, addImages } = input
+  const { form, game, categorySlug, template, currencyConfig, editListingId, editStatus, addImages, useItemPicture } = input
 
   const publish = useCallback(
     async (asDraft: boolean) => {
@@ -50,7 +51,7 @@ export function usePublishOffer(input: {
       setSubmitting(true)
       let succeeded = false
       try {
-        const payload = publishPayloadFor({ form, game, categorySlug, template, currencyConfig, asDraft })
+        const payload = publishPayloadFor({ form, game, categorySlug, template, currencyConfig, asDraft, useItemPicture })
         const res = editListingId ? await updateListingFromWizard(editListingId, payload) : await publishListing(payload)
         if (!res.success) {
           toast.error(res.error)
@@ -82,7 +83,7 @@ export function usePublishOffer(input: {
         }
       }
     },
-    [form, game, categorySlug, template, currencyConfig, editListingId, editStatus, queryClient, router],
+    [form, game, categorySlug, template, currencyConfig, editListingId, editStatus, useItemPicture, queryClient, router],
   )
 
   const uploadImages = useCallback(

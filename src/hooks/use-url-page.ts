@@ -13,9 +13,11 @@ import { pageCount, pageHref, pageSlice, parsePage } from '@/lib/pagination'
  *   goTo(n)      push ?page=n, then smooth-scroll `topRef` into view
  *   resetKey     a string of the filter VALUES (not the list, which is
  *                rebuilt on unrelated renders); when it changes the list
- *                starts again at page 1. Ignored on mount so a ?page= link holds
+ *                starts again at page 1. Ignored on mount so a ?page= link holds.
+ *                Null until the page has read its filters from the address
+ *                (useFilterMemory): bringing them back isn't a new filter.
  */
-export function useUrlPage<T>(items: readonly T[], size: number, resetKey: string) {
+export function useUrlPage<T>(items: readonly T[], size: number, resetKey: string | null) {
   const [raw, setRaw] = useState<string | null>(null)
   const onParams = useCallback((params: URLSearchParams) => setRaw(params.get('page')), [])
 
@@ -32,10 +34,12 @@ export function useUrlPage<T>(items: readonly T[], size: number, resetKey: strin
 
   // Compared with the last key (not a first-run flag), so React's dev
   // double-run of effects can't wipe a ?page= the visitor arrived with.
-  const lastKey = useRef(resetKey)
+  const lastKey = useRef<string | null>(null)
   useEffect(() => {
-    if (lastKey.current === resetKey) return
+    if (resetKey === null || lastKey.current === resetKey) return
+    const first = lastKey.current === null
     lastKey.current = resetKey
+    if (first) return
     setRaw(null)
     if (new URLSearchParams(window.location.search).has('page')) writePage(1, 'replace')
   }, [resetKey])

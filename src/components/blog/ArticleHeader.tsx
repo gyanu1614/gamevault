@@ -50,7 +50,7 @@ export function ArticleHeader({
       <h1 className="text-pretty [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[26px] font-bold leading-[1.2] tracking-[-0.015em] text-text-primary sm:text-[30px] lg:text-[34px]">
         {title}
       </h1>
-      {excerpt && <p className="blog-type mt-4 text-pretty text-[17px] leading-[1.65] text-[#c2c0cc] sm:text-[19px]">{excerpt}</p>}
+      {excerpt && <p className="blog-type mt-4 text-pretty text-[17px] leading-[1.65] text-text-secondary sm:text-[19px]">{excerpt}</p>}
       <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-text-tertiary">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logo-mark-white.avif" alt="" aria-hidden width={22} height={22} className="h-[22px] w-[22px] object-contain" />

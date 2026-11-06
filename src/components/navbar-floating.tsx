@@ -6,7 +6,7 @@ import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
-  Search, Menu, X, ArrowLeft, ChevronRight, Settings, Store, Package, MessageSquare, PanelLeftOpen, PanelLeftClose, Wallet, LayoutDashboard, Activity, Coins, UserCircle2, Swords, Rocket, LifeBuoy, ShoppingCart, LayoutGrid,
+  Search, Menu, X, ArrowLeft, ChevronRight, Settings, Store, Package, MessageSquare, PanelLeftOpen, PanelLeftClose, Wallet, LayoutDashboard, Activity, Coins, UserCircle2, Swords, Rocket, LifeBuoy, Tag, LayoutGrid,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages'
 import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
-import { splitActiveOrders } from '@/lib/orders/active-orders-split'
+import { LIVE_ORDER_STATUSES, splitActiveOrders } from '@/lib/orders/active-orders-split'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { cn } from '@/lib/utils'
 import { safeInternalPath } from '@/lib/utils/safe-link'
@@ -30,8 +30,8 @@ import { RevealGroup, RevealItem } from '@/components/account/Reveal'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import {
   BellIcon,
-  ChatCircleDotsIcon,
-  ReceiptIcon,
+  ChatTextIcon,
+  PackageIcon,
   CaretDownIcon,
   CaretRightIcon,
   MagnifyingGlassIcon,
@@ -39,7 +39,6 @@ import {
 } from '@phosphor-icons/react'
 import { NavAccountButton, NavIconButton, NavPanel, NavPanelHeader } from '@/components/navbar/NavChrome'
 import { ProfileMenu } from '@/components/navbar/ProfileMenu'
-import { useNavWalletBalance, useStoreOfflineMode } from '@/components/navbar/use-profile-menu-data'
 import { OrderStatusPill } from '@/components/account/OrderStatusPill'
 import { useUserChannelEvent, useUserChannelRejoined } from '@/hooks/use-user-channel'
 import { pictureUrl } from '@/lib/images/picture-url'
@@ -49,8 +48,8 @@ import { pictureUrl } from '@/lib/images/picture-url'
    sellerOnly rows hide for buyers; page-level tabs carry sub-views. */
 const ACCOUNT_MENU_ITEMS = [
   { label: 'Dashboard', href: '/account/dashboard', Icon: LayoutDashboard, sellerOnly: false },
-  { label: 'Orders', href: '/account/orders', Icon: ShoppingCart, sellerOnly: false },
-  { label: 'Offers', href: '/account/listings', Icon: Package, sellerOnly: true },
+  { label: 'Orders', href: '/account/orders', Icon: Package, sellerOnly: false },
+  { label: 'Offers', href: '/account/listings', Icon: Tag, sellerOnly: true },
   { label: 'Messages', href: '/account/messages', Icon: MessageSquare, sellerOnly: false },
   { label: 'Wallet', href: '/account/wallet', Icon: Wallet, sellerOnly: false },
   { label: 'Founding HQ', href: '/founding', Icon: Rocket, sellerOnly: false },
@@ -191,7 +190,7 @@ function LiveOrderGameIcon({ game }: { game?: { slug?: string | null; image_url?
           className="h-full w-full object-cover"
         />
       ) : (
-        <ReceiptIcon size={17} weight="bold" aria-hidden className="text-text-secondary" />
+        <PackageIcon size={17} weight="bold" aria-hidden className="text-text-secondary" />
       )}
     </div>
   )
@@ -462,8 +461,6 @@ export function Navbar({
 
   const isAdmin = useIsAdmin(user?.id)
   // Admin badge/menu: one cached read per user (useIsAdmin), not one per mount.
-  // V21/P7.ae — Offline Mode (store pause), shared with the checkout bar.
-  const { offlineMode, pendingOffline, toggleOfflineMode } = useStoreOfflineMode(user)
 
   // Unread message count — shared with the account sidebar (one query key,
   // one request); chat realtime invalidates it, the poll is a fallback.
@@ -534,12 +531,12 @@ export function Navbar({
       // Workstream E — buyers still see their unpaid 'pending' (awaiting
       // payment) orders in Live Orders; sellers do NOT — a seller can't act on
       // an order until the payment is confirmed, so 'pending' is dropped from
-      // the selling set.
-      const ACTIVE_BUYING = ['pending', 'paid', 'processing', 'delivering']
+      // the selling set. An order stays here until the buyer completes it
+      // (owner, 2026-11-06): marked delivered used to take it away.
       const { data } = await supabase
         .from('orders')
         .select('id, order_number, status, total_amount, created_at, buyer_id, seller_id, listing:listings!orders_listing_id_fkey(title, game:games(slug, image_url))')
-        .in('status', ACTIVE_BUYING)
+        .in('status', [...LIVE_ORDER_STATUSES])
         .or(`buyer_id.eq.${user.id},and(seller_id.eq.${user.id},status.neq.pending)`)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -550,7 +547,6 @@ export function Navbar({
   })
   // V63 — Wallet balance for the profile-menu Wallet row (sellers), shared
   // with the checkout bar (one query key, one cache).
-  const navWalletBalance = useNavWalletBalance(user)
 
   const activeOrders = activeOrdersData || { buying: [], selling: [] }
   const totalActiveOrders = activeOrders.buying.length + activeOrders.selling.length
@@ -1093,7 +1089,7 @@ export function Navbar({
                       below, after the bell). */}
                   <NavIconButton
                     href="/account/messages"
-                    icon={ChatCircleDotsIcon}
+                    icon={ChatTextIcon}
                     label="Messages"
                     count={unreadCount}
                     className="lg:hidden"
@@ -1205,7 +1201,7 @@ export function Navbar({
                   {/* Messages — desktop (phones use the shortcut above). */}
                   <NavIconButton
                     href="/account/messages"
-                    icon={ChatCircleDotsIcon}
+                    icon={ChatTextIcon}
                     label="Messages"
                     count={unreadCount}
                     className="hidden lg:grid"
@@ -1214,7 +1210,7 @@ export function Navbar({
                   {/* Live Orders */}
                   <div className="relative" data-dropdown>
                     <NavIconButton
-                      icon={ReceiptIcon}
+                      icon={PackageIcon}
                       label="Live Orders"
                       count={totalActiveOrders}
                       active={activityOpen}
@@ -1228,23 +1224,11 @@ export function Navbar({
 
                     {activityOpen && (
                       <NavPanel onClose={() => setActivityOpen(false)}>
-                        <NavPanelHeader
-                          title="Live Orders"
-                          aside={
-                            <Link
-                              href="/account/orders"
-                              onClick={() => setActivityOpen(false)}
-                              className="group inline-flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
-                            >
-                              View All
-                              <CaretRightIcon size={11} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
-                            </Link>
-                          }
-                        />
+                        <NavPanelHeader title="Live Orders" />
 
                         {/* One view: Buying above Selling; a section renders
                             only when it has orders. */}
-                        {activeOrders.buying.length === 0 && activeOrders.selling.length === 0 ? (
+                        {totalActiveOrders === 0 ? (
                           <div className="py-12 text-center">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -1280,6 +1264,16 @@ export function Navbar({
                               ))}
                           </div>
                         )}
+
+                        <div className="shrink-0 border-t border-white/[0.07] p-2.5">
+                          <Link
+                            href="/account/orders"
+                            onClick={() => setActivityOpen(false)}
+                            className="flex h-10 items-center justify-center rounded-[8px] bg-white/[0.06] text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.1]"
+                          >
+                            View All Orders
+                          </Link>
+                        </div>
                       </NavPanel>
                     )}
                   </div>
@@ -1321,11 +1315,8 @@ export function Navbar({
                       <ProfileMenu
                         user={user}
                         isAdmin={isAdmin}
-                        walletBalance={navWalletBalance}
                         unreadMessages={unreadCount}
-                        offlineMode={offlineMode}
-                        pendingOffline={pendingOffline}
-                        onToggleOffline={toggleOfflineMode}
+                        pendingOrders={totalActiveOrders}
                         onNavigate={() => setUserMenuOpen(false)}
                         onLogout={() => void performLogout()}
                       />

@@ -65,7 +65,9 @@ export function TraitField({
     </button>
   )
 
-  const list = <TraitList options={options} value={value} onPick={pick} labelId={labelId} />
+  // Only Adopt Me's forms have badges; a list without them has no empty column and no extra width.
+  const hasMarks = options.some((o) => !!o.short)
+  const list = <TraitList options={options} value={value} onPick={pick} labelId={labelId} hasMarks={hasMarks} />
 
   if (desktop) {
     return (
@@ -80,7 +82,8 @@ export function TraitField({
             avoidCollisions={false}
             collisionPadding={12}
             className={cn(
-              'z-50 w-[max(var(--radix-popover-trigger-width),340px)] max-h-[min(460px,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain rounded-lg bg-[#2A2B31] py-1.5',
+              'z-50 max-h-[min(460px,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain rounded-lg bg-[#2A2B31] py-1.5',
+              hasMarks ? 'w-[max(var(--radix-popover-trigger-width),340px)]' : 'w-[max(var(--radix-popover-trigger-width),280px)]',
               'shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_24px_48px_-16px_rgba(0,0,0,0.8)]',
               'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1',
             )}
@@ -116,7 +119,7 @@ export function TraitField({
   )
 }
 
-function TraitList({ options, value, onPick, labelId }: { options: TraitOption[]; value: string | null; onPick: (v: string) => void; labelId: string }) {
+function TraitList({ options, value, onPick, labelId, hasMarks }: { options: TraitOption[]; value: string | null; onPick: (v: string) => void; labelId: string; hasMarks: boolean }) {
   return (
     <ul role="listbox" aria-labelledby={labelId}>
       {options.map((o) => {
@@ -128,9 +131,9 @@ function TraitList({ options, value, onPick, labelId }: { options: TraitOption[]
               onClick={() => onPick(o.variant)}
               className={cn('flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-white/[0.04] lg:min-h-[44px]', selected && 'bg-white/[0.035]')}
             >
-              <span className="flex w-[62px] shrink-0 items-center">{o.short ? <TraitMarks code={o.short} className={cn(o.count === 0 && 'opacity-40')} /> : null}</span>
-              <span className={cn('min-w-0 flex-1 truncate', selected ? 'font-semibold' : 'font-medium', o.count === 0 && 'text-text-secondary')} style={{ fontSize: 'var(--fs-body)' }}>
-                <TraitName traitKey={o.count > 0 ? o.variant : null} label={o.label} />
+              {hasMarks ? <span className="flex w-[62px] shrink-0 items-center">{o.short ? <TraitMarks code={o.short} className={cn(o.count === 0 && 'opacity-40')} /> : null}</span> : null}
+              <span className={cn('min-w-0 flex-1 truncate', selected ? 'font-semibold' : 'font-medium')} style={{ fontSize: 'var(--fs-body)' }}>
+                <TraitName traitKey={o.variant} label={o.label} />
               </span>
               {o.minPriceUsd != null ? (
                 <span className="shrink-0 font-semibold tabular-nums text-text-primary" style={{ fontSize: 'var(--fs-body)' }}>

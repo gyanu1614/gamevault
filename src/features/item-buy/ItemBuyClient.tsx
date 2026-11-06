@@ -11,8 +11,9 @@ import { OffersSection } from './OffersSection'
 import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
 import { TraitField } from './TraitField'
+import { TraitName } from './TraitName'
 import { defaultTrait, formPicker, offerPhotoFor, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
-import { sellerExtraTitle } from './model/seller-title'
+import { offerLine } from './model/seller-title'
 import { useBuyOffer } from './use-buy-offer'
 import { ITEM_SECTION_GAP } from './layout'
 
@@ -86,7 +87,9 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
   const shown = traitDef(offer ? offerVariant : trait)
   const isOwn = !!offer && !!viewerId && offer.sellerId === viewerId
   const photo = offerPhotoFor(p.noun, offerVariant, offer?.imageUrl)
-  const extraTitle = offer ? sellerExtraTitle(p.gameSlug, offer.name, { itemName: p.itemName, gameName: p.gameName, traitLabel: shown?.label }) : null
+  const line = offer ? offerLine(p.gameSlug, offer.name, { itemName: p.itemName, gameName: p.gameName, traitLabel: shown?.label }) : null
+  // The mutation in the line wears its colour, the same as in the picker.
+  const lineTrait = line && shown && shown.key !== 'default' && line.toLowerCase().startsWith(shown.label.toLowerCase()) ? shown : null
 
   const setUrlTrait = (next: string | null) => {
     try {
@@ -147,6 +150,18 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[220px_minmax(0,1fr)_340px] lg:grid-rows-[auto_auto_1fr] lg:gap-x-8 lg:gap-y-0 lg:[grid-template-areas:'pic_title_buy'_'pic_facts_buy'_'pic_notes_buy'] xl:grid-cols-[300px_minmax(0,1fr)_380px] xl:gap-x-10">
         <div className="order-1 min-w-0 lg:[grid-area:title]">
           <ItemTitle itemName={p.itemName} gameName={p.gameName} />
+          {line ? (
+            <p title={offer?.name} className="mt-2 flex min-w-0 items-center gap-2 truncate text-[18px] font-semibold leading-snug text-text-primary">
+              {lineTrait ? (
+                <>
+                  <TraitName traitKey={lineTrait.key} label={lineTrait.label} />
+                  <span className="truncate">{line.slice(lineTrait.label.length).trim()}</span>
+                </>
+              ) : (
+                <span className="truncate">{line}</span>
+              )}
+            </p>
+          ) : null}
         </div>
         <div className="order-2 min-w-0 lg:flex lg:flex-col lg:[grid-area:pic]">
           <PictureStage imageUrl={photo ?? p.imageUrl} photo={!!photo} name={`${p.gameName} ${named(offerVariant)}`} traitCode={shown?.short ?? null} />
@@ -157,7 +172,6 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
           ) : null}
         </div>
         <div className="order-3 min-w-0 lg:mt-6 lg:[grid-area:facts]">
-          {extraTitle ? <p className="mb-4 line-clamp-2 text-[14px] font-medium leading-snug text-text-secondary">{extraTitle}</p> : null}
           <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
         </div>
         <div className="order-4 min-w-0 lg:[grid-area:buy]">
@@ -176,7 +190,8 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
             buyRef={buyRef}
           />
         </div>
-        <div className="order-5 min-w-0 lg:mt-6 lg:[grid-area:notes]">
+        {/* Desktop: as tall as the room left beside the buy card, adding none of its own, so the page never grows. */}
+        <div className="order-5 min-w-0 lg:mt-6 lg:flex lg:h-0 lg:min-h-[calc(100%-1.5rem)] lg:flex-col lg:[grid-area:notes]">
           {offer ? <DeliveryNotes text={offer.description ?? null} fallback={p.deliveryFallback} resetKey={offer.id} /> : null}
           {p.trust}
         </div>

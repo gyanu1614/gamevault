@@ -28,10 +28,10 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 
 /** One menu row. `group` lets the leading icon brighten with the label. */
 export const navMenuRowCls =
-  'group flex h-11 w-full items-center gap-3 rounded-[8px] px-3 text-[14px] font-medium text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:bg-white/[0.06] focus-visible:text-text-primary focus-visible:outline-none'
+  'group flex h-11 w-full items-center gap-3 rounded-[8px] px-3 text-[14px] font-medium text-text-primary transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:bg-white/[0.06] focus-visible:text-text-primary focus-visible:outline-none'
 
-/** Leading icon colour for a menu row (tertiary at rest, primary on hover). */
-export const navMenuIconCls = 'shrink-0 text-text-tertiary transition-colors group-hover:text-text-primary group-focus-visible:text-text-primary'
+/** Leading icon colour for a menu row: white, the same as its label. */
+export const navMenuIconCls = 'shrink-0 text-text-primary'
 
 export function NavMenuDivider() {
   return <div role="separator" className="mx-3 my-1.5 h-px bg-white/[0.07]" />

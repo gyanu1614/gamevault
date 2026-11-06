@@ -19,6 +19,7 @@ import { currencyOfferUrl, isCurrencyCategoryType } from '@/lib/listings/url'
 import { SingleSelectFilter, iconForFilter } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemFilters'
 import { ScrollRow } from '@/components/ui/scroll-row'
 import { useAuth } from '@/hooks/use-auth'
+import { useFilterMemory } from '@/hooks/use-filter-memory'
 import { useUrlPage } from '@/hooks/use-url-page'
 import { Pagination } from '@/components/marketplace/Pagination'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
@@ -56,8 +57,24 @@ export function StoreOffers({
   const categories = useMemo(() => categoryFacets(offers, filters.game), [offers, filters.game])
   const sortOptions = useMemo(() => storeSortOptions(offers), [offers])
   const results = useMemo(() => filterStoreOffers(offers, filters), [offers, filters])
+  // Going back to this shop brings all of it back. reconcileFilters drops what the shop no longer has.
+  const restored = useFilterMemory(
+    {
+      q: filters.q.trim() || null,
+      game: filters.game === ALL ? null : filters.game,
+      category: filters.category === ALL ? null : filters.category,
+      sort: filters.sort === DEFAULT_STORE_FILTERS.sort ? null : filters.sort,
+    },
+    (params) =>
+      setFilters({
+        q: params.get('q') ?? '',
+        game: params.get('game') ?? ALL,
+        category: params.get('category') ?? ALL,
+        sort: (params.get('sort') as StoreSort | null) ?? DEFAULT_STORE_FILTERS.sort,
+      }),
+  )
   // A filter or search change goes back to page 1 (keyed on the values).
-  const paged = useUrlPage(results, PAGE_SIZE, JSON.stringify(filters))
+  const paged = useUrlPage(results, PAGE_SIZE, restored ? JSON.stringify(filters) : null)
   const visible = paged.visible
 
   const update = (patch: Partial<StoreFilters>) => setFilters((f) => ({ ...f, ...patch }))

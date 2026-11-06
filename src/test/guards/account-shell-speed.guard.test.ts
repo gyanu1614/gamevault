@@ -16,7 +16,7 @@ const src = (path: string) => readFileSync(join(process.cwd(), 'src', path), 'ut
 
 describe('reads on every page never queue as server actions', () => {
   it.each([
-    ['components/navbar/use-profile-menu-data.ts', ['getMyWalletBalance', 'getMyStorePaused']],
+    ['components/navbar-floating.tsx', ['getMyWalletBalance', 'getMyStorePaused']],
     ['hooks/use-seller-presence.ts', ['updatePresenceOnline', 'updatePresenceOffline']],
     ['hooks/use-seller-prompt.ts', ['sellerListingCount']],
   ])('%s', (file, actions) => {
@@ -40,12 +40,15 @@ describe('the wallet and withdrawal pages arrive with their numbers', () => {
     expect(code).toContain('/api/account/withdrawal-quote')
   })
 
-  it('the wallet reads no balance in the browser, and each list waits for its tab', () => {
-    const code = src('app/account/wallet/_WalletClient.tsx')
+  it('the wallet reads no balance in the browser, and each list waits until the feed needs it', () => {
+    const client = src('app/account/wallet/_WalletClient.tsx')
+    const feed = src('app/account/wallet/_Activity.tsx')
     for (const read of ['getMyWalletBalance', 'getLoyaltyStats', 'getMyWithdrawalRequests', 'useSellerEarnings']) {
-      expect(code).not.toContain(read)
+      expect(client).not.toContain(read)
+      expect(feed).not.toContain(read)
     }
-    expect(code).toContain("enabled: isSeller && activeTab === 'earnings'")
+    expect(feed).toContain("enabled: isSeller && (filter === 'all' || filter === 'sales')")
+    expect(feed).toContain("enabled: filter === 'all' || filter === 'purchases'")
   })
 })
 

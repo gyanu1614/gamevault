@@ -5,7 +5,7 @@
  * destination (coin + chain + address) and/or a Payoneer email. Withdrawal
  * requests read the destination from here — it is never typed per request.
  * Any change stamps details_changed_at, which blocks withdrawals for
- * platform_fee_settings.payout_details_freeze_hours (48 h) and emails the
+ * platform_fee_settings.payout_details_freeze_hours (24 h) and emails the
  * seller (an attacker who changes the address cannot cash out before the
  * owner sees the email).
  *

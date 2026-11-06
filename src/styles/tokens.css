@@ -34,12 +34,17 @@
   --color-border-strong:   rgba(255,255,255,0.22);
 
   /* ── Text ── */
-  --color-text-primary:    #E9EDF2;
-  --color-text-secondary:  #9AA6B3;
-  --color-text-tertiary:   #6C7684;
-  --color-text-disabled:   #6C7684;
-  --color-text-inverse:    #F2F8F3;   /* ink on green fill */
-  --color-text-footer:     #9AA6B3;
+  /* Pure white and neutral greys (owner, 2026-11-06: ours looked dull beside Eldorado,
+     measured at #FFFFFF / #A8AAB3 / #898A93 on a darker page). Ours were off-white and
+     blue-tinted, and tertiary failed contrast: 3.2-3.9:1. These are a step brighter than
+     Eldorado's because our surfaces are a step lighter. Tertiary is 4.8:1 on our lightest
+     surface; below 4.5:1 is for disabled text only. */
+  --color-text-primary:    #FFFFFF;
+  --color-text-secondary:  #B4B6BE;
+  --color-text-tertiary:   #90929B;
+  --color-text-disabled:   #6F7179;
+  --color-text-inverse:    #FFFFFF;   /* ink on green fill */
+  --color-text-footer:     #B4B6BE;
 
   /* ── Accent — Green ── */
   --color-accent-default:  #2A7A50;   /* button fill */
@@ -78,9 +83,9 @@
      field's own border brightening. Use these tokens (Tailwind: ring-focus-ring,
      ring-focus-soft, border-focus-border, shadow-focus) — never lime/accent
      classes on a focus/focus-visible/focus-within state. */
-  --color-focus-ring:      rgba(233,237,242,0.45);
-  --color-focus-ring-soft: rgba(233,237,242,0.12);
-  --color-focus-border:    rgba(233,237,242,0.36);
+  --color-focus-ring:      rgba(255, 255, 255,0.45);
+  --color-focus-ring-soft: rgba(255, 255, 255,0.12);
+  --color-focus-border:    rgba(255, 255, 255,0.36);
   --shadow-focus:          0 0 0 1.5px var(--color-focus-ring);
 
   /* ── Typography — Families (vars injected by next/font/local in layout.tsx) ── */

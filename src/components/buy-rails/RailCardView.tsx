@@ -80,8 +80,8 @@ export function RailCardView({
 
         <ul className="space-y-1.5">
           {lines.map(({ icon: LineIcon, text }, i) => (
-            <li key={i} className={cn('flex items-center gap-2 text-body-sm tabular-nums', i === 0 ? 'font-medium text-white' : 'text-[#C9CBD1]')}>
-              <LineIcon aria-hidden style={{ fontSize: 16 }} className="shrink-0 text-[#9A9DA6]" />
+            <li key={i} className={cn('flex items-center gap-2 text-body-sm tabular-nums', i === 0 ? 'font-medium text-white' : 'text-text-secondary')}>
+              <LineIcon aria-hidden style={{ fontSize: 16 }} className="shrink-0 text-text-secondary" />
               <span className="min-w-0">{text}</span>
             </li>
           ))}
@@ -101,7 +101,7 @@ function RailMedia({ card }: { card: RailCard }) {
   if (!card.image) {
     return (
       <span className="flex h-20 w-20 items-center justify-center rounded-full bg-[#24252B]">
-        <StorefrontRounded aria-hidden style={{ fontSize: 32 }} className="text-[#9A9DA6]" />
+        <StorefrontRounded aria-hidden style={{ fontSize: 32 }} className="text-text-secondary" />
       </span>
     )
   }

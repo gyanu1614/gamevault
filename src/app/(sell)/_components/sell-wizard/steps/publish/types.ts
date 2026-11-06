@@ -13,6 +13,10 @@ export interface Step4Props {
   deliveryMethod: 'manual' | 'instant'; setDeliveryMethod: (m: 'manual' | 'instant') => void
   deliveryTime: string; setDeliveryTime: (s: string) => void
   allowedDeliveryModes: string[]
+  /** A picked item that uses its catalogue picture: no Photos section. */
+  hidePhotos?: boolean
+  /** Entering manually: the way back to the item search. */
+  onBackToSearch?: () => void
   images: string[]
   onUpload: (files: FileList | null) => void
   onRemoveImage: (i: number) => void

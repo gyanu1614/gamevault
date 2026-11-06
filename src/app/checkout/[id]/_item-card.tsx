@@ -64,14 +64,14 @@ export function ItemCard({
           className="h-12 w-12 rounded-md bg-[#191A1F] object-cover sm:row-span-2 sm:h-16 sm:w-16"
         />
         <div className="min-w-0 self-center sm:self-start">
-          <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#E9EDF2] sm:text-[16px]">{title}</h2>
-          {subtitle && <p className="mt-0.5 truncate text-[13px] text-[#9AA6B3]">{subtitle}</p>}
+          <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-text-primary sm:text-[16px]">{title}</h2>
+          {subtitle && <p className="mt-0.5 truncate text-[13px] text-text-secondary">{subtitle}</p>}
         </div>
         {/* "|" between details: each detail carries a left hairline and the
             line is pulled left by its width under a clip, so a wrapped line
             never starts or ends on a stray divider. */}
         <div className="col-span-2 mt-3 overflow-hidden sm:col-span-1 sm:col-start-2 sm:mt-1">
-          <p className="-ml-[11px] flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] leading-snug text-[#9AA6B3]">
+          <p className="-ml-[11px] flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] leading-snug text-text-secondary">
             {details.map((d) => (
               <span key={d} className={DETAIL}>
                 {d}
@@ -91,9 +91,9 @@ export function ItemCard({
       {/* Tight (owner 2026-11-01: "too padded"): label, name and the
           record sit close, so the band stays a slim strip. */}
       <div className={cn(BAND_CLASS, 'px-4 py-2.5')}>
-        <p className="text-[12px] leading-4 text-[#9AA6B3]">Seller</p>
+        <p className="text-[12px] leading-4 text-text-secondary">Seller</p>
         <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-          <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold leading-6 text-[#E9EDF2]">
+          <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold leading-6 text-text-primary">
             <span className="truncate">{seller.name}</span>
             {seller.verified && <VerifiedBadge size={16} />}
             {seller.online && (
@@ -110,7 +110,7 @@ export function ItemCard({
                 return (
                   <li
                     key={p.kind}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(106,168,255,0.12)] px-2 py-1 text-[12px] font-semibold leading-none text-[#E9EDF2] sm:px-2.5 sm:text-[12.5px]"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(106,168,255,0.12)] px-2 py-1 text-[12px] font-semibold leading-none text-text-primary sm:px-2.5 sm:text-[12.5px]"
                   >
                     <Icon aria-hidden size={14} weight="fill" color={TRUST_BLUE} />
                     {p.label}

@@ -114,7 +114,7 @@ export function CategoryGuide({
   // softer white so the headings stand out from it instead of reading as more
   // of the same text.
   const h3 = 'text-body-lg font-bold text-text-primary'
-  const prose = 'text-body-sm leading-[1.65] text-[rgba(233,237,242,0.8)]'
+  const prose = 'text-body-sm leading-[1.65] text-[rgba(255,255,255,0.8)]'
 
   // Short line under each of the four steps. Step 1 names what the buyer
   // is choosing ("Choose your pet" on Adopt Me, "Choose your item" by

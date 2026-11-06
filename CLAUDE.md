@@ -116,6 +116,32 @@
 - **Long lists sent to a client component send only what it uses.** Leave out what it can rebuild (links, the storage address) and anything empty: `toGridRows` / `fromGridRows`.
 - Why: on 2026-11-05 a Supabase block turned into saved 404s and empty lists, every picture died with it, and 8,100 of 14,400 daily picture downloads skipped the cache.
 
+## One white, one set of greys (2026-11-06)
+- **Text colours come from the tokens:** `text-text-primary` #FFFFFF, `text-text-secondary` #B4B6BE, `text-text-tertiary` #90929B, `text-text-disabled` #6F7179. Never a hex in a class. Light surfaces with their own ink (payment page, auth dialog) are the only exceptions. `text-colours.guard.test.ts` fails otherwise.
+- **What you can click in a menu is white, with a white icon** (`navMenuRowCls`, `navMenuIconCls`). Grey is for what describes a thing, not for the thing.
+- Why: the owner compared our phone menu with Eldorado's. Eldorado measured #FFFFFF / #A8AAB3 / #898A93. Ours was off-white and blue-tinted, tertiary failed contrast at 3.2-3.9:1, and the same greys were hand-written across checkout, sell and buy-rails.
+
+## Going back keeps your place (2026-11-06)
+- **A public listing page keeps its search and filters in its address** through `useFilterMemory` (`src/hooks/use-filter-memory.ts`, helpers in `src/lib/navigation/filter-params.ts`): `replaceState` with no state, no server call, no stored copy. Pass `restored ? key : null` to `useUrlPage`, so bringing filters back doesn't reset the page. Every value read from the address is checked against what the page offers.
+- **`RouteProgress` restores the scroll on Back** (`src/lib/navigation/scroll-memory.ts`). A page must not jump to the top on mount: `RouteProgress` already does it for a new page, and a jump there undoes Back.
+- **Telling a Back from a new page needs `window.event` as well as a listener** (`wasHistoryMove`). React draws a Back inside the popstate event, straight after Next's listener, and ours starts later. Capture doesn't help: on `window` Chrome runs listeners in the order they were added. Seen 2026-11-06.
+
+## Paused store: not for sale (2026-11-06)
+- A listing from a paused store is a 404 even from a direct link (`storeIsPaused` in the listing page), and `createCheckout` refuses it. Pause lives in Settings only.
+
+## Wallet: where the money is, then what happened to it (2026-11-06)
+- **Two plain cards, the same shape** (`src/lib/wallet/balances.ts`, `_Balances.tsx`): Available, which a seller can withdraw, and Pending, every sale not yet theirs (orders in progress plus completed ones inside the wait before release). No green, no gradient, no payout address: the owner tried a line of stages and a lit card and rejected both. Figures come from `wallet_available_balance` and `seller_earnings_summary`; a failed read shows a dash, never $0.00.
+- **One Activity feed replaces the three tables** (`src/lib/wallet/activity.ts`, `_Activity.tsx`): built in the browser from the lists it already reads, and each list loads only when a filter needs it.
+- **Withdraw is steps beside a live receipt**, not a narrow card or a pop-up.
+
+## Navbar orders (2026-11-06)
+- **Sellers see Orders then Offers, buyers Orders only**, with a blue marker counting orders not yet completed. One meaning per icon: a package is an order, a tag is an offer, Chat Text is messages.
+- **Live Orders lists an order until the buyer completes it** (`LIVE_ORDER_STATUSES`): delivered and disputed stay. Nothing finished shows there; View All Orders is the way to the rest.
+
+## The wait after a payout change refuses nothing (migration 20261106093010)
+- Adding or changing a payout method starts a 24-hour wait (`payout_details_freeze_hours`). `withdrawal_quote` no longer refuses during it: the seller can ask straight away, the money is set aside as usual, and the request carries `send_after`. The seller sees Scheduled and can cancel until then.
+- `withdrawal_approve` refuses before `send_after`, and `withdrawal_mark_paid` needs `approved`, so the whole path is covered in the database, not just on the admin button.
+
 ## Values pages + sell pages: one price rule, data-led (values platform, 2026-10-22)
 - **One headline rule on every values hub:** our live listing → market price → trade value (Adopt Me) → "Value · No Trades Yet" ("New" for a new item). Heroes pass `noPriceFallback` (`src/lib/value-listings/buy-panel.ts`); never hand-write a no-price label. **Product + AggregateOffer JSON-LD only from our own stock** (`ownStockProduct` in `src/lib/seo/jsonld.ts`); a market price is never an InStock offer. `item-hero-wiring.guard.test.ts` pins both.
 - **New = `isNewItem`** (released ≤14 days, else added ≤14 days; `src/lib/values/new-item.ts`), computed on the server; list rows carry `isNew` only when true. The Google rule `isNewIndexable` (30 days + How To Get + release info) runs before the per-game "needs a price" rules.

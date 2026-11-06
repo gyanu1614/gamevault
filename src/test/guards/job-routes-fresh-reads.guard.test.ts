@@ -19,7 +19,6 @@ const ROOT = join(process.cwd(), 'src/app/api')
 const STARTS_WITH_COOKIES: Record<string, string> = {
   'account/identity-check': 'getIdentityCheckStatus reads the session first',
   'account/listing-count': 'sellerListingCount reads the session first',
-  'account/menu': 'Session client first',
   'account/wallet-summary': 'Session client first',
   'account/withdrawal-quote': 'quoteWithdrawal reads the session first',
 }

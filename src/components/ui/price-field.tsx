@@ -106,7 +106,7 @@ export function PriceField({ value, unit = 'Unit', onSave, disabled, className }
           'flex w-10 flex-none items-center justify-center border-l border-white/[0.08] transition-colors',
           dirty
             ? 'bg-white/[0.04] text-lime-text hover:bg-white/[0.09]'
-            : 'cursor-default text-[#4a5266]',
+            : 'cursor-default text-text-tertiary',
         )}
       >
         {saving ? (

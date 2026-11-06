@@ -69,6 +69,8 @@ export interface WithdrawalRequest {
   admin_notes?: string
   /** On-chain proof, set when an admin marks the payout sent. */
   transaction_hash?: string | null
+  /** Asked for during the payout-details wait: staff can't approve it before this. */
+  send_after?: string | null
   approved_at?: string | null
   rejected_at?: string | null
   completed_at?: string | null
@@ -124,6 +126,8 @@ export interface WithdrawalQuote {
   maximum: number | null
   /** Matured seller balance + store credit, in dollars. */
   available: number
+  /** Payout details changed recently: a request made now goes out only after this. */
+  sendAfter: string | null
   gate: { eligible: boolean; reason: string | null; unlockAt: string | null; freezeUntil: string | null; minAgeDays: number }
 }
 
@@ -142,6 +146,7 @@ function toQuote(q: any): WithdrawalQuote {
     minimum: q?.minimum == null ? null : n(q.minimum),
     maximum: q?.maximum == null ? null : n(q.maximum),
     available: n(q?.available_minor) / 100,
+    sendAfter: q?.send_after ?? null,
     gate: {
       eligible: Boolean(q?.gate?.eligible),
       reason: q?.gate?.reason ?? null,
@@ -451,6 +456,7 @@ export async function approveWithdrawalRequest(params: {
       p_notes: params.adminNotes ?? null,
     })
     if (error) throw error
+    if (approved?.reason === 'waiting') return { success: false, error: 'The seller recently changed their payout details. This can be approved once that wait ends.' }
     if (!approved?.changed) return { success: true }
 
     afterResponse('Withdrawals approval comms', async () => {

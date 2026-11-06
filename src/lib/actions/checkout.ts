@@ -162,6 +162,15 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     if ((sellerProfile as { seller_status: string | null } | null)?.seller_status !== 'active') {
       return { success: false, error: 'Listing is not available' }
     }
+    // A paused store's offers are off sale, even from a saved link or an open tab.
+    const { data: presence } = await createServiceRoleClient()
+      .from('seller_presence')
+      .select('store_paused')
+      .eq('seller_id', listing.seller_id)
+      .maybeSingle()
+    if ((presence as { store_paused: boolean | null } | null)?.store_paused === true) {
+      return { success: false, error: 'Listing is not available' }
+    }
     if (!listing.is_unlimited && listing.quantity < quantity) {
       return { success: false, error: `Insufficient stock. Only ${listing.quantity} available` }
     }

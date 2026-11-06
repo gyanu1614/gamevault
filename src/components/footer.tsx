@@ -206,7 +206,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`DropMarket on ${p.name}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-[rgba(233,237,242,0.06)] text-text-secondary transition-colors hover:bg-[rgba(233,237,242,0.09)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.06)] text-text-secondary transition-colors hover:bg-[rgba(255,255,255,0.09)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     >
                       <Icon size={17} weight="fill" aria-hidden />
                     </a>
@@ -280,7 +280,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/support"
-                className="inline-flex items-center gap-2 rounded-lg bg-[rgba(233,237,242,0.06)] px-4 py-2.5 text-[13.5px] font-medium text-white transition-colors hover:bg-[rgba(233,237,242,0.09)]"
+                className="inline-flex items-center gap-2 rounded-lg bg-[rgba(255,255,255,0.06)] px-4 py-2.5 text-[13.5px] font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.09)]"
               >
                 <MessageCircle aria-hidden className="h-4 w-4 text-lime" />
                 Live Chat

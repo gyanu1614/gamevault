@@ -11,8 +11,9 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { readSellerEarnings, readWalletOverview, readWithdrawalRequests, withdrawnTotal } from '@/lib/wallet/reads'
-import WalletClient, { type WalletTab } from './_WalletClient'
+import type { ActivityFilter } from '@/lib/wallet/activity'
+import { readSellerEarnings, readWalletOverview, readWithdrawalRequests } from '@/lib/wallet/reads'
+import WalletClient from './_WalletClient'
 
 export const metadata: Metadata = {
   title: 'Wallet',
@@ -41,18 +42,18 @@ export default async function WalletPage({ searchParams }: { searchParams: Promi
     searchParams,
   ])
 
-  const sellerTabs: WalletTab[] = ['earnings', 'purchases', 'payouts']
-  const initialTab: WalletTab = isSeller ? (sellerTabs.includes(tab as WalletTab) ? (tab as WalletTab) : 'earnings') : 'purchases'
+  // Older links name the tabs the page used to have.
+  const FROM_TAB: Record<string, ActivityFilter> = { earnings: 'sales', payouts: 'withdrawals', purchases: 'purchases' }
+  const initialFilter: ActivityFilter = isSeller ? ((tab ? FROM_TAB[tab] : undefined) ?? 'all') : 'purchases'
 
   return (
     <WalletClient
       userId={user.id}
       isSeller={isSeller}
-      initialTab={initialTab}
+      initialFilter={initialFilter}
       overview={overview}
       earnings={earnings}
       requests={requests ?? []}
-      withdrawn={withdrawnTotal(requests ?? [])}
     />
   )
 }

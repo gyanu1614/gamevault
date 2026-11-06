@@ -77,9 +77,9 @@ const T = {
   ivory2: '#191A1F',
   row: '#24252B',
   glass: '#1D1E23',
-  ink: '#E9EDF2',
-  ink2: '#9AA6B3',
-  dis: '#6C7684',
+  ink: '#FFFFFF',
+  ink2: '#B4B6BE',
+  dis: '#90929B',
   forest: '#2A7A50',
   forest2: '#33935F',
   accentText: '#56B87F',
@@ -240,7 +240,7 @@ function InfoDot({
         >
           <Info
             aria-hidden
-            className="h-[14px] w-[14px] text-[#9AA6B3] transition-colors group-hover:text-[#E9EDF2]"
+            className="h-[14px] w-[14px] text-text-secondary transition-colors group-hover:text-text-primary"
           />
         </button>
       </TooltipTrigger>
@@ -765,7 +765,7 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
     <span
       aria-hidden
       className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full transition-colors"
-      style={{ boxShadow: `inset 0 0 0 2px ${checked ? TRUST_BLUE : 'rgba(233,237,242,0.85)'}` }}
+      style={{ boxShadow: `inset 0 0 0 2px ${checked ? TRUST_BLUE : 'rgba(255,255,255,0.85)'}` }}
     >
       {checked && <span className="h-2 w-2 rounded-full" style={{ background: TRUST_BLUE }} />}
     </span>
@@ -985,7 +985,7 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
             <button
               type="button"
               onClick={() => setCodeOpen((v) => !v)}
-              className="flex w-fit items-center gap-2 text-[12.5px] font-semibold text-[#E9EDF2] transition-colors hover:text-[#6AA8FF]"
+              className="flex w-fit items-center gap-2 text-[12.5px] font-semibold text-text-primary transition-colors hover:text-[#6AA8FF]"
             >
               <Tag className="h-3.5 w-3.5" />
               Have A Discount Code?
@@ -1026,7 +1026,7 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
                 aria-label="Discount Code"
                 // Fill only, no outline (owner 2026-11-01): the well lightens
                 // a step on hover and on focus, like the payment rows.
-                className="h-[38px] min-w-0 flex-1 rounded-md bg-white/[0.05] px-3 text-[13px] text-[#E9EDF2] outline-none transition-colors placeholder:text-[#6C7684] hover:bg-white/[0.08] focus:bg-white/[0.09]"
+                className="h-[38px] min-w-0 flex-1 rounded-md bg-white/[0.05] px-3 text-[13px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:bg-white/[0.08] focus:bg-white/[0.09]"
               />
               {/* Trust-blue tint like the seller pills; hover fills solid blue. */}
               <button
@@ -1099,7 +1099,7 @@ export function CheckoutForm({ listing, user, sellerReviews = [], initialQty, bu
       href="/support"
       target="_blank"
       rel="noopener"
-      className="mt-3 flex items-center justify-center gap-1.5 text-[12.5px] transition-colors hover:text-[#E9EDF2]"
+      className="mt-3 flex items-center justify-center gap-1.5 text-[12.5px] transition-colors hover:text-text-primary"
       style={{ color: T.ink2 }}
     >
       <Headset aria-hidden size={15} weight="fill" color={TRUST_BLUE} />

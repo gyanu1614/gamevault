@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import { isLoggingOut } from '@/lib/auth/logout-signal'
 import BuyingOpensSoonBanner from '@/components/seller/BuyingOpensSoonBanner'
+import { AccountMenuRow } from '@/components/account/AccountMenuRow'
 import { AccountRouteSkeleton } from './_AccountRouteSkeleton'
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
@@ -45,7 +46,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     return (
       <>
         <HeroBackdropPreload name="account" />
-        <HeroBackdrop name="account" className="hero-dim min-h-[calc(100dvh-var(--navbar-bottom,0px))] lg:pl-64">
+        <HeroBackdrop name="account" className="hero-dim hero-clip min-h-[calc(100dvh-var(--navbar-bottom,0px))] lg:pl-64">
           <div className="pt-7">{skeleton}</div>
         </HeroBackdrop>
         <AccountSidebarSkeleton />
@@ -98,8 +99,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           min-h-screen under the navbar's in-flow spacer every account page
           was taller than the window and scrolled for nothing (owner,
           2026-09-28, Withdraw Funds). */}
-      <HeroBackdrop name="account" className="hero-dim min-h-[calc(100dvh-var(--navbar-bottom,0px))] lg:pl-64">
+      <HeroBackdrop name="account" className="hero-dim hero-clip min-h-[calc(100dvh-var(--navbar-bottom,0px))] lg:pl-64">
         <div className="pt-7">
+          <AccountMenuRow isSeller={!!user.isApprovedSeller} />
           <BuyingOpensSoonBanner />
           {children}
         </div>

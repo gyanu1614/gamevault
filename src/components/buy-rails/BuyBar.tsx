@@ -179,12 +179,12 @@ export function BuyBar({
                       className={card.kind === 'items' ? 'h-full w-full object-cover' : 'h-10 w-10 object-contain'}
                     />
                   ) : (
-                    <StorefrontRounded aria-hidden style={{ fontSize: 20 }} className="text-[#9A9DA6]" />
+                    <StorefrontRounded aria-hidden style={{ fontSize: 20 }} className="text-text-secondary" />
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-body font-semibold leading-tight text-white">{card.variant === 'sell' ? card.title : card.name}</p>
-                  <p className="mt-0.5 truncate text-body-sm tabular-nums text-[#9A9DA6]">{card.summary}</p>
+                  <p className="mt-0.5 truncate text-body-sm tabular-nums text-text-secondary">{card.summary}</p>
                 </div>
                 <RailButton href={href} onClick={() => track('rail_clicked', props)} className="h-11 shrink-0 px-5 text-body-sm">
                   {card.cta}
@@ -194,7 +194,7 @@ export function BuyBar({
                     type="button"
                     onClick={close}
                     aria-label="Close"
-                    className="-mr-2 flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-[6px] text-[#9A9DA6] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                    className="-mr-2 flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-[6px] text-text-secondary transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   >
                     <CloseRounded aria-hidden style={{ fontSize: 20 }} />
                   </button>

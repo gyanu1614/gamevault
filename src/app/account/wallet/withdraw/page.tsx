@@ -8,7 +8,8 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { readPayoutDetails, readWalletOverview, readWithdrawalMethods, readWithdrawalRequests } from '@/lib/wallet/reads'
+import { pendingBalance } from '@/lib/wallet/balances'
+import { readPayoutDetails, readSellerEarnings, readWalletOverview, readWithdrawalMethods, readWithdrawalRequests } from '@/lib/wallet/reads'
 import WithdrawClient from './_WithdrawClient'
 
 export const metadata: Metadata = {
@@ -29,12 +30,13 @@ export default async function WithdrawPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect(`/login?redirect=${encodeURIComponent('/account/wallet/withdraw')}`)
 
-  const [overview, details, methods, requests] = await Promise.all([
+  const [overview, details, methods, requests, earnings] = await Promise.all([
     orNull('balance', readWalletOverview(user.id)),
     orNull('payout details', readPayoutDetails(user.id)),
     orNull('methods', readWithdrawalMethods(supabase)),
     orNull('requests', readWithdrawalRequests(supabase, user.id)),
+    orNull('earnings', readSellerEarnings(user.id)),
   ])
 
-  return <WithdrawClient overview={overview} details={details} methods={methods} requests={requests ?? []} />
+  return <WithdrawClient overview={overview} details={details} methods={methods} requests={requests ?? []} pending={pendingBalance(overview, earnings)} />
 }

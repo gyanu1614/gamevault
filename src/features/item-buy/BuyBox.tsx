@@ -71,6 +71,10 @@ export interface BuyBoxProps {
  * on phones it floats on the page with the picker on top, the promises in one
  * sliding row and the ways to pay under the seller. A trait nobody sells gets
  * Notify Me instead.
+ *
+ * Desktop: one height whatever's on show, an offer or Notify Me, a quantity box or
+ * none, because the picture and the description take theirs from it (owner,
+ * 2026-11-06: switching Emberbow to Chroma Emberbow shrank the picture).
  */
 export function BuyBox(p: BuyBoxProps) {
   const { offer } = p
@@ -79,8 +83,8 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     // Phones: lands under the navbar and the back row, both fixed there.
-    <section id="buy-box" aria-labelledby="item-title" className={cn(GLASS, 'scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)] lg:p-6')}>
-      <div>
+    <section id="buy-box" aria-labelledby="item-title" className={cn(GLASS, 'scroll-mt-game-chrome max-lg:scroll-mt-[calc(var(--subnav-top)+68px)] lg:flex lg:min-h-[453px] lg:flex-col lg:p-6')}>
+      <div className="lg:flex lg:flex-1 lg:flex-col">
         {p.picker ? (
           <div className="lg:hidden">
             <TraitField {...p.picker} />
@@ -129,7 +133,7 @@ export function BuyBox(p: BuyBoxProps) {
           </div>
         )}
 
-        <div className="mt-6 lg:mb-5 lg:mt-5">
+        <div className="mt-6 lg:mb-5 lg:mt-auto lg:pt-5">
           <BuyPromises />
         </div>
         <div className="hidden pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] lg:block">

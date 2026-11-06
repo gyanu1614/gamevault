@@ -37,7 +37,7 @@ export function Step4Publish(p: Step4Props) {
       {isCurrency && visiblePlatformKinds(p.platformFields).length > 0 && <ListingDetailsSection p={p} />}
       {isBundleMode && <BundleSection p={p} />}
       <DescriptionSection p={p} isCurrency={isCurrency} />
-      {!isCurrency && <PhotosSection p={p} />}
+      {!isCurrency && !p.hidePhotos && <PhotosSection p={p} />}
       <QuantitySection p={p} isCurrency={isCurrency} isBundleMode={isBundleMode} suffix={suffix} />
       <PriceSection p={p} isCurrency={isCurrency} isBundleMode={isBundleMode} suffix={suffix} />
       <DeliverySection p={p} />

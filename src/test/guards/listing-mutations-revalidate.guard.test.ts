@@ -34,6 +34,8 @@ const EXEMPT: Record<string, string> = {
   // (the create/edit paths, pinned by value-listings-link-seams.guard.test.ts,
   // and the nightly /api/cron/value-listing-refs).
   'src/lib/value-listings/link.ts': 'link columns only; its callers revalidate',
+  // 2026-11-06: a listing with no photos takes its item's picture, inside publish and edit, before they revalidate.
+  'src/lib/value-listings/item-picture.ts': 'runs inside publish and edit, which revalidate right after',
   // Step 4 — the shared create seam. It deliberately does NOT revalidate: the
   // caller does, so a 500-row import revalidates once per category instead of
   // once per listing. Every caller of it is itself in the pinned set below.
@@ -156,6 +158,8 @@ describe('listing mutations revalidate the category surfaces', () => {
       // GRO-08: drafts built during the application are submitted on
       // approval (service role) — calls the seam per touched listing.
       'src/lib/listings/submit-applicant-drafts.ts',
+      // A listing's item picture (exempt above; publish and edit revalidate).
+      'src/lib/value-listings/item-picture.ts',
       // Bundle 2: the value item link (exempt above; callers revalidate).
       'src/lib/value-listings/link.ts',
       // Admin Variant Mismatches: the Trait pick fix (exempt above; its caller revalidates).

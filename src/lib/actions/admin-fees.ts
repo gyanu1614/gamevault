@@ -370,7 +370,7 @@ export async function fetchMoneySettings(): Promise<{
       completion_hold_hours: Number(row.completion_hold_hours ?? 24),
       dispute_window_days: Number(row.dispute_window_days ?? 7),
       withdrawal_min_account_age_days: Number(row.withdrawal_min_account_age_days ?? 30),
-      payout_details_freeze_hours: Number(row.payout_details_freeze_hours ?? 48),
+      payout_details_freeze_hours: Number(row.payout_details_freeze_hours ?? 24),
     },
     windows: ((w ?? []) as any[]).map((x) => ({ category_type: x.category_type, auto_complete_hours: Number(x.auto_complete_hours), updated_at: x.updated_at })),
     methods: ((m ?? []) as any[]).map((x) => ({

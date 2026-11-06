@@ -45,6 +45,11 @@ vi.mock('@/app/(marketplace)/[gameSlug]/[categorySlug]/_routeGate', () => ({
   getEnabledCategory: async () => gate.category,
 }))
 
+const pausedStores = { ids: [] as string[] }
+vi.mock('@/lib/actions/seller-presence', () => ({
+  getPausedSellerIds: async () => pausedStores.ids,
+}))
+
 const clients: { category: SupabaseRecorder; home: SupabaseRecorder } = {
   category: createSupabaseRecorder(),
   home: createSupabaseRecorder(),
@@ -66,7 +71,7 @@ const LISTING = {
   price: 120,
   status: 'active',
   images: [],
-  seller: { is_test: false },
+  seller: { id: 'seller-1', is_test: false },
   game: { name: 'Adopt Me', slug: 'adopt-me' },
   category: { name: 'Pets', slug: 'pets' },
 }
@@ -86,9 +91,17 @@ beforeEach(() => {
   gate.game = { id: 'g1', name: 'Adopt Me', slug: 'adopt-me' }
   gate.category = { id: 'c1', name: 'Pets', slug: 'pets', type: 'items' }
   categoryTags.length = 0
+  pausedStores.ids = []
 })
 
 describe('listing page (ISR)', () => {
+  it('a paused store sells nothing: its listing is a 404, even from a direct link', async () => {
+    clients.category = createSupabaseRecorder({ listings: [LISTING] })
+    clients.home = createSupabaseRecorder({ listings: [] })
+    pausedStores.ids = ['seller-1']
+    await expect(metadata(params('adopt-me', 'pets', 'shadow-dragon-mfr'))).rejects.toThrow('NOT_FOUND')
+  })
+
   it('is cached: revalidate window + on-demand params', async () => {
     const page = await import('@/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/page')
     expect(page.revalidate).toBe(86400)

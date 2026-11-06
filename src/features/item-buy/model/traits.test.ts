@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildValueCatalog } from '@/lib/value-listings/catalogs'
-import { traitDefs, traitTone } from './traits'
+import { traitDefs, traitMutation, traitTone } from './traits'
 
 describe('traitTone', () => {
   it('Neon green, Mega rainbow, the plain forms uncoloured', () => {
@@ -15,7 +15,12 @@ describe('traitTone', () => {
   })
 
   it('Steal a Brainrot: Gold, Diamond and Rainbow mutations', () => {
-    expect(['default', 'gold', 'diamond', 'rainbow'].map(traitTone)).toEqual([null, 'gold', 'diamond', 'mega'])
+    expect(traitMutation('default')).toBeNull()
+    expect(traitMutation('neon')).toBeNull()
+    expect(traitMutation('candy')?.color).toBe('#FF8FC5')
+    expect(traitMutation('lava')?.color).toBe('#FF6A3D')
+    expect(traitMutation('rainbow')?.gradient).toBeTruthy()
+    expect(traitTone('chroma-travelers-gun')).toBe('chroma')
   })
 })
 

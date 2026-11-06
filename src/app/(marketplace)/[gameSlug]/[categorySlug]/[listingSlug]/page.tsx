@@ -16,6 +16,7 @@
  * value item pages; listings are noindex, so none are prerendered at build.
  */
 
+import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { listingMeta } from '@/lib/seo/listing-meta'
 import { Suspense, cache } from 'react'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -91,6 +92,11 @@ const resolveCurrencyRedirect = cache(async function resolveCurrencyRedirect(
   })
 })
 
+async function storeIsPaused(listing: { seller?: { id?: string } | null }): Promise<boolean> {
+  const paused = await getPausedSellerIds()
+  return !!listing.seller?.id && paused.includes(listing.seller.id)
+}
+
 type PublicListing =
   | { kind: 'listing'; listing: any }
   | { kind: 'redirect'; href: string }
@@ -105,6 +111,10 @@ type PublicListing =
  *      A listing whose canonical URL differs (alias segment, id instead of
  *      slug) 308s there; one whose game/category is not live renders here, as
  *      it always has (a game the public cannot see at all is a 404).
+ *
+ * A paused store's offers are hidden everywhere, this link included (owner,
+ * 2026-11-06): a 404, like any other listing that's off sale. Pausing and
+ * resuming refresh it through the same tags as the category pages.
  *
  * `cache()` shares it between generateMetadata, the route gate and the body.
  */
@@ -129,7 +139,7 @@ const getPublicListing = cache(async function getPublicListing(
         .maybeSingle()
     let { data } = (await inCategory('slug')) as { data: any }
     if (!data && byId) data = ((await inCategory('id')) as { data: any }).data
-    if (data) return { kind: 'listing', listing: data }
+    if (data) return (await storeIsPaused(data)) ? null : { kind: 'listing', listing: data }
   }
 
   const anywhere = createHomeListingsReadClient()
@@ -147,6 +157,7 @@ const getPublicListing = cache(async function getPublicListing(
   if (!listing?.game?.slug || !listing.category?.slug) return null
 
   const canonical = `/${listing.game.slug}/${listing.category.slug}/${listing.slug || listing.id}`
+  if (await storeIsPaused(listing)) return null
   if (canonical !== `/${gameSlug}/${categorySlug}/${listingSlug}`) {
     return { kind: 'redirect', href: canonical }
   }

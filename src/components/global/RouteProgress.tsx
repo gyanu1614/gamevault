@@ -28,8 +28,9 @@
  * 4s safety timeout so a runaway bar always recovers.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { forgetPop, holdScroll, notePop, noteSiteMove, recallScroll, rememberScroll, wasHistoryMove } from '@/lib/navigation/scroll-memory'
 import { startUnlessCancelled } from '@/lib/navigation/start-unless-cancelled'
 
 // V14u — Bumped from 120ms → 350ms. Cached App Router navs commonly land
@@ -131,6 +132,12 @@ export default function RouteProgress() {
     window.history.scrollRestoration = 'manual'
   }
 
+  // Back or Forward (the browser's button, a phone's swipe, router.back()).
+  useEffect(() => {
+    window.addEventListener('popstate', notePop)
+    return () => window.removeEventListener('popstate', notePop)
+  }, [])
+
   // Capture anchor clicks at the document level.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -154,6 +161,11 @@ export default function RouteProgress() {
       const targetPathSearch = `${url.pathname}${url.search}`
       const currentPathSearch = `${window.location.pathname}${window.location.search}`
       if (targetPathSearch === currentPathSearch) return
+
+      // Next moves to the top of the new page before our effects run, so the place
+      // on this one is read here. Back comes back to it.
+      rememberScroll(currentPathSearch, window.scrollY)
+      forgetPop()
 
       // V17x — Scroll-to-top REMOVED from the click handler.
       //
@@ -204,11 +216,18 @@ export default function RouteProgress() {
   // same page (listing ?page=N, filters, category pills with scroll:false)
   // keeps its place: the grid scrolls itself smoothly to its own top, and
   // this instant jump to 0 was overriding it.
+  // 2026-11-06: Back returns to the place the visitor left, not the top (owner: search,
+  // open an item, go back, and the page had forgotten them). Before paint, so it never
+  // shows a frame at the wrong place.
   const lastPathRef = useRef<string | null>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const viaHistory = wasHistoryMove()
+    const firstRun = lastPathRef.current === null
     const pathChanged = lastPathRef.current !== pathname
     lastPathRef.current = pathname
     if (pathChanged) {
+      if (!firstRun) noteSiteMove(viaHistory)
+      const saved = viaHistory ? recallScroll(`${window.location.pathname}${window.location.search}`) : null
       try {
         // 2026-10-23: a URL with a #fragment that names an element on the new
         // page (a legal section, a merged policy's part, a help-centre deep
@@ -218,6 +237,8 @@ export default function RouteProgress() {
         const target = id ? document.getElementById(id) : null
         if (target) {
           target.scrollIntoView({ block: 'start', behavior: 'instant' as ScrollBehavior })
+        } else if (saved !== null) {
+          holdScroll(saved)
         } else {
           window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
           document.documentElement.scrollTop = 0
@@ -227,6 +248,9 @@ export default function RouteProgress() {
         /* noop */
       }
     }
+  }, [pathname, searchParams])
+
+  useEffect(() => {
     if (!navigatingRef.current) return
     const finishRaf = requestAnimationFrame(() => {
       finish()
