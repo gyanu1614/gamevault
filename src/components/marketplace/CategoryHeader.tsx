@@ -4,8 +4,9 @@ import { PAGE_TITLE } from './page-scale'
 
 /**
  * The category page title (owner, 2026-11-03, "Clean Toolbar"): one bold line
- * that says what the page sells ("Adopt Me Pets") and how many, no logo tile or
- * small game line, since the sub-navbar right above already shows both. The
+ * that says what the page sells ("Adopt Me Items"), no logo tile or small game
+ * line, since the sub-navbar right above already shows both. Items pages show no
+ * number (owner, 2026-11-05); other categories keep theirs. The
  * price and delivery facts and the intro stay in the HTML for search engines but
  * are not shown. Shared by the listings view (ItemsPageClient) and the values
  * games' item grid, so the two never drift.
@@ -20,9 +21,9 @@ export function CategoryHeader({
 }: {
   gameName: string
   categoryLabel: string
-  /** What the page lists (listings, or items on a values game's grid). */
-  count: number
-  countNoun: { one: string; many: string }
+  /** How many it lists; leave out to show no number. */
+  count?: number
+  countNoun?: { one: string; many: string }
   stats?: { lowPrice: number | null; avgDeliveryLabel: string | null } | null
   introLine?: string | null
 }) {
@@ -30,7 +31,7 @@ export function CategoryHeader({
   return (
     <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
       <h1 className={PAGE_TITLE}>{title}</h1>
-      {count > 0 && (
+      {count != null && count > 0 && countNoun && (
         <span className="text-[14px] font-medium capitalize tabular-nums text-text-secondary">
           {count.toLocaleString('en-US')} {count === 1 ? countNoun.one : countNoun.many}
         </span>

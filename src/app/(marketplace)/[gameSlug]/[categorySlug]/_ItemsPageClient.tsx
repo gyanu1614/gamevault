@@ -69,6 +69,8 @@ const SORT_OPTIONS: { slug: ItemSort; label: string }[] = [
 
 
 interface ItemsPageClientProps {
+  /** Items pages show no number (owner, 2026-11-05). */
+  hideCount?: boolean
   gameSlug: string
   gameName: string
   tagline?: string
@@ -96,6 +98,7 @@ export default function ItemsPageClient({
   categoryLabel = 'Items',
   introLine,
   stats,
+  hideCount = false,
 }: ItemsPageClientProps) {
   // V14v — Scroll to top on mount before paint.
   useLayoutEffect(() => {
@@ -320,7 +323,7 @@ export default function ItemsPageClient({
           <CategoryHeader
             gameName={gameName}
             categoryLabel={categoryLabel}
-            count={sorted.length}
+            count={hideCount ? undefined : sorted.length}
             countNoun={{ one: 'listing', many: 'listings' }}
             stats={stats}
             introLine={introLine}

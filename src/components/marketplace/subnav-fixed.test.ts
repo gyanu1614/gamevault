@@ -1,13 +1,13 @@
 /**
  * The game sub-navbar (owner, 2026-11-04, GameBoost's as the reference): fixed
  * under the navbar, slides away on scroll down, one step darker than the navbar
- * with a thin neutral line between them, Join Discord on the bar. The scroll rule
+ * with a thin neutral line between them. The scroll rule
  * itself is in src/hooks/useHideOnScroll.test.ts.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { SUBNAV_HIDDEN, SUBNAV_HIDDEN_MD, SUBNAV_STRIP } from './subnav-tab'
+import { SUBNAV_HIDDEN, SUBNAV_HIDDEN_MD, SUBNAV_STRIP, itemsFirst } from './subnav-tab'
 
 const root = process.cwd()
 const globals = readFileSync(join(root, 'src/app/globals.css'), 'utf8')
@@ -35,8 +35,14 @@ describe('game sub-navbar', () => {
     expect(SUBNAV_STRIP.split(/\s+/)).toContain('max-lg:!bg-[#16171B]')
   })
 
-  it('Join Discord is on every form of the bar', () => {
-    expect(nav.match(/<SubnavDiscordButton/g)?.length).toBe(3)
+  it('Join Discord is off the bar (owner, 2026-11-05)', () => {
+    expect(nav).not.toMatch(/Discord/)
+  })
+
+  it('Items leads the tabs; the rest keep their order', () => {
+    const tabs = [{ slug: 'buy-gems', type: 'currency' }, { slug: 'accounts', type: 'account' }, { slug: 'buy-items', type: 'items' }]
+    expect(itemsFirst(tabs).map((t) => t.slug)).toEqual(['buy-items', 'buy-gems', 'accounts'])
+    expect(itemsFirst<{ slug: string; type?: string }>([{ slug: 'a' }, { slug: 'b' }]).map((t) => t.slug)).toEqual(['a', 'b'])
   })
 
   it('scroll targets clear both bars', () => {

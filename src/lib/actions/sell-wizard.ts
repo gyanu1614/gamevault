@@ -559,7 +559,7 @@ export interface PublishListingInput {
 /** Adopt Me: the title names another variant than the Trait pick. A warning only; the pick is saved. */
 type VariantWarning = { variantWarning?: string }
 
-export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string } & VariantWarning>> {
+export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string; notLinked?: boolean } & VariantWarning>> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()

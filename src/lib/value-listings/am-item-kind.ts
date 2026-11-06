@@ -15,9 +15,3 @@ export type AmItemType = (typeof AM_ITEM_TYPES)[number]
 export function amItemType(kind: AmItemKind | null | undefined): AmItemType {
   return kind === 'egg' ? 'Eggs' : kind === 'potion' ? 'Potions' : 'Pets'
 }
-
-/** "Pets, Eggs & Potions". */
-export function amTypesHeading(types: readonly string[]): string {
-  if (types.length < 2) return types[0] ?? ''
-  return `${types.slice(0, -1).join(', ')} & ${types[types.length - 1]}`
-}

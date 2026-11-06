@@ -10,7 +10,8 @@ import { OffersSection } from './OffersSection'
 import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
 import { TraitField } from './TraitField'
-import { defaultTrait, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
+import { defaultTrait, offerPhotoFor, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
+import { sellerExtraTitle } from './model/seller-title'
 import { useBuyOffer } from './use-buy-offer'
 import { ITEM_SECTION_GAP } from './layout'
 
@@ -80,6 +81,8 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
   const offerVariant = offer ? offerVariants[offer.id] ?? null : null
   const shown = traitDef(offer ? offerVariant : trait)
   const isOwn = !!offer && !!viewerId && offer.sellerId === viewerId
+  const photo = offerPhotoFor(p.noun, offerVariant, offer?.imageUrl)
+  const extraTitle = offer ? sellerExtraTitle(p.gameSlug, offer.name, { itemName: p.itemName, gameName: p.gameName, traitLabel: shown?.label }) : null
 
   const setUrlTrait = (next: string | null) => {
     try {
@@ -135,14 +138,15 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
           <ItemTitle itemName={p.itemName} gameName={p.gameName} />
         </div>
         <div className="order-2 min-w-0 lg:flex lg:flex-col lg:[grid-area:pic]">
-          <PictureStage imageUrl={p.imageUrl} name={`${p.gameName} ${p.itemName}`} traitCode={shown?.short ?? null} />
+          <PictureStage imageUrl={photo ?? p.imageUrl} photo={!!photo} name={`${p.gameName} ${named(offerVariant)}`} traitCode={shown?.short ?? null} />
           {options.length > 0 ? (
             <div className="mt-3 hidden shrink-0 lg:block">
-              <TraitField filled noun={p.noun} options={options} value={trait} onChange={onTrait} />
+              <TraitField noun={p.noun} options={options} value={trait} onChange={onTrait} />
             </div>
           ) : null}
         </div>
         <div className="order-3 min-w-0 lg:mt-6 lg:[grid-area:facts]">
+          {extraTitle ? <p className="mb-4 line-clamp-2 text-[14px] font-medium leading-snug text-text-secondary">{extraTitle}</p> : null}
           <ItemSpecs rarity={p.rarity} offer={offer} deliveryMethod={p.deliveryMethod} />
         </div>
         <div className="order-4 min-w-0 lg:[grid-area:buy]">
@@ -172,6 +176,9 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
       <div className={ITEM_SECTION_GAP}>
         <OffersSection
           noun={p.noun}
+          gameSlug={p.gameSlug}
+          gameName={p.gameName}
+          itemName={p.itemName}
           offers={allOffers}
           offerVariants={offerVariants}
           traitDefs={traits}

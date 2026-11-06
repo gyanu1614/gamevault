@@ -109,7 +109,7 @@ const RATE = /\d+(?:[.,]\d+)?\s*[kmbt]?\s*\/\s*s(?:ec)?\b/gi
 const BOUNDARY = '|'
 const NUMERIC = /^(?:\d+[a-z]{0,2}|x\d+)$/
 
-const FILLER_WORDS: ReadonlySet<string> = new Set([
+export const FILLER_WORDS: ReadonlySet<string> = new Set([
   // game names
   'adopt', 'me', 'steal', 'a', 'an', 'brainrot', 'brainrots', 'roblox', 'egg', 'eggs',
   // rarity / quality words

@@ -16,6 +16,7 @@ import { TraitMarks } from './TraitMarks'
 import { TraitName } from './TraitName'
 import { fmtUsd } from './money'
 import { amTrait, formLetters, toggleFilterLetter, type AmLetter } from './model/am-traits'
+import { sellerExtraTitle } from './model/seller-title'
 import type { TraitDef } from './model/offers'
 
 /** Offer rows shown before "Show All". */
@@ -31,6 +32,9 @@ const FIRST = 8
  */
 export function OffersSection({
   noun,
+  gameSlug,
+  gameName,
+  itemName,
   offers,
   offerVariants,
   traitDefs,
@@ -39,6 +43,9 @@ export function OffersSection({
   onSelectOffer,
 }: {
   noun: string
+  gameSlug: string
+  gameName: string
+  itemName: string
   offers: ItemOffer[]
   offerVariants: Record<string, string | null>
   traitDefs: TraitDef[]
@@ -122,6 +129,7 @@ export function OffersSection({
                       { icon: Inventory2RoundedIcon, label: 'In Stock', value: stock },
                       { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery },
                     ]}
+                    note={sellerExtraTitle(gameSlug, o.name, { itemName, gameName, traitLabel: def(offerVariants[o.id] ?? null)?.label })}
                     price={fmtUsd(o.pricePerUnit)}
                     isOwn={!!viewerId && o.sellerId === viewerId}
                     selected={o.id === selectedId}

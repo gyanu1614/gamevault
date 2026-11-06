@@ -11,7 +11,8 @@
  * navbar's own colour, so the two bars read as one section (owner, 2026-11-02/03,
  * Eldorado's phone item page as the reference). Fixed under the navbar; it slides
  * away on scroll down and returns on a small scroll up (owner, 2026-11-04,
- * GameBoost), except a phone's back row, which stays. Join Discord on every bar.
+ * GameBoost), except a phone's back row, which stays. Items is the first tab in
+ * every game (owner, 2026-11-05).
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react'
@@ -35,8 +36,8 @@ import {
   SUBNAV_TAB,
   SUBNAV_TAB_ACTIVE,
   SubnavActiveBar,
-  SubnavDiscordButton,
   categoryIcon,
+  itemsFirst,
   subnavIconClass,
 } from './subnav-tab'
 import { pictureUrl } from '@/lib/images/picture-url'
@@ -154,9 +155,7 @@ export default function GameSubNav({
             <Link href={`/${gameSlug}`} className="min-w-0 flex-1 truncate px-2 text-center text-[15px] font-bold text-text-primary">
               {gameName}
             </Link>
-            <span className="flex w-11 shrink-0 justify-end">
-              <SubnavDiscordButton />
-            </span>
+            <span aria-hidden className="w-11 shrink-0" />
           </div>
         ) : null}
         <div className={cn(SUBNAV_ROW, phoneBack && 'max-md:hidden')}>
@@ -195,7 +194,7 @@ export default function GameSubNav({
                 className="flex items-center overflow-x-auto max-md:gap-1 md:overflow-visible"
                 style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
               >
-                {categories.map((cat) => {
+                {itemsFirst(categories).map((cat) => {
                   const isActive = cat.slug === currentCategorySlug
                   const isPending = pendingSlug === cat.slug
                   // V14s — the spinner only after the grace period.
@@ -245,16 +244,12 @@ export default function GameSubNav({
             </div>
           )}
 
-          {/* Phones: always in reach, beside the sliding strip. */}
-          <SubnavDiscordButton className="ml-1 md:hidden" />
-
-          {/* ── Content tab + Sell + Discord (desktop: right column). Sell from lg
+          {/* ── Content tab + Sell (desktop: right column). Sell from lg
                  up: below that the strip is full, and listings carry a Sell row
                  in their grid instead. ─────────────────────────────────── */}
           <div className="hidden items-center gap-3 justify-self-end md:flex">
             {extraTabs}
             <SubnavSellButton className="max-lg:hidden" />
-            <SubnavDiscordButton />
           </div>
         </div>
       </div>

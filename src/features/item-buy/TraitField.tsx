@@ -12,27 +12,23 @@ import { TraitName } from './TraitName'
 import type { TraitOption } from './model/offers'
 
 /**
- * The trait picker (owner, 2026-10-27; StockX's "Size: All ⌄" as the
- * reference; 2026-11-02: a plain row, not a box inside the buy box): the word
- * "Trait", the picked trait and a chevron. It opens a list of every trait with its cheapest price; a trait
- * nobody sells says Notify Me. Desktop: a dropdown under the field (Radix
- * Popover). Phones: a sheet that slides up from the bottom (vaul). `filled`
- * (desktop, under the picture; owner, 2026-11-03): a filled control one tone above
- * the glass panel whatever colour the panel picks up, so it never reads as a box of
- * the same colour inside a box.
+ * The trait picker (owner, 2026-10-27; StockX's "Size: All ⌄" as the reference):
+ * the word "Trait", the picked trait and a chevron, on a filled card one tone above
+ * whatever is behind it, the same on phone and desktop (owner, 2026-11-05: it has to
+ * look like something you can open). It opens a list of every trait with its
+ * cheapest price; a trait nobody sells says Notify Me. Desktop: a dropdown under the
+ * field (Radix Popover). Phones: a sheet that slides up from the bottom (vaul).
  */
 export function TraitField({
   noun,
   options,
   value,
   onChange,
-  filled = false,
 }: {
   noun: string
   options: TraitOption[]
   value: string | null
   onChange: (variant: string) => void
-  filled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const desktop = useMediaQuery('(min-width: 1024px)')
@@ -51,15 +47,15 @@ export function TraitField({
       aria-expanded={open}
       aria-labelledby={labelId}
       className={cn(
-        'flex h-12 items-center gap-3 text-left transition-colors',
+        'flex h-12 w-full items-center gap-3 rounded-lg px-3.5 text-left transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-        filled ? cn('w-full rounded-lg px-3.5', open ? 'bg-white/[0.14]' : 'bg-white/[0.08] hover:bg-white/[0.11]') : cn('-mx-3 w-[calc(100%+1.5rem)] rounded-md px-3', open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'),
+        open ? 'bg-white/[0.14]' : 'bg-white/[0.08] hover:bg-white/[0.11]',
       )}
     >
-      <span id={labelId} className={cn('shrink-0 text-text-tertiary', filled && 'sr-only')} style={{ fontSize: 'var(--fs-body)' }}>
+      <span id={labelId} className="shrink-0 text-text-tertiary" style={{ fontSize: 'var(--fs-body)' }}>
         {noun}
       </span>
-      <span className={cn('flex min-w-0 flex-1 items-center gap-2.5', !filled && 'justify-end')}>
+      <span className="flex min-w-0 flex-1 items-center justify-end gap-2.5">
         {current?.short ? <TraitMarks code={current.short} size={22} /> : null}
         <span className="truncate text-[14px] font-semibold text-text-primary">
           {current ? <TraitName traitKey={current.variant} label={current.label} /> : `Choose a ${noun}`}

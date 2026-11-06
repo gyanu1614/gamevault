@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { offerPhotoFor } from './offers'
 import { defaultTrait, offersOfTrait, pickOffer, traitNoun, traitOptions, type TraitDef } from './offers'
 
 const VARIANTS: TraitDef[] = [
@@ -88,5 +89,22 @@ describe('traitNoun', () => {
   it('Trait for Adopt Me, Mutation for Steal a Brainrot', () => {
     expect(traitNoun('adopt-me')).toBe('Trait')
     expect(traitNoun('steal-a-brainrot')).toBe('Mutation')
+  })
+})
+
+describe('offerPhotoFor', () => {
+  it('a mutation shows the offer’s own photo', () => {
+    expect(offerPhotoFor('Mutation', 'candy', 'https://x/candy.webp')).toBe('https://x/candy.webp')
+  })
+  it('a mutation with no photo keeps the catalogue picture', () => {
+    expect(offerPhotoFor('Mutation', 'candy', null)).toBeNull()
+    expect(offerPhotoFor('Mutation', 'candy', '')).toBeNull()
+  })
+  it('the plain item keeps the catalogue picture', () => {
+    expect(offerPhotoFor('Mutation', 'default', 'https://x/a.webp')).toBeNull()
+    expect(offerPhotoFor('Mutation', null, 'https://x/a.webp')).toBeNull()
+  })
+  it('an Adopt Me trait never swaps the picture', () => {
+    expect(offerPhotoFor('Trait', 'neon', 'https://x/a.webp')).toBeNull()
   })
 })

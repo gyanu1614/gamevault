@@ -917,6 +917,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
               gameSlug={gameSlug}
               gameName={game.name}
               categoryLabel={category.name}
+              hideCount={categoryType === 'items'}
               tagline={
                 (category as any).description ||
                 `Browse verified ${game.name} listings — every order covered by SafeDrop Protection.`

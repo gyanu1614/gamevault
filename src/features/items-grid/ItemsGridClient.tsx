@@ -31,7 +31,7 @@ import type { ItemOffer } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_i
 import { TRAIT_LETTERS, TraitFilterMenu, TraitSheetButtons } from '@/features/item-buy/TraitFilterMenu'
 import { TraitMarks } from '@/features/item-buy/TraitMarks'
 import type { AmLetter } from '@/features/item-buy/model/am-traits'
-import { AM_ITEM_TYPES, amTypesHeading, type AmItemType } from '@/lib/value-listings/am-item-kind'
+import { AM_ITEM_TYPES, type AmItemType } from '@/lib/value-listings/am-item-kind'
 import { filterGrid, formsForLetters, fromGridRows, sortGrid, splitByForm, toggleGridLetter, type FilterOption, type GridRow, type GridSort } from './model/grid'
 import { GridCard } from './GridCard'
 import { StockAlertsProvider } from './stock-alerts-context'
@@ -169,14 +169,12 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, rows, it
       <main className="min-h-screen">
         <SearchParamsBridge onParams={seedFromUrl} />
         <SearchParamsBridge onParams={paged.onParams} />
-        {/* The heading says what people search for: "Adopt Me Pets", not the category's "Items". */}
+        {/* "<Game> Items" for every game, no number (owner, 2026-11-05). */}
         <section ref={paged.topRef} className="scroll-mt-game-chrome">
           <div className={cn('mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8', PAGE_TOP)}>
             <CategoryHeader
               gameName={gameName}
-              categoryLabel={hasTypeTabs ? amTypesHeading(typeTabs) : itemNoun}
-              count={sorted.length}
-              countNoun={words ?? { one: itemNoun.replace(/s$/, '').toLowerCase(), many: itemNoun.toLowerCase() }}
+              categoryLabel="Items"
               stats={stats}
               introLine={introLine}
             />

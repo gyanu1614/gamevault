@@ -72,3 +72,13 @@ export function defaultTrait(
 export function traitNoun(gameSlug: string): 'Trait' | 'Mutation' {
   return gameSlug === 'adopt-me' ? 'Trait' : 'Mutation'
 }
+
+/**
+ * A mutation changes how the item looks and the catalogue only has the plain one, so
+ * the offer's own photo shows when it has one (owner, 2026-11-05). Without one the
+ * catalogue picture stays, and the picker under it names the mutation.
+ */
+export function offerPhotoFor(noun: 'Trait' | 'Mutation', traitKey: string | null | undefined, offerImage: string | null | undefined): string | null {
+  if (noun !== 'Mutation' || !traitKey || traitKey === 'default') return null
+  return offerImage || null
+}
