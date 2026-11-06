@@ -32,13 +32,20 @@ export function amRarity(raw: string | undefined): string | null {
 const pageUrl = (title: string) => `https://${HOST}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2F/g, '/')}`
 const daysBetween = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 86_400_000
 
-/** The page's infobox. Most pets use {{Pets}}; a few (Chestnut Glyptodon) use the plain {{Item}}. */
+/** Wiki editors sometimes build these on the pet template; the run writes straight to live. */
+const NOT_PET_CATEGORIES = new Set(['Category:Food', 'Category:Potions', 'Category:Toys'])
+
+/** A pet we already hold: either infobox. Most pets use {{Pets}}; a few (Chestnut Glyptodon) use the plain {{Item}}. */
 const petInfobox = (text: string) => templateBody(text, 'Pets') ?? templateBody(text, 'Item')
 
 /** A pet page → its item; null for non-pet pages, subpages, unknown rarity and upcoming pets. */
 export function parseAmPage(page: WikiPage, checkedAt: string): ParsedItem | null {
   if (page.title.includes('/')) return null
-  const body = petInfobox(page.content)
+  if (page.categories.some((c) => NOT_PET_CATEGORIES.has(c))) return null
+  // Toys and potions use {{Item}} too, and any recently edited page reaches this
+  // parser, so {{Item}} only counts on a page in the Pets category (Netzooka, a toy,
+  // got in as a pet on 2026-11-06 before this check).
+  const body = templateBody(page.content, 'Pets') ?? (page.categories.includes('Category:Pets') ? templateBody(page.content, 'Item') : null)
   if (body == null) return null
   const info = templateParams(body)
   const rarity = amRarity(info.rarity)

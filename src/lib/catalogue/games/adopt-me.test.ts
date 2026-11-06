@@ -45,6 +45,27 @@ describe('parseAmPage', () => {
     expect(parseAmPage(chestnut, '2026-11-06')).toMatchObject({ slug: 'chestnut-glyptodon', name: 'Chestnut Glyptodon', rarity: 'rare', imageFile: 'Chestnut Glyptodon.png' })
   })
 
+  it('a toy on the Item template is not a pet (Netzooka got in this way)', () => {
+    const toy: WikiPage = {
+      pageId: 206641,
+      revisionId: 1,
+      title: 'Netzooka',
+      categories: ['Category:Toys', 'Category:Legendary', 'Category:Legendary Toys', 'Category:Limited', 'Category:Unavailable'],
+      content: "{{Item\n|image = Netzooka.png\n|caption = The Netzooka in a player's inventory.\n|rarity = Legendary\n}}\nThe '''Netzooka''' is a limited legendary [[Toys|toy]] in ''Adopt Me!''.",
+    }
+    expect(parseAmPage(toy, '2026-11-06')).toBeNull()
+  })
+
+  it('a potion on the Item template, whose category names a rarity of pets only in part, is not a pet', () => {
+    const potion: WikiPage = { pageId: 3, revisionId: 1, title: 'Grow Potion', categories: ['Category:Potions', 'Category:Food', 'Category:Rare', 'Category:Rare Pets Food'], content: '{{Item\n|image = Grow.png\n|rarity = Rare\n}}\nA potion.' }
+    expect(parseAmPage(potion, '2026-11-06')).toBeNull()
+  })
+
+  it('a food page built on the pet template is not a pet (the wiki has Birthday Cake)', () => {
+    const food: WikiPage = { pageId: 4, revisionId: 1, title: 'Birthday Cake', categories: ['Category:Food', 'Category:Common'], content: "{{Pets\n|image = Cake.png\n|rarity = Common\n}}\nThe '''Birthday Cake''' is a common [[food]]." }
+    expect(parseAmPage(food, '2026-11-06')).toBeNull()
+  })
+
   it('an Item page with no rarity is not a pet', () => {
     const page: WikiPage = { pageId: 2, revisionId: 1, title: 'Some Item', categories: ['Category:Pets'], content: '{{Item\n|image = Some.png\n}}\nText.' }
     expect(parseAmPage(page, '2026-11-06')).toBeNull()
