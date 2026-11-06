@@ -137,7 +137,7 @@ export function BlogCard({
         ) : (
           <span
             aria-hidden
-            className="absolute bottom-3 left-3 text-label-sm uppercase text-white/25"
+            className="absolute bottom-3 left-3 text-label-sm uppercase text-text-disabled"
           >
             DropMarket
           </span>
@@ -150,7 +150,7 @@ export function BlogCard({
         />
 
         {/* Read time — overlaid, so it doesn't cost the card a whole meta row. */}
-        <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-[6px] bg-black/55 px-1.5 py-1 text-label text-white/90 backdrop-blur-sm">
+        <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-[6px] bg-black/55 px-1.5 py-1 text-label text-text-primary backdrop-blur-sm">
           <Clock className="h-3 w-3 shrink-0" />
           <span className="tabular-nums">{post.readMinutes} min</span>
         </span>

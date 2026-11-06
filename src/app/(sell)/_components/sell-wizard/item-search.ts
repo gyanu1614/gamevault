@@ -24,14 +24,20 @@ export interface ItemSearchGame {
   noTraitLists?: readonly string[]
   /** A real name for the empty box. */
   example: string
+  /**
+   * One item looks the same in every offer, so the catalogue's picture is the offer's
+   * (owner, 2026-11-06). Not Steal a Brainrot: income and mutation differ per offer,
+   * and a seller's photo shows it.
+   */
+  fixedPicture?: boolean
 }
 
 const MM2_LIST = new RegExp(`^(${MM2_SELL_FORM.types.map((t) => t.key).join('|')})-(?!name)`)
 const AM_LISTS = new Set(['pet-name', 'egg-name', 'potion-name'])
 
 const GAMES: Record<string, ItemSearchGame> = {
-  'murder-mystery-2': { isList: (s) => MM2_LIST.test(s), hidden: [...MM2_SELL_FORM.legacyFields, ...(MM2_SELL_FORM.retiredFields ?? [])], example: 'Sunrise' },
-  'adopt-me': { isList: (s) => AM_LISTS.has(s), hidden: [], traitField: 'trait', noTraitLists: ['egg-name', 'potion-name'], example: 'Bat Dragon' },
+  'murder-mystery-2': { isList: (s) => MM2_LIST.test(s), hidden: [...MM2_SELL_FORM.legacyFields, ...(MM2_SELL_FORM.retiredFields ?? [])], example: 'Sunrise', fixedPicture: true },
+  'adopt-me': { isList: (s) => AM_LISTS.has(s), hidden: [], traitField: 'trait', noTraitLists: ['egg-name', 'potion-name'], example: 'Bat Dragon', fixedPicture: true },
   'steal-a-brainrot': { isList: (s) => /^select-brainrot(-\d+)?$/.test(s), hidden: [], example: 'Dragon Cannelloni' },
 }
 
@@ -86,7 +92,7 @@ export function itemChainIds(game: ItemSearchGame, attributes: readonly Attribut
   return chain
 }
 
-/** The lists alone: what the manual path doesn't ask (Item Name instead). */
+/** The lists alone: not asked under a pick's nested fields. */
 export function itemListIds(game: ItemSearchGame, attributes: readonly Attribute[]): Set<string> {
   return new Set(attributes.filter((a) => game.isList(a.slug)).map((a) => a.id))
 }
@@ -143,6 +149,9 @@ export function pickHasNoTrait(game: ItemSearchGame, attributes: readonly Attrib
   return game.noTraitLists?.includes(list?.slug ?? '') ?? false
 }
 
+/** A picked item whose picture is the catalogue's: the form asks for no photos. */
+export const pickUsesItemPicture = (game: ItemSearchGame | null, picked: ItemRow | null): boolean => !!game?.fixedPicture && !!picked
+
 /** What's still asked under a picked item: the trait, the mutation. */
 export function fieldsAfterPick(game: ItemSearchGame, attributes: readonly Attribute[], row: ItemRow, values: Record<string, unknown>): Attribute[] {
   const byId = byIdOf(attributes)
@@ -170,8 +179,8 @@ export function initialAutoTitle(title: string, row: ItemRow | null, gameName: s
 }
 
 /**
- * How an existing listing opens: on its item, else on the manual fields if it has
- * any answers (it sells something we don't list), else on the search.
+ * How an existing listing opens: on its item, else manually if it has any answers
+ * (it sells something we don't list), else on the search.
  */
 export function initialItemEntry(picked: ItemRow | null, chainIds: ReadonlySet<string>, values: Record<string, unknown>): 'search' | 'manual' {
   if (picked) return 'search'

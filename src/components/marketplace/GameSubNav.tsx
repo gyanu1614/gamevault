@@ -220,7 +220,7 @@ export default function GameSubNav({
                     >
                       {isActive && <SubnavActiveBar />}
                       {showLoading ? (
-                        <Loader2 aria-hidden className="relative z-10 h-[17px] w-[17px] animate-spin text-white/70" />
+                        <Loader2 aria-hidden className="relative z-10 h-[17px] w-[17px] animate-spin text-text-secondary" />
                       ) : (
                         <Icon aria-hidden stroke={1.9} className={subnavIconClass(isActive)} />
                       )}

@@ -1353,14 +1353,17 @@ export async function sendPayoutDetailsChangedEmail({
   kind,
   summary,
   freezeUntil,
+  cancelledWithdrawal = false,
 }: {
   to: string
   name: string
   kind: 'crypto' | 'payoneer'
   /** Human summary of the new destination (masked address / email). */
   summary: string
-  /** ISO timestamp when withdrawals reopen, or null when no freeze applies. */
+  /** ISO timestamp the wait ends, or null when there is none. */
   freezeUntil: string | null
+  /** The change cancelled a withdrawal that was waiting to go out. */
+  cancelledWithdrawal?: boolean
 }) {
   const untilText = freezeUntil ? new Date(freezeUntil).toUTCString().replace(' GMT', ' UTC') : null
   const { data, error } = await resend.emails.send({
@@ -1378,8 +1381,8 @@ export async function sendPayoutDetailsChangedEmail({
         (untilText
           ? emailBox({
               accent: true,
-              title: 'Withdrawals paused briefly',
-              html: `For your security, withdrawals are paused until <strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${untilText}</strong> whenever payout details change.`,
+              title: 'Withdrawals wait for now',
+              html: `For your security, a withdrawal you ask for now goes out after <strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${untilText}</strong>.${cancelledWithdrawal ? ' A withdrawal that was waiting to go out was cancelled, and its money is back in your balance.' : ''}`,
             })
           : '') +
         emailButton('Review Payout Settings →', `${APP_URL}/account/settings?tab=payouts`) +

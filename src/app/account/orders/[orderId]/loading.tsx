@@ -17,21 +17,10 @@ const CARD =
 export default function OrderDetailLoading() {
   return (
     <div className="relative min-h-screen">
-      <div className="mx-auto max-w-[1400px] px-5 pb-10 pt-6 sm:px-8 lg:px-10 lg:pt-8">
-        {/* Back link + presence */}
-        <div className="mb-6 flex items-center justify-between max-sm:mb-7">
-          <Block className="h-4 w-32" />
-          <div className="flex items-center gap-2.5 sm:translate-y-1.5">
-            <Block className="h-8 w-8 rounded-full" />
-            <div className="space-y-1">
-              <Block className="h-2.5 w-10" />
-              <Block className="h-3.5 w-20" />
-            </div>
-          </div>
-        </div>
-
+      <div className="mx-auto max-w-[1400px] px-5 pb-10 pt-5 sm:px-8 lg:px-10 lg:pt-6">
         {/* Header */}
         <div className="flex items-center gap-3 sm:items-start sm:gap-5">
+          <Block className="h-10 w-10 shrink-0 rounded-md sm:h-11 sm:w-11" />
           <Block className="h-12 w-12 shrink-0 rounded-xl sm:h-[88px] sm:w-[88px] sm:rounded-2xl" />
           <div className="min-w-0 flex-1 space-y-2 sm:space-y-3 sm:pt-1">
             <Block className="h-5 w-3/4 max-w-md sm:h-7" />
@@ -40,7 +29,14 @@ export default function OrderDetailLoading() {
               <Block className="h-4 w-20" />
             </div>
           </div>
-          <div className="hidden shrink-0 flex-col items-end gap-2 pt-3 sm:flex">
+          <div className="hidden shrink-0 flex-col items-end gap-3 sm:flex">
+            <div className="flex items-center gap-2.5">
+              <Block className="h-8 w-8 rounded-full" />
+              <div className="space-y-1">
+                <Block className="h-2.5 w-10" />
+                <Block className="h-3.5 w-20" />
+              </div>
+            </div>
             <Block className="h-8 w-32 rounded-[9px]" />
           </div>
         </div>

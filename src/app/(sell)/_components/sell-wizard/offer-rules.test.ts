@@ -121,3 +121,19 @@ describe('editing a listing keeps its item fields', () => {
     expect(p.template_data).toEqual({ item_type: 'gun', gun: 'ginger', rarity: 'Ancient' })
   })
 })
+
+describe('a picked item that uses its catalogue picture', () => {
+  const base = { form: { ...filled, images: [] }, attributesFilled: true, categorySlug: 'items', currencyConfig: null, deliveryMethods: [], policy: null }
+  it('can publish with no photos', () => {
+    expect(canPublishOffer(base)).toBe(false)
+    expect(canPublishOffer({ ...base, photosNotAsked: true })).toBe(true)
+  })
+  it('sends no photos, so the server fills the picture itself', () => {
+    const p = publishPayloadFor({ form: { ...filled, images: ['https://elsewhere/x.png'] }, game, categorySlug: 'items', template, currencyConfig: null, asDraft: false, useItemPicture: true })
+    expect(p.images).toEqual([])
+  })
+  it('keeps the photos on any other offer', () => {
+    const p = publishPayloadFor({ form: filled, game, categorySlug: 'items', template, currencyConfig: null, asDraft: false })
+    expect(p.images).toEqual(['u1'])
+  })
+})

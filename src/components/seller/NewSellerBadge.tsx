@@ -8,7 +8,7 @@
 import VerifiedIcon from '@mui/icons-material/Verified'
 import { cn } from '@/lib/utils'
 
-const NEW_GREY = 'rgba(154,166,179,0.55)'
+const NEW_GREY = 'rgba(180,182,190,0.55)'
 
 export function NewSellerBadge({ size = 14, className }: { size?: number; className?: string }) {
   return (

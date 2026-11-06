@@ -81,9 +81,9 @@ export function ChoiceRow({
         {...sortable.listeners}
         aria-label={`Drag ${option.label} to reorder`}
         className={cn(
-          'grid h-[38px] w-6 shrink-0 cursor-grab touch-none place-items-center rounded text-[#62656E] hover:text-text-primary active:cursor-grabbing',
+          'grid h-[38px] w-6 shrink-0 cursor-grab touch-none place-items-center rounded text-text-tertiary hover:text-text-primary active:cursor-grabbing',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-          !selected && 'lg:text-transparent lg:group-hover:text-[#62656E] lg:focus-visible:text-[#62656E]',
+          !selected && 'lg:text-transparent lg:group-hover:text-text-tertiary lg:focus-visible:text-text-tertiary',
         )}
       >
         <DotsSixVertical aria-hidden weight="bold" className="h-4 w-4" />
@@ -138,7 +138,7 @@ export function ChoiceRow({
           aria-current={selected || undefined}
           className="flex h-[38px] min-w-0 flex-1 items-center gap-2 rounded-[7px] px-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         >
-          <span className={cn('min-w-0 flex-1 truncate text-[13.5px]', selected ? 'font-medium text-text-primary' : 'text-[#D7D9DE]')}>
+          <span className={cn('min-w-0 flex-1 truncate text-[13.5px]', selected ? 'font-medium text-text-primary' : 'text-text-primary')}>
             {option.label}
           </span>
           {meta ? (

@@ -68,6 +68,8 @@ export function canPublishOffer(input: {
   policy: SellerPublishPolicy | null
   /** The item fields are still loading: their required picks are not known yet. */
   templateLoading?: boolean
+  /** A picked item with a catalogue picture: the form doesn't ask for photos. */
+  photosNotAsked?: boolean
 }): boolean {
   const { form, categorySlug, currencyConfig, deliveryMethods } = input
   if (input.templateLoading) return false
@@ -75,7 +77,7 @@ export function canPublishOffer(input: {
   // Currency listings skip Title + Photos: the server fills them from the currency record.
   const isCurrency = categorySlug === 'currency'
   if (!isCurrency && !form.title.trim()) return false
-  if (!isCurrency && form.images.length === 0) return false
+  if (!isCurrency && !input.photosNotAsked && form.images.length === 0) return false
   const price = parseFloat(form.price)
   if (!Number.isFinite(price) || price <= 0) return false
   const quantity = parseInt(form.quantity, 10)
@@ -174,6 +176,8 @@ export function publishPayloadFor(input: {
   template: AttributeTemplateFull | null
   currencyConfig: CurrencyConfig | null
   asDraft: boolean
+  /** Send no photos: the server gives the offer its item's picture. */
+  useItemPicture?: boolean
 }) {
   const { form } = input
   return {
@@ -195,7 +199,7 @@ export function publishPayloadFor(input: {
     }),
     delivery_method: form.deliveryMethod,
     delivery_time: form.deliveryTime,
-    images: form.images,
+    images: input.useItemPicture ? [] : form.images,
     template_data: templateDataFor(input.template, form.fieldValues),
     region: form.region || null,
     platform: form.platform || null,

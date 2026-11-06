@@ -35,12 +35,12 @@
 
   /* ── Text ──────────────────────────────────────────────── */
   /* text/1 → primary                                         */
-  --color-text-primary:    #E9EDF2;
+  --color-text-primary:    #FFFFFF;
   /* text/2 → secondary                                       */
-  --color-text-secondary:  #9AA6B3;
+  --color-text-secondary:  #B4B6BE;
   /* text/3 → tertiary/decorative                             */
-  --color-text-tertiary:   #6C7684;
-  --color-text-disabled:   #6C7684;
+  --color-text-tertiary:   #90929B;
+  --color-text-disabled:   #6F7179;
 
   /* ── Accents — Green ───────────────────────────────────── */
   /* green/solid  → primary button fill                       */
@@ -48,7 +48,7 @@
   --color-accent-hover:    #338F5D;
   --color-accent-pressed:  #226343;
   /* green/ink    → label on green fill                       */
-  --color-text-inverse:    #F2F8F3;
+  --color-text-inverse:    #FFFFFF;
   /* green/text   → green as text, icon, link                 */
   --color-accent-text:     #56B87F;
   /* green/tint   → active nav item bg                        */
@@ -59,7 +59,7 @@
   /* V2-specific green extras                                 */
   --v2-green-tint:         rgba(86,184,127,0.12);
   --v2-green-border:       rgba(86,184,127,0.30);
-  --v2-green-ink:          #F2F8F3;
+  --v2-green-ink:          #FFFFFF;
 
   /* ── Accents — Amber ───────────────────────────────────── */
   --v2-amber-solid:        #B57A42;
@@ -86,9 +86,9 @@
      field's own border brightening. Use these tokens (Tailwind: ring-focus-ring,
      ring-focus-soft, border-focus-border, shadow-focus) — never lime/accent
      classes on a focus/focus-visible/focus-within state. */
-  --color-focus-ring:      rgba(233,237,242,0.45);
-  --color-focus-ring-soft: rgba(233,237,242,0.12);
-  --color-focus-border:    rgba(233,237,242,0.36);
+  --color-focus-ring:      rgba(255,255,255,0.45);
+  --color-focus-ring-soft: rgba(255,255,255,0.12);
+  --color-focus-border:    rgba(255,255,255,0.36);
   --shadow-focus:          0 0 0 1.5px var(--color-focus-ring);
 
   /* ── Layout ────────────────────────────────────────────── */

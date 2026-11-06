@@ -56,7 +56,7 @@ export async function loadFeeNoticeFacts(): Promise<FeeNoticeFacts> {
     minAccountAgeDays: Number(settings?.withdrawal_min_account_age_days ?? 30),
     completionHoldHours: Number(settings?.completion_hold_hours ?? 24),
     disputeWindowDays: Number(settings?.dispute_window_days ?? 7),
-    payoutFreezeHours: Number(settings?.payout_details_freeze_hours ?? 48),
+    payoutFreezeHours: Number(settings?.payout_details_freeze_hours ?? 24),
     sellFeesUrl: `${APP_URL}/sell/fees`,
     settingsUrl: `${APP_URL}/account/settings?tab=payouts`,
   }

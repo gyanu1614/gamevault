@@ -59,7 +59,7 @@ export async function WhyBuyCard({
   return (
     <div
       className={[
-        'relative overflow-hidden rounded-lg bg-[#1A1B1F] shadow-[inset_0_1px_0_rgba(233,237,242,0.07)]',
+        'relative overflow-hidden rounded-lg bg-[#1A1B1F] shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]',
         className,
       ]
         .filter(Boolean)

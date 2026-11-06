@@ -273,7 +273,7 @@ async function loadWithdrawalTerms(): Promise<PublicWithdrawalTerms> {
     completionHoldHours: Number(s.completion_hold_hours ?? 24),
     disputeWindowDays: Number(s.dispute_window_days ?? 7),
     minAccountAgeDays: Number(s.withdrawal_min_account_age_days ?? 30),
-    payoutFreezeHours: Number(s.payout_details_freeze_hours ?? 48),
+    payoutFreezeHours: Number(s.payout_details_freeze_hours ?? 24),
     windows,
     generatedAt: new Date().toISOString(),
   }

@@ -453,10 +453,10 @@ export function useChatThread({
 
       let localFiles: LocalFile[] | undefined
       if (file) {
-        if (file.type.startsWith('image/')) {
+        if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
           const url = URL.createObjectURL(file)
           objectUrlsRef.current.push(url)
-          localFiles = [{ kind: 'image', url }]
+          localFiles = [{ kind: file.type.startsWith('video/') ? 'video' : 'image', url }]
         } else {
           localFiles = [{ kind: 'pdf' }]
         }

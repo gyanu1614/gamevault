@@ -1,7 +1,12 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+
+function replaceQuery(params: URLSearchParams) {
+  const qs = params.toString()
+  window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
+}
 
 /**
  * STATE-011 — filter state that lives in the URL instead of useState.
@@ -11,10 +16,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
  * already read one dimension (`type`) from the URL, so this generalises the
  * pattern they were half-applying.
  *
- * Writes go through router.replace(..., { scroll: false }) so filtering does
- * not push a history entry per keystroke and does not jump the page to the top.
- * A value equal to its default is removed from the query string, keeping the
- * common URL clean.
+ * Writes replace the address with no call to the server (owner, 2026-11-06: through
+ * the router, every letter in a search box asked the server for the page and waited).
+ * No history entry per keystroke, no jump to the top. With no state passed, Next attaches
+ * its own and keeps useSearchParams in step. A search box goes through UrlSearchInput,
+ * because that step isn't instant. A value equal to its default is removed from the
+ * query string, keeping the common URL clean.
  *
  * Purely ephemeral UI state (which dropdown is open, row selection) stays in
  * useState — it is not worth a URL and should not survive a refresh.
@@ -27,7 +34,6 @@ export function useUrlFilters<T extends Record<string, string | number>>(
   setValues: (next: Partial<T>) => void
   reset: () => void
 } {
-  const router = useRouter()
   const searchParams = useSearchParams()
 
   // Stable key list so the memo below does not depend on object identity.
@@ -50,16 +56,15 @@ export function useUrlFilters<T extends Record<string, string | number>>(
 
   const write = useCallback(
     (next: Partial<T>) => {
-      const params = new URLSearchParams(search)
+      const params = new URLSearchParams(window.location.search)
       for (const [key, value] of Object.entries(next)) {
         const isDefault = value === undefined || value === defaults[key as keyof T]
         if (isDefault || value === '') params.delete(key)
         else params.set(key, String(value))
       }
-      const qs = params.toString()
-      router.replace(qs ? `?${qs}` : '?', { scroll: false })
+      replaceQuery(params)
     },
-    [router, search, defaults],
+    [defaults],
   )
 
   const setValue = useCallback(
@@ -69,11 +74,10 @@ export function useUrlFilters<T extends Record<string, string | number>>(
   )
 
   const reset = useCallback(() => {
-    const params = new URLSearchParams(search)
+    const params = new URLSearchParams(window.location.search)
     for (const key of keys) params.delete(String(key))
-    const qs = params.toString()
-    router.replace(qs ? `?${qs}` : '?', { scroll: false })
-  }, [router, search, keys])
+    replaceQuery(params)
+  }, [keys])
 
   return { values, setValue, setValues: write, reset }
 }

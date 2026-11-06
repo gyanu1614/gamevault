@@ -71,7 +71,7 @@ function Progress({ step, tone }: { step: number; tone: 'blue' | 'green' }) {
         <span
           key={n}
           className="h-[3px] w-4 rounded-full"
-          style={{ background: n <= step ? on : 'rgba(233,237,242,0.10)', opacity: n === step ? 1 : n < step ? 0.45 : 1 }}
+          style={{ background: n <= step ? on : 'rgba(255,255,255,0.10)', opacity: n === step ? 1 : n < step ? 0.45 : 1 }}
         />
       ))}
     </span>

@@ -24,7 +24,7 @@ import {
   Undo2,
   TimerOff,
   Ban,
-} from 'lucide-react'
+} from './_order-icons'
 import Link from '@/components/navigation/AppLink'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
@@ -218,11 +218,11 @@ const STRIPS: Record<
 // no token here and `lime` is a CSS-variable colour (opacity modifiers on it
 // generate nothing), so the warning / accent tint tokens are used instead.
 const TONE_BG: Record<string, string> = {
-  amber:  'bg-warning-bg text-warning',
-  lime:   'bg-lime-tint-bg text-lime-text',
-  blue:   'bg-blue-400/[0.12] text-blue-400',
-  gray:   'bg-white/[0.06] text-text-secondary',
-  orange: 'bg-orange-400/[0.12] text-orange-400',
+  amber:  'text-warning',
+  lime:   'text-lime-text',
+  blue:   'text-blue-400',
+  gray:   'text-text-secondary',
+  orange: 'text-orange-400',
 }
 
 export function StatusStrip({
@@ -246,8 +246,8 @@ export function StatusStrip({
   escrowStatus = null,
 }: StatusStripProps) {
   // V21/P5.r — Shared style tokens that scale with promoted variant.
-  const sIcon = promoted ? 'h-12 w-12 rounded-[12px]' : 'h-9 w-9 rounded-[9px]'
-  const sIconGlyph = promoted ? 'h-[22px] w-[22px]' : 'h-4 w-4'
+  const sIcon = promoted ? 'h-9 w-9' : 'h-7 w-7'
+  const sIconGlyph = 'h-full w-full'
   const sTitle = promoted ? 'text-body-lg leading-snug' : 'text-[14px]'
   const sCaption = promoted ? 'text-body-sm leading-snug' : 'text-[12.5px]'
   const sPad = promoted ? 'px-5 py-[18px]' : 'p-4'
@@ -323,14 +323,14 @@ export function StatusStrip({
         <div className="mt-3.5 flex items-center gap-3 max-sm:mt-2 max-sm:gap-2.5">
           <span
             className={cn(
-              'grid h-10 w-10 flex-shrink-0 place-items-center rounded-[10px] max-sm:h-7 max-sm:w-7 max-sm:rounded-[7px]',
-              isPositive ? 'bg-green-400/[0.12] text-green-400' : 'bg-red-400/[0.12] text-red-400',
+              'h-8 w-8 flex-shrink-0 max-sm:h-7 max-sm:w-7',
+              isPositive ? 'text-green-400' : 'text-red-400',
             )}
           >
             {isPositive ? (
-              <ThumbsUp className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
+              <ThumbsUp className="h-full w-full" />
             ) : (
-              <ThumbsDown className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
+              <ThumbsDown className="h-full w-full" />
             )}
           </span>
           <p className="min-w-0 flex-1 text-[14.5px] font-semibold leading-[1.4] text-text-primary max-sm:text-[13.5px]">
@@ -456,16 +456,14 @@ export function StatusStrip({
         <div className="mt-3.5 flex items-center gap-3 max-sm:mt-2 max-sm:gap-2.5">
           <span
             className={cn(
-              'grid h-10 w-10 flex-shrink-0 place-items-center rounded-[10px] max-sm:h-7 max-sm:w-7 max-sm:rounded-[7px]',
-              isPositive
-                ? 'bg-green-400/[0.12] text-green-400'
-                : 'bg-red-400/[0.12] text-red-400',
+              'h-8 w-8 flex-shrink-0 max-sm:h-7 max-sm:w-7',
+              isPositive ? 'text-green-400' : 'text-red-400',
             )}
           >
             {isPositive ? (
-              <ThumbsUp className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
+              <ThumbsUp className="h-full w-full" />
             ) : (
-              <ThumbsDown className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
+              <ThumbsDown className="h-full w-full" />
             )}
           </span>
           <p className="min-w-0 flex-1 text-[14.5px] font-semibold leading-[1.4] text-text-primary max-sm:text-[13.5px]">

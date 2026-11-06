@@ -60,7 +60,7 @@ export default function BuyingOpensSoon({
         <h1 className="mt-4 text-[26px] font-bold tracking-tight text-white">
           Buying Opens Soon
         </h1>
-        <p className="mt-2 text-[14px] leading-relaxed text-white/60">
+        <p className="mt-2 text-[14px] leading-relaxed text-text-secondary">
           We&rsquo;re putting the finishing touches on payments. Listings are live —
           checkout unlocks shortly.
         </p>
@@ -69,10 +69,10 @@ export default function BuyingOpensSoon({
         <div className="mt-5 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-[14px] font-semibold text-white">{listingTitle}</p>
-            {gameName && <p className="mt-0.5 text-[12px] text-white/50">{gameName}</p>}
+            {gameName && <p className="mt-0.5 text-[12px] text-text-tertiary">{gameName}</p>}
           </div>
           <span className="shrink-0 text-[15px] font-bold text-lime-300">
-            ${price.toFixed(2)} <span className="text-[11px] font-medium text-white/40">{currency}</span>
+            ${price.toFixed(2)} <span className="text-[11px] font-medium text-text-tertiary">{currency}</span>
           </span>
         </div>
 
@@ -88,7 +88,7 @@ export default function BuyingOpensSoon({
           </div>
         ) : (
           <div className="mt-5">
-            <label className="mb-1.5 block text-[12.5px] font-medium text-white/70">
+            <label className="mb-1.5 block text-[12.5px] font-medium text-text-secondary">
               Get Notified At Launch
             </label>
             <div className="flex gap-2">
@@ -98,7 +98,7 @@ export default function BuyingOpensSoon({
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') void submit() }}
                 placeholder="you@example.com"
-                className="h-[46px] min-w-0 flex-1 rounded-lg border border-white/15 bg-black/30 px-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/30 focus:border-focus-border"
+                className="h-[46px] min-w-0 flex-1 rounded-lg border border-white/15 bg-black/30 px-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-text-disabled focus:border-focus-border"
               />
               <button
                 type="button"
@@ -120,7 +120,7 @@ export default function BuyingOpensSoon({
 
         <Link
           href={backHref}
-          className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-white/50 transition-colors hover:text-white/80"
+          className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-text-tertiary transition-colors hover:text-text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back To Listing

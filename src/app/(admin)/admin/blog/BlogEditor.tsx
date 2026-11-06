@@ -272,7 +272,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
             }}
             placeholder="The answer in one or two lines. Shown under the title, on guide cards and on Google."
             aria-label="Summary"
-            className="blog-type mt-3 block w-full resize-none overflow-hidden bg-transparent text-[17px] leading-[1.65] text-[#c2c0cc] outline-none placeholder:text-text-tertiary sm:text-[19px]"
+            className="blog-type mt-3 block w-full resize-none overflow-hidden bg-transparent text-[17px] leading-[1.65] text-text-secondary outline-none placeholder:text-text-tertiary sm:text-[19px]"
           />
           <div className="mt-6">
             <BlockEditor initial={docSeed} onChange={onDoc} />

@@ -103,7 +103,7 @@ export default function IconSetPage() {
                   <SilverIcon src={src} className="h-8 w-8" />
                   <span className="min-w-0">
                     <span className="block truncate text-[13.5px] font-bold text-white">{label}</span>
-                    <span className="block truncate text-[10.5px] text-[#6d7488]">{src.split('/').pop()}</span>
+                    <span className="block truncate text-[10.5px] text-text-tertiary">{src.split('/').pop()}</span>
                   </span>
                 </div>
               ))}

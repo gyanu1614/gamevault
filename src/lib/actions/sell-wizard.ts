@@ -29,6 +29,7 @@ import { decidePublishStatus, needsUnverifiedPriceReview } from '@/lib/listings/
 import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
+import { fillMissingListingPicture } from '@/lib/value-listings/item-picture'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
 import { reportNotLinked } from '@/lib/value-listings/not-linked'
 import { insertListing, type ListingsWriter } from '@/lib/listings/create'
@@ -719,6 +720,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     }
     // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
     const link = await linkListingsToValueItems(getAdminSupabase(), [createdId])
+    await fillMissingListingPicture(getAdminSupabase(), createdId)
     // Live with no item page: buyers only find it under More Listings, so say so.
     // Item listings only: an account or currency offer never has an item page.
     const notLinked = finalStatus === 'active' && gameCategory.type === 'items' && link.unmatched.length > 0
@@ -909,6 +911,7 @@ export async function updateListingFromWizard(
     if (error) return { success: false, error: error.message }
     // Bundle 2 — re-link after an edit (never blocks; see value-listings/link).
     const link = await linkListingsToValueItems(getAdminSupabase(), [listingId])
+    await fillMissingListingPicture(getAdminSupabase(), listingId)
     const finalStatus: string = (written as { status?: string } | null)?.status
       ?? (requestedStatus === 'draft' ? 'draft' : isResubmit || priceReview ? 'pending_approval' : existingStatus)
 

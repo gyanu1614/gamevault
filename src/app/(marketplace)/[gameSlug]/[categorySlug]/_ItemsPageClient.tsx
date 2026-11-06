@@ -12,9 +12,11 @@
  * changes — Steal-a-Brainrot, Adopt Me, Blox Fruits, MM2, all the same.
  */
 
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
+import { useFilterMemory } from '@/hooks/use-filter-memory'
+import { listParam, priceParam, readAllowed, readOne, readPriceParam } from '@/lib/navigation/filter-params'
 import { useUrlPage } from '@/hooks/use-url-page'
 import { Pagination } from '@/components/marketplace/Pagination'
 import { Search, Store } from 'lucide-react'
@@ -100,15 +102,6 @@ export default function ItemsPageClient({
   stats,
   hideCount = false,
 }: ItemsPageClientProps) {
-  // V14v — Scroll to top on mount before paint.
-  useLayoutEffect(() => {
-    if (typeof window === 'undefined') return
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual'
-    }
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-  }, [])
-
   // V14m/Step 7a — viewer from the client auth context (self-purchase block).
   const { user: viewer } = useAuth()
   const viewerId = viewer?.id ?? null
@@ -120,44 +113,9 @@ export default function ItemsPageClient({
     return () => clearTimeout(t)
   }, [q])
 
-  // Selected values per attribute (multi-select). Seeded from the URL after
-  // hydration by seedFromUrl below.
+  // Selected values per attribute (multi-select), restored from the address below.
   const [attrFilters, setAttrFilters] = useState<Record<string, string[]>>({})
 
-  // V21/P7.v — Seed filters from the URL so a navbar search hit like
-  // "garama" can deep-link to this page with the filter pre-applied:
-  // /steal-a-brainrot/buy-items?attr_category=garama. We read each
-  // `attr_<slug>` param and keep only those whose option actually exists
-  // in this category's taxonomy (defensive against stale links).
-  //
-  // Step 7a — read through SearchParamsBridge after hydration (the page is
-  // ISR; useSearchParams() here would drop this whole grid out of the static
-  // HTML). Seed ONCE, as before: later filter changes are local state, not
-  // URL-driven.
-  //
-  // Multi-select: `attr_<slug>=a,b` seeds two values; the single-value form
-  // (`attr_<slug>=a`, used by navbar search links) still works.
-  const seededRef = useRef(false)
-  const seedFromUrl = useCallback(
-    (params: URLSearchParams) => {
-      if (seededRef.current) return
-      seededRef.current = true
-      const search = params.get('search')?.trim() ?? ''
-      if (search) {
-        setQ(search)
-        setDebouncedQ(search.toLowerCase())
-      }
-      const seeded: Record<string, string[]> = {}
-      for (const f of taxonomy.filters ?? []) {
-        const raw = params.get(`attr_${f.slug}`)
-        if (!raw) continue
-        const valid = raw.split(',').filter((v) => f.options.some((o) => o.slug === v))
-        if (valid.length) seeded[f.slug] = valid
-      }
-      if (Object.keys(seeded).length > 0) setAttrFilters(seeded)
-    },
-    [taxonomy],
-  )
   // Selected values per attribute, keyed by attribute slug. An empty (or
   // missing) list means the filter is off. Several values in one filter
   // match ANY of them; different filters must ALL match.
@@ -195,6 +153,37 @@ export default function ItemsPageClient({
   }, [offers])
 
   const [sort, setSort] = useState<ItemSort>('recommended')
+
+  // V21/P7.v + 2026-11-06 — Search and filters live in the address, so going back to
+  // this page brings them back, and a navbar search hit like "garama" can link here with
+  // its filter on: /steal-a-brainrot/buy-items?attr_category=garama (`attr_<slug>=a,b` for
+  // two values). Only options this category still has are kept: an old link can name one
+  // that has gone.
+  const restored = useFilterMemory(
+    {
+      search: q.trim() || null,
+      sort: sort === 'recommended' ? null : sort,
+      delivery: listParam(delivery),
+      price: priceParam(priceRange),
+      ...Object.fromEntries((taxonomy.filters ?? []).map((f) => [`attr_${f.slug}`, listParam(attrFilters[f.slug] ?? [])])),
+    },
+    (params) => {
+      const search = params.get('search')?.trim() ?? ''
+      if (search) {
+        setQ(search)
+        setDebouncedQ(search.toLowerCase())
+      }
+      const seeded: Record<string, string[]> = {}
+      for (const f of taxonomy.filters ?? []) {
+        const valid = readAllowed(params, `attr_${f.slug}`, f.options.map((o) => o.slug))
+        if (valid.length) seeded[f.slug] = valid
+      }
+      if (Object.keys(seeded).length > 0) setAttrFilters(seeded)
+      setSort(readOne(params, 'sort', SORT_OPTIONS.map((o) => o.slug), 'recommended'))
+      setDelivery(readAllowed(params, 'delivery', deliveryOptions.map((o) => o.slug)))
+      setPriceRange(readPriceParam(params, 'price', priceBounds))
+    },
+  )
 
   // V15b — Conditional-rule evaluator that runs against the CURRENT
   // filter state (not against a listing's data). Used to decide which
@@ -271,7 +260,7 @@ export default function ItemsPageClient({
   // starts again at page 1; the key is the filter VALUES, not the list
   // (the list is rebuilt on unrelated renders and would reset every time).
   const filterKey = JSON.stringify([debouncedQ, attrFilters, priceRange, delivery, sort])
-  const paged = useUrlPage(sorted, PAGE_SIZE, filterKey)
+  const paged = useUrlPage(sorted, PAGE_SIZE, restored ? filterKey : null)
   const visible = paged.visible
 
   const clearApplied = () => {
@@ -315,7 +304,6 @@ export default function ItemsPageClient({
 
   return (
     <main className="min-h-screen">
-      <SearchParamsBridge onParams={seedFromUrl} />
       <SearchParamsBridge onParams={paged.onParams} />
       {/* scroll-mt clears the fixed navbar + sub-navbar when a page change scrolls here. */}
       <section ref={paged.topRef} className="scroll-mt-game-chrome">

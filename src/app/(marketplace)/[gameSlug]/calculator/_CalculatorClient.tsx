@@ -1432,7 +1432,7 @@ function TradeSide({
                   size={22}
                   weight="bold"
                   aria-hidden
-                  className="text-white/20 transition-colors group-hover:text-text-primary"
+                  className="text-text-disabled transition-colors group-hover:text-text-primary"
                 />
               </button>
             )

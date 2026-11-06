@@ -9,6 +9,7 @@
  * shows the first four steps and folds the rest behind "Show Full Timeline".
  */
 
+import { OrderTimeline } from './_order-icons'
 import { useState } from 'react'
 import {
   ShoppingBag,
@@ -143,18 +144,7 @@ export function AuditLog({ order, disputeResolution, latestDispute }: AuditLogPr
   return (
     <OrderCard className="px-5 pb-4 pt-4 sm:px-6">
       <div className="mb-4 flex items-center gap-2.5">
-        <span
-          aria-hidden
-          className="h-5 w-5 [background:currentColor] text-lime-text"
-          style={{
-            maskImage: "url('/assets/order-icons/audit.svg')",
-            WebkitMaskImage: "url('/assets/order-icons/audit.svg')",
-            maskSize: 'contain',
-            WebkitMaskSize: 'contain',
-            maskRepeat: 'no-repeat',
-            WebkitMaskRepeat: 'no-repeat',
-          }}
-        />
+        <OrderTimeline className="h-7 w-7 flex-shrink-0 text-text-primary" />
         <h2 className="text-[15px] font-bold tracking-tight text-text-primary">Order Timeline</h2>
       </div>
 

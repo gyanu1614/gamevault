@@ -85,7 +85,7 @@ export default function FoundingRail({ name, joinNumber, cap, claimed }: Foundin
           <h1 className="text-[26px] font-semibold leading-[1.15] tracking-tight text-white xl:text-[28px]">
             {name ? <>Welcome in, {name}.</> : <>You&rsquo;re early.<br />Claim your spot.</>}
           </h1>
-          <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-white/70">
+          <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-text-secondary">
             {name
               ? 'One of the first traders on DropMarket. Here’s where you stand, the latest from us, and the door to start selling.'
               : 'Be one of the first hundred sellers on DropMarket — a founding fee discount, first dibs on listing, and a badge buyers can see.'}
@@ -106,7 +106,7 @@ export default function FoundingRail({ name, joinNumber, cap, claimed }: Foundin
               First {cap}
             </div>
           )}
-          <div className="mt-2.5 text-[12.5px] text-white/65">
+          <div className="mt-2.5 text-[12.5px] text-text-secondary">
             {joinNumber ? 'of the first ' : 'founding sellers · '}
             {joinNumber && <span className="font-semibold" style={{ color: PALETTE.lime }}>{cap}</span>}
             {joinNumber ? ' founding spots' : `${claimed} claimed so far`}
@@ -127,7 +127,7 @@ export default function FoundingRail({ name, joinNumber, cap, claimed }: Foundin
           {PERKS.map(({ icon: Icon, label }) => (
             <li key={label} className="flex items-center gap-2 lg:gap-3">
               <Icon className="h-[17px] w-[17px] shrink-0 lg:h-[19px] lg:w-[19px]" style={{ color: PALETTE.lime }} strokeWidth={2} />
-              <span className="text-[12.5px] text-white/90 lg:text-[13px]">{label}</span>
+              <span className="text-[12.5px] text-text-primary lg:text-[13px]">{label}</span>
             </li>
           ))}
         </ul>

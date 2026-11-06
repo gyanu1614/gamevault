@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toRefundToCardRow } from './refund-to-card-rows'
+import { refundRowsToShow, refundSentence, toRefundToCardRow } from './refund-to-card-rows'
 
 // A $70 item + $4.97 service fee, refunded as $70 store credit.
 const base = {
@@ -48,5 +48,44 @@ describe('toRefundToCardRow', () => {
     const row = toRefundToCardRow({ ...base, order_number: null, method_label: null }, 7000)
     expect(row.orderNumber).toBe('7F0C9A52')
     expect(row.methodLabel).toBeNull()
+  })
+})
+
+describe('refundRowsToShow', () => {
+  it('leaves out a refund with nothing to do or tell', () => {
+    const rows = [
+      toRefundToCardRow(base, 7000),
+      toRefundToCardRow({ ...base, refundable: false }, 7000),
+      toRefundToCardRow(base, 0),
+      toRefundToCardRow({ ...base, request_status: 'sent' }, 0),
+    ]
+    expect(refundRowsToShow(rows).map((r) => r.state)).toEqual(['available', 'sent'])
+  })
+})
+
+describe('refundSentence', () => {
+  const says = (status: string | null) => refundSentence(toRefundToCardRow({ ...base, request_status: status }, 7000))
+
+  it('states the choice: what is in the balance and what the payment method would get', () => {
+    expect(says(null)).toBe("Your refund for order #DM-AB12-CD34 is in your balance as $70.00 store credit. Want it back on Pix instead? You'd get $74.97, service fee included.")
+  })
+
+  it('states where a request is', () => {
+    expect(says('pending')).toContain("We're sending $74.97 back to Pix")
+    expect(says('sent')).toContain('We sent $74.97 back to Pix')
+    expect(says('rejected')).toContain('$70.00 stays in your balance')
+    expect(says('failed')).toContain('Please contact Support')
+  })
+
+  it('names the order, so the row can link it', () => {
+    for (const status of [null, 'pending', 'sent', 'rejected', 'failed']) expect(says(status)).toContain('#DM-AB12-CD34')
+  })
+
+  it('has a plain name when the method is unknown', () => {
+    expect(refundSentence(toRefundToCardRow({ ...base, method_label: null }, 7000))).toContain('your payment method')
+  })
+
+  it('uses no jargon', () => {
+    for (const status of [null, 'pending', 'sent', 'rejected', 'failed']) expect(says(status)).not.toMatch(/escrow|on hold|ledger|quote|minor/i)
   })
 })

@@ -31,7 +31,7 @@ import { PaidNextSteps } from './PaidNextSteps'
 
 const POLL_MS = 2_500
 const GIVE_UP_MS = 120_000
-const CONFETTI = ['#56B87F', '#A3E635', '#F5C451', '#E9EDF2']
+const CONFETTI = ['#56B87F', '#A3E635', '#F5C451', '#FFFFFF']
 
 export interface PaidOrderSummary {
   id: string
@@ -178,7 +178,7 @@ export function OrderPaidView({ order }: { order: PaidOrderSummary }) {
       </span>
     ) : (
       <span className="grid h-[60px] w-[60px] place-items-center rounded-full bg-[#24252B] ring-1 ring-white/10">
-        <Loader2 className={view === 'slow' ? 'h-7 w-7 text-[#9AA6B3]' : 'h-7 w-7 animate-spin text-[#56B87F]'} />
+        <Loader2 className={view === 'slow' ? 'h-7 w-7 text-text-secondary' : 'h-7 w-7 animate-spin text-[#56B87F]'} />
       </span>
     )
 
@@ -209,8 +209,8 @@ export function OrderPaidView({ order }: { order: PaidOrderSummary }) {
           className="flex flex-col items-center text-center"
         >
           {mark}
-          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-[-0.01em] text-[#E9EDF2] sm:text-[32px]">{title}</h1>
-          <p className="mt-1.5 max-w-[460px] text-[14.5px] leading-relaxed text-[#9AA6B3]">{body}</p>
+          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-[-0.01em] text-text-primary sm:text-[32px]">{title}</h1>
+          <p className="mt-1.5 max-w-[460px] text-[14.5px] leading-relaxed text-text-secondary">{body}</p>
         </motion.div>
 
         <motion.section
@@ -225,27 +225,27 @@ export function OrderPaidView({ order }: { order: PaidOrderSummary }) {
               {order.image ? (
                 <Image src={order.image} alt={order.title} width={56} height={56} unoptimized className="h-14 w-14 object-cover" />
               ) : (
-                <PackageCheck className="h-6 w-6 text-[#9AA6B3]" />
+                <PackageCheck className="h-6 w-6 text-text-secondary" />
               )}
             </span>
             <div className="min-w-0 flex-1 text-left">
-              <p className="truncate text-[15px] font-semibold leading-snug text-[#E9EDF2]">{order.title}</p>
-              <p className="mt-0.5 truncate text-[12.5px] text-[#9AA6B3]">
+              <p className="truncate text-[15px] font-semibold leading-snug text-text-primary">{order.title}</p>
+              <p className="mt-0.5 truncate text-[12.5px] text-text-secondary">
                 {[order.gameName, `Qty ${order.quantity}`].filter(Boolean).join(' · ')}
               </p>
               {order.orderNumber && (
                 <button
                   type="button"
                   onClick={copyNumber}
-                  className="-ml-1 mt-0.5 inline-flex items-center gap-1.5 rounded px-1 py-0.5 font-mono text-[12px] font-semibold text-[#C9D1DA] transition-colors hover:bg-white/[0.06] hover:text-[#E9EDF2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  className="-ml-1 mt-0.5 inline-flex items-center gap-1.5 rounded px-1 py-0.5 font-mono text-[12px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   aria-label={`Copy order number ${order.orderNumber}`}
                 >
                   {order.orderNumber}
-                  <Copy className="h-3 w-3 text-[#9AA6B3]" />
+                  <Copy className="h-3 w-3 text-text-secondary" />
                 </button>
               )}
             </div>
-            <span className="shrink-0 self-start pt-0.5 text-[17px] font-bold tabular-nums text-[#E9EDF2]">${order.total.toFixed(2)}</span>
+            <span className="shrink-0 self-start pt-0.5 text-[17px] font-bold tabular-nums text-text-primary">${order.total.toFixed(2)}</span>
           </div>
 
         </motion.section>
@@ -264,7 +264,7 @@ export function OrderPaidView({ order }: { order: PaidOrderSummary }) {
           {secondary && (
             <Link
               href={secondary.href}
-              className="flex h-12 w-full items-center justify-center rounded-lg bg-white/[0.03] text-[14.5px] font-semibold text-[#C9D1DA] ring-1 ring-white/[0.12] transition-colors hover:bg-white/[0.06] hover:text-[#E9EDF2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:flex-1"
+              className="flex h-12 w-full items-center justify-center rounded-lg bg-white/[0.03] text-[14.5px] font-semibold text-text-secondary ring-1 ring-white/[0.12] transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:flex-1"
             >
               {secondary.label}
             </Link>

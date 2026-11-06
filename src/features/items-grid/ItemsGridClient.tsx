@@ -10,7 +10,7 @@
  * the client over the full list; the page number lives in the URL (?page=),
  * read through SearchParamsBridge so the first page stays in the static HTML.
  */
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { EggIcon } from '@phosphor-icons/react/dist/ssr/Egg'
 import { FlaskIcon } from '@phosphor-icons/react/dist/ssr/Flask'
 import { PawPrintIcon } from '@phosphor-icons/react/dist/ssr/PawPrint'
@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { FilterToolbar, type AppliedFilter } from '@/components/marketplace/FilterToolbar'
 import { SheetChips, SheetPickOne, type FilterSheetSection } from '@/components/marketplace/FiltersSheet'
 import { SellerPromptRow } from '@/components/seller/SellerPrompt'
+import { useFilterMemory } from '@/hooks/use-filter-memory'
 import { useUrlPage } from '@/hooks/use-url-page'
 import { useAuth } from '@/hooks/use-auth'
 import ItemCard from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard'
@@ -33,6 +34,7 @@ import { TraitMarks } from '@/features/item-buy/TraitMarks'
 import type { AmLetter } from '@/features/item-buy/model/am-traits'
 import { AM_ITEM_TYPES, type AmItemType } from '@/lib/value-listings/am-item-kind'
 import { filterGrid, formsForLetters, fromGridRows, sortGrid, splitByForm, toggleGridLetter, type FilterOption, type GridRow, type GridSort } from './model/grid'
+import { gridAddressValues, readGridAddress } from './model/grid-address'
 import { GridCard } from './GridCard'
 import { StockAlertsProvider } from './stock-alerts-context'
 
@@ -89,17 +91,30 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, rows, it
 
   const forms = useMemo(() => (isAm ? formsForLetters(letters, options.forms.map((f) => f.value)) : pickedForms), [isAm, letters, options.forms, pickedForms])
 
-  // A ?search= deep link (old value-page links) seeds the search once.
-  const seedFromUrl = useCallback((params: URLSearchParams) => {
-    const s = params.get('search')
-    if (s) setQ((cur) => cur || s)
-  }, [])
-
   const priceBounds = useMemo<[number, number]>(() => {
     const prices = items.map((i) => i.minPrice).filter((p): p is number => p != null)
     return prices.length > 0 ? [Math.floor(Math.min(...prices)), Math.ceil(Math.max(...prices))] : [0, 0]
   }, [items])
   const hasPrice = priceBounds[1] > priceBounds[0]
+
+  // Going back to this page brings all of it back.
+  const restored = useFilterMemory(gridAddressValues({ q, sort, rarities, types, letters, forms: pickedForms, price }), (params) => {
+    const saved = readGridAddress(params, {
+      rarities: options.rarities.map((o) => o.value),
+      types: options.types.map((o) => o.value),
+      letters: TRAIT_LETTERS.map((t) => t.letter),
+      forms: options.forms.map((o) => o.value),
+      bounds: priceBounds,
+    })
+    setQ(saved.q)
+    setSort(saved.sort)
+    setRarities(saved.rarities)
+    setTypes(saved.types)
+    setLetters(saved.letters)
+    setPickedForms(saved.forms)
+    setPrice(saved.price)
+  })
+
   const typeTabs = isAm ? AM_ITEM_TYPES.filter((t) => options.types.some((o) => o.value === t)) : []
   const hasTypeTabs = typeTabs.length > 1
   const tab: TypeTab = hasTypeTabs ? ((types[0] as AmItemType | undefined) ?? 'All') : 'All'
@@ -113,7 +128,7 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, rows, it
     return sortGrid(splitByForm(filterGrid(items, f), f), sort)
   }, [items, rarities, types, forms, price, q, sort])
   const filterKey = [rarities.join(','), types.join(','), forms.join(','), price?.join('-') ?? '', q.trim(), sort].join('|')
-  const paged = useUrlPage(sorted, PAGE_SIZE, filterKey)
+  const paged = useUrlPage(sorted, PAGE_SIZE, restored ? filterKey : null)
 
   const pickTab = (next: TypeTab) => {
     setTypes(next === 'All' ? [] : [next])
@@ -167,7 +182,6 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, rows, it
   return (
     <StockAlertsProvider gameSlug={gameSlug}>
       <main className="min-h-screen">
-        <SearchParamsBridge onParams={seedFromUrl} />
         <SearchParamsBridge onParams={paged.onParams} />
         {/* "<Game> Items" for every game, no number (owner, 2026-11-05). */}
         <section ref={paged.topRef} className="scroll-mt-game-chrome">
@@ -203,7 +217,7 @@ export default function ItemsGridClient({ gameSlug, gameName, itemNoun, rows, it
         </section>
 
         <FilterToolbar
-          search={{ value: q, onChange: setQ, placeholder: words?.search ?? `Search for a ${itemNoun.replace(/s$/, '')}`, ariaLabel: `Search ${gameName} ${words?.many ?? itemNoun.toLowerCase()}` }}
+          search={{ value: q, onChange: setQ, placeholder: words?.search ?? `Search for ${/^[aeiou]/i.test(itemNoun) ? 'an' : 'a'} ${itemNoun.replace(/s$/, '')}`, ariaLabel: `Search ${gameName} ${words?.many ?? itemNoun.toLowerCase()}` }}
           filters={
             <>
               {hasTypes && <MultiSelectFilter label="Item Type" options={toTaxonomy(options.types)} selected={types} onChange={setTypes} />}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sellerExtraTitle } from './seller-title'
+import { offerLine, sellerExtraTitle } from './seller-title'
 
 const SAB = 'steal-a-brainrot'
 const ctx = (itemName: string, traitLabel?: string) => ({ itemName, gameName: 'Steal a Brainrot', traitLabel })
@@ -32,5 +32,23 @@ describe('sellerExtraTitle', () => {
   it('nothing to show', () => {
     expect(sellerExtraTitle(SAB, null, ctx('67'))).toBeNull()
     expect(sellerExtraTitle(SAB, '   ', ctx('67'))).toBeNull()
+  })
+})
+
+describe('offerLine', () => {
+  it('keeps what this offer is, drops the name, the game and the sales talk', () => {
+    expect(offerLine(SAB, 'Rainbow Garama and Madundung 500M/s – Steal a Brainrot | Instant Delivery', ctx('Garama and Madundung', 'Rainbow'))).toBe('Rainbow 500M/s')
+    expect(offerLine(SAB, 'Candy Dragon Cannelloni 1B/s - Quick Delivery', ctx('Dragon Cannelloni', 'Candy'))).toBe('Candy 1B/s')
+    expect(offerLine(SAB, 'Garama and Madundung - 50M/s', ctx('Garama and Madundung'))).toBe('50M/s')
+  })
+  it('a title that never names the item stays as written, minus the talk', () => {
+    expect(offerLine(SAB, 'Best Traits Bundle | Instant Delivery', ctx('Garama and Madundung'))).toBe('Best Traits Bundle')
+  })
+  it('says nothing when the title adds nothing', () => {
+    expect(offerLine(SAB, 'Dragon Gingerini', ctx('Dragon Gingerini'))).toBeNull()
+    expect(offerLine(SAB, 'Dragon Gingerini - Instant Delivery', ctx('Dragon Gingerini'))).toBeNull()
+  })
+  it('only on games whose titles carry news', () => {
+    expect(offerLine('adopt-me', 'Candy Dragon 1B/s', ctx('Dragon'))).toBeNull()
   })
 })

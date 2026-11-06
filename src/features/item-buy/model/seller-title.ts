@@ -17,6 +17,30 @@ export function sellerExtraTitle(
   if (!GAMES_WITH_SELLER_TITLE.has(gameSlug) || !title?.trim()) return null
   const known = new Set(`${context.itemName} ${context.gameName} ${context.traitLabel ?? ''}`.split(/\s+/).flatMap((w) => normalizeText(w).split(' ')))
   // "/s" of an income is never the only news: "125M/s" still leaves "125m".
-  const says = normalizeText(title).split(' ').filter((w) => w && w !== 's' && w !== 'sec' && !known.has(w) && !FILLER_WORDS.has(w))
-  return says.length > 0 ? title.trim() : null
+  return saysNews(title, known) ? title.trim() : null
+}
+
+function saysNews(text: string, known: ReadonlySet<string>): boolean {
+  return normalizeText(text).split(' ').some((w) => w && w !== 's' && w !== 'sec' && !known.has(w) && !FILLER_WORDS.has(w))
+}
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * What the buyer needs from that title, under the item's name: "Rainbow 500M/s", not
+ * "Rainbow Garama and Madundung 500M/s – Steal a Brainrot | Instant Delivery". The
+ * name is already the heading and the rest is sales talk (owner, 2026-11-06).
+ */
+export function offerLine(
+  gameSlug: string,
+  title: string | null | undefined,
+  context: { itemName: string; gameName: string; traitLabel?: string | null },
+): string | null {
+  const extra = sellerExtraTitle(gameSlug, title, context)
+  if (!extra) return null
+  const known = new Set(`${context.gameName}`.split(/\s+/).flatMap((w) => normalizeText(w).split(' ')))
+  const parts = extra.split(/\s*[|–—]\s*|\s+-\s+/).filter((part) => saysNews(part, known))
+  const line = parts.join(' ').replace(/\s+/g, ' ').trim()
+  const withoutName = line.replace(new RegExp(escapeRegExp(context.itemName), 'i'), ' ').replace(/\s+/g, ' ').trim()
+  return withoutName || line || null
 }

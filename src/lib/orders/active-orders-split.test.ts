@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { splitActiveOrders } from './active-orders-split'
+import { LIVE_ORDER_STATUSES, splitActiveOrders } from './active-orders-split'
 
 const ME = 'me'
 const row = (id: string, side: 'buy' | 'sell', status = 'paid') => ({
@@ -7,6 +7,16 @@ const row = (id: string, side: 'buy' | 'sell', status = 'paid') => ({
   status,
   buyer_id: side === 'buy' ? ME : 'other',
   seller_id: side === 'sell' ? ME : 'other',
+})
+
+describe('which orders are live', () => {
+  it('an order stays until it is completed: delivered and disputed ones count', () => {
+    expect(LIVE_ORDER_STATUSES).toContain('delivered')
+    expect(LIVE_ORDER_STATUSES).toContain('disputed')
+    expect(LIVE_ORDER_STATUSES).not.toContain('completed')
+    expect(LIVE_ORDER_STATUSES).not.toContain('refunded')
+    expect(LIVE_ORDER_STATUSES).not.toContain('cancelled')
+  })
 })
 
 describe('splitActiveOrders', () => {

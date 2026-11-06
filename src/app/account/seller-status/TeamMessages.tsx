@@ -160,7 +160,7 @@ export default function TeamMessages() {
                 />
                 <div>
                   <p className="text-[13.5px] font-bold text-white">DropMarket Team</p>
-                  <p className="text-[10.5px] text-white/60">About your seller application</p>
+                  <p className="text-[10.5px] text-text-secondary">About your seller application</p>
                 </div>
               </div>
               <button

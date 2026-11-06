@@ -16,6 +16,7 @@
  * value item pages; listings are noindex, so none are prerendered at build.
  */
 
+import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { listingMeta } from '@/lib/seo/listing-meta'
 import { Suspense, cache } from 'react'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -24,6 +25,8 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import ListingDetailSkeleton from './_ListingDetailSkeleton'
 import { LISTING_DETAIL_SELECT, ListingDetailBody } from './_ListingDetailBody'
 import { getActiveGame, getEnabledCategory } from '../_routeGate'
+import { resolveItemRoute } from '../_valueItemOffers'
+import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import {
   createCategoryListingsReadClient,
   createHomeListingsReadClient,
@@ -91,6 +94,11 @@ const resolveCurrencyRedirect = cache(async function resolveCurrencyRedirect(
   })
 })
 
+async function storeIsPaused(listing: { seller?: { id?: string } | null }): Promise<boolean> {
+  const paused = await getPausedSellerIds()
+  return !!listing.seller?.id && paused.includes(listing.seller.id)
+}
+
 type PublicListing =
   | { kind: 'listing'; listing: any }
   | { kind: 'redirect'; href: string }
@@ -105,6 +113,10 @@ type PublicListing =
  *      A listing whose canonical URL differs (alias segment, id instead of
  *      slug) 308s there; one whose game/category is not live renders here, as
  *      it always has (a game the public cannot see at all is a 404).
+ *
+ * A paused store's offers are hidden everywhere, this link included (owner,
+ * 2026-11-06): a 404, like any other listing that's off sale. Pausing and
+ * resuming refresh it through the same tags as the category pages.
  *
  * `cache()` shares it between generateMetadata, the route gate and the body.
  */
@@ -129,7 +141,7 @@ const getPublicListing = cache(async function getPublicListing(
         .maybeSingle()
     let { data } = (await inCategory('slug')) as { data: any }
     if (!data && byId) data = ((await inCategory('id')) as { data: any }).data
-    if (data) return { kind: 'listing', listing: data }
+    if (data) return (await storeIsPaused(data)) ? null : { kind: 'listing', listing: data }
   }
 
   const anywhere = createHomeListingsReadClient()
@@ -147,6 +159,7 @@ const getPublicListing = cache(async function getPublicListing(
   if (!listing?.game?.slug || !listing.category?.slug) return null
 
   const canonical = `/${listing.game.slug}/${listing.category.slug}/${listing.slug || listing.id}`
+  if (await storeIsPaused(listing)) return null
   if (canonical !== `/${gameSlug}/${categorySlug}/${listingSlug}`) {
     return { kind: 'redirect', href: canonical }
   }
@@ -154,8 +167,24 @@ const getPublicListing = cache(async function getPublicListing(
 })
 
 /**
- * Redirects (currency → currency page, alias → canonical) and the 404 are
- * decided here as well as in the route: metadata resolves before the shell
+ * An item in the catalogue has one page, its item page (owner, 2026-11-06: a link to an
+ * offer opened this older design). A listing linked to one goes there, open on its own
+ * offer and trait. A listing with no item page, or in another category, stays here.
+ */
+async function itemPageOf(listing: any): Promise<string | null> {
+  const itemSlug: string | null = listing.value_item_slug ?? null
+  const variant: string | null = listing.value_variant ?? null
+  const gameSlug: string | undefined = listing.game?.slug
+  const categorySlug: string | undefined = listing.category?.slug
+  if (!itemSlug || !gameSlug || !categorySlug) return null
+  const withTrait = variant ? await resolveItemRoute(gameSlug, categorySlug, itemSlug, variant) : null
+  if (!withTrait && !(await resolveItemRoute(gameSlug, categorySlug, itemSlug, null))) return null
+  return itemBuyHref({ gameSlug, categorySlug, itemSlug, variant: withTrait ? variant : null, offerId: listing.id })
+}
+
+/**
+ * Redirects (currency → currency page, alias → canonical, catalogue item → its
+ * item page) and the 404 are decided here as well as in the route: metadata resolves before the shell
  * flushes, so this is what makes them a real 308 / 404 (not a 200 with a
  * "not found" body inside the Suspense boundary).
  */
@@ -166,6 +195,8 @@ async function resolveOrExit(params: PageProps['params']) {
   const result = await getPublicListing(gameSlug, categorySlug, listingSlug)
   if (!result) notFound()
   if (result.kind === 'redirect') permanentRedirect(result.href)
+  const itemPage = await itemPageOf(result.listing)
+  if (itemPage) permanentRedirect(itemPage)
   return { gameSlug, categorySlug, listing: result.listing }
 }
 

@@ -40,12 +40,12 @@ export function HowItWorks() {
             <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-[rgba(106,168,255,0.16)]">
               <Info size={17} weight="fill" color={TRUST_BLUE} />
             </span>
-            <span className="text-[15px] font-semibold tracking-[-0.01em] text-[#E9EDF2]">How Your Order Works</span>
+            <span className="text-[15px] font-semibold tracking-[-0.01em] text-text-primary">How Your Order Works</span>
             <CaretDown
               aria-hidden
               size={16}
               weight="bold"
-              className="ml-auto shrink-0 text-[#C9D2DC] transition-transform duration-200 group-data-[state=open]:rotate-180"
+              className="ml-auto shrink-0 text-text-secondary transition-transform duration-200 group-data-[state=open]:rotate-180"
             />
           </Accordion.Trigger>
         </Accordion.Header>
@@ -55,8 +55,8 @@ export function HowItWorks() {
               <li key={title} className="flex items-start gap-3">
                 <Icon aria-hidden size={20} weight="duotone" color={TRUST_BLUE} className="mt-[1px] shrink-0" />
                 <span className="min-w-0">
-                  <span className="block text-[14px] font-semibold leading-snug text-[#E9EDF2]">{title}</span>
-                  <span className="mt-0.5 block text-[13px] leading-snug text-[#9AA6B3]">{sub}</span>
+                  <span className="block text-[14px] font-semibold leading-snug text-text-primary">{title}</span>
+                  <span className="mt-0.5 block text-[13px] leading-snug text-text-secondary">{sub}</span>
                 </span>
               </li>
             ))}

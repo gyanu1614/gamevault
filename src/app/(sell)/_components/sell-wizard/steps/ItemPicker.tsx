@@ -6,7 +6,6 @@ import type { Attribute } from '@/lib/actions/new-schema'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { ItemPicture } from '@/features/items-grid/ItemPicture'
 import { rarityMeta } from '@/lib/values/rarity'
-import { inputCls } from '@/app/(sell)/_components/sell-wizard/styles'
 import { fieldsAfterPick, type ItemRow, type ItemSearchGame } from '@/app/(sell)/_components/sell-wizard/item-search'
 import { FieldCard } from '@/app/(sell)/_components/sell-wizard/steps/Step3Details'
 import { SubCard } from '@/app/(sell)/_components/sell-wizard/ui/SubCard'
@@ -43,12 +42,13 @@ function ItemMeta({ gameSlug, rarity, type }: { gameSlug: string; rarity: string
 /**
  * The sell form's first question for a game with a catalogue (owner, 2026-11-06):
  * type a name, pick a row, and every item field fills. Then only what the pick
- * can't know is asked (the trait, the mutation). An item we don't list goes to the
- * manual fields. Rules in ../item-search; phones get the Combobox's bottom sheet.
+ * can't know is asked (the trait, the mutation). For an item we don't list, the seller
+ * enters it manually: this card goes and the title says what it is. Rules in
+ * ../item-search; phones get the Combobox's bottom sheet.
  */
 export const ItemPicker = memo(function ItemPicker({
-  game, gameSlug, rows, picked, attributes, values, topLevel, childrenOf, manual, manualItemName, hiddenIds, hint,
-  onPick, onChange, onFieldChange, onManual, onManualName, onBackToSearch,
+  game, gameSlug, rows, picked, attributes, values, childrenOf, hiddenIds, hint,
+  onPick, onChange, onFieldChange, onManual,
 }: {
   game: ItemSearchGame
   gameSlug: string
@@ -56,19 +56,14 @@ export const ItemPicker = memo(function ItemPicker({
   picked: ItemRow | null
   attributes: Attribute[]
   values: Record<string, unknown>
-  topLevel: Attribute[]
   childrenOf: Map<string, Map<string, Attribute[]>>
-  manual: boolean
-  manualItemName: string
-  /** Not asked on the manual path: the item lists and the retired fields. */
+  /** Not asked under a pick: the item lists and the retired fields. */
   hiddenIds: ReadonlySet<string>
   hint: FieldHint | null
   onPick: (row: ItemRow) => void
   onChange: () => void
   onFieldChange: (id: string, value: unknown) => void
   onManual: (typed: string) => void
-  onManualName: (name: string) => void
-  onBackToSearch: () => void
 }) {
   const facts = useItemFacts(gameSlug)
   const options = useMemo<ComboboxOption[]>(
@@ -80,25 +75,6 @@ export const ItemPicker = memo(function ItemPicker({
     })),
     [rows, facts, gameSlug],
   )
-
-  if (manual) {
-    return (
-      <SubCard title="Offer Details">
-        <div className="space-y-5">
-          {topLevel.filter((a) => !hiddenIds.has(a.id)).map((a) => (
-            <FieldCard key={a.id} attribute={a} values={values} onChange={onFieldChange} childrenOf={childrenOf} hint={hint} hiddenIds={hiddenIds} />
-          ))}
-          <div>
-            <label htmlFor="manual-item-name" className="mb-2 block text-[13px] font-medium text-text-secondary">Item Name</label>
-            <input id="manual-item-name" value={manualItemName} onChange={(e) => onManualName(e.target.value)} maxLength={80} className={inputCls} />
-          </div>
-          <button type="button" onClick={onBackToSearch} className="text-[14px] font-medium text-text-primary underline underline-offset-[3px] hover:text-text-secondary">
-            Back To Search
-          </button>
-        </div>
-      </SubCard>
-    )
-  }
 
   if (picked) {
     const [picture, rarity] = facts[picked.value] ?? [null, null]

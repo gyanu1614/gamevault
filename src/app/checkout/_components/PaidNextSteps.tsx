@@ -55,16 +55,16 @@ function ManualSteps({ sellerName }: { sellerName: string }) {
   ]
   return (
     <section aria-label="What happens next" className="mt-7 [@media(max-height:780px)]:mt-5">
-      <h2 className="text-center text-[16px] font-semibold text-[#E9EDF2]">What Happens Next</h2>
+      <h2 className="text-center text-[16px] font-semibold text-text-primary">What Happens Next</h2>
       <ol className="relative mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-3">
         {/* Connector: across the icons on desktop, down them on phones. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute left-[16.67%] right-[16.67%] top-8 hidden h-[2px] rounded-full bg-[linear-gradient(90deg,rgba(86,184,127,0.75),rgba(233,237,242,0.14)_50%,rgba(233,237,242,0.08))] sm:block"
+          className="pointer-events-none absolute left-[16.67%] right-[16.67%] top-8 hidden h-[2px] rounded-full bg-[linear-gradient(90deg,rgba(86,184,127,0.75),rgba(255,255,255,0.14)_50%,rgba(255,255,255,0.08))] sm:block"
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute bottom-8 left-8 top-8 w-[2px] -translate-x-1/2 rounded-full bg-[linear-gradient(180deg,rgba(86,184,127,0.75),rgba(233,237,242,0.14)_50%,rgba(233,237,242,0.08))] sm:hidden"
+          className="pointer-events-none absolute bottom-8 left-8 top-8 w-[2px] -translate-x-1/2 rounded-full bg-[linear-gradient(180deg,rgba(86,184,127,0.75),rgba(255,255,255,0.14)_50%,rgba(255,255,255,0.08))] sm:hidden"
         />
         {steps.map((s, i) => (
           <motion.li
@@ -76,8 +76,8 @@ function ManualSteps({ sellerName }: { sellerName: string }) {
           >
             <IconMark src={s.icon} done={s.done} />
             <span className="min-w-0">
-              <span className="block text-[15px] font-semibold leading-snug text-[#E9EDF2]">{s.title}</span>
-              <span className="mt-0.5 block text-[13px] leading-snug text-[#9AA6B3]">{s.line}</span>
+              <span className="block text-[15px] font-semibold leading-snug text-text-primary">{s.title}</span>
+              <span className="mt-0.5 block text-[13px] leading-snug text-text-secondary">{s.line}</span>
             </span>
           </motion.li>
         ))}
@@ -127,17 +127,17 @@ function InstantItem({ orderId }: { orderId: string }) {
       className="mt-7 flex flex-col items-center text-center [@media(max-height:780px)]:mt-5"
     >
       <IconMark src="/icons/set/key.svg" size="lg" done={state === 'shown'} />
-      <h2 className="mt-3 text-[18px] font-semibold text-[#E9EDF2]">Your Item Is Ready</h2>
-      <p className="mt-1 text-[13.5px] text-[#9AA6B3]">Delivered instantly. Keep it private.</p>
+      <h2 className="mt-3 text-[18px] font-semibold text-text-primary">Your Item Is Ready</h2>
+      <p className="mt-1 text-[13.5px] text-text-secondary">Delivered instantly. Keep it private.</p>
 
       {state === 'shown' ? (
         <div className="mt-4 flex w-full items-start gap-2 rounded-lg bg-black/35 px-3.5 py-3 text-left ring-1 ring-white/[0.12]">
-          <code className="min-w-0 flex-1 select-all whitespace-pre-wrap break-all font-mono text-[14px] leading-relaxed text-[#E9EDF2]">{code}</code>
+          <code className="min-w-0 flex-1 select-all whitespace-pre-wrap break-all font-mono text-[14px] leading-relaxed text-text-primary">{code}</code>
           <button
             type="button"
             onClick={copy}
             aria-label="Copy your item"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[#C9D1DA] transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             <Copy className="h-4 w-4" />
           </button>
@@ -147,7 +147,7 @@ function InstantItem({ orderId }: { orderId: string }) {
           type="button"
           onClick={reveal}
           disabled={state === 'loading'}
-          className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#E9EDF2] px-6 text-[14.5px] font-semibold text-[#121317] transition-[background-color,transform] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring active:scale-[0.98] disabled:opacity-70"
+          className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#FFFFFF] px-6 text-[14.5px] font-semibold text-[#121317] transition-[background-color,transform] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring active:scale-[0.98] disabled:opacity-70"
         >
           {state === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
           {state === 'loading' ? 'Opening…' : 'Show My Item'}

@@ -9,12 +9,21 @@ import type { Step4Props } from './types'
 import { titleExample } from './title-example'
 
 /** Offer title (not asked for currency: the server names it). */
-export function TitleSection({ p }: { p: Pick<Step4Props, 'title' | 'setTitle' | 'gameSlug' | 'gameName'> }) {
+export function TitleSection({ p }: { p: Pick<Step4Props, 'title' | 'setTitle' | 'gameSlug' | 'gameName' | 'onBackToSearch'> }) {
   // The error shows once the field has been left empty, not on first render.
   const [touched, setTouched] = useState(false)
   const titleInvalid = touched && !p.title.trim()
   return (
-<SubCard title="Title">
+<SubCard
+  title="Title"
+  right={
+    p.onBackToSearch ? (
+      <button type="button" onClick={p.onBackToSearch} className="shrink-0 text-[14px] font-medium text-text-secondary underline underline-offset-[3px] transition-colors hover:text-text-primary">
+        Back To Search
+      </button>
+    ) : null
+  }
+>
   <FieldRow>
     <input
       value={p.title}

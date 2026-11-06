@@ -8,13 +8,14 @@
  */
 
 import { useEffect, useState } from 'react'
-import { FileText, ImageOff, Loader2 } from 'lucide-react'
+import { FileText, ImageOff, Loader2, Video } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
   CHAT_ATTACHMENT_BUCKET,
   isImageAttachment,
   isStoragePath,
+  isVideoAttachment,
 } from '@/lib/chat/attachments'
 
 function useAttachmentUrl(value: string): { url: string | null; failed: boolean } {
@@ -66,6 +67,7 @@ export default function ChatAttachment({ value }: { value: string }) {
   }
 
   if (isImage) return <ImageThumb url={url} />
+  if (isVideoAttachment(value)) return <VideoClip url={url} />
 
   return (
     <a
@@ -77,6 +79,38 @@ export default function ChatAttachment({ value }: { value: string }) {
       <FileText className="h-4 w-4 text-lime-text" aria-hidden />
       Open PDF
     </a>
+  )
+}
+
+/**
+ * Plays in the bubble. `#t=0.1` shows a first frame on iPhones, which otherwise draw a
+ * blank box. A phone's HEVC file doesn't play in every desktop browser, so one that
+ * can't play becomes a link to the file.
+ */
+function VideoClip({ url }: { url: string }) {
+  const [cantPlay, setCantPlay] = useState(false)
+  if (cantPlay) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-[12.5px] font-semibold text-text-primary hover:text-lime-text"
+      >
+        <Video className="h-4 w-4 text-lime-text" aria-hidden />
+        Open Video
+      </a>
+    )
+  }
+  return (
+    <video
+      src={`${url}#t=0.1`}
+      controls
+      playsInline
+      preload="metadata"
+      onError={() => setCantPlay(true)}
+      className="max-h-72 w-[260px] max-w-full rounded-lg bg-black/40"
+    />
   )
 }
 

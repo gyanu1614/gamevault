@@ -34,7 +34,7 @@
 import { lockScroll } from '@/lib/scroll-lock'
 import { sellerFacingReason } from '@/lib/moderation/seller-reason'
 import * as React from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from '@/components/navigation/AppLink'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -79,7 +79,9 @@ import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
 import { listingOwnerUrl, listingUrl } from '@/lib/listings/url'
 import { sellerShopSlug, type SellerIdentityInput } from '@/lib/seller/identity'
 import { accountInputCls } from '@/components/account/AccountSurface'
-import { ScrollRow } from '@/components/ui/scroll-row'
+import { ScrollRow, useScrollEdges } from '@/components/ui/scroll-row'
+import { UrlSearchInput } from '@/components/account/UrlSearchInput'
+import { AccountMenuRow } from '@/components/account/AccountMenuRow'
 import { listingUnits, type QuantityGranularity } from '@/lib/currency/quantity-unit'
 
 const OFFER_META: Record<OfferType, { title: string }> = {
@@ -264,6 +266,15 @@ const ITEM_CLS =
   'h-9 cursor-pointer gap-2.5 rounded-[5px] px-2.5 text-[13px] font-semibold text-text-secondary focus:text-text-primary'
 const LABEL_CLS =
   'px-2.5 pb-1 pt-1.5 text-[12px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary'
+
+/**
+ * The ⋮ column stays in view over the columns that scroll, the way MUI X and Ant Design
+ * pin a column: filled with the card's own colour, so nothing darkens (owner, 2026-11-06:
+ * a wide dark gradient sat over Offer ID and read as a grey band). A short fade shows a
+ * column sliding under it, only while there's more to scroll to.
+ */
+const PINNED_CELL =
+  "sticky right-0 z-10 before:pointer-events-none before:absolute before:inset-y-0 before:right-full before:w-8 before:bg-gradient-to-l before:from-bg-raised before:to-transparent before:opacity-0 before:transition-opacity before:content-[''] group-data-[more=true]/table:before:opacity-100"
 
 // ─── Small building blocks ───────────────────────────────────────────────────
 
@@ -474,10 +485,11 @@ function OffersContent() {
   // same single URL write.
   const setGameId = (v: string) => setFilters({ game: v, page: 1 })
   const setStatusFilter = (v: FilterStatus) => setFilters({ status: v, page: 1 })
-  const setSearch = (v: string) => setFilters({ q: v, page: 1 })
   const setSort = (v: SortKey) => setFilters({ sort: v, page: 1 })
   const setPerPage = (v: number) => setFilters({ perPage: v, page: 1 })
   const setPage = (v: number) => setFilter('page', v)
+  const tableScroller = useRef<HTMLDivElement>(null)
+  const tableEdges = useScrollEdges(tableScroller)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   // Row checkboxes appear only in selection mode (owner, 2026-09-28: the
   // table opens on the offers, not on a column of ticks). Bulk Actions
@@ -705,6 +717,7 @@ function OffersContent() {
     <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-72">
     {/* Standard page width (max-w-7xl + px-4/6/8), same x as every account page. */}
     <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-7 sm:px-6 md:max-w-7xl lg:px-8">
+      <AccountMenuRow isSeller inPage />
       {isRestricted && (
         <div className="mb-3 shrink-0">
           <RestrictionBanner status={sellerStatus} />
@@ -860,9 +873,10 @@ function OffersContent() {
 
         <div className="relative min-w-0 flex-1 sm:min-w-[220px] sm:max-w-[320px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-          <input
+          <UrlSearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            param="q"
+            onCommit={(q) => setFilters({ q, page: 1 })}
             placeholder="Search offers…"
             aria-label="Search offers"
             className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-3 font-medium sm:h-[42px]')}
@@ -900,10 +914,10 @@ function OffersContent() {
             reference app ships the same row look on phones, horizontally
             scrollable). The old below-md stacked-card list is retired. */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div className="overflow-x-auto overscroll-x-contain">
+          <div ref={tableScroller} data-more={tableEdges.right} className="group/table overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
-              <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+              <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary">
                 {selecting && (
                   <th className="w-12 py-3 pl-5 pr-2 max-sm:hidden">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
@@ -919,7 +933,7 @@ function OffersContent() {
                 <th className="px-3 py-3 whitespace-nowrap">Delivery Type</th>
                 <th className="px-3 py-3 whitespace-nowrap">Offer ID</th>
                 <th className="px-3 py-3 whitespace-nowrap">Updated</th>
-                <th className="sticky right-0 z-10 w-24 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-3 pl-10 pr-5" />
+                <th className={cn(PINNED_CELL, 'w-14 bg-bg-raised py-3 pl-1 pr-3')} />
               </tr>
             </thead>
             <tbody>
@@ -949,7 +963,7 @@ function OffersContent() {
                     key={l.id}
                     className={cn(
                       'border-t border-white/[0.06] transition-colors',
-                      selected.has(l.id) && 'bg-white/[0.03]',
+                      selected.has(l.id) && 'bg-bg-raised-hover',
                     )}
                   >
                     {selecting && (
@@ -1029,7 +1043,7 @@ function OffersContent() {
                     <td className="whitespace-nowrap px-3 py-2.5 text-[12.5px] text-text-tertiary">
                       {fmtRelative(l.updated_at)}
                     </td>
-                    <td className="sticky right-0 z-10 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-4 pl-10 pr-5">
+                    <td className={cn(PINNED_CELL, 'py-2.5 pl-1 pr-3 shadow-[0_-1px_0_rgba(255,255,255,0.06)]', selected.has(l.id) ? 'bg-bg-raised-hover' : 'bg-bg-raised')}>
                       {renderActionsMenu(
                         l,
                         'flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-text-tertiary transition-colors hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-text-primary',
@@ -1066,7 +1080,7 @@ function OffersContent() {
             table, stacked so nothing hides off-screen on phones. ── */}
         <div className="hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-1">
-            <label className="-ml-2 flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+            <label className="-ml-2 flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary">
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
               Select All
             </label>

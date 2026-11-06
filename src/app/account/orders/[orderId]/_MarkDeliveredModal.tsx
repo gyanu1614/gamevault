@@ -10,7 +10,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, CheckCircle2, Image as ImageIcon, Loader2, PackageCheck } from 'lucide-react'
+import { Upload, X, CheckCircle2, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { PackageCheck } from './_order-icons'
 import { cn } from '@/lib/utils'
 import { OrderModal, modalButton } from './_OrderModal'
 import { createClient } from '@/lib/supabase/client'

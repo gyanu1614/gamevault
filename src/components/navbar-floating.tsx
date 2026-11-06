@@ -6,7 +6,7 @@ import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
-  Search, Menu, X, ArrowLeft, ChevronRight, Settings, Store, Package, MessageSquare, PanelLeftOpen, PanelLeftClose, Wallet, LayoutDashboard, Activity, Coins, UserCircle2, Swords, Rocket, LifeBuoy, ShoppingCart, LayoutGrid,
+  Search, Menu, X, ArrowLeft, ChevronRight, Settings, Store, Package, MessageSquare, PanelLeftOpen, PanelLeftClose, Wallet, LayoutDashboard, Activity, Coins, UserCircle2, Swords, Rocket, LifeBuoy, Tag, LayoutGrid,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages'
 import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
-import { splitActiveOrders } from '@/lib/orders/active-orders-split'
+import { LIVE_ORDER_STATUSES, splitActiveOrders } from '@/lib/orders/active-orders-split'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { cn } from '@/lib/utils'
 import { safeInternalPath } from '@/lib/utils/safe-link'
@@ -30,8 +30,8 @@ import { RevealGroup, RevealItem } from '@/components/account/Reveal'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import {
   BellIcon,
-  ChatCircleDotsIcon,
-  ReceiptIcon,
+  ChatTextIcon,
+  PackageIcon,
   CaretDownIcon,
   CaretRightIcon,
   MagnifyingGlassIcon,
@@ -39,7 +39,6 @@ import {
 } from '@phosphor-icons/react'
 import { NavAccountButton, NavIconButton, NavPanel, NavPanelHeader } from '@/components/navbar/NavChrome'
 import { ProfileMenu } from '@/components/navbar/ProfileMenu'
-import { useNavWalletBalance, useStoreOfflineMode } from '@/components/navbar/use-profile-menu-data'
 import { OrderStatusPill } from '@/components/account/OrderStatusPill'
 import { useUserChannelEvent, useUserChannelRejoined } from '@/hooks/use-user-channel'
 import { pictureUrl } from '@/lib/images/picture-url'
@@ -49,8 +48,8 @@ import { pictureUrl } from '@/lib/images/picture-url'
    sellerOnly rows hide for buyers; page-level tabs carry sub-views. */
 const ACCOUNT_MENU_ITEMS = [
   { label: 'Dashboard', href: '/account/dashboard', Icon: LayoutDashboard, sellerOnly: false },
-  { label: 'Orders', href: '/account/orders', Icon: ShoppingCart, sellerOnly: false },
-  { label: 'Offers', href: '/account/listings', Icon: Package, sellerOnly: true },
+  { label: 'Orders', href: '/account/orders', Icon: Package, sellerOnly: false },
+  { label: 'Offers', href: '/account/listings', Icon: Tag, sellerOnly: true },
   { label: 'Messages', href: '/account/messages', Icon: MessageSquare, sellerOnly: false },
   { label: 'Wallet', href: '/account/wallet', Icon: Wallet, sellerOnly: false },
   { label: 'Founding HQ', href: '/founding', Icon: Rocket, sellerOnly: false },
@@ -134,7 +133,7 @@ function MobileServiceRow({
           {item.description}
         </span>
       </span>
-      <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-white/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/75" />
+      <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-text-primary" />
     </>
   )
 
@@ -191,7 +190,7 @@ function LiveOrderGameIcon({ game }: { game?: { slug?: string | null; image_url?
           className="h-full w-full object-cover"
         />
       ) : (
-        <ReceiptIcon size={17} weight="bold" aria-hidden className="text-text-secondary" />
+        <PackageIcon size={17} weight="bold" aria-hidden className="text-text-secondary" />
       )}
     </div>
   )
@@ -462,8 +461,6 @@ export function Navbar({
 
   const isAdmin = useIsAdmin(user?.id)
   // Admin badge/menu: one cached read per user (useIsAdmin), not one per mount.
-  // V21/P7.ae — Offline Mode (store pause), shared with the checkout bar.
-  const { offlineMode, pendingOffline, toggleOfflineMode } = useStoreOfflineMode(user)
 
   // Unread message count — shared with the account sidebar (one query key,
   // one request); chat realtime invalidates it, the poll is a fallback.
@@ -534,12 +531,12 @@ export function Navbar({
       // Workstream E — buyers still see their unpaid 'pending' (awaiting
       // payment) orders in Live Orders; sellers do NOT — a seller can't act on
       // an order until the payment is confirmed, so 'pending' is dropped from
-      // the selling set.
-      const ACTIVE_BUYING = ['pending', 'paid', 'processing', 'delivering']
+      // the selling set. An order stays here until the buyer completes it
+      // (owner, 2026-11-06): marked delivered used to take it away.
       const { data } = await supabase
         .from('orders')
         .select('id, order_number, status, total_amount, created_at, buyer_id, seller_id, listing:listings!orders_listing_id_fkey(title, game:games(slug, image_url))')
-        .in('status', ACTIVE_BUYING)
+        .in('status', [...LIVE_ORDER_STATUSES])
         .or(`buyer_id.eq.${user.id},and(seller_id.eq.${user.id},status.neq.pending)`)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -550,7 +547,6 @@ export function Navbar({
   })
   // V63 — Wallet balance for the profile-menu Wallet row (sellers), shared
   // with the checkout bar (one query key, one cache).
-  const navWalletBalance = useNavWalletBalance(user)
 
   const activeOrders = activeOrdersData || { buying: [], selling: [] }
   const totalActiveOrders = activeOrders.buying.length + activeOrders.selling.length
@@ -1093,7 +1089,7 @@ export function Navbar({
                       below, after the bell). */}
                   <NavIconButton
                     href="/account/messages"
-                    icon={ChatCircleDotsIcon}
+                    icon={ChatTextIcon}
                     label="Messages"
                     count={unreadCount}
                     className="lg:hidden"
@@ -1205,7 +1201,7 @@ export function Navbar({
                   {/* Messages — desktop (phones use the shortcut above). */}
                   <NavIconButton
                     href="/account/messages"
-                    icon={ChatCircleDotsIcon}
+                    icon={ChatTextIcon}
                     label="Messages"
                     count={unreadCount}
                     className="hidden lg:grid"
@@ -1214,7 +1210,7 @@ export function Navbar({
                   {/* Live Orders */}
                   <div className="relative" data-dropdown>
                     <NavIconButton
-                      icon={ReceiptIcon}
+                      icon={PackageIcon}
                       label="Live Orders"
                       count={totalActiveOrders}
                       active={activityOpen}
@@ -1228,23 +1224,11 @@ export function Navbar({
 
                     {activityOpen && (
                       <NavPanel onClose={() => setActivityOpen(false)}>
-                        <NavPanelHeader
-                          title="Live Orders"
-                          aside={
-                            <Link
-                              href="/account/orders"
-                              onClick={() => setActivityOpen(false)}
-                              className="group inline-flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
-                            >
-                              View All
-                              <CaretRightIcon size={11} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
-                            </Link>
-                          }
-                        />
+                        <NavPanelHeader title="Live Orders" />
 
                         {/* One view: Buying above Selling; a section renders
                             only when it has orders. */}
-                        {activeOrders.buying.length === 0 && activeOrders.selling.length === 0 ? (
+                        {totalActiveOrders === 0 ? (
                           <div className="py-12 text-center">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -1280,6 +1264,16 @@ export function Navbar({
                               ))}
                           </div>
                         )}
+
+                        <div className="shrink-0 border-t border-white/[0.07] p-2.5">
+                          <Link
+                            href="/account/orders"
+                            onClick={() => setActivityOpen(false)}
+                            className="flex h-10 items-center justify-center rounded-[8px] bg-white/[0.06] text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.1]"
+                          >
+                            View All Orders
+                          </Link>
+                        </div>
                       </NavPanel>
                     )}
                   </div>
@@ -1321,11 +1315,8 @@ export function Navbar({
                       <ProfileMenu
                         user={user}
                         isAdmin={isAdmin}
-                        walletBalance={navWalletBalance}
                         unreadMessages={unreadCount}
-                        offlineMode={offlineMode}
-                        pendingOffline={pendingOffline}
-                        onToggleOffline={toggleOfflineMode}
+                        pendingOrders={totalActiveOrders}
                         onNavigate={() => setUserMenuOpen(false)}
                         onLogout={() => void performLogout()}
                       />
@@ -1425,7 +1416,7 @@ export function Navbar({
                       setMobileMenuTab(null)
                     }}
                     aria-label="Close menu"
-                    className="grid h-10 w-10 place-items-center rounded-md bg-white/[0.06] text-white/75 transition-[background-color,color,transform] hover:bg-white/[0.10] hover:text-white active:scale-95"
+                    className="grid h-10 w-10 place-items-center rounded-md bg-white/[0.06] text-text-primary transition-[background-color,color,transform] hover:bg-white/[0.10] hover:text-white active:scale-95"
                   >
                     <X aria-hidden className="h-5 w-5" strokeWidth={2} />
                   </button>
@@ -1459,10 +1450,10 @@ export function Navbar({
                                   className="group flex min-h-[56px] w-full items-center gap-3 px-3.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
                                 >
                                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-overlay">
-                                    <Icon className="h-[18px] w-[18px] text-white/80" aria-hidden />
+                                    <Icon className="h-[18px] w-[18px] text-text-primary" aria-hidden />
                                   </span>
                                   <span className="flex-1 truncate text-[15px] font-medium text-white">{label}</span>
-                                  <ChevronRight className="h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                                  <ChevronRight className="h-4 w-4 text-text-tertiary transition-transform group-hover:translate-x-0.5" aria-hidden />
                                 </Link>
                               ),
                             )}
@@ -1473,10 +1464,10 @@ export function Navbar({
                             className="group mt-3 flex min-h-[56px] w-full items-center gap-3 rounded-lg bg-bg-raised px-3.5 text-left transition-colors hover:bg-bg-raised-hover"
                           >
                             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-overlay">
-                              <LayoutGrid className="h-[18px] w-[18px] text-white/80" aria-hidden />
+                              <LayoutGrid className="h-[18px] w-[18px] text-text-primary" aria-hidden />
                             </span>
                             <span className="flex-1 text-[15px] font-medium text-white">Browse Marketplace</span>
-                            <ChevronRight className="h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                            <ChevronRight className="h-4 w-4 text-text-tertiary transition-transform group-hover:translate-x-0.5" aria-hidden />
                           </button>
                         </section>
                       </RevealItem>
@@ -1557,7 +1548,7 @@ export function Navbar({
                                   tabIndex={-1}
                                   className="grid h-8 w-6 shrink-0 place-items-center"
                                 >
-                                  <ChevronRight aria-hidden className="h-4 w-4 text-white/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/75" />
+                                  <ChevronRight aria-hidden className="h-4 w-4 text-text-tertiary transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-text-primary" />
                                 </Link>
                               </div>
                             ))}
@@ -1595,14 +1586,14 @@ export function Navbar({
                         <Link
                           href="/account/wallet"
                           onClick={() => setMobileMenuOpen(false)}
-                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-white/80 transition-colors hover:bg-bg-raised-hover hover:text-white"
+                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover hover:text-white"
                         >
                           <Wallet className="h-4 w-4" aria-hidden /> Wallet
                         </Link>
                         <Link
                           href="/support"
                           onClick={() => setMobileMenuOpen(false)}
-                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-white/80 transition-colors hover:bg-bg-raised-hover hover:text-white"
+                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover hover:text-white"
                         >
                           <LifeBuoy className="h-4 w-4" aria-hidden /> Support
                         </Link>
@@ -1666,26 +1657,26 @@ export function Navbar({
                             aria-label="Back To Menu"
                             className="-ml-1 flex h-11 items-center gap-3 pr-2 text-white transition-colors active:scale-[0.98]"
                           >
-                            <ArrowLeft className="h-5 w-5 text-white/70" />
+                            <ArrowLeft className="h-5 w-5 text-text-secondary" />
                             <span className="text-[17px] font-semibold">{tab?.label ?? 'Games'}</span>
                           </button>
                           <div className="relative mt-1 flex h-10 items-center overflow-hidden rounded-md bg-bg-raised ring-1 ring-transparent transition-shadow focus-within:ring-white/20">
-                            <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/45" />
+                            <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-text-tertiary" />
                             <input
                               type="search"
                               value={mobileGameSearch}
                               onChange={(e) => setMobileGameSearch(e.target.value)}
                               placeholder="Search for a game"
                               aria-label={`Search ${tab?.label ?? 'games'}`}
-                              className="h-full w-full bg-transparent pl-10 pr-3 text-[16px] text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
+                              className="h-full w-full bg-transparent pl-10 pr-3 text-[16px] text-white outline-none placeholder:text-text-tertiary [&::-webkit-search-cancel-button]:hidden"
                             />
                           </div>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 [-webkit-overflow-scrolling:touch]">
                           {entries.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center">
-                              <Search className="mb-2 h-5 w-5 text-white/30" />
-                              <p className="text-[13px] text-white/45">{needle ? 'No matches' : 'No games here yet'}</p>
+                              <Search className="mb-2 h-5 w-5 text-text-disabled" />
+                              <p className="text-[13px] text-text-tertiary">{needle ? 'No matches' : 'No games here yet'}</p>
                             </div>
                           ) : (
                             entries.map(({ game, categorySlug }) => (
@@ -1704,12 +1695,12 @@ export function Navbar({
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img src={pictureUrl(game.image_url, 'thumb')} alt={`${game.name} logo`} aria-hidden className="h-9 w-9 shrink-0 rounded-[8px] object-cover ring-1 ring-white/[0.10]" />
                                 ) : (
-                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.08] text-[9px] font-bold text-white/45">
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.08] text-[9px] font-bold text-text-tertiary">
                                     {game.name.slice(0, 2).toUpperCase()}
                                   </span>
                                 )}
-                                <span className="flex-1 truncate text-[15px] font-medium text-white/85">{game.name}</span>
-                                <ChevronRight className="h-4 w-4 shrink-0 text-white/45 group-hover:text-white/80" />
+                                <span className="flex-1 truncate text-[15px] font-medium text-text-primary">{game.name}</span>
+                                <ChevronRight className="h-4 w-4 shrink-0 text-text-tertiary group-hover:text-text-primary" />
                               </Link>
                             ))
                           )}
@@ -1811,7 +1802,7 @@ function CategoryDropdown({
           aria-expanded={isActive}
           className={cn(
             'relative flex h-10 items-center gap-1.5 whitespace-nowrap rounded-[8px] px-3.5 text-[14px] font-medium transition-colors',
-            showPill || isCurrent ? 'text-white' : 'text-white/75 hover:text-white',
+            showPill || isCurrent ? 'text-white' : 'text-text-primary hover:text-white',
           )}
         >
           {showPill && (
@@ -1827,7 +1818,7 @@ function CategoryDropdown({
             size={12}
             weight="bold"
             aria-hidden
-            className={cn('relative text-white/50 transition-transform duration-200', isActive && 'rotate-180 text-white/80')}
+            className={cn('relative text-text-primary transition-transform duration-200', isActive && 'rotate-180')}
           />
         </button>
       </Popover.Trigger>
@@ -2373,7 +2364,7 @@ function GlobalSearch({
           size={18}
           weight="bold"
           aria-hidden
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/55"
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary"
         />
         <input
           ref={inputRef}
@@ -2404,7 +2395,7 @@ function GlobalSearch({
             // a distinct field, not a second pill matching the navbar's
             // rounded-full shape.
             // Fill only (no resting border), like every other field.
-            'h-10 rounded-[8px] pl-11 text-[14px] text-white placeholder:text-white/45 outline-none transition-[background-color,box-shadow] focus:outline-none focus-visible:shadow-none',
+            'h-10 rounded-[8px] pl-11 text-[14px] text-white placeholder:text-text-tertiary outline-none transition-[background-color,box-shadow] focus:outline-none focus-visible:shadow-none',
             expanded
               ? 'w-full bg-white/[0.07] pr-11 ring-1 ring-white/15'
               : cn(

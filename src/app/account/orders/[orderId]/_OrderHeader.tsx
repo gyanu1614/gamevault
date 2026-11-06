@@ -3,14 +3,16 @@
 /**
  * OrderHeader — V21/P2
  *
- * Top bar (back link + party presence chip) + header row (image, title,
- * chips, order id, status pills). Standalone client component because
- * the copy-on-click order id + presence pulse animation need browser.
+ * One row (owner, 2026-11-06: the page started too far down): the back arrow
+ * the item pages use, image, title, chips and order id, then who you're dealing with
+ * above the status. Standalone client component because the copy-on-click order id +
+ * presence pulse animation need browser.
  */
 
-import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
-import { ArrowLeft, Copy, Truck, Clock, CheckCircle2, Package, AlertTriangle, XCircle, RefreshCw, Check } from 'lucide-react'
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
+import { BackButton } from '@/components/marketplace/BackButton'
+import { Copy, Truck, Clock, CheckCircle2, Package, AlertTriangle, XCircle, RefreshCw, Check } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useSellerOnline } from '@/hooks/use-seller-presence'
@@ -132,29 +134,18 @@ export function OrderHeader({
   const categoryIcon = resolveCategoryIcon(categorySlug)
   return (
     <>
-      {/* Top bar — quiet back link, slim presence chip on the right */}
-      <div className="mb-6 flex items-center justify-between max-sm:mb-7">
-        <Link
-          href="/account/orders"
-          className="inline-flex items-center gap-2 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back To Orders
-        </Link>
-        {/* sm+: nudged down to sit closer to the status pill below. */}
-        {presence && (
-          <div className="sm:translate-y-1.5">
-            <PresenceChip presence={presence} />
-          </div>
-        )}
-      </div>
-
-      {/* Header row — large framed item image + title block + status pills.
+      {/* Header row — back arrow + framed item image + title block + status pills.
           Below sm it is one compact unit (small image + title + chips,
-          vertically centred); the pills and the order id are hidden there,
-          the status card below the header and the Order Details card carry
-          them instead. */}
+          vertically centred); the pills, the party and the order id are hidden
+          there, the status card and the Order Details card carry them instead. */}
       <div className="flex flex-wrap items-start gap-x-4 gap-y-3 max-sm:flex-nowrap max-sm:items-center max-sm:gap-x-3 sm:flex-nowrap sm:gap-5">
+        <BackButton
+          href="/account/orders"
+          className="bg-white/[0.06] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)] backdrop-blur-[32px] backdrop-saturate-[1.8] hover:bg-white/[0.1] max-sm:h-10 max-sm:w-10"
+        >
+          <ArrowLeftIcon aria-hidden size={18} weight="bold" />
+        </BackButton>
+
         {/* Item image — bigger, framed, with subtle inner border */}
         <div className="relative flex-shrink-0">
           {itemImageUrl ? (
@@ -241,7 +232,8 @@ export function OrderHeader({
 
         {/* Order status only: payout / SafeDrop state lives in the SafeDrop
             card, so no second pill here. */}
-        <div className="flex w-full flex-shrink-0 flex-row flex-wrap items-center gap-2 max-sm:hidden sm:w-auto sm:flex-col sm:items-end sm:pt-3">
+        <div className="flex w-full flex-shrink-0 flex-row flex-wrap items-center gap-3 max-sm:hidden sm:w-auto sm:flex-col sm:items-end">
+          {presence && <PresenceChip presence={presence} />}
           <StatusPill status={orderStatus} disputeResolved={disputeResolved} />
         </div>
       </div>

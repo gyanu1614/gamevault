@@ -14,9 +14,13 @@ describe('chat attachments', () => {
   })
 
   it('rejects other types, oversized and empty files', () => {
-    expect(validateChatAttachment({ type: 'text/html', size: 10 })).toMatch(/Only images/)
-    expect(validateChatAttachment({ type: 'image/svg+xml', size: 10 })).toMatch(/Only images/)
+    expect(validateChatAttachment({ type: 'text/html', size: 10 })).toMatch(/Only photos/)
+    expect(validateChatAttachment({ type: 'image/svg+xml', size: 10 })).toMatch(/Only photos/)
     expect(validateChatAttachment({ type: 'image/png', size: 10 * 1024 * 1024 + 1 })).toMatch(/10 MB/)
+    expect(validateChatAttachment({ type: 'video/mp4', size: 50 * 1024 * 1024 })).toBeNull()
+    expect(validateChatAttachment({ type: 'video/quicktime', size: 11 * 1024 * 1024 })).toBeNull()
+    expect(validateChatAttachment({ type: 'video/mp4', size: 50 * 1024 * 1024 + 1 })).toMatch(/50 MB/)
+    expect(validateChatAttachment({ type: 'video/x-msvideo', size: 10 })).toMatch(/Only photos/)
     expect(validateChatAttachment({ type: 'image/png', size: 0 })).toMatch(/empty/)
   })
 

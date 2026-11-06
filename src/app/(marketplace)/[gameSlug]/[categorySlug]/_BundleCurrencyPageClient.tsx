@@ -50,6 +50,8 @@ import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { useFilterMemory } from '@/hooks/use-filter-memory'
+import { readOne } from '@/lib/navigation/filter-params'
 import { findLinkedOffer, readCurrencyOfferLink } from '@/lib/listings/currency-offer-link'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
@@ -227,6 +229,26 @@ export default function BundleCurrencyPageClient({
   const filterMethods = useMemo(() => methodsInUse(data.deliveryMethods ?? [], data.offers), [data.deliveryMethods, data.offers])
   const methodById = useMemo(() => new Map((data.deliveryMethods ?? []).map((m) => [m.id, m])), [data.deliveryMethods])
   const [methodFilter, setMethodFilter] = useState<string | null>(null)
+  // Going back to this page brings the buyer's picks back. A default isn't written.
+  const defaultRegion = data.regions[0]?.value ?? ''
+  const defaultPlatform = data.platforms[0]?.value ?? ''
+  useFilterMemory(
+    {
+      bundle: bundleId === popularBundleId ? null : bundleId,
+      region: region === defaultRegion ? null : region,
+      platform: platform === defaultPlatform ? null : platform,
+      sort: otherFilter === 'recommended' ? null : otherFilter,
+      method: methodFilter,
+    },
+    (params) => {
+      setBundleId(readOne(params, 'bundle', data.bundles.map((b) => b.id), popularBundleId))
+      setRegion(readOne(params, 'region', data.regions.map((r) => r.value), defaultRegion))
+      setPlatform(readOne(params, 'platform', data.platforms.map((p) => p.value), defaultPlatform))
+      setOtherFilter(readOne(params, 'sort', ['recommended', 'cheapest', 'fastest'] as const, 'recommended'))
+      const method = params.get('method')
+      if (method && filterMethods.some((m) => m.id === method)) setMethodFilter(method)
+    },
+  )
 
   // Offers filtered to the currently-picked (bundle, region) combo,
   // sorted ascending by price. Index 0 = best seller (recommended);

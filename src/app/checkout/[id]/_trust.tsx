@@ -41,8 +41,8 @@ function Seal({ Icon, title, children }: { Icon: PhosphorIcon; title: string; ch
         <Icon size={17} weight="fill" color={TRUST_BLUE} />
       </span>
       <span className="min-w-0">
-        <span className="block text-[13.5px] font-semibold leading-snug text-[#E9EDF2]">{title}</span>
-        <span className="mt-0.5 block text-[12.5px] leading-snug text-[#9AA6B3]">{children}</span>
+        <span className="block text-[13.5px] font-semibold leading-snug text-text-primary">{title}</span>
+        <span className="mt-0.5 block text-[12.5px] leading-snug text-text-secondary">{children}</span>
       </span>
     </li>
   )
@@ -121,17 +121,17 @@ export function BuyerRating({ rating }: { rating: SiteRating | null }) {
         <UsersThree size={17} weight="fill" color={RATING_GREEN} />
       </span>
       <span className="min-w-0">
-        <span className="block text-[15px] font-semibold leading-snug tracking-[-0.01em] text-[#E9EDF2]">Buyer Rating</span>
-        <span className="block text-[12.5px] leading-snug text-[#9AA6B3]">
+        <span className="block text-[15px] font-semibold leading-snug tracking-[-0.01em] text-text-primary">Buyer Rating</span>
+        <span className="block text-[12.5px] leading-snug text-text-secondary">
           <span className="max-sm:hidden">From </span>
           {rating.count.toLocaleString('en-US')} buyer reviews
         </span>
       </span>
       <span className="ml-auto flex shrink-0 items-center gap-2">
         <Stars value={rating.average} />
-        <span className="text-[14px] font-semibold tabular-nums text-[#E9EDF2]">
+        <span className="text-[14px] font-semibold tabular-nums text-text-primary">
           {rating.average.toFixed(1)}
-          <span className="font-normal text-[#9AA6B3]"> / 5</span>
+          <span className="font-normal text-text-secondary"> / 5</span>
         </span>
       </span>
     </div>
@@ -151,12 +151,12 @@ export function CheckoutFooter() {
     <footer className="border-t border-white/[0.06] bg-[#131417]">
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-3 px-3 py-6 text-center sm:px-6 lg:flex-row lg:justify-between lg:px-8 lg:text-left">
         <div>
-          <p className="text-body-sm text-[#9AA6B3]">© {new Date().getFullYear()} DropMarket Ltd. All rights reserved.</p>
-          <p className="mt-0.5 text-[12.5px] text-[#6C7684]">Registered in the United Kingdom · Company No. 17309867</p>
+          <p className="text-body-sm text-text-secondary">© {new Date().getFullYear()} DropMarket Ltd. All rights reserved.</p>
+          <p className="mt-0.5 text-[12.5px] text-text-tertiary">Registered in the United Kingdom · Company No. 17309867</p>
         </div>
-        <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-body-sm text-[#9AA6B3]">
+        <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-body-sm text-text-secondary">
           {LEGAL.map((l) => (
-            <Link key={l.href} href={l.href} className="transition-colors hover:text-[#E9EDF2]">
+            <Link key={l.href} href={l.href} className="transition-colors hover:text-text-primary">
               {l.label}
             </Link>
           ))}

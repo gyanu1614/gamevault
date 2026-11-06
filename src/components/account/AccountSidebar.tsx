@@ -11,7 +11,7 @@ import { useUnreadMessagesCount } from '@/hooks/use-unread-messages'
 import {
   LayoutDashboard,
   Package,
-  ShoppingCart,
+  Tag,
   MessageSquare,
   Star,
   Settings,
@@ -37,8 +37,12 @@ interface NavItem {
   showForBuyer?: boolean
   showForSeller?: boolean
   requiresSeller?: boolean
-  /** V21/P7.ai — Nested sub-items (e.g. Offers → Currency/Items/...). */
+  /** V21/P7.ai — Nested sub-items (e.g. Offers → Items/Accounts/Currency). */
   children?: { label: string; href: string }[]
+  /** Children always on show, so a new seller sees all of them (Offers; owner, 2026-11-06). */
+  alwaysOpen?: boolean
+  /** The ?type= the page opens on when the URL has none. */
+  defaultType?: string
 }
 
 interface AccountSidebarProps {
@@ -61,9 +65,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const searchParams = useSearchParams()
-  // V22 — Accordion: at most one grouped item (Offers / Orders) is open at a
-  // time. `null` = none open. Clicking a parent navigates AND opens its group,
-  // closing any other. Initialized lazily from the active route below.
+  // V22 — The one group that opens and closes (Orders). `null` = closed. Offers
+  // is always open. Initialized lazily from the active route below.
   const [openGroup, setOpenGroup] = useState<string | null>(null)
 
   // The global navbar owns the hamburger trigger. Keeping the drawer state
@@ -110,23 +113,24 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
   // open that group so its sub-items are visible. Keyed on pathname only, so
   // switching ?type= within the same group doesn't reset a user's choice.
   useEffect(() => {
-    if (pathname.startsWith('/account/listings')) setOpenGroup('Offers')
-    else if (pathname.startsWith('/account/orders')) setOpenGroup('Orders')
+    if (pathname.startsWith('/account/orders')) setOpenGroup('Orders')
   }, [pathname])
 
   // Navigation split into seller tools and account tools (with divider between)
   const getSellerToolItems = (): NavItem[] => [
     { label: 'Dashboard',   href: '/account/dashboard',  icon: LayoutDashboard, requiresSeller: true, showForBuyer: false, showForSeller: true },
-    { label: 'Orders',      href: '/account/orders',     icon: ShoppingCart,    requiresSeller: true, showForBuyer: false, showForSeller: true,
+    { label: 'Orders',      href: '/account/orders',     icon: Package,         requiresSeller: true, showForBuyer: false, showForSeller: true,
       children: [
         { label: 'Sold Orders', href: '/account/orders?type=sold' },
         { label: 'Purchases',   href: '/account/orders?type=purchases' },
       ] },
-    { label: 'Offers',      href: '/account/listings',   icon: Package, requiresSeller: true, showForBuyer: false, showForSeller: true,
+    { label: 'Offers',      href: '/account/listings',   icon: Tag, requiresSeller: true, showForBuyer: false, showForSeller: true,
+      alwaysOpen: true,
+      defaultType: 'currency',
       children: [
-        { label: 'Currency', href: '/account/listings?type=currency' },
         { label: 'Items',    href: '/account/listings?type=items' },
         { label: 'Accounts', href: '/account/listings?type=accounts' },
+        { label: 'Currency', href: '/account/listings?type=currency' },
       ] },
     { label: 'Messages',    href: '/account/messages',   icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, requiresSeller: true, showForBuyer: false, showForSeller: true },
     { label: 'Wallet',      href: '/account/wallet',     icon: Wallet,          requiresSeller: true, showForBuyer: false, showForSeller: true },
@@ -144,7 +148,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
     // Buyer-only items
     return [
       { label: 'Dashboard',    href: '/account/dashboard', icon: LayoutDashboard, showForBuyer: true, showForSeller: false },
-      { label: 'My Purchases', href: '/account/orders',    icon: ShoppingCart, showForBuyer: true, showForSeller: false },
+      { label: 'Orders',       href: '/account/orders',    icon: Package, showForBuyer: true, showForSeller: false },
       { label: 'Messages',     href: '/account/messages',  icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, showForBuyer: true, showForSeller: false },
       { label: 'Wallet',       href: '/account/wallet',    icon: Wallet,       showForBuyer: true, showForSeller: false },
       { label: 'Refer & Earn', href: '/account/referral',  icon: Gift,     showForBuyer: true, showForSeller: false },
@@ -253,15 +257,19 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
           const Icon = item.icon
           const active = isActive(item.href)
           const activeType = searchParams.get('type')
-          // V22 — Accordion: a grouped item's children show only when it's the
-          // open group. Clicking a parent (below) sets it open + closes others.
-          const showChildren = !!item.children && openGroup === item.label
+          const showChildren = !!item.children && (item.alwaysOpen || openGroup === item.label)
           return (
             <div key={item.label}>
-              {item.children ? (
-                /* V79 — Grouped parents (Orders / Offers) are pure dropdown
-                   toggles: clicking never navigates, it opens the group;
-                   picking a sub-item is what navigates. */
+              {item.alwaysOpen ? (
+                /* Always open: a plain heading, no chevron. Its children navigate. */
+                <div className="flex items-center gap-2.5 px-2.5 py-2 text-[14.5px] font-medium text-text-primary">
+                  <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+              ) : item.children ? (
+                /* V79 — A grouped parent (Orders) is a pure dropdown toggle:
+                   clicking never navigates, it opens the group; picking a
+                   sub-item is what navigates. */
                 <button
                   type="button"
                   onClick={() => setOpenGroup((prev) => (prev === item.label ? null : item.label))}
@@ -270,7 +278,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                     'w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                     active
                       ? 'text-text-primary hover:bg-bg-raised-hover'
-                      : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
+                      : 'text-text-primary hover:bg-bg-raised-hover'
                   )}
                 >
                   <div className="flex items-center gap-2.5">
@@ -281,7 +289,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                     className={cn(
                       'h-4 w-4 flex-shrink-0 transition-transform duration-200',
                       showChildren && 'rotate-180',
-                      'text-text-tertiary',
+                      'text-text-primary',
                     )}
                   />
                 </button>
@@ -308,7 +316,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                   'flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                   active
                     ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
-                    : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
+                    : 'text-text-primary hover:bg-bg-raised-hover'
                 )}
               >
                 <div className="flex items-center gap-2.5">
@@ -342,13 +350,11 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                     <div className="mt-1 ml-6 flex flex-col gap-0.5">
                       {item.children.map((sub, subIdx) => {
                         const subType = sub.href.split('type=')[1] ?? null
-                        // Default to the first child when no ?type= is set,
-                        // so the group works for any section (Offers,
-                        // Orders, …) without a hardcoded default. Only while
-                        // actually on the section's page — the dropdown can
-                        // now be opened from anywhere without navigating.
+                        // With no ?type= the page opens on its default, else
+                        // the first child. Only while actually on the section's
+                        // page: Orders can be opened from anywhere.
                         const onSection = pathname === sub.href.split('?')[0]
-                        const firstType = item.children![0].href.split('type=')[1] ?? null
+                        const firstType = item.defaultType ?? item.children![0].href.split('type=')[1] ?? null
                         const subActive = onSection && (activeType ?? firstType) === subType
                         return (
                           <Link
@@ -359,7 +365,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                               'rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors',
                               subActive
                                 ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
-                                : 'text-text-tertiary hover:bg-bg-raised-hover hover:text-text-secondary'
+                                : 'text-text-primary hover:bg-bg-raised-hover'
                             )}
                           >
                             {sub.label}
@@ -394,7 +400,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 'flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                 active
                   ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
-                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
+                  : 'text-text-primary hover:bg-bg-raised-hover'
               )}
             >
               <div className="flex items-center gap-2.5">
@@ -430,7 +436,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                 active
                   ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
-                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
+                  : 'text-text-primary hover:bg-bg-raised-hover'
               )}
             >
               <Icon className="h-[18px] w-[18px] flex-shrink-0" />
@@ -448,7 +454,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             setIsMobileOpen(false)
             window.dispatchEvent(new Event('dm:logout'))
           }}
-          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium text-text-primary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
         >
           <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
           <span>Logout</span>

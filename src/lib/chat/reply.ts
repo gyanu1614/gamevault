@@ -7,7 +7,7 @@
 const MAX = 90
 
 /** The label a file-only message stores (attachmentOnlyLabel). */
-const FILE_LABELS: Record<string, string> = { 'Sent a photo': 'Photo', 'Sent a PDF': 'PDF' }
+const FILE_LABELS: Record<string, string> = { 'Sent a photo': 'Photo', 'Sent a video': 'Video', 'Sent a PDF': 'PDF' }
 
 export function replySnippet(message: { content: string; attachments?: string[] | null }): string {
   const hasFiles = (message.attachments?.length ?? 0) > 0

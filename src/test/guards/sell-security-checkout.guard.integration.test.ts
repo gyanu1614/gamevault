@@ -52,6 +52,20 @@ describe.skipIf(!hasEnv)('sell security — createCheckout gates (integration)',
     expect(await ordersFor(fx!.buyer.id)).toBe(before)
   })
 
+  it("a paused store's still-active listing cannot be bought", async () => {
+    const before = await ordersFor(fx!.buyer.id)
+    await fx!.svc.from('seller_presence').upsert({ seller_id: fx!.seller.id, store_paused: true }, { onConflict: 'seller_id' })
+    try {
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 3 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/not available/)
+      expect(await ordersFor(fx!.buyer.id)).toBe(before)
+    } finally {
+      await fx!.svc.from('seller_presence').update({ store_paused: false }).eq('seller_id', fx!.seller.id)
+    }
+  })
+
   it("ACC-01: a restricted seller's still-active listing cannot be bought", async () => {
     const before = await ordersFor(fx!.buyer.id)
     await fx!.svc.from('profiles').update({ seller_status: 'restricted' }).eq('id', fx!.seller.id)

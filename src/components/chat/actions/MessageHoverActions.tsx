@@ -4,7 +4,7 @@
  * Desktop message actions (mouse / trackpad): a small toolbar beside the
  * bubble while the row is hovered or focused. React (emoji row), Reply, and
  * ⋯ with the same actions plus Copy Text. Hidden on touch screens, where a
- * long-press opens MessageActionSheet instead.
+ * message's own three dots open MessageActionSheet instead.
  */
 
 import { useState } from 'react'

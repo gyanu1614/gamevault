@@ -45,7 +45,7 @@ export function PayoutsTab() {
         <div className="skeleton h-[190px] w-full rounded-lg" aria-hidden />
       ) : data ? (
         <BalanceHero
-          label="Store Balance"
+          label="Available Balance"
           amount={data.overview.available + data.overview.wallet}
           actions={
             <Link href="/account/wallet/withdraw" className={accountBtn.primary}>
@@ -54,7 +54,7 @@ export function PayoutsTab() {
             </Link>
           }
           rows={[
-            { label: 'Pending Sales', value: usd(data.earnings.pendingSales + data.overview.pending), tone: 'trust', icon: <HourglassMediumIcon size={18} weight="duotone" /> },
+            { label: 'Pending Balance', value: usd(data.earnings.pendingSales + data.overview.pending), tone: 'trust', icon: <HourglassMediumIcon size={18} weight="duotone" /> },
             { label: 'Withdrawn', value: usd(data.withdrawn), tone: 'neutral', icon: <PaperPlaneTiltIcon size={18} weight="duotone" /> },
           ]}
         />

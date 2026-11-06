@@ -45,7 +45,7 @@ function Box({ data, items }: { data: CalcBuyData; items: CalcItem[] }) {
           {summary ? summary.line : `Have ${items.length === 1 ? 'this item' : 'these items'}? · No sellers yet · list ${items.length === 1 ? 'it' : 'them'} first`}
         </p>
         {summary && (
-          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-body-sm text-[#9A9DA6]">
+          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-body-sm text-text-secondary">
             {dedupe(summary.stocked).map((i) => (
               <Link
                 key={i.slug}
@@ -53,7 +53,7 @@ function Box({ data, items }: { data: CalcBuyData; items: CalcItem[] }) {
                 onClick={() => track('rail_clicked', { surface: 'calculator', position: 'box', game: data.gameSlug, item: i.slug, variant: 'buy' })}
                 className="rounded-sm tabular-nums transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               >
-                {i.name} <span className="text-[#D4D6DC]">{formatUsd(i.minUsd)}</span>
+                {i.name} <span className="text-text-primary">{formatUsd(i.minUsd)}</span>
               </Link>
             ))}
           </p>

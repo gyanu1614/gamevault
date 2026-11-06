@@ -149,7 +149,7 @@ function Group({
 
   return (
     <div className={cn(bare ? 'contents' : 'min-w-0', (many || column || fill) && 'w-full', column && 'flex min-h-0 flex-1 flex-col')}>
-      {label && <p className="mb-1.5 text-caption font-medium text-[#9A9DA6]">{group.label}</p>}
+      {label && <p className="mb-1.5 text-caption font-medium text-text-secondary">{group.label}</p>}
       <div
         ref={track}
         role={group.mode === 'single' ? 'radiogroup' : 'group'}
@@ -170,7 +170,7 @@ function Group({
         )}
       >
         {group.options.map((o) => {
-          const color = o.color ?? accent ?? '#E9EDF2'
+          const color = o.color ?? accent ?? '#FFFFFF'
           const isRadio = group.mode === 'single'
           const tabIndex = isRadio ? (o.active || (!activeKey && o === group.options[0]) ? 0 : -1) : 0
           const inner = (
@@ -192,7 +192,7 @@ function Group({
                 <span className="flex flex-col items-start leading-tight">
                   <span>{o.label}</span>
                   {o.hint && (
-                    <span className={cn('text-[11px] font-medium tabular-nums', o.active ? '' : 'text-[#7C7F88]')} style={o.active ? { color } : undefined}>
+                    <span className={cn('text-[11px] font-medium tabular-nums', o.active ? '' : 'text-text-tertiary')} style={o.active ? { color } : undefined}>
                       {o.hint}
                     </span>
                   )}
@@ -208,8 +208,8 @@ function Group({
             h,
             // Even trays share the width; tighter padding so three tiers fit (phones).
             fill && !many && 'px-2 lg:px-3.5',
-            o.active ? 'border-transparent text-white' : 'text-[#B4B7BF] hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-white',
-            o.disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-[#9A9DA6]',
+            o.active ? 'border-transparent text-white' : 'text-text-secondary hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-white',
+            o.disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-text-secondary',
           )
           return o.href ? (
             <Link

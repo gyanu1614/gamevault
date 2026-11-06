@@ -6,6 +6,8 @@
  * the list below shows the pet's other offers, any trait.
  */
 
+import { ITEM_OFFER_PARAM } from '@/lib/value-listings/buy-state'
+
 export interface TraitDef {
   key: string
   label: string
@@ -74,6 +76,12 @@ export function pickOffer<T extends OfferLike>(
 ): T | null {
   const list = offersOfTrait(offers, variantOf, variant)
   return list.find((o) => o.id === chosenId) ?? list[0] ?? null
+}
+
+/** The offer a link names (`?offer=`), if it's on this page. */
+export function linkedOffer<T extends OfferLike>(search: string, offers: readonly T[]): T | null {
+  const id = new URLSearchParams(search).get(ITEM_OFFER_PARAM)
+  return id ? offers.find((o) => o.id === id) ?? null : null
 }
 
 /** The trait the page opens on: the URL's when the game has it, else the cheapest offer's; null = none (no offers). */

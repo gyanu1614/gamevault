@@ -8,8 +8,10 @@
  * and the design handoff README for spec details.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { useFilterMemory } from '@/hooks/use-filter-memory'
+import { readOne } from '@/lib/navigation/filter-params'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
 import { ShieldCheck, Zap, Store, Minus, Plus, ArrowRight, ChevronDown } from 'lucide-react'
@@ -249,25 +251,12 @@ export default function CurrencyPageClient({
   }
   const heroRef = useRef<HTMLDivElement>(null)
 
-  // V14v — Always land at the top on mount. Covers back/forward
-  // navigation in some browsers, and deep-links from elsewhere on the
-  // site. (As of V17g there are no slug redirects in play — the DB
-  // stores canonical slugs and the URL is the URL.)
-  //
-  // useLayoutEffect (not useEffect) so the scroll happens BEFORE the
-  // browser paints the new route. Otherwise the user sees one frame at
-  // the previous scroll position (often the footer area), then a jump to
-  // the top — read as "the page flashed the bottom for a second".
-  //
-  // We also disable the browser's automatic scroll restoration so it
-  // doesn't fight us on back/forward navigation.
-  useLayoutEffect(() => {
-    if (typeof window === 'undefined') return
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual'
-    }
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-  }, [])
+  // Going back to this page brings the sort and the method back.
+  useFilterMemory({ sort: filter === 'recommended' ? null : filter, method: methodFilter }, (params) => {
+    setFilter(readOne(params, 'sort', ['recommended', 'cheapest', 'fastest'] as const, 'recommended'))
+    const method = params.get('method')
+    if (method && filterMethods.some((m) => m.id === method)) chooseMethod(method)
+  })
 
   // The How It Works first tile shows the live cheapest price per unit.
   const cheapestHighlight = useMemo(() => {
@@ -866,7 +855,7 @@ function HeroCard({
                 <BuySweep />
                 <span className="relative">{PURCHASES_ENABLED ? 'Buy Now' : 'Opens Soon'}</span>
                 <span className="relative flex min-w-0 items-center gap-2.5">
-                  <span className="truncate text-[14px] font-medium text-white/75">
+                  <span className="truncate text-[14px] font-medium text-text-primary">
                     {qty.toLocaleString('en-US')} {unitLabel}
                   </span>
                   <span className="tabular-nums">{money(total)}</span>

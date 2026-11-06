@@ -3,16 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { PayoutDetails } from '@/lib/actions/payout-details'
 import type { WalletOverview } from '@/lib/actions/wallet-ledger'
 import type { WithdrawalMethod, WithdrawalQuote } from '@/lib/actions/withdrawals'
-import {
-  amountRefusal,
-  defaultMethodFor,
-  feeTerms,
-  gateMessage,
-  groupMethods,
-  maxWithdrawable,
-  savedDestinationFor,
-  shortAddress,
-} from './_withdraw-model'
+import { amountRefusal, defaultMethodFor, feeTerms, gateMessage, groupMethods, maxWithdrawable, savedDestinationFor, shortAddress, cleanAmount, maxAmount, waitMessage } from './_withdraw-model'
 
 function method(over: Partial<WithdrawalMethod>): WithdrawalMethod {
   return {
@@ -120,6 +111,14 @@ describe('gateMessage', () => {
     expect(gateMessage(overview({ reason: 'account_age', unlockAt: '2026-12-01T12:00:00Z' }))).toContain('Dec 1, 2026')
   })
 
+  it('the wait after a payout change stops nothing, it only explains when the money goes', () => {
+    const waiting = overview({ reason: 'payout_details_freeze', freezeUntil: '2026-11-08T12:00:00Z' })
+    expect(gateMessage(waiting)).toBeNull()
+    expect(waitMessage(waiting, 'UTC')).toContain('Nov 8')
+    expect(waitMessage(overview({ eligible: true }))).toBeNull()
+    expect(waitMessage(overview({ reason: 'account_age' }))).toBeNull()
+  })
+
   it('falls back to the database sentence for a reason it does not map', () => {
     expect(gateMessage(overview({ reason: 'kyc_required', message: 'Verify your identity.' }))).toBe('Verify your identity.')
   })
@@ -146,6 +145,21 @@ describe('amountRefusal', () => {
 
   it('stays quiet before an amount is typed', () => {
     expect(amountRefusal(quote({ refusal: 'below_minimum', message: 'Too low.' }), 0)).toBeNull()
+  })
+})
+
+describe('the amount box', () => {
+  it('keeps digits and one point, two decimals at most', () => {
+    expect(cleanAmount('12.345')).toBe('12.34')
+    expect(cleanAmount('$1,000.5')).toBe('1000.5')
+    expect(cleanAmount('1.2.3')).toBe('1.23')
+    expect(cleanAmount('abc')).toBe('')
+  })
+  it('Max never asks for more than there is', () => {
+    const open = { max_withdrawal: 0 } as WithdrawalMethod
+    expect(maxAmount(open, 10.019)).toBe('10.01')
+    expect(maxAmount(open, -5)).toBe('0.00')
+    expect(maxAmount({ max_withdrawal: 100 } as WithdrawalMethod, 250)).toBe('100.00')
   })
 })
 

@@ -245,15 +245,15 @@ export default async function SellLandingPage({ params }: PageProps) {
               {/* Icon (neutral, in a forest chip) beside the title. min-h keeps
                   all three headers the same height even when a title wraps. */}
               <div className="relative flex min-h-[40px] items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#1E2723] bg-[#10160F] text-[#E4EAE2]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#1E2723] bg-[#10160F] text-text-primary">
                   <c.icon className="h-[18px] w-[18px]" stroke={1.9} />
                 </span>
-                <h2 className="text-body-sm font-bold leading-tight text-[#F1F3F1]">{c.title}</h2>
+                <h2 className="text-body-sm font-bold leading-tight text-text-primary">{c.title}</h2>
               </div>
               {/* 3 punchy points. */}
               <ul className="relative mt-4 space-y-2.5">
                 {c.points.map((p) => (
-                  <li key={p} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-[#B7C0B8]">
+                  <li key={p} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-text-secondary">
                     <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#8FBF9C]" stroke={2.4} />
                     <span>{p}</span>
                   </li>
@@ -267,7 +267,7 @@ export default async function SellLandingPage({ params }: PageProps) {
             are animated amber dots, not pink numbers. Step 1 has in-text apply
             links; step 2 shows a real top-pets grid. */}
         <section className="mx-auto mt-16 max-w-4xl">
-          <h2 className="text-center text-heading font-bold tracking-tight text-[#F2F6F0]">
+          <h2 className="text-center text-heading font-bold tracking-tight text-text-primary">
             How It Works
           </h2>
           <div className="mt-6 space-y-6 border border-[#1A211A] bg-[#0B0F0C]/60 p-6 backdrop-blur-md sm:p-8">
@@ -279,8 +279,8 @@ export default async function SellLandingPage({ params }: PageProps) {
                 <IconUserPlus className="h-[16px] w-[16px]" stroke={1.75} />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-[#F1F3F1]">Sign Up &amp; Apply to Sell</h3>
-                <p className="mt-1 text-[13.5px] leading-relaxed text-[#98A398]">
+                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-text-primary">Sign Up &amp; Apply to Sell</h3>
+                <p className="mt-1 text-[13.5px] leading-relaxed text-text-secondary">
                   Reserve your spot as a{' '}
                   <Link
                     href={foundingHref(`${gameSlug}-sell-step`)}
@@ -306,8 +306,8 @@ export default async function SellLandingPage({ params }: PageProps) {
                 <IconListDetails className="h-[16px] w-[16px]" stroke={1.75} />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-[#F1F3F1]">List Your {name} {noun}</h3>
-                <p className="mt-1 text-[13.5px] leading-relaxed text-[#98A398]">
+                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-text-primary">List Your {name} {noun}</h3>
+                <p className="mt-1 text-[13.5px] leading-relaxed text-text-secondary">
                   Price against the live market, set a delivery window, and publish.
                   No listing fee — you only pay when something sells.
                 </p>
@@ -320,8 +320,8 @@ export default async function SellLandingPage({ params }: PageProps) {
                 <IconCash className="h-[16px] w-[16px]" stroke={1.75} />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-[#F1F3F1]">Deliver &amp; Get Paid</h3>
-                <p className="mt-1 text-[13.5px] leading-relaxed text-[#98A398]">
+                <h3 className="flex min-h-8 items-center text-[15px] font-bold leading-tight text-text-primary">Deliver &amp; Get Paid</h3>
+                <p className="mt-1 text-[13.5px] leading-relaxed text-text-secondary">
                   Make the sale, deliver in-game, and cash out to your payment
                   method. SafeDrop protects every payout — you&apos;re paid even if
                   a buyer disappears.
@@ -333,7 +333,7 @@ export default async function SellLandingPage({ params }: PageProps) {
 
         {/* The game's full seller guide, one slim line under How It Works. */}
         {guide && (
-          <p className="mx-auto mt-5 max-w-4xl text-center text-[13.5px] text-[#98A398]">
+          <p className="mx-auto mt-5 max-w-4xl text-center text-[13.5px] text-text-secondary">
             New to selling {name}?{' '}
             <Link
               href={`/${gameSlug}/blog/${guide.slug}`}
@@ -364,7 +364,7 @@ export default async function SellLandingPage({ params }: PageProps) {
 
         {/* FAQ — reuse the shared FaqCards accordion (same as calculator page). */}
         <section className="mx-auto mt-16 max-w-3xl">
-          <h2 className="text-center text-heading font-bold tracking-tight text-[#F2F6F0]">
+          <h2 className="text-center text-heading font-bold tracking-tight text-text-primary">
             Selling {name} — FAQ
           </h2>
           <FaqCards items={FAQ} defaultOpen={0} square className="mt-5" />

@@ -367,7 +367,7 @@ export function OrderClient(props: OrderClientProps) {
         }}
       />
 
-      <div className="mx-auto max-w-[1400px] px-5 pb-10 pt-6 sm:px-8 lg:px-10 lg:pt-8">
+      <div className="mx-auto max-w-[1400px] px-5 pb-10 pt-5 sm:px-8 lg:px-10 lg:pt-6">
         <OrderHeader
           itemImageUrl={itemImageUrl}
           itemTitle={itemTitle}

@@ -14,7 +14,8 @@
  */
 
 import { useState } from 'react'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { ShieldAlert } from './_order-icons'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'

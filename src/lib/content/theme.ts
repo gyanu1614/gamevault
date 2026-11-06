@@ -180,11 +180,11 @@ export const CONTENT_NEUTRALS = {
   line: '#1A211A',
   lineSoft: '#151B15',
   lineStrong: '#263026',
-  text: '#F2F6F0',
-  text2: '#D7DED4',
-  textMuted: '#98A398',
-  textDim: '#7C877C',
-  textFaint: '#5E685E',
+  text: '#FFFFFF',
+  text2: '#D4D6DC',
+  textMuted: '#B4B6BE',
+  textDim: '#90929B',
+  textFaint: '#6F7179',
   /** Losses and price drops — muted clay, never pure red. */
   negative: '#C97B6B',
 } as const

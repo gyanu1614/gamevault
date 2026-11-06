@@ -18,8 +18,8 @@ import {
   Truck,
   Undo2,
   XCircle,
-  type LucideIcon,
-} from 'lucide-react'
+  type OrderIcon,
+} from './_order-icons'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
 
@@ -50,7 +50,7 @@ interface OrderStatusCardProps {
 }
 
 interface StatusCopy {
-  Icon: LucideIcon
+  Icon: OrderIcon
   tone: Tone
   title: string
   /** Per-role message; `all` is the fallback. */
@@ -143,14 +143,14 @@ const COPY: Record<string, StatusCopy> = {
 }
 
 const TONE: Record<Tone, { tile: string; title: string }> = {
-  green:  { tile: 'bg-green-400/[0.12] text-green-400',   title: 'text-green-400' },
+  green:  { tile: 'text-green-400',   title: 'text-green-400' },
   // amber has no token and lime opacity modifiers don't compile: use the
   // warning / accent tint tokens.
-  lime:   { tile: 'bg-lime-tint-bg text-lime-text',       title: 'text-lime-text' },
-  amber:  { tile: 'bg-warning-bg text-warning',           title: 'text-warning' },
-  red:    { tile: 'bg-red-400/[0.12] text-red-400',       title: 'text-red-400' },
-  blue:   { tile: 'bg-blue-400/[0.12] text-blue-400',     title: 'text-blue-400' },
-  orange: { tile: 'bg-orange-400/[0.12] text-orange-400', title: 'text-orange-400' },
+  lime:   { tile: 'text-lime-text',   title: 'text-lime-text' },
+  amber:  { tile: 'text-warning',     title: 'text-warning' },
+  red:    { tile: 'text-red-400',     title: 'text-red-400' },
+  blue:   { tile: 'text-blue-400',    title: 'text-blue-400' },
+  orange: { tile: 'text-orange-400',  title: 'text-orange-400' },
 }
 
 function statusTime(
@@ -208,9 +208,7 @@ export function OrderStatusCard({
 
   return (
     <OrderCard className={cn('flex items-start gap-3 px-5 py-4', className)} padded={false}>
-      <span className={cn('grid h-11 w-11 flex-shrink-0 place-items-center rounded-[11px]', tone.tile)}>
-        <copy.Icon className="h-[22px] w-[22px]" aria-hidden />
-      </span>
+      <copy.Icon className={cn('h-9 w-9 flex-shrink-0', tone.tile)} />
       <div className="min-w-0 flex-1 leading-tight">
         <div className={cn('text-body font-bold leading-snug', tone.title)}>{copy.title}</div>
         {when && (
