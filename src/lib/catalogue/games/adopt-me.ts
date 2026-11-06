@@ -32,10 +32,13 @@ export function amRarity(raw: string | undefined): string | null {
 const pageUrl = (title: string) => `https://${HOST}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2F/g, '/')}`
 const daysBetween = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 86_400_000
 
+/** The page's infobox. Most pets use {{Pets}}; a few (Chestnut Glyptodon) use the plain {{Item}}. */
+const petInfobox = (text: string) => templateBody(text, 'Pets') ?? templateBody(text, 'Item')
+
 /** A pet page → its item; null for non-pet pages, subpages, unknown rarity and upcoming pets. */
 export function parseAmPage(page: WikiPage, checkedAt: string): ParsedItem | null {
   if (page.title.includes('/')) return null
-  const body = templateBody(page.content, 'Pets')
+  const body = petInfobox(page.content)
   if (body == null) return null
   const info = templateParams(body)
   const rarity = amRarity(info.rarity)
@@ -69,7 +72,7 @@ export function parseAmPage(page: WikiPage, checkedAt: string): ParsedItem | nul
 async function petImageFromWiki(wiki: { wikitext(title: string): Promise<string> }, name: string): Promise<string | null> {
   for (const title of [name, `${name} (Pet)`]) {
     const text = await wiki.wikitext(title).catch(() => '')
-    const file = firstImageFile(templateParams(templateBody(text, 'Pets')).image)
+    const file = firstImageFile(templateParams(petInfobox(text)).image)
     if (file) return file
   }
   return null
