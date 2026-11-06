@@ -28,6 +28,7 @@ const BATCH = 50
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 export async function GET(request: NextRequest) {
   // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
