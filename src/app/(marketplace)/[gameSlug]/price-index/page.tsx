@@ -20,6 +20,9 @@ import { cn } from '@/lib/utils'
 import { HubSection } from '@/components/values/HubSection'
 import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_LABEL } from '@/components/values/styles'
 import { createValueListReadClient } from '@/lib/values/read-client'
+import { fetchAllRows } from '@/lib/db/fetch-all'
+import { trendDays } from '../values/_listTrends'
+import { moversBetween, type Mover, type MoverName, type MoverRow } from './_movers'
 import { formatCash } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
@@ -52,7 +55,6 @@ export function generateStaticParams() {
 }
 
 type TopValue = { slug: string; name: string; rarity: string; priceUsd: number }
-type Mover = { slug: string; name: string; from: number; to: number; pct: number }
 
 async function getTopValues(): Promise<TopValue[]> {
   const supabase = createValueListReadClient('steal-a-brainrot')
@@ -73,66 +75,40 @@ async function getTopValues(): Promise<TopValue[]> {
 }
 
 /**
- * Biggest movers over the last ~7 days of history: compare each brainrot's
- * default median on the newest capture date vs the oldest within the window.
- * Returns [] when there's <2 distinct dates (page shows a "collecting" note).
+ * Biggest movers over the same 7-day window as the value cards. Reads exactly the
+ * two days it compares: the window holds about 3,200 rows, and a plain read stops
+ * at 1,000 with no error, oldest first, so it never reached the newest days. The
+ * names come from the whole catalogue rather than an id list: 400 ids overflow the
+ * reply's headers and the read fails (2026-11-06, a release build stopped on it).
  */
 async function getMovers(): Promise<{ gainers: Mover[]; losers: Mover[]; days: number }> {
-  const supabase = createValueListReadClient('steal-a-brainrot')
-  const { data: mut } = await supabase
-    .from('sab_mutations')
-    .select('id')
-    .eq('slug', 'default')
-    .maybeSingle()
-  const defaultMutId = (mut as { id: string } | null)?.id
-  if (!defaultMutId) return { gainers: [], losers: [], days: 0 }
+  const db = createValueListReadClient('steal-a-brainrot') as any
+  const { data: mutation } = await db.from('sab_mutations').select('id').eq('slug', 'default').maybeSingle()
+  const mutationId = (mutation as { id: string } | null)?.id
+  if (!mutationId) return { gainers: [], losers: [], days: 0 }
 
-  const since = new Date()
-  since.setDate(since.getDate() - 8)
-  const { data: rows } = await (supabase as any)
-    .from('sab_price_history')
-    .select('brainrot_id,history_date,median_usd')
-    .eq('mutation_id', defaultMutId)
-    .gte('history_date', since.toISOString().slice(0, 10))
-    .order('history_date', { ascending: true })
+  const span = await trendDays(db, 'sab_price_history', (q) => q.eq('mutation_id', mutationId))
+  if (!span) return { gainers: [], losers: [], days: 0 }
 
-  const history = (rows ?? []) as { brainrot_id: string; history_date: string; median_usd: number }[]
-  const dates = Array.from(new Set(history.map((r) => r.history_date)))
-  if (dates.length < 2) return { gainers: [], losers: [], days: dates.length }
+  const [history, names] = await Promise.all([
+    fetchAllRows<MoverRow>((from, to) =>
+      db
+        .from('sab_price_history')
+        .select('brainrot_id,history_date,median_usd')
+        .eq('mutation_id', mutationId)
+        .in('history_date', [span.fromDate, span.toDate])
+        .order('brainrot_id', { ascending: true })
+        .order('history_date', { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllRows<MoverName>((from, to) =>
+      db.from('sab_brainrot_catalog').select('id,name,slug').order('id', { ascending: true }).range(from, to),
+    ),
+  ])
+  if (history.error || names.error) throw new Error('Price index: movers read failed')
 
-  const oldest = dates[0]
-  const newest = dates[dates.length - 1]
-  const byBrainrot = new Map<string, { first?: number; last?: number }>()
-  for (const r of history) {
-    const e = byBrainrot.get(r.brainrot_id) ?? {}
-    if (r.history_date === oldest) e.first = Number(r.median_usd)
-    if (r.history_date === newest) e.last = Number(r.median_usd)
-    byBrainrot.set(r.brainrot_id, e)
-  }
-
-  // Resolve names for the movers.
-  const ids = Array.from(byBrainrot.keys())
-  const { data: names } = await supabase
-    .from('sab_brainrot_catalog')
-    .select('id,name,slug')
-    .in('id', ids)
-  const nameById = new Map(
-    ((names ?? []) as { id: string; name: string; slug: string }[]).map((n) => [n.id, n]),
-  )
-
-  const moves: Mover[] = []
-  for (const [id, e] of byBrainrot) {
-    if (e.first == null || e.last == null || e.first <= 0) continue
-    const n = nameById.get(id)
-    if (!n) continue
-    const pct = ((e.last - e.first) / e.first) * 100
-    if (Math.abs(pct) < 1) continue
-    moves.push({ slug: n.slug, name: n.name, from: e.first, to: e.last, pct })
-  }
-
-  const gainers = moves.filter((m) => m.pct > 0).sort((a, b) => b.pct - a.pct).slice(0, 8)
-  const losers = moves.filter((m) => m.pct < 0).sort((a, b) => a.pct - b.pct).slice(0, 8)
-  return { gainers, losers, days: dates.length }
+  const days = Math.round((Date.parse(span.toDate) - Date.parse(span.fromDate)) / 86_400_000) + 1
+  return { ...moversBetween(history.data ?? [], names.data ?? [], span), days }
 }
 
 async function generateMetadataRaw({
