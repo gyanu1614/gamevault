@@ -23,6 +23,12 @@ describe('CategoryHeader', () => {
     expect(header({ categoryLabel: 'Adopt Me Pets' })).toContain('>Adopt Me Pets</h1>')
   })
 
+  it('an Items page reads "<Game> Items", with no number', () => {
+    const html = header({ gameName: 'Murder Mystery 2', categoryLabel: 'Items', count: undefined, countNoun: undefined })
+    expect(html).toContain('>Murder Mystery 2 Items</h1>')
+    expect(html).not.toMatch(/\d+ (items|listings)/)
+  })
+
   it('singular for one, nothing for none', () => {
     expect(header({ count: 1 })).toMatch(/1 pet</)
     expect(header({ count: 0 })).not.toMatch(/0 pets/)

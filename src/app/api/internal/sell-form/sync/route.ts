@@ -3,6 +3,7 @@ import { authorizeInternalRequest, internalJson } from '@/lib/security/internal-
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { CATALOGUE_GAMES } from '@/lib/catalogue/registry'
 import { findSellFormConfig } from '@/lib/catalogue/sell-form/config'
+import { findListSyncConfig, syncSellFormLists } from '@/lib/catalogue/sell-form/lists'
 import { syncMessage, syncSellForm } from '@/lib/catalogue/sell-form/run'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
 import { revalidateGameCategorySurfaces, revalidateListingSurfaces } from '@/lib/revalidation/listings'
@@ -40,26 +41,31 @@ export async function POST(request: Request): Promise<Response> {
   const entry = CATALOGUE_GAMES.find((g) => g.key === key || g.adapter.gameSlug === key)
   const game = entry?.adapter.gameSlug ?? key
   const config = findSellFormConfig(game)
-  if (!config) return internalJson({ ok: true, skipped: 'no sell-form config for this game' })
+  const lists = findListSyncConfig(game)
+  if (!config && !lists) return internalJson({ ok: true, skipped: 'no sell-form config for this game' })
   const write = url.searchParams.get('dry') !== '1'
 
   const db = createServiceRoleClient()
   try {
-    const { report } = await syncSellForm(
-      config,
-      {
-        db,
-        afterRepairs: async (ids) => {
-          await linkListingsToValueItems(db, ids)
-          await revalidateListingSurfaces(db as never, { listingIds: ids })
-        },
-        afterFormChange: async ({ gameId }) => {
-          revalidateTag(SELL_TEMPLATE_TAG)
-          await revalidateGameCategorySurfaces(db as never, gameId)
-        },
-      },
-      { write, allowLarge: url.searchParams.get('allowLarge') === '1' },
-    )
+    const afterFormChange = async ({ gameId }: { gameId: string }) => {
+      revalidateTag(SELL_TEMPLATE_TAG)
+      await revalidateGameCategorySurfaces(db as never, gameId)
+    }
+    const options = { write, allowLarge: url.searchParams.get('allowLarge') === '1' }
+    const { report } = config
+      ? await syncSellForm(
+          config,
+          {
+            db,
+            afterRepairs: async (ids) => {
+              await linkListingsToValueItems(db, ids)
+              await revalidateListingSurfaces(db as never, { listingIds: ids })
+            },
+            afterFormChange,
+          },
+          options,
+        )
+      : await syncSellFormLists(lists!, { db, afterFormChange }, options)
     const text = syncMessage(entry?.name ?? game, report)
     if (text && write) await postOpsAlert(text)
     return internalJson({ ok: report.status !== 'failed', report }, report.status === 'blocked' ? 409 : 200)

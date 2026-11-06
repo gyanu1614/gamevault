@@ -25,6 +25,14 @@ describe('syncMessage', () => {
   })
 })
 
+describe('syncMessage: a warning alone', () => {
+  it('still reaches the owner, even with nothing added', () => {
+    expect(syncMessage('Adopt Me', { ...base, warnings: ['2 items of "hat" could not be placed: the form has no list for them'] })).toBe(
+      '⚠️ **Adopt Me** sell form:\n• 2 items of "hat" could not be placed: the form has no list for them',
+    )
+  })
+})
+
 describe('legacyRetirement', () => {
   const config = {
     types: [{ key: 'knife' }, { key: 'gun' }],
@@ -39,6 +47,14 @@ describe('legacyRetirement', () => {
       retire: [{ id: 'a', slug: 'rarity-2' }],
       inUse: ['knife-name-5'],
     })
+  })
+
+  it('retires a retired field the same way: gone once no live listing answers it', () => {
+    const retiring = { ...config, legacyFields: [], retiredFields: ['item-properties'] } as unknown as SellFormConfig
+    const plan = { typeValues: { knife: 'knives', gun: 'guns' } }
+    const used = [{ id: 'l1', templateData: { 'item-properties': 'chroma' }, valueItemSlug: null }]
+    expect(legacyRetirement(retiring, plan, form, used, [])).toEqual({ retire: [], inUse: ['item-properties'] })
+    expect(legacyRetirement(retiring, plan, form, used, [{ id: 'l1', templateData: {}, itemSlug: null }])).toEqual({ retire: [{ id: 'c', slug: 'item-properties' }], inUse: [] })
   })
 
   it('retires nothing while a configured type has no chain', () => {

@@ -5,6 +5,7 @@
  * catalogue runs (read model src/lib/values/admin-values.ts), and the Eldorado
  * names review: confirm / reject / link (src/lib/values/market-names.ts).
  */
+import { loadNotLinkedListings, type NotLinkedListing } from '@/lib/values/not-linked-listings'
 import { requireRole } from '@/lib/actions/admin-permissions'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { ADMIN_VALUES_VIEWS, isAdminValuesGame, loadAdminValues, type AdminValuesPage, type AdminValuesView } from '@/lib/values/admin-values'
@@ -24,6 +25,19 @@ export async function getAdminValues(
     return { ok: true, data }
   } catch (e) {
     console.error('[admin-values]', (e as Error).message)
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
+// ── Live listings with no item page ─────────────────────────────────────────
+
+export async function getNotLinkedListings(gameSlug: string): Promise<{ ok: true; data: NotLinkedListing[] } | { ok: false; error: string }> {
+  await requireRole([...ROLES])
+  if (!isAdminValuesGame(gameSlug)) return { ok: false, error: 'This game has no values hub.' }
+  try {
+    return { ok: true, data: await loadNotLinkedListings(createServiceRoleClient() as any, gameSlug) }
+  } catch (e) {
+    console.error('[admin-values] not linked', (e as Error).message)
     return { ok: false, error: (e as Error).message }
   }
 }

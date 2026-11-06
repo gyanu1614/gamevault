@@ -29,13 +29,15 @@ export function requiredAttributesFilled(
   values: Record<string, unknown>,
   topLevel: Attribute[],
   childrenOf: ChildIndex,
+  /** Fields not on screen (the item lists, on the manual path). */
+  notAsked?: ReadonlySet<string>,
 ): boolean {
   if (!template) return true
   const byId = indexById(template)
   const check = (list: Attribute[]): boolean => {
     for (const a of list) {
       if (!isVisible(a, values, byId)) continue
-      if (a.is_required && isBlank(values[a.id])) return false
+      if (a.is_required && !notAsked?.has(a.id) && isBlank(values[a.id])) return false
       const inner = childrenOf.get(a.id)
       const v = values[a.id]
       if (inner && typeof v === 'string' && v && !check(inner.get(v) ?? [])) return false

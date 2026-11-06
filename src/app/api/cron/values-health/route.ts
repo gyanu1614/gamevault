@@ -11,6 +11,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { evaluateGameHealth, healthMessage, readGameHealth, VALUES_HEALTH_GAMES, type HealthProblem } from '@/lib/values/health'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 export const maxDuration = 60
 
 export async function GET(request: NextRequest) {

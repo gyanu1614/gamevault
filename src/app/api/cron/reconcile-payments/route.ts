@@ -19,6 +19,7 @@ import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 export const maxDuration = 60
 
 const OUTBOX_BATCH = 50

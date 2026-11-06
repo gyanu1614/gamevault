@@ -17,6 +17,7 @@ import fs from 'node:fs'
 import process from 'node:process'
 import { findSellFormConfig } from '../src/lib/catalogue/sell-form/config.ts'
 import { syncSellForm } from '../src/lib/catalogue/sell-form/run.ts'
+import { findListSyncConfig, syncSellFormLists } from '../src/lib/catalogue/sell-form/lists.ts'
 import { valuesDbClient } from './lib/values-db.mjs'
 
 const argv = process.argv.slice(2)
@@ -32,12 +33,22 @@ function countBy(rows, key) {
 async function main() {
   const game = val('game')
   const config = game && findSellFormConfig(game)
-  if (!config) throw new Error(`--game=<slug> with a sell-form config is required (got "${game}")`)
+  const lists = game && findListSyncConfig(game)
+  if (!config && !lists) throw new Error(`--game=<slug> with a sell-form config is required (got "${game}")`)
   const env = val('env')
   const write = flag('write')
   if (write && env !== 'local') throw new Error('--write is local only; production writes go through /api/internal/sell-form/sync')
   const { db, url } = valuesDbClient({ env: env ?? undefined, readOnly: !write })
   console.log(`${write ? 'Writing to' : 'Dry run against'} ${url}`)
+
+  if (lists) {
+    const { report, plan } = await syncSellFormLists(lists, { db, afterFormChange: null }, { write, allowLarge: flag('allow-large') })
+    console.log(`### ${lists.gameSlug} sell form lists: ${report.status}${write ? '' : ' (dry run)'}`)
+    if (report.message) console.log(`**${report.message}**`)
+    if (plan) console.log(`fields: +${plan.createFields.length} · rules: ${plan.setRules.length} · options: +${plan.createOptions.length} (${countBy(plan.createOptions, (c) => c.node) || 'none'})`)
+    for (const w of report.warnings) console.log(`⚠ ${w}`)
+    return
+  }
 
   const { report, plan, repairs } = await syncSellForm(config, { db, afterRepairs: null, afterFormChange: null }, { write, allowLarge: flag('allow-large') || !write })
   const lines = [

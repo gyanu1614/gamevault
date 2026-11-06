@@ -306,3 +306,45 @@ describe('matchListingToValueItem — Adopt Me eggs and potions', () => {
     expect(match('Dog')?.itemSlug).toBe('dog')
   })
 })
+
+// 2026-11-05: "Chroma Embersickle - Murder Mystery 2", picked as Embersickle +
+// Item Properties: Chroma. The title contradicted the pick, so the listing linked
+// to nothing: not on the item's page, and its Notify Me alert never went out.
+describe('a pick the title contradicts: the title decides', () => {
+  const MM2 = buildValueCatalog('murder-mystery-2', {
+    items: [
+      { slug: 'embersickle', name: 'Embersickle' },
+      { slug: 'chroma-embersickle', name: 'Chroma Embersickle' },
+    ],
+  })!.catalog
+  const picked = { 'knife-godly': 'embersickle', 'item-properties': 'chroma' }
+
+  it('links to the item the title names', () => {
+    expect(matchListingToValueItem({ title: 'Chroma Embersickle - Murder Mystery 2', templateData: picked }, MM2)?.itemSlug).toBe('chroma-embersickle')
+  })
+
+  it('links to nothing when the title names an item we do not list', () => {
+    expect(matchListingToValueItem({ title: 'Frost Embersickle - Murder Mystery 2', templateData: picked }, MM2)).toBeNull()
+  })
+
+  it('a pick the title agrees with is unchanged', () => {
+    expect(matchListingToValueItem({ title: 'Embersickle - Murder Mystery 2', templateData: picked }, MM2)?.itemSlug).toBe('embersickle')
+  })
+
+  it('another item named elsewhere in the title never wins', () => {
+    const am = buildValueCatalog('adopt-me', {
+      items: [
+        { slug: 'parrot', name: 'Parrot' },
+        { slug: 'bat-dragon', name: 'Bat Dragon' },
+        { slug: 'frost-dragon', name: 'Frost Dragon' },
+        { slug: 'fly-potion', name: 'Fly Potion', kind: 'potion' as const },
+      ],
+    })!.catalog
+    expect(matchListingToValueItem({ title: 'Cute Parrot - Fly Potion', templateData: { 'pet-name': 'parrot' } }, am)).toBeNull()
+    expect(matchListingToValueItem({ title: 'Fairy Bat Dragon | Frost Dragon', templateData: { 'pet-name': 'bat-dragon' } }, am)).toBeNull()
+  })
+
+  it('a title that names nothing keeps the pick', () => {
+    expect(matchListingToValueItem({ title: 'Godly knife, fast delivery', templateData: picked }, MM2)?.itemSlug).toBe('embersickle')
+  })
+})

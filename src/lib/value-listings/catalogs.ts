@@ -108,7 +108,7 @@ export function buildValueCatalog(
         gameSlug,
         items,
         variants: VARIANTS.map((code) => ({ key: VARIANT_KEY[code], names: VARIANT_ALIASES[code] })),
-        identityKeys: ['pet-name'],
+        identityKeys: ['pet-name', 'egg-name', 'potion-name'],
         variantKeys: ['trait'],
         // Real variants with no value page, and "no potion": not part of a pet's name.
         skipWords: ['nf', 'nr', 'mf', 'mr', 'np', 'potion', 'potions'],
@@ -182,6 +182,25 @@ export async function loadValueCatalog(client: AnyClient, game: { id: string; sl
   return null
 }
 
+/**
+ * Is this item in the game's catalogue? One row from the table loadValueCatalog
+ * reads, under the same rules, for the check before an item page saves a 404.
+ */
+export async function catalogHasItem(client: AnyClient, game: { id: string; slug: string }, itemSlug: string): Promise<boolean> {
+  const query =
+    game.slug === 'steal-a-brainrot'
+      ? client.from('sab_brainrot_market_catalog').select('slug')
+      : game.slug === 'adopt-me'
+        ? client.from('adopt_me_pets').select('slug')
+        : VALUES_PIPELINE_GAMES.has(game.slug)
+          ? client.from('values_items').select('slug').eq('game_id', game.id).not('is_enabled', 'is', false)
+          : null
+  if (!query) return false
+  const { data, error } = await query.eq('slug', itemSlug).limit(1)
+  if (error) throw error
+  return (data ?? []).length > 0
+}
+
 /** attribute slug → option slug → label, for one game category's template. */
 export async function loadOptionLabels(client: AnyClient, gameCategoryId: string): Promise<Record<string, Record<string, string>>> {
   const { data: tpl } = await client
@@ -194,13 +213,10 @@ export async function loadOptionLabels(client: AnyClient, gameCategoryId: string
   const { data: attrs } = await client.from('attributes').select('id, slug').eq('template_id', tpl.id)
   const list = (attrs ?? []) as Array<{ id: string; slug: string }>
   if (list.length === 0) return {}
-  const { data: opts } = await client
-    .from('attribute_options')
-    .select('attribute_id, slug, value, label')
-    .in('attribute_id', list.map((a) => a.id))
+  const opts = await readAllRows(() => client.from('attribute_options').select('attribute_id, slug, value, label').in('attribute_id', list.map((a) => a.id)), 'id')
   const slugById = new Map(list.map((a) => [a.id, a.slug]))
   const out: Record<string, Record<string, string>> = {}
-  for (const o of (opts ?? []) as Array<{ attribute_id: string; slug: string; value: string | null; label: string }>) {
+  for (const o of opts as Array<{ attribute_id: string; slug: string; value: string | null; label: string }>) {
     const attr = slugById.get(o.attribute_id)
     if (!attr) continue
     // Listings store the choice's VALUE (what the sell form writes); it equals

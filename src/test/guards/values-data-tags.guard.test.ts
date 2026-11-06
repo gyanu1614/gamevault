@@ -70,10 +70,10 @@ const ANON_ALLOWED: Record<string, { count: number; reason: string }> = {
     reason: "searchCatalog: the admin editor's item search (one query per keystroke, never cached); the article's read is tagged",
   },
   [`${HUB}/page.tsx`]: {
-    count: 2,
+    count: 1,
     reason:
-      'generateStaticParams (games slugs) + the metadata curated-currency check (category_configs); ' +
-      'its listing reads use the listing read clients (listings-data-tags.guard)',
+      'the metadata curated-currency check (category_configs); generateStaticParams reads the sitemap set ' +
+      '(getIndexableGameSlugs); its listing reads use the listing read clients (listings-data-tags.guard)',
   },
   'src/features/game-home/load/game.ts': {
     count: 1,

@@ -223,6 +223,8 @@ export interface CurrencySellerRowProps {
   surfaceClassName?: string
   /** When given, the row toggles this panel open/closed. */
   details?: ReactNode
+  /** One quiet line under the row: the seller's own words about this offer. */
+  note?: string | null
 }
 
 // The marketplace card (gradient, no outline); hover lifts the gradient.
@@ -259,6 +261,8 @@ export function CurrencySellerRow(p: CurrencySellerRowProps) {
           <OfferRowAction isOwn={p.isOwn} selected={p.selected} onSelect={p.onSelect} />
         </div>
       </div>
+
+      {p.note ? <p className={cn(passThrough, 'relative z-10 -mt-1.5 truncate px-4 pb-3 text-[13px] text-text-secondary sm:-mt-2 sm:px-5 sm:pb-4')}>{p.note}</p> : null}
 
       {/* Phone: price first, then the metrics; wraps rather than clipping at 360px. */}
       <div className={cn(passThrough, 'relative z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 sm:hidden')}>

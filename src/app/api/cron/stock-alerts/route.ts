@@ -12,6 +12,7 @@ import { sendDueStockAlerts } from '@/lib/stock-alerts/dispatch'
  */
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 export const maxDuration = 300
 
 export async function GET(request: NextRequest) {

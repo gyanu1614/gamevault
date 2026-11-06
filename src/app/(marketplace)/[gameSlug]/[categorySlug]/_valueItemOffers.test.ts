@@ -13,6 +13,7 @@ vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), c
 const getValueListings = vi.fn()
 const getValueItemListings = vi.fn()
 const getValueItemDescriptions = vi.fn(async () => ({ b: 'Fast trade, message me first.' }))
+const itemPageExistsFresh = vi.fn(async () => false)
 vi.mock('@/lib/value-listings/stock-server', () => ({
   getItemsPair: vi.fn(async (game: string) =>
     game === 'adopt-me' ? { gameId: 'g1', gameName: 'Adopt Me', gameImageUrl: null, pairId: 'p1', categorySlug: 'buy-items' } : null,
@@ -20,6 +21,7 @@ vi.mock('@/lib/value-listings/stock-server', () => ({
   getValueCatalog: vi.fn(async () =>
     buildValueCatalog('adopt-me', { items: [{ slug: 'bat-dragon', name: 'Bat Dragon' }, { slug: 'owl', name: 'Owl' }] }),
   ),
+  itemPageExistsFresh: (...a: unknown[]) => itemPageExistsFresh(...(a as [])),
   getValueListings: (...a: unknown[]) => getValueListings(...a),
   getValueItemDescriptions: (...a: unknown[]) => getValueItemDescriptions(...(a as [])),
   getValueItemListings: (...a: unknown[]) => getValueItemListings(...a),
@@ -36,10 +38,56 @@ const row = (id: string, item: string, variant: string | null, price: number) =>
 describe('loadItemListingsPage', () => {
   beforeEach(() => {
     getValueListings.mockReset()
+    getValueItemDescriptions.mockClear()
+    itemPageExistsFresh.mockReset()
+    itemPageExistsFresh.mockResolvedValue(false)
     getValueListings.mockResolvedValue({
       pair: {},
       rows: [row('a', 'bat-dragon', 'fly-ride', 300), row('b', 'bat-dragon', 'neon', 900), row('c', 'owl', 'neon', 40)],
     })
+  })
+
+  // 2026-11-06: /murder-mystery-2/buy-items/item/emberbow was saved as a 404
+  // seconds after its first listing went live, with the item in the database.
+  // A saved 404 stays until the next release, so the database has the last word.
+  it('never answers 404 for an item the database still has', async () => {
+    itemPageExistsFresh.mockResolvedValue(true)
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(resolveItemRoute('adopt-me', 'buy-items', 'nope', null)).rejects.toMatchObject({ name: 'PublicReadError' })
+    expect(itemPageExistsFresh).toHaveBeenCalledWith('adopt-me', 'buy-items', 'nope')
+    // What a future case needs to find the layer that was wrong.
+    expect(error.mock.calls[0][1]).toMatchObject({ gameSlug: 'adopt-me', itemSlug: 'nope', hasPair: true, catalogItems: 2 })
+    error.mockRestore()
+  })
+
+  it('a failed check keeps the last page: it throws, it does not become a 404', async () => {
+    itemPageExistsFresh.mockRejectedValue(Object.assign(new Error('down'), { name: 'PublicReadError' }))
+    await expect(resolveItemRoute('adopt-me', 'buy-items', 'nope', null)).rejects.toMatchObject({ name: 'PublicReadError' })
+  })
+
+  it('an item the saved data has needs no extra read', async () => {
+    await resolveItemRoute('adopt-me', 'buy-items', 'bat-dragon', null)
+    expect(itemPageExistsFresh).not.toHaveBeenCalled()
+  })
+
+  it('an unknown trait of a real item stays a 404 with no extra read', async () => {
+    expect(await resolveItemRoute('adopt-me', 'buy-items', 'bat-dragon', 'diamond')).toBeNull()
+    expect(itemPageExistsFresh).not.toHaveBeenCalled()
+  })
+
+  // 2026-11-06: a new Sunrise offer showed the stock hand-over text, not the
+  // seller's. Descriptions are read for the offers on the page, so a new offer
+  // can't be served from a copy saved before it existed.
+  it('reads descriptions for the offers on the page', async () => {
+    await loadItemListingsPage('adopt-me', 'buy-items', 'bat-dragon', null)
+    expect(getValueItemDescriptions).toHaveBeenCalledWith('adopt-me', 'bat-dragon', ['a', 'b'])
+  })
+
+  it('an item with no offers reads no descriptions', async () => {
+    getValueListings.mockResolvedValue({ pair: {}, rows: [row('c', 'owl', 'neon', 40)] })
+    const data = await loadItemListingsPage('adopt-me', 'buy-items', 'bat-dragon', null)
+    expect(data!.offers).toEqual([])
+    expect(getValueItemDescriptions).not.toHaveBeenCalled()
   })
 
   it.each([

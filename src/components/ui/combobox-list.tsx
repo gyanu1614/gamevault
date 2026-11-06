@@ -16,6 +16,8 @@ export function OptionList({
   query,
   value,
   emptyText,
+  rankMatches = false,
+  onFirstRow,
   size,
   rowIconClassName,
   onChoose,
@@ -25,7 +27,10 @@ export function OptionList({
   options: ComboboxOption[]
   query: string
   value: string
-  emptyText: string
+  emptyText: string | ((query: string) => string)
+  rankMatches?: boolean
+  /** A search: the top row is the highlighted one, so Enter picks it. */
+  onFirstRow?: (value: string) => void
   size: 'md' | 'lg'
   rowIconClassName: string
   onChoose: (v: string) => void
@@ -34,10 +39,14 @@ export function OptionList({
   const s = SIZES[size]
   const index = React.useMemo(() => indexOptions(options), [options])
   const deferred = React.useDeferredValue(query)
-  const { items, more } = React.useMemo(() => filterOptions(index, deferred), [index, deferred])
+  const { items, more } = React.useMemo(() => filterOptions(index, deferred, { rank: rankMatches }), [index, deferred, rankMatches])
+  const first = items[0]?.value
+  React.useEffect(() => {
+    if (first !== undefined) onFirstRow?.(first)
+  }, [first, onFirstRow])
   return (
     <CommandList id={listboxId} role="listbox" className={cn('overflow-y-auto overscroll-contain', s.list, className)}>
-      {items.length === 0 && <p className="px-3 py-2 text-xs text-text-tertiary">{emptyText}</p>}
+      {items.length === 0 && <p className="px-3 py-2 text-xs text-text-tertiary">{typeof emptyText === 'function' ? emptyText(deferred.trim()) : emptyText}</p>}
       <CommandGroup>
         {items.map((o) => {
           const isChecked = o.value === value
@@ -58,7 +67,14 @@ export function OptionList({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={pictureUrl(o.icon_url, 'icon')} alt={o.label} aria-hidden loading="lazy" className={cn('shrink-0 object-cover', rowIconClassName)} />
               )}
-              <span className="flex-1 truncate">{o.label}</span>
+              {o.meta ? (
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{o.label}</span>
+                  <span className="block truncate text-[13px] font-normal text-text-tertiary">{o.meta}</span>
+                </span>
+              ) : (
+                <span className="flex-1 truncate">{o.label}</span>
+              )}
               {isChecked && <Check className={cn('text-lime-text', s.check)} />}
             </CommandItem>
           )

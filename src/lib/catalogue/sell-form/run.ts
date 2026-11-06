@@ -35,7 +35,7 @@ export interface SyncResult {
   repairs: ListingRepair[]
 }
 
-function emptyReport(gameSlug: string, write: boolean): SyncReport {
+export function emptyReport(gameSlug: string, write: boolean): SyncReport {
   return {
     gameSlug, status: 'nothing_to_do', write, fieldsCreated: 0, fieldsUpdated: 0, optionsCreated: [], optionsUpdated: 0,
     optionsDeleted: 0, optionsKept: [], rulesSet: 0, listingsRepaired: 0, fieldsRetired: [], fieldsKeptInUse: [], warnings: [], message: null,
@@ -59,8 +59,9 @@ export function legacyRetirement(
   const retire: { id: string; slug: string }[] = []
   const inUse: string[] = []
   const chainComplete = config.types.every((t) => plan.typeValues[t.key])
+  const retiring = new Set([...config.legacyFields, ...(config.retiredFields ?? [])])
   for (const f of form.fields) {
-    if (!config.legacyFields.includes(f.slug)) continue
+    if (!retiring.has(f.slug)) continue
     if (!chainComplete) {
       inUse.push(f.slug)
       continue
@@ -151,6 +152,7 @@ export function syncMessage(gameName: string, report: SyncReport): string | null
   if (report.fieldsRetired.length) parts.push(`${report.fieldsRetired.length} old ${report.fieldsRetired.length === 1 ? 'field' : 'fields'} removed (${report.fieldsRetired.join(', ')})`)
   if (report.fieldsCreated + report.rulesSet && !added.length) parts.push(`${report.fieldsCreated} fields and ${report.rulesSet} rules restored`)
   if (report.optionsKept.length) parts.push(`${report.optionsKept.length} stray ${report.optionsKept.length === 1 ? 'option was' : 'options were'} kept because a listing uses ${report.optionsKept.length === 1 ? 'it' : 'them'}`)
-  if (!parts.length) return null
-  return `🧾 ${title}: ${parts.join('; ')}.${report.warnings.length ? `\n${report.warnings.map((w) => `• ${w}`).join('\n')}` : ''}`
+  const warnings = report.warnings.map((w) => `• ${w}`).join('\n')
+  if (!parts.length) return warnings ? `⚠️ ${title}:\n${warnings}` : null
+  return `🧾 ${title}: ${parts.join('; ')}.${warnings ? `\n${warnings}` : ''}`
 }

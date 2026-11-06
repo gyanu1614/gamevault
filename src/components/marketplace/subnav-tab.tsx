@@ -2,14 +2,12 @@ import {
   IconBook2,
   IconBox,
   IconBolt,
-  IconBrandDiscordFilled,
   IconCoins,
   IconGift,
   IconRocket,
   IconUserCircle,
   type Icon,
 } from '@tabler/icons-react'
-import { DISCORD_INVITE_URL } from '@/lib/config/social'
 import { cn } from '@/lib/utils'
 
 /**
@@ -57,29 +55,9 @@ export const SUBNAV_HIDDEN = '-translate-y-full opacity-0 pointer-events-none'
 /** The same from md up only: inside a listing, phones keep their back button on screen (owner, 2026-11-02/03). */
 export const SUBNAV_HIDDEN_MD = 'md:-translate-y-full md:opacity-0 md:pointer-events-none'
 
-/**
- * Join Discord, in Discord's own colour, on every game page's bar (owner,
- * 2026-11-04, GameBoost's as the reference). The words show from xl up; below
- * that the bar is full, so it is the mark alone. Hover lightens in place.
- */
-export function SubnavDiscordButton({ className }: { className?: string }) {
-  return (
-    <a
-      href={DISCORD_INVITE_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Join DropMarket on Discord"
-      className={cn(
-        'inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-[#5865F2] text-[14px] font-semibold text-white transition-colors hover:bg-[#6B77F5]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-        'w-9 xl:w-auto xl:px-3.5',
-        className,
-      )}
-    >
-      <IconBrandDiscordFilled aria-hidden className="h-[18px] w-[18px] shrink-0" />
-      <span className="hidden xl:inline">Join Discord</span>
-    </a>
-  )
+/** Items leads every game's tabs (owner, 2026-11-05); the rest keep their order. */
+export function itemsFirst<T extends { type?: string | null }>(categories: readonly T[]): T[] {
+  return [...categories.filter((c) => c.type === 'items'), ...categories.filter((c) => c.type !== 'items')]
 }
 
 /** Lockup left · tabs centred · content tab right on md+, on the navbar's side edges; one scroll row on phones. */

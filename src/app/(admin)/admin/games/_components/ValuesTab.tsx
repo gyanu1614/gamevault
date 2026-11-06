@@ -16,6 +16,7 @@ import { getAdminValues } from '@/lib/actions/admin-values'
 import { ADMIN_VALUES_PAGE_SIZE, type AdminValuesView } from '@/lib/values/admin-values'
 import { AdminEmpty, AdminLoadingRows, AdminPagination, FilterChip, PanelHead, StatusBadge, TABLE, adminFieldCls, type ChipTone } from '../../components/kit'
 import { MarketNamesPanel } from './MarketNamesPanel'
+import { NotLinkedPanel } from './NotLinkedPanel'
 
 const VIEWS: { id: AdminValuesView; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -169,6 +170,8 @@ export function ValuesTab({ gameSlug, gameName }: { gameSlug: string; gameName: 
       </section>
 
       <MarketNamesPanel gameSlug={gameSlug} />
+
+      <NotLinkedPanel gameSlug={gameSlug} />
 
       <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
         <PanelHead title="New-Items Catalogue" subtitle="Runs daily from the game's wiki and only ever adds items." />

@@ -43,6 +43,28 @@ export function traitOptions(traits: readonly TraitDef[], offers: readonly Offer
   })
 }
 
+/** An item's Common and Chroma versions in the trait picker's shape: `variant` is the item's slug. */
+export function formOptions(forms: ReadonlyArray<{ slug: string; label: string; count: number; minPriceUsd: number | null }>): TraitOption[] {
+  return forms.map((f) => ({ variant: f.slug, label: f.label, short: null, count: f.count, minPriceUsd: f.minPriceUsd }))
+}
+
+/** The Common / Chroma picker: picking the other version opens its page. */
+export function formPicker(
+  forms: ReadonlyArray<{ slug: string; label: string; href: string; count: number; minPriceUsd: number | null }>,
+  itemSlug: string,
+  go: (href: string) => void,
+) {
+  return {
+    noun: 'Type',
+    options: formOptions(forms),
+    value: itemSlug,
+    onChange: (slug: string) => {
+      const form = forms.find((f) => f.slug === slug)
+      if (form && slug !== itemSlug) go(form.href)
+    },
+  }
+}
+
 /** The buy box's offer: the one the buyer chose from the list while it fits the trait, else the trait's cheapest. */
 export function pickOffer<T extends OfferLike>(
   offers: readonly T[],
@@ -71,4 +93,14 @@ export function defaultTrait(
 /** What a game calls its variants. */
 export function traitNoun(gameSlug: string): 'Trait' | 'Mutation' {
   return gameSlug === 'adopt-me' ? 'Trait' : 'Mutation'
+}
+
+/**
+ * A mutation changes how the item looks and the catalogue only has the plain one, so
+ * the offer's own photo shows when it has one (owner, 2026-11-05). Without one the
+ * catalogue picture stays, and the picker under it names the mutation.
+ */
+export function offerPhotoFor(noun: 'Trait' | 'Mutation', traitKey: string | null | undefined, offerImage: string | null | undefined): string | null {
+  if (noun !== 'Mutation' || !traitKey || traitKey === 'default') return null
+  return offerImage || null
 }

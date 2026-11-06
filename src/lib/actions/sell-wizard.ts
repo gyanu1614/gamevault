@@ -30,6 +30,7 @@ import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
+import { reportNotLinked } from '@/lib/value-listings/not-linked'
 import { insertListing, type ListingsWriter } from '@/lib/listings/create'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { toStoredImage } from '@/lib/images/resize-server'
@@ -558,7 +559,7 @@ export interface PublishListingInput {
 /** Adopt Me: the title names another variant than the Trait pick. A warning only; the pick is saved. */
 type VariantWarning = { variantWarning?: string }
 
-export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string } & VariantWarning>> {
+export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string; notLinked?: boolean } & VariantWarning>> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -718,11 +719,17 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     }
     // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
     const link = await linkListingsToValueItems(getAdminSupabase(), [createdId])
+    // Live with no item page: buyers only find it under More Listings, so say so.
+    // Item listings only: an account or currency offer never has an item page.
+    const notLinked = finalStatus === 'active' && gameCategory.type === 'items' && link.unmatched.length > 0
+    if (notLinked) reportNotLinked(link.unmatched)
 
     revalidatePath('/account/listings')
-    // Step 7b — the category page is prerendered (24 h TTL); tell it.
+    // Step 7b — the category page is prerendered (24 h TTL); tell it. The listing
+    // id also names its value item, so that item's pages follow straight away.
     await revalidateListingSurfaces(getAdminSupabase() as never, {
       gameCategoryIds: [gameCategory.id],
+      listingIds: createdId ? [createdId] : [],
     })
 
     // SEO — IndexNow for the freshly published listing + the pages it appears
@@ -764,7 +771,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
 
     return {
       success: true,
-      data: { id: createdId, status: finalStatus, path: categoryPath, variantWarning: link.variantMismatches[0]?.text },
+      data: { id: createdId, status: finalStatus, path: categoryPath, variantWarning: link.variantMismatches[0]?.text, notLinked },
     }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -1138,6 +1145,7 @@ export async function bulkPublishListings(
     // gate + policy decision; seller_id is pinned to the session user.
     const listingsWriter = getAdminSupabase()
     const touchedCategoryIds = new Set<string>()
+    const createdIds: string[] = []
 
     for (const r of rows) {
       try {
@@ -1188,6 +1196,7 @@ export async function bulkPublishListings(
           continue
         }
         ok++
+        if (created.id) createdIds.push(created.id)
         touchedCategoryIds.add(gameCategory.id)
       } catch (e: any) {
         failed.push({ line: r.line, error: e?.message ?? 'Unknown error' })
@@ -1195,13 +1204,19 @@ export async function bulkPublishListings(
     }
 
     // Bundle 2 — link this seller's new rows (never blocks; see value-listings/link).
-    if (ok > 0) await linkListingsToValueItems(listingsWriter, { sellerId: user.id })
+    if (ok > 0) {
+      const link = await linkListingsToValueItems(listingsWriter, { sellerId: user.id })
+      // This batch's item listings: the link step also picks up the seller's older rows.
+      if (status === 'active' && gameCategory.type === 'items') reportNotLinked(link.unmatched.filter((u) => createdIds.includes(u.id)))
+    }
 
     revalidatePath('/account/listings')
-    // Step 7b — one revalidation per category the batch touched.
+    // Step 7b — one revalidation per category the batch touched. The listing ids
+    // also name their value items, so those items' pages follow straight away.
     if (touchedCategoryIds.size > 0) {
       await revalidateListingSurfaces(listingsWriter as never, {
         gameCategoryIds: [...touchedCategoryIds],
+        listingIds: createdIds,
       })
     }
 

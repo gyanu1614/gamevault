@@ -54,6 +54,45 @@ export interface ItemPageModel<T extends ItemPageRow> {
   similar: StockedItem[]
   /** The most popular other items in stock, only when this item has some: the carousel under the page. */
   related: StockedItem[]
+  /** Murder Mystery 2: this item and its Chroma version, when both exist. Empty otherwise. */
+  forms: ItemForm[]
+}
+
+/** One version of an item with its own page and offers. */
+export interface ItemForm {
+  slug: string
+  label: 'Common' | 'Chroma'
+  href: string
+  count: number
+  minPriceUsd: number | null
+}
+
+const CHROMA_PREFIX = 'chroma-'
+
+/**
+ * In Murder Mystery 2 a Chroma item is its own catalogue row and page ("Chroma
+ * Sunrise" beside "Sunrise"), so choosing Chroma on an item page opens that page
+ * and its offers (owner, 2026-11-06). 52 items have both.
+ */
+function itemForms(
+  gameSlug: string,
+  categorySlug: string,
+  catalog: LoadedCatalog,
+  itemSlug: string,
+  stockOf: (slug: string) => ItemStock | undefined,
+): ItemForm[] {
+  if (gameSlug !== 'murder-mystery-2') return []
+  const plain = itemSlug.startsWith(CHROMA_PREFIX) ? itemSlug.slice(CHROMA_PREFIX.length) : itemSlug
+  const chroma = `${CHROMA_PREFIX}${plain}`
+  if (!catalog.items.some((i) => i.slug === plain) || !catalog.items.some((i) => i.slug === chroma)) return []
+  const form = (slug: string, label: ItemForm['label']): ItemForm => ({
+    slug,
+    label,
+    href: itemBuyHref({ gameSlug, categorySlug, itemSlug: slug }),
+    count: stockOf(slug)?.total ?? 0,
+    minPriceUsd: stockOf(slug)?.minPriceUsd ?? null,
+  })
+  return [form(plain, 'Common'), form(chroma, 'Chroma')]
 }
 
 export type StockedItem = CatalogItemRow & { count: number; minPriceUsd: number; href: string }
@@ -124,5 +163,6 @@ export function buildItemPage<T extends ItemPageRow>(input: ItemPageInput<T>): I
     canonicalPath: itemBuyHref({ gameSlug, categorySlug, itemSlug, variant: null }),
     similar: inStock ? [] : others,
     related: inStock ? others : [],
+    forms: itemForms(gameSlug, categorySlug, catalog, itemSlug, (slug) => stockMap.get(slug)),
   }
 }

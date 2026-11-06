@@ -30,6 +30,7 @@ export function planListingRepairs(
   for (const i of items) if (i.itemType && i.rarity) listKeys.add(listNode(i.itemType, raritySlug(i.rarity)))
   const renamedFrom = new Set(plan.renamed.map((r) => r.from))
   const legacy = new Set(config.legacyFields)
+  const retired = new Set(config.retiredFields ?? [])
   /** Keys that may hold the item answer, most specific first. */
   const itemKeys = [...listKeys, ...renamedFrom, ...config.legacyFields]
   const chainKeys = new Set([...listKeys, ...config.types.map((t) => rarityNode(t.key))])
@@ -56,7 +57,8 @@ export function planListingRepairs(
       }
     }
 
-    let desired: Record<string, string>
+    /** Null: the chain answers stay as they are (a retired answer may still go). */
+    let desired: Record<string, string> | null = null
     const type = target?.itemType && plan.typeValues[target.itemType] ? target.itemType : null
     if (target && type) {
       const r = target.rarity ? raritySlug(target.rarity) : OTHER
@@ -64,22 +66,22 @@ export function planListingRepairs(
     } else {
       // No catalogue item: only an old-form answer is worth moving (keep type + rarity, item → Other).
       target = null
-      if (!Object.keys(data).some((k) => legacy.has(k) || renamedFrom.has(k))) continue
-      const t = typeOf(data[config.typeField])
-      if (!t || !plan.typeValues[t]) continue
-      const own = str(data[rarityNode(t)])
+      const t = Object.keys(data).some((k) => legacy.has(k) || renamedFrom.has(k)) ? typeOf(data[config.typeField]) : null
+      const own = t ? str(data[rarityNode(t)]) : null
       const r = own && rarities.has(own) ? own : config.legacyFields.map((k) => str(data[k])).find((v) => v && rarities.has(v)) ?? null
-      if (!r) continue
-      const key = listNode(t, r)
-      desired = { [config.typeField]: plan.typeValues[t], [rarityNode(t)]: r, [key]: str(data[key]) ?? OTHER }
+      if (t && plan.typeValues[t] && r) {
+        const key = listNode(t, r)
+        desired = { [config.typeField]: plan.typeValues[t], [rarityNode(t)]: r, [key]: str(data[key]) ?? OTHER }
+      }
     }
 
     const next: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(data)) {
-      if ((chainKeys.has(k) || legacy.has(k) || renamedFrom.has(k)) && !(k in desired)) continue
+      if (retired.has(k)) continue
+      if (desired && (chainKeys.has(k) || legacy.has(k) || renamedFrom.has(k)) && !(k in desired)) continue
       next[k] = v
     }
-    Object.assign(next, desired)
+    if (desired) Object.assign(next, desired)
     if (!sameAnswers(data, next)) out.push({ id: l.id, templateData: next, itemSlug: target?.slug ?? null })
   }
   return out

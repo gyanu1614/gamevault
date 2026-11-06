@@ -115,12 +115,11 @@ export default function ItemsSkeleton({ grid = false, subnav = true, typeTabs = 
       {subnav ? <GameSubNavSkeleton tabs={2} /> : null}
 
       {/* Title + toolbar — mirrors CategoryHeader and FilterToolbar: one bold line
-          and its count, then search + filters + sort (desktop) or search +
+          then search + filters + sort (desktop) or search +
           Filters (below lg), all 44px. */}
       <div className="mx-auto w-full max-w-7xl px-4 pb-2 pt-7 sm:px-6 md:pt-4 lg:px-8">
         <div className={`${typeTabs ? 'mb-3' : 'mb-5'} flex items-baseline gap-3`}>
           <Block className="h-[31px] w-56 max-w-[70%] sm:h-[37px] sm:w-72" />
-          <Block className="h-4 w-14" />
         </div>
         {typeTabs ? <Block className="mb-4 h-10 w-[326px] max-w-full rounded-lg" /> : null}
         <div className="flex items-center gap-2">

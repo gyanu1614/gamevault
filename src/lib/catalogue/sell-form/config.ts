@@ -21,6 +21,9 @@ export const MM2_SELL_FORM: SellFormConfig = {
     'knife-name', 'knife-name-2', 'knife-name-3', 'knife-name-4', 'knife-name-5', 'knife-name-6',
     'gun-name', 'gun-name-2', 'gun-name-3', 'gun-name-4', 'gun-name-5',
   ],
+  // A Chroma item is its own item, so Common/Chroma says nothing. Picking Embersickle
+  // + Chroma listed the wrong item (2026-11-05, Chroma Embersickle).
+  retiredFields: ['item-properties'],
 }
 
 export const SELL_FORM_CONFIGS: readonly SellFormConfig[] = [MM2_SELL_FORM]

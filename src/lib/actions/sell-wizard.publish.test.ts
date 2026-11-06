@@ -26,9 +26,20 @@ type Res = { data: unknown; error: unknown }
 const h = vi.hoisted(() => ({
   session: null as any,
   admin: null as any,
+  revalidate: vi.fn(async (..._args: unknown[]) => ({ tags: [] })),
+  unmatched: [] as Array<{ id: string; gameSlug: string; title: string; templateKeys: string[] }>,
+  reportNotLinked: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
+vi.mock('@/lib/value-listings/link', () => ({
+  linkListingsToValueItems: vi.fn(async () => ({ checked: 1, linked: 0, unmatched: h.unmatched, errors: [], gameCategoryIds: [], changedItems: [], relinked: 0, variantMismatches: [] })),
+}))
+vi.mock('@/lib/value-listings/not-linked', () => ({ reportNotLinked: h.reportNotLinked }))
+vi.mock('@/lib/revalidation/listings', async (original) => ({
+  ...(await original<typeof import('@/lib/revalidation/listings')>()),
+  revalidateListingSurfaces: h.revalidate,
+}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/seo/indexnow', () => ({ snapshotListings: vi.fn(async () => new Map()), submitListingChanges: vi.fn(async () => undefined), logUrlEvents: vi.fn(async () => undefined) }))
 vi.mock('@/lib/actions/new-schema', () => ({
@@ -120,7 +131,7 @@ describe('AUTH-010 — publish paths require an admin-enabled (game, category) p
       listings: [{ data: { id: 'l-1', slug: 'sword' }, error: null }],
     })
     const res = await publishListing({ ...INPUT, status: 'draft' })
-    expect(res).toEqual({ success: true, data: { id: 'l-1', status: 'draft' } })
+    expect(res).toEqual({ success: true, data: { id: 'l-1', status: 'draft', notLinked: false } })
     // catalogue untouched; the ONLY service-role write is the listing itself (AUTH-031)
     expect(h.admin.calls.filter((c: any) => c.table !== 'listings')).toEqual([])
     const ins = h.admin.calls.filter((c: any) => c.table === 'listings' && c.op === 'insert')
@@ -215,6 +226,107 @@ describe('AUTH-031 — the service-role listing insert is pinned to the session 
   })
 })
 
+// 2026-11-06: a new offer's description and its value page's stock stayed old for
+// up to a day. Only listing ids name the item, so the category alone isn't enough.
+describe('a new listing refreshes the pages of the item it sells', () => {
+  const enabledItems = () => sessionWith({
+    profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+    global_categories: [{ data: { id: 'gc-items' }, error: null }],
+    game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+  })
+
+  it('publishListing names the listing and its category', async () => {
+    h.revalidate.mockClear()
+    h.session = enabledItems()
+    h.admin = mockClient({ listings: [{ data: { id: 'new-1', slug: 'sunrise' }, error: null }] })
+    const res = await publishListing(INPUT)
+    expect(res.success).toBe(true)
+    expect(h.revalidate.mock.calls[0][1]).toEqual({ gameCategoryIds: ['pair-1'], listingIds: ['new-1'] })
+  })
+
+  it('bulkPublishListings names every new listing and the category', async () => {
+    h.revalidate.mockClear()
+    h.session = enabledItems()
+    h.admin = mockClient({
+      listings: [{ data: { id: 'bulk-1', slug: 'a' }, error: null }, { data: { id: 'bulk-2', slug: 'b' }, error: null }],
+    })
+    const res = await bulkPublishListings('game-1', 'items', [
+      { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+      { line: 2, title: 'Bravo item', price: 2, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+    ])
+    expect(res.success).toBe(true)
+    expect(h.revalidate.mock.calls[0][1]).toEqual({ gameCategoryIds: ['pair-1'], listingIds: ['bulk-1', 'bulk-2'] })
+  })
+})
+
+describe('a live listing with no item page', () => {
+  const session = () => sessionWith({
+    profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+    global_categories: [{ data: { id: 'gc-items' }, error: null }],
+    game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+  })
+  const orphan = { id: 'new-1', gameSlug: 'murder-mystery-2', title: 'Frost Wand', templateKeys: [] }
+
+  it('tells the seller and the owner', async () => {
+    h.reportNotLinked.mockClear()
+    h.unmatched = [orphan]
+    h.session = session()
+    h.admin = mockClient({ listings: [{ data: { id: 'new-1', slug: 'frost' }, error: null }] })
+    const res = await publishListing(INPUT)
+    expect(res).toMatchObject({ success: true, data: { notLinked: true } })
+    expect(h.reportNotLinked).toHaveBeenCalledWith([orphan])
+    h.unmatched = []
+  })
+
+  it('an account or currency offer never has an item page, so it says nothing', async () => {
+    h.reportNotLinked.mockClear()
+    h.unmatched = [orphan]
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-accounts' }, error: null }],
+      game_categories: [{ data: { id: 'pair-a', slug: 'buy-accounts', name: 'Accounts', type: 'account', legacy_category_id: 'cat-a' }, error: null }],
+    })
+    h.admin = mockClient({ listings: [{ data: { id: 'new-1', slug: 'acct' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'accounts' })
+    expect(res).toMatchObject({ success: true, data: { notLinked: false } })
+    expect(h.reportNotLinked).not.toHaveBeenCalled()
+    h.unmatched = []
+  })
+
+  it('a draft is not news', async () => {
+    h.reportNotLinked.mockClear()
+    h.unmatched = [orphan]
+    h.session = session()
+    h.admin = mockClient({ listings: [{ data: { id: 'new-1', slug: 'frost' }, error: null }] })
+    const res = await publishListing({ ...INPUT, status: 'draft' })
+    expect(res).toMatchObject({ success: true, data: { notLinked: false } })
+    expect(h.reportNotLinked).not.toHaveBeenCalled()
+    h.unmatched = []
+  })
+
+  it('a listing that linked says nothing', async () => {
+    h.reportNotLinked.mockClear()
+    h.session = session()
+    h.admin = mockClient({ listings: [{ data: { id: 'new-1', slug: 'frost' }, error: null }] })
+    const res = await publishListing(INPUT)
+    expect(res).toMatchObject({ success: true, data: { notLinked: false } })
+    expect(h.reportNotLinked).not.toHaveBeenCalled()
+  })
+
+  it('bulk reports them too', async () => {
+    h.reportNotLinked.mockClear()
+    h.unmatched = [orphan]
+    const older = { ...orphan, id: 'older-listing', title: 'From last week' }
+    h.unmatched = [{ ...orphan, id: 'b1' }, older]
+    h.session = session()
+    h.admin = mockClient({ listings: [{ data: { id: 'b1', slug: 'a' }, error: null }] })
+    await bulkPublishListings('game-1', 'items', [{ line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any])
+    // This batch only: the link step also reads the seller's older rows.
+    expect(h.reportNotLinked).toHaveBeenCalledWith([{ ...orphan, id: 'b1' }])
+    h.unmatched = []
+  })
+})
+
 describe('ACC-11 — a crafted status never reaches the service-role insert', () => {
   for (const status of ['paused', 'sold', 'suspended', 'pending_approval', 'archived']) {
     it(`publishListing refuses status=${status}`, async () => {
@@ -243,7 +355,7 @@ describe('GRO-08 — an applicant may save drafts, never anything else', () => {
     })
     h.admin = mockClient({ listings: [{ data: { id: 'l-9', slug: 'z' }, error: null }] })
     const res = await publishListing({ ...INPUT, status: 'active' })
-    expect(res).toEqual({ success: true, data: { id: 'l-9', status: 'draft' } })
+    expect(res).toEqual({ success: true, data: { id: 'l-9', status: 'draft', notLinked: false } })
     expect(rpcNames).toEqual(['sell_access_kind'])
     const ins = h.admin.calls.find((c: any) => c.table === 'listings' && c.op === 'insert')!
     expect((ins.args[0] as any).status).toBe('draft')
