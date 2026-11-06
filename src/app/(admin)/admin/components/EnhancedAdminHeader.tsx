@@ -526,7 +526,7 @@ export default function EnhancedAdminHeader({
                   requestAnimationFrame(() => searchInputRef.current?.focus())
                 }}
                 aria-label="Search"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/80 transition-colors hover:bg-white/[0.07] hover:text-white sm:hidden"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-text-primary transition-colors hover:bg-white/[0.07] hover:text-white sm:hidden"
               >
                 <MagnifyingGlass aria-hidden weight="bold" className="h-5 w-5" />
               </button>
@@ -537,7 +537,7 @@ export default function EnhancedAdminHeader({
                 rel="noopener noreferrer"
                 aria-label="Open the marketplace"
                 title="Open the marketplace"
-                className="hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-white/80 transition-colors hover:bg-white/[0.07] hover:text-white sm:grid"
+                className="hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-text-primary transition-colors hover:bg-white/[0.07] hover:text-white sm:grid"
               >
                 <ArrowSquareOut aria-hidden weight="bold" className="h-[20px] w-[20px]" />
               </a>

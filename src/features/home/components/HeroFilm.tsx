@@ -51,13 +51,13 @@ import { GridSpotlight } from './GridSpotlight'
 import { HeroSearch } from './HeroSearch'
 import { HeroEyebrow } from '@/components/seller/SellerPrompt'
 
-/** Multi-game shortcuts. Every href was checked against production (200). */
+/** Shortcuts to what's really on sale (owner, 2026-11-06): each had live offers when picked. */
 const SHORTCUTS = [
-  { label: 'Valorant Accounts', href: '/valorant/buy-accounts', icon: 'accounts' },
   { label: 'Robux', href: '/roblox/buy-robux', icon: 'currency' },
   { label: 'V-Bucks', href: '/fortnite/buy-vbucks', icon: 'currency' },
-  { label: 'CS2 Skins', href: '/cs2/buy-items', icon: 'items' },
-  { label: 'GTA Accounts', href: '/gta-vi/buy-accounts', icon: 'accounts' },
+  { label: 'Adopt Me', href: '/adopt-me/buy-items', icon: 'items' },
+  { label: 'MM2', href: '/murder-mystery-2/buy-items', icon: 'items' },
+  { label: 'Steal a Brainrot', href: '/steal-a-brainrot/buy-items', icon: 'items' },
 ] as const
 
 /** Beat 2's proof row — the same claims the homepage TrustStrip makes. */

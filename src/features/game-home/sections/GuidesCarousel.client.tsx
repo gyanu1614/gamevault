@@ -92,13 +92,13 @@ export function GuidesCarousel({ posts }: { posts: GuideCard[] }) {
                   <span className="mt-1.5 block text-balance text-[20px] font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-[28px]">
                     {post.title}
                   </span>
-                  <span className="mt-2 hidden max-w-xl text-[14.5px] leading-relaxed text-white/75 sm:line-clamp-1">{post.excerpt}</span>
-                  <span className="mt-3 flex items-center gap-3 text-[13px] font-semibold text-white/80">
+                  <span className="mt-2 hidden max-w-xl text-[14.5px] leading-relaxed text-text-primary sm:line-clamp-1">{post.excerpt}</span>
+                  <span className="mt-3 flex items-center gap-3 text-[13px] font-semibold text-text-primary">
                     <span className="inline-flex items-center gap-1.5 text-white group-hover:underline group-hover:underline-offset-4">
                       Read Guide
                       <ArrowRightIcon size={13} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
                     </span>
-                    <span className="text-white/55">{post.readMinutes}&nbsp;min read</span>
+                    <span className="text-text-tertiary">{post.readMinutes}&nbsp;min read</span>
                   </span>
                 </span>
               </Link>

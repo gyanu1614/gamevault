@@ -22,7 +22,7 @@
  */
 
 import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent } from 'react'
-import { Send, Loader2, Paperclip, X, FileText, Reply } from 'lucide-react'
+import { Send, Loader2, Paperclip, X, FileText, Reply, Video } from 'lucide-react'
 import { toast } from 'sonner'
 import { CHAT_ATTACHMENT_ACCEPT, validateChatAttachment } from '@/lib/chat/attachments'
 import { Textarea } from '@/components/ui/textarea'
@@ -183,7 +183,7 @@ export default function MessageInput({
             <img src={previewUrl} alt="" className="h-10 w-10 flex-shrink-0 rounded-md object-cover" />
           ) : (
             <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md bg-white/[0.04] text-lime-text">
-              <FileText className="h-4 w-4" aria-hidden />
+              {file.type.startsWith('video/') ? <Video className="h-4 w-4" aria-hidden /> : <FileText className="h-4 w-4" aria-hidden />}
             </span>
           )}
           <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-text-primary">{file.name}</span>

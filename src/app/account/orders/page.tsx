@@ -13,6 +13,8 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import Link from '@/components/navigation/AppLink'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUrlFilters } from '@/hooks/use-url-filters'
+import { UrlSearchInput } from '@/components/account/UrlSearchInput'
+import { AccountMenuRow } from '@/components/account/AccountMenuRow'
 import Image from 'next/image'
 import {
   Search,
@@ -379,6 +381,7 @@ function OrdersContent() {
     // only the orders list scrolls (pinned to the navbar's bottom edge).
     <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] lg:left-72">
       <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-7 sm:px-6 md:max-w-7xl lg:px-8">
+        <AccountMenuRow isSeller={!!isSeller} inPage />
         {/* V21/P7.al — Standard account header. */}
         <div className="mb-4 shrink-0">
           <AccountPageHeader
@@ -647,11 +650,12 @@ function OrdersContent() {
           {/* Search — its own full-width row under the filter chips. */}
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-            <input
+            <UrlSearchInput
               type="text"
               placeholder="Search listings…"
               value={filters.searchQuery}
-              onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+              param="searchQuery"
+              onCommit={(searchQuery) => setFilters({ ...filters, searchQuery })}
               aria-label="Search orders"
               className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-10 sm:h-[42px]')}
             />

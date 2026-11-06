@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Phone message actions: a bottom sheet opened by a long-press on a
- * message. The emoji row first (one tap reacts and closes), then Reply and
+ * Phone message actions: a bottom sheet opened by a message's three dots.
+ * The emoji row first (one tap reacts and closes), then Reply and
  * Copy Text as full-width rows with 48px targets. One sheet per thread,
  * owned by MessageList.
  */

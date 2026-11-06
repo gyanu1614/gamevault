@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formOptions, formPicker, offerPhotoFor } from './offers'
+import { formOptions, formPicker, linkedOffer, offerPhotoFor } from './offers'
 import { defaultTrait, offersOfTrait, pickOffer, traitNoun, traitOptions, type TraitDef } from './offers'
 
 const VARIANTS: TraitDef[] = [
@@ -145,5 +145,16 @@ describe('formPicker', () => {
     const went: string[] = []
     formPicker(forms, 'travelers-gun', (h) => went.push(h)).onChange('travelers-gun')
     expect(went).toEqual([])
+  })
+})
+
+describe('linkedOffer', () => {
+  const offers = [{ id: 'a', price: 1 }, { id: 'b', price: 2 }] as any[]
+  it('finds the offer a link names', () => {
+    expect(linkedOffer('?offer=b', offers)?.id).toBe('b')
+  })
+  it('ignores an offer that is no longer on the page, and a plain address', () => {
+    expect(linkedOffer('?offer=gone', offers)).toBeNull()
+    expect(linkedOffer('', offers)).toBeNull()
   })
 })

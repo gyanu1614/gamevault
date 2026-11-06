@@ -17,7 +17,7 @@
  * `overflow-x-auto` where it should scroll); the wrapper is only `relative`.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -33,13 +33,8 @@ interface ScrollRowProps {
   children: ReactNode
 }
 
-export function ScrollRow({
-  className,
-  wrapperClassName,
-  edgeColor = 'rgba(var(--color-bg-base-rgb), 0.96)',
-  children,
-}: ScrollRowProps) {
-  const ref = useRef<HTMLDivElement>(null)
+/** Whether a horizontal scroller has more to show on each side. */
+export function useScrollEdges(ref: RefObject<HTMLElement>) {
   const [edges, setEdges] = useState({ left: false, right: false })
 
   const update = useCallback(() => {
@@ -49,7 +44,7 @@ export function ScrollRow({
     const left = el.scrollLeft > 2
     const right = max > 2 && el.scrollLeft < max - 2
     setEdges((prev) => (prev.left === left && prev.right === right ? prev : { left, right }))
-  }, [])
+  }, [ref])
 
   useEffect(() => {
     const el = ref.current
@@ -63,12 +58,24 @@ export function ScrollRow({
       el.removeEventListener('scroll', update)
       ro.disconnect()
     }
-  }, [update])
+  }, [ref, update])
 
   // Labels change width (a picked filter), so re-measure after every render.
   useEffect(() => {
     update()
   })
+
+  return edges
+}
+
+export function ScrollRow({
+  className,
+  wrapperClassName,
+  edgeColor = 'rgba(var(--color-bg-base-rgb), 0.96)',
+  children,
+}: ScrollRowProps) {
+  const ref = useRef<HTMLDivElement>(null)
+  const edges = useScrollEdges(ref)
 
   const scrollBy = (dir: -1 | 1) => {
     const el = ref.current

@@ -53,6 +53,8 @@ export async function savePayoutDetails(input: SavePayoutDetailsInput): Promise<
   success: boolean
   changed?: boolean
   freezeUntil?: string | null
+  /** The change cancelled a withdrawal that was waiting to go out. */
+  cancelledWithdrawal?: boolean
   error?: string
 }> {
   try {
@@ -113,13 +115,14 @@ export async function savePayoutDetails(input: SavePayoutDetailsInput): Promise<
             ? `${String(input.coin).toUpperCase()} on ${String(input.chain)} — …${String(input.address).trim().slice(-6)}`
             : `Payoneer — ${String(input.email).trim().toLowerCase()}`,
           freezeUntil: data.freeze_until ?? null,
+          cancelledWithdrawal: Number(data.cancelled_requests ?? 0) > 0,
         })
       })().catch((err) => console.error('[PayoutDetails] change email failed:', err))
     }
 
     revalidatePath('/account/settings')
     revalidatePath('/account/wallet/withdraw')
-    return { success: true, changed: Boolean(data.changed), freezeUntil: data.freeze_until ?? null }
+    return { success: true, changed: Boolean(data.changed), freezeUntil: data.freeze_until ?? null, cancelledWithdrawal: Number(data.cancelled_requests ?? 0) > 0 }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Failed to save payout details' }
   }

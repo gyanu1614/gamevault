@@ -457,6 +457,7 @@ export async function approveWithdrawalRequest(params: {
     })
     if (error) throw error
     if (approved?.reason === 'waiting') return { success: false, error: 'The seller recently changed their payout details. This can be approved once that wait ends.' }
+    if (approved?.reason === 'no_hold') return { success: false, error: 'This request has no money set aside, so it can\'t be approved.' }
     if (!approved?.changed) return { success: true }
 
     afterResponse('Withdrawals approval comms', async () => {

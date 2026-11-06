@@ -37,6 +37,14 @@ const contrast = (a: string, b: string) => {
 const token = (css: string, name: string) => new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`).exec(css)?.[1] ?? ''
 
 describe('the text colours', () => {
+  it('no see-through white for text: a faint decoration is fine, a grey comes from the tokens', () => {
+    const SKIP_DEV = 'src/app/dev/'
+    const bad = files
+      .filter((f) => !f.path.includes(SKIP_DEV))
+      .flatMap((f) => [...f.code.matchAll(/text-white\/(\d+)(?![\d.])/g)].filter((m) => Number(m[1]) >= 20).map((m) => `${f.path}: ${m[0]}`))
+    expect(bad).toEqual([])
+  })
+
   const tokens = readFileSync(join(SRC, 'styles/tokens.css'), 'utf8')
   const themeV2 = readFileSync(join(SRC, 'styles/theme-v2.css'), 'utf8')
 

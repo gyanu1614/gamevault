@@ -34,7 +34,7 @@ export type LocalStatus = 'sending' | 'failed'
 
 /** A file picked on this device, shown until/instead of the signed copy. */
 export interface LocalFile {
-  kind: 'image' | 'pdf'
+  kind: 'image' | 'video' | 'pdf'
   /** Object URL for images; PDFs show a chip. */
   url?: string
 }

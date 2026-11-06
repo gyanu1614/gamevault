@@ -280,7 +280,7 @@ export default function MessageList({
     }
   }
 
-  // Phone: one action sheet for the thread, opened by a long-press.
+  // Phone: one action sheet for the thread, opened by a message's three dots.
   const [sheet, setSheet] = useState<{ id: string; open: boolean } | null>(null)
   const sheetMessage = sheet ? byId.get(sheet.id) : undefined
   const sheetActions = sheetMessage?.sender_id ? actionsFor(sheetMessage) : null
@@ -439,7 +439,7 @@ export default function MessageList({
                   quote={quoteFor(message)}
                   reactions={reactionsFor(message.id)}
                   actions={actionsFor(message)}
-                  onLongPress={message.local_status === undefined ? () => setSheet({ id: message.id, open: true }) : null}
+                  onOpenActions={message.local_status === undefined ? () => setSheet({ id: message.id, open: true }) : null}
                   highlighted={highlightId === message.id}
                 />
               )

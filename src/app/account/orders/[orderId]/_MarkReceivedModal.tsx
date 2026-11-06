@@ -9,7 +9,8 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertTriangle, Shield, Loader2, ThumbsUp, ThumbsDown, CheckCircle2, PackageCheck, MessageSquareHeart } from 'lucide-react'
+import { AlertTriangle, Shield, Loader2, ThumbsUp, ThumbsDown, CheckCircle2, MessageSquareHeart } from 'lucide-react'
+import { PackageCheck } from './_order-icons'
 import { OrderModal, modalButton, modalField } from './_OrderModal'
 import { confirmOrderReceipt } from '@/lib/actions/orders'
 import { createReview } from '@/lib/api/reviews'

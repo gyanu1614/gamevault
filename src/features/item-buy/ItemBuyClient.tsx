@@ -12,7 +12,7 @@ import { PhoneBuyBar } from './PhoneBuyBar'
 import { PictureStage } from './PictureStage'
 import { TraitField } from './TraitField'
 import { TraitName } from './TraitName'
-import { defaultTrait, formPicker, offerPhotoFor, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
+import { defaultTrait, formPicker, linkedOffer, offerPhotoFor, offersOfTrait, pickOffer, traitOptions, type TraitDef } from './model/offers'
 import { offerLine } from './model/seller-title'
 import { useBuyOffer } from './use-buy-offer'
 import { ITEM_SECTION_GAP } from './layout'
@@ -77,6 +77,16 @@ export function ItemBuyClient(p: ItemBuyClientProps) {
   const allOffers = useMemo(() => offersOfTrait(offers, offerVariants, null), [offers, offerVariants])
 
   useEffect(() => setQty(1), [offer?.id])
+
+  // A link to one seller's offer opens on it. Read here so the page stays static.
+  useEffect(() => {
+    const linked = linkedOffer(window.location.search, offers)
+    if (!linked) return
+    setTrait(offerVariants[linked.id] ?? null)
+    setChosenId(linked.id)
+    // Only on arrival: after this the buyer's own picks decide.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const traitDef = (key: string | null) => (key ? traits.find((t) => t.key === key) ?? null : null)
   const named = (key: string | null) => {

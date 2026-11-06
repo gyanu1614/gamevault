@@ -40,6 +40,11 @@ const gate = {
   game: { id: 'g1', name: 'Adopt Me', slug: 'adopt-me' } as Record<string, unknown> | null,
   category: { id: 'c1', name: 'Pets', slug: 'pets', type: 'items' } as Record<string, unknown> | null,
 }
+const itemRoutes = { known: new Set<string>() }
+vi.mock('@/app/(marketplace)/[gameSlug]/[categorySlug]/_valueItemOffers', () => ({
+  resolveItemRoute: async (_g: string, _c: string, item: string, variant: string | null) =>
+    itemRoutes.known.has(variant ? `${item}/${variant}` : item) ? { pair: {}, catalog: {} } : null,
+}))
 vi.mock('@/app/(marketplace)/[gameSlug]/[categorySlug]/_routeGate', () => ({
   getActiveGame: async () => gate.game,
   getEnabledCategory: async () => gate.category,
@@ -95,6 +100,28 @@ beforeEach(() => {
 })
 
 describe('listing page (ISR)', () => {
+  it('a listing of a catalogue item opens on its item page, on its own offer and trait', async () => {
+    itemRoutes.known = new Set(['shadow-dragon', 'shadow-dragon/neon'])
+    clients.category = createSupabaseRecorder({ listings: [{ ...LISTING, value_item_slug: 'shadow-dragon', value_variant: 'neon' }] })
+    await expect(metadata(params('adopt-me', 'pets', LISTING.slug))).rejects.toThrow(
+      `REDIRECT /adopt-me/pets/item/shadow-dragon/neon?offer=${LISTING.id}`,
+    )
+  })
+
+  it('a trait the item page does not know: the item page, still on the offer', async () => {
+    itemRoutes.known = new Set(['shadow-dragon'])
+    clients.category = createSupabaseRecorder({ listings: [{ ...LISTING, value_item_slug: 'shadow-dragon', value_variant: 'odd' }] })
+    await expect(metadata(params('adopt-me', 'pets', LISTING.slug))).rejects.toThrow(
+      `REDIRECT /adopt-me/pets/item/shadow-dragon?offer=${LISTING.id}`,
+    )
+  })
+
+  it('a listing with no item page stays on this page', async () => {
+    itemRoutes.known = new Set()
+    clients.category = createSupabaseRecorder({ listings: [{ ...LISTING, value_item_slug: 'not-in-catalogue', value_variant: null }] })
+    await expect(metadata(params('adopt-me', 'pets', LISTING.slug))).resolves.toBeTruthy()
+  })
+
   it('a paused store sells nothing: its listing is a 404, even from a direct link', async () => {
     clients.category = createSupabaseRecorder({ listings: [LISTING] })
     clients.home = createSupabaseRecorder({ listings: [] })

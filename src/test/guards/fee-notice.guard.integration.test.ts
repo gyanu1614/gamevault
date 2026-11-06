@@ -65,7 +65,7 @@ describe.skipIf(!hasEnv)('PR 7 Part 5 — fee notice: facts, dry run, at-most-on
     const facts = {
       ratesStartAt: '2026-10-08T00:00:00.000Z', foundingPeriodText: 'first year', foundingDiscountPct: 50,
       methods: [{ displayName: 'Crypto (USDT)', feeText: '3% + $5', minWithdrawal: 50 }, { displayName: 'Payoneer', feeText: '3% (minimum fee $5)', minWithdrawal: 100 }],
-      minAccountAgeDays: 30, completionHoldHours: 24, disputeWindowDays: 7, payoutFreezeHours: 48,
+      minAccountAgeDays: 30, completionHoldHours: 24, disputeWindowDays: 7, payoutFreezeHours: 24,
       sellFeesUrl: 'https://dropmarket.gg/sell/fees', settingsUrl: 'https://dropmarket.gg/account/settings?tab=payouts',
     }
     const { subject, html } = buildFeeNoticeEmail('Ava <b>', facts)
@@ -93,7 +93,7 @@ describe.skipIf(!hasEnv)('PR 7 Part 5 — fee notice: facts, dry run, at-most-on
     expect(f.methods.map((m) => m.displayName).sort()).toEqual(['Crypto (USDT)', 'Payoneer'])
     expect(f.methods.find((m) => m.displayName === 'Payoneer')).toMatchObject({ feeText: '3% (minimum fee $5)', minWithdrawal: 100 })
     expect(f.methods.find((m) => m.displayName === 'Crypto (USDT)')).toMatchObject({ feeText: '3% + $5', minWithdrawal: 50 })
-    expect(f).toMatchObject({ minAccountAgeDays: 30, completionHoldHours: 24, disputeWindowDays: 7, payoutFreezeHours: 48 })
+    expect(f).toMatchObject({ minAccountAgeDays: 30, completionHoldHours: 24, disputeWindowDays: 7, payoutFreezeHours: 24 })
   })
 
   it('dry run lists the seller and renders the email without sending', async () => {

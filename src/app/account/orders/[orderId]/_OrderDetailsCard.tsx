@@ -11,15 +11,14 @@
  *  3. Party button at the bottom of the details card.
  *  4. Payout card (seller + admin) — separate sibling card below.
  *
- * Icons live in /public/assets/order-icons (order-details.svg,
- * payout.svg, escrow.svg). Swap with final art using same filenames.
  */
 
 import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ChevronRight, Copy, Check, ThumbsUp, ThumbsDown, Wallet, Info, Loader2 } from 'lucide-react'
+import { ChevronRight, Copy, Check, Info, Loader2 } from 'lucide-react'
+import { OrderDetails, Payout, ShieldCheck, ThumbsDown, ThumbsUp, Wallet, type OrderIcon } from './_order-icons'
 import { useState } from 'react'
 import { requestRefundToSource } from '@/lib/actions/refund-to-source'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -524,7 +523,7 @@ function PayoutBody({
           className="mt-3 flex items-center justify-between rounded-[9px] border border-border-subtle bg-white/[0.02] px-3 py-2.5 text-[12.5px] font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:text-lime-text"
         >
           <span className="inline-flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-lime-text" aria-hidden />
+            <Wallet className="h-5 w-5 text-lime-text" />
             View In Wallet
           </span>
           <ChevronRight className="h-4 w-4 text-text-tertiary" aria-hidden />
@@ -601,9 +600,9 @@ function BuyerReviewBody({
           )}
         >
           {isPositive ? (
-            <ThumbsUp className="h-4 w-4 fill-current" />
+            <ThumbsUp className="h-5 w-5" />
           ) : (
-            <ThumbsDown className="h-4 w-4 fill-current" />
+            <ThumbsDown className="h-5 w-5" />
           )}
         </span>
         <div className="min-w-0 flex-1 leading-tight">
@@ -666,31 +665,14 @@ function PartyButton({ party }: { party: PartyInfo }) {
 }
 
 /**
- * Shared compact header used by both Order Details + Payout cards.
- * Logo on the LEFT, title beside it on the same row. Tight spacing.
- * Icon swaps via `iconSrc` so the user can drop new SVGs in
- * /public/assets/order-icons later.
+ * Shared compact header used by both Order Details + Payout cards:
+ * the icon on the left, the title beside it on the same row.
  */
-function CardHeader({ iconSrc, title }: { iconSrc: string; title: string }) {
+function CardHeader({ icon: Icon, title }: { icon: OrderIcon; title: string }) {
   return (
     <div className="mb-3 flex items-center gap-2.5">
-      <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px] bg-lime-tint-bg text-lime-text">
-        <span
-          aria-hidden
-          className="h-[15px] w-[15px] bg-current"
-          style={{
-            WebkitMaskImage: `url(${iconSrc})`,
-            maskImage: `url(${iconSrc})`,
-            WebkitMaskSize: 'contain',
-            maskSize: 'contain',
-            WebkitMaskRepeat: 'no-repeat',
-            maskRepeat: 'no-repeat',
-            WebkitMaskPosition: 'center',
-            maskPosition: 'center',
-          }}
-        />
-      </span>
-      <span className="text-[13.5px] font-bold tracking-tight text-text-primary">
+      <Icon className="h-7 w-7 flex-shrink-0 text-text-primary" />
+      <span className="text-[15px] font-bold tracking-tight text-text-primary">
         {title}
       </span>
     </div>
@@ -751,7 +733,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
   return (
     <>
       <OrderCard className="px-5 pb-4 pt-5">
-        <CardHeader iconSrc="/assets/order-icons/order-details.svg" title="Order Details" />
+        <CardHeader icon={OrderDetails} title="Order Details" />
 
         {gameName && (
           <Row label="Game">
@@ -827,7 +809,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
 
       {(role === 'buyer' || role === 'admin') && (
         <OrderCard className="px-5 pb-4 pt-5">
-          <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop Protection" />
+          <CardHeader icon={ShieldCheck} title="SafeDrop Protection" />
           <SafeDropBody
             amount={escrowAmount}
             refund={buyerRefund}
@@ -845,7 +827,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
 
       {(role === 'seller' || role === 'admin') && (
         <OrderCard className="px-5 pb-4 pt-5">
-          <CardHeader iconSrc="/assets/order-icons/payout.svg" title="Your Payout" />
+          <CardHeader icon={Payout} title="Your Payout" />
           <PayoutBody
             subtotal={subtotal}
             feePercent={feePercent}

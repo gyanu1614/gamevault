@@ -855,7 +855,7 @@ function HeroCard({
                 <BuySweep />
                 <span className="relative">{PURCHASES_ENABLED ? 'Buy Now' : 'Opens Soon'}</span>
                 <span className="relative flex min-w-0 items-center gap-2.5">
-                  <span className="truncate text-[14px] font-medium text-white/75">
+                  <span className="truncate text-[14px] font-medium text-text-primary">
                     {qty.toLocaleString('en-US')} {unitLabel}
                   </span>
                   <span className="tabular-nums">{money(total)}</span>

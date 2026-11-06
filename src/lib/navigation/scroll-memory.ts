@@ -18,8 +18,46 @@ export const recallScroll = (page: string): number | null => positions.get(page)
  * back from the address, a later page of results).
  */
 export function holdScroll(y: number, frames = 30): void {
+  endHoldTop?.()
   window.scrollTo({ top: y, left: 0, behavior: 'instant' as ScrollBehavior })
   if (Math.abs(window.scrollY - y) > 1 && frames > 0) requestAnimationFrame(() => holdScroll(y, frames - 1))
+}
+
+const HOLD_TOP_MS = 800
+const HAND_ON_PAGE = ['touchstart', 'wheel', 'keydown', 'pointerdown'] as const
+let endHoldTop: (() => void) | null = null
+
+/**
+ * Puts a new page at the top and keeps it there while it settles (owner, 2026-11-06: on a
+ * phone, Buy Now opened checkout part way down). iPhone Safari animates page scrolls under
+ * `scroll-behavior: smooth`, and the new page arriving can cut one short, so one scroll
+ * isn't enough. Smooth scrolling is off while it holds. A hand on the page ends it: from
+ * then on the page is theirs.
+ */
+export function holdTop(ms = HOLD_TOP_MS): void {
+  endHoldTop?.()
+  const root = document.documentElement
+  const smooth = root.style.scrollBehavior
+  root.style.scrollBehavior = 'auto'
+  const until = performance.now() + ms
+
+  const end = () => {
+    endHoldTop = null
+    root.style.scrollBehavior = smooth
+    for (const type of HAND_ON_PAGE) window.removeEventListener(type, end)
+  }
+  endHoldTop = end
+  for (const type of HAND_ON_PAGE) window.addEventListener(type, end, { passive: true })
+
+  const toTop = () => {
+    if (endHoldTop !== end) return
+    window.scrollTo(0, 0)
+    root.scrollTop = 0
+    document.body.scrollTop = 0
+    if (performance.now() < until) requestAnimationFrame(toTop)
+    else end()
+  }
+  toTop()
 }
 
 let awaitedPop: Event | null = null

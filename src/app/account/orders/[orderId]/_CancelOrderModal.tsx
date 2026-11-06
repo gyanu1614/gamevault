@@ -8,7 +8,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, XCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { XCircle } from './_order-icons'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { sellerCancelOrder } from '@/lib/actions/orders'

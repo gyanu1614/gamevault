@@ -180,12 +180,12 @@ export default function StatusView({
                 className="h-7 w-7 object-contain"
               />
               <span className="text-[15px] font-bold tracking-tight text-white">
-                Drop<span className="text-white/70">Market</span>
+                Drop<span className="text-text-secondary">Market</span>
               </span>
             </button>
             <button
               onClick={() => onNavigate('/')}
-              className="-m-1.5 flex w-fit items-center gap-1.5 rounded-lg p-1.5 text-xs text-white/55 transition-colors hover:text-white"
+              className="-m-1.5 flex w-fit items-center gap-1.5 rounded-lg p-1.5 text-xs text-text-tertiary transition-colors hover:text-white"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Back To Home
@@ -201,7 +201,7 @@ export default function StatusView({
             <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Application Status<span style={{ color: P.lime }}>.</span>
             </h1>
-            <p className="mt-1.5 text-sm text-white/60">
+            <p className="mt-1.5 text-sm text-text-secondary">
               Track the progress of your seller application
             </p>
           </div>

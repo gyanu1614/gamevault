@@ -30,14 +30,10 @@ export function PopularGameCard({ game }: Props) {
   // rather than a broken image.
   const [artFailed, setArtFailed] = useState(false)
 
-  // A game with no listings is real but not yet open — shown quieter rather
-  // than hidden, and never with an invented number attached.
-  const isEmpty = game.listingCount === 0
-
   return (
     // The card art + name are one link; the category chips are their own
     // links, so they can't nest inside it — hence the wrapper.
-    <div style={{ opacity: isEmpty ? 0.6 : 1 }}>
+    <div>
     {/* The game hub is /<slug>, NOT /games/<slug> — the latter 404s. */}
     <Link
       href={`/${game.slug}`}

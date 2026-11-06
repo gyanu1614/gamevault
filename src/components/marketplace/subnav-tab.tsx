@@ -79,7 +79,7 @@ export const SUBNAV_TAB = cn(
   'group relative flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold transition-colors',
   'text-text-secondary hover:text-text-primary',
   // Desktop: the bar's full height; the same text as the navbar's links, one header.
-  'md:h-[52px] md:px-4 md:text-[14px] md:font-medium md:text-white/75 md:hover:text-white',
+  'md:h-[52px] md:px-4 md:text-[14px] md:font-medium md:text-text-primary md:hover:text-white',
   'md:hover:bg-[linear-gradient(to_top,rgba(255,255,255,0.07),rgba(255,255,255,0))]',
   // Phone: the compact scroll strip.
   'max-md:h-10 max-md:rounded-md max-md:px-3 max-md:text-[13px]',

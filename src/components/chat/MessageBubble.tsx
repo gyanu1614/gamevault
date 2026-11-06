@@ -14,10 +14,10 @@ import type { ReactionSummary } from '@/lib/chat/reactions'
 import ChatAttachment from './ChatAttachment'
 import AdminMessageBubble from './AdminMessageBubble'
 import { ReactionChips } from './ReactionChips'
+import { DotsThreeIcon } from '@phosphor-icons/react/dist/csr/DotsThree'
 import { ReplyQuote } from './ReplyQuote'
 import { clockTime, renderMarkdown } from './message-text'
 import { MessageHoverActions, type MessageActionHandlers } from './actions/MessageHoverActions'
-import { useLongPress } from './actions/use-long-press'
 
 /** Critically damped settle (no overshoot): a message arriving is not a
  *  gesture with momentum, so it must not bounce. */
@@ -25,7 +25,7 @@ const SETTLE = { type: 'spring', bounce: 0, duration: 0.32 } as const
 
 /** The label a file-only message stores (attachmentOnlyLabel). */
 function isAttachmentPlaceholder(content: string): boolean {
-  return content === 'Sent a photo' || content === 'Sent a PDF'
+  return content === 'Sent a photo' || content === 'Sent a video' || content === 'Sent a PDF'
 }
 
 interface MessageBubbleProps {
@@ -65,7 +65,7 @@ interface MessageBubbleProps {
   /** React / Reply / Copy (desktop toolbar); null = none for this message. */
   actions?: MessageActionHandlers | null
   /** Touch long-press: open the action sheet for this message. */
-  onLongPress?: (() => void) | null
+  onOpenActions?: (() => void) | null
   /** Briefly marked after jumping to it from a reply's quote. */
   highlighted?: boolean
 }
@@ -86,11 +86,10 @@ export default function MessageBubble({
   quote = null,
   reactions = [],
   actions = null,
-  onLongPress = null,
+  onOpenActions = null,
   highlighted = false,
 }: MessageBubbleProps) {
   const reduceMotion = useReducedMotion()
-  const longPress = useLongPress(() => onLongPress?.(), !!onLongPress)
   const hasFiles =
     (!!message.attachments && message.attachments.length > 0) ||
     (!!message.local_files && message.local_files.length > 0)
@@ -149,7 +148,7 @@ export default function MessageBubble({
       )}
 
       {/* Message Content */}
-      <div className={cn('flex min-w-0 max-w-[78%] flex-col sm:max-w-[70%]', alignRight ? 'items-end' : 'items-start')}>
+      <div className={cn('flex min-w-0 max-w-[72%] flex-col sm:max-w-[70%]', alignRight ? 'items-end' : 'items-start')}>
         {/* Sender name on the first message of their run. */}
         {(alignLeft || isAdminView) && senderName && showAvatar && (
           <span className="mb-1 px-1 text-xs font-medium text-text-secondary">{senderName}</span>
@@ -161,12 +160,10 @@ export default function MessageBubble({
               fill only, no outline. Solid fills (not thin tints) so the
               thread reads clearly on the card. */}
           <div
-            {...longPress}
             className={cn(
               'min-w-0 max-w-full px-3.5 py-2 text-text-primary [overflow-wrap:anywhere] transition-opacity duration-200 ease-out',
               greenBubble ? 'rounded-[10px] rounded-tr-[4px] bg-[#1F3B2E]' : 'rounded-[10px] rounded-tl-[4px] bg-[#2B2C33]',
               isPending && 'opacity-60',
-              onLongPress && '[@media(pointer:coarse)]:select-none [@media(pointer:coarse)]:[-webkit-touch-callout:none]',
             )}
           >
             {quote && <ReplyQuote name={quote.name} snippet={quote.snippet} own={greenBubble} onJump={quote.onJump} />}
@@ -202,6 +199,15 @@ export default function MessageBubble({
                           alt=""
                           className="max-h-60 w-[220px] max-w-full rounded-lg object-cover"
                         />
+                      ) : f.kind === 'video' && f.url ? (
+                        <video
+                          key={`local-${i}`}
+                          src={`${f.url}#t=0.1`}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="max-h-72 w-[260px] max-w-full rounded-lg bg-black/40"
+                        />
                       ) : (
                         <span
                           key={`local-${i}`}
@@ -220,6 +226,20 @@ export default function MessageBubble({
           </div>
 
           {actions && <MessageHoverActions side={alignRight ? 'left' : 'right'} {...actions} />}
+          {/* Touch screens have no hover: the same actions, one tap away (owner, 2026-11-06: nobody knew to hold). */}
+          {onOpenActions && (
+            <button
+              type="button"
+              onClick={onOpenActions}
+              aria-label="Message actions"
+              className={cn(
+                'absolute top-1/2 grid h-9 w-8 -translate-y-1/2 place-items-center rounded-md text-text-tertiary transition-colors active:bg-white/[0.08] active:text-text-primary [@media(hover:hover)_and_(pointer:fine)]:hidden',
+                alignRight ? 'right-full' : 'left-full',
+              )}
+            >
+              <DotsThreeIcon className="h-5 w-5" weight="bold" aria-hidden />
+            </button>
+          )}
         </div>
 
         <ReactionChips

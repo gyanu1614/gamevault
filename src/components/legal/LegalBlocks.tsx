@@ -89,7 +89,7 @@ export function LegalBlockView({ block }: { block: LegalBlock }) {
           {block.items.map((item, i) => (
             <li
               key={i}
-              className="list-disc text-[15px] leading-[1.7] text-text-secondary marker:text-white/30 print:text-black print:marker:text-black"
+              className="list-disc text-[15px] leading-[1.7] text-text-secondary marker:text-text-disabled print:text-black print:marker:text-black"
             >
               <LegalInline md={item} />
             </li>

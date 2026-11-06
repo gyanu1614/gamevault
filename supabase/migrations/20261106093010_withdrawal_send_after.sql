@@ -119,6 +119,8 @@ DECLARE
 BEGIN
   PERFORM set_config('app.guarded_write', 'on', true);
   PERFORM pg_advisory_xact_lock(hashtextextended('withdrawal_request:' || p_seller_id::text, 0));
+  -- new: a save of payout details can't land between the wait being read and the address being copied.
+  PERFORM 1 FROM seller_payout_details WHERE seller_id = p_seller_id FOR UPDATE;
 
   v_q := withdrawal_quote(p_seller_id, p_method_id, p_amount);
   IF NOT (v_q->>'ok')::boolean THEN
@@ -168,6 +170,10 @@ BEGIN
   -- new: not before the payout-details wait ends.
   IF v_req.send_after IS NOT NULL AND v_req.send_after > now() THEN
     RETURN jsonb_build_object('changed', false, 'reason', 'waiting', 'send_after', v_req.send_after);
+  END IF;
+  -- new: no money set aside, nothing to pay. withdrawal_payout would refuse this only after staff had sent it.
+  IF NOT EXISTS (SELECT 1 FROM ledger_transactions WHERE idempotency_key = 'withdrawal:' || p_request_id::text) THEN
+    RETURN jsonb_build_object('changed', false, 'reason', 'no_hold');
   END IF;
   UPDATE withdrawal_requests
      SET status = 'approved', approved_at = now(), processed_by = p_admin_id,

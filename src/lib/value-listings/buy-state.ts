@@ -36,9 +36,13 @@ interface ItemRef {
   variant?: string | null
 }
 
-export function itemBuyHref({ gameSlug, categorySlug, itemSlug, variant }: ItemRef): string {
+/** Address key of one seller's offer on an item page; the page opens on it. */
+export const ITEM_OFFER_PARAM = 'offer'
+
+export function itemBuyHref({ gameSlug, categorySlug, itemSlug, variant, offerId }: ItemRef & { offerId?: string | null }): string {
   const base = `/${gameSlug}/${categorySlug}/item/${encodeURIComponent(itemSlug)}`
-  return variant ? `${base}/${encodeURIComponent(variant)}` : base
+  const path = variant ? `${base}/${encodeURIComponent(variant)}` : base
+  return offerId ? `${path}?${ITEM_OFFER_PARAM}=${encodeURIComponent(offerId)}` : path
 }
 
 export function resolveBuyState(input: ItemRef & { stock: ItemStock | null | undefined }): BuyState {

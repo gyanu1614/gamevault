@@ -107,6 +107,7 @@ export default function PayoutDetailsSection({ only, onSaved }: { only?: PayoutD
     setSaving(null)
     if (!r.success) return void toast.error(r.error || 'Could not save. Please try again.')
     toast.success(r.changed ? `Payout details saved. We send withdrawals after ${hours} hours.` : 'No changes to save.')
+    if (r.cancelledWithdrawal) toast.info('Your waiting withdrawal was cancelled. The money is back in your balance.')
     if (r.changed && onSaved) return onSaved()
     const fresh = await getMyPayoutDetails()
     if (fresh.success && fresh.details) setDetails(fresh.details)

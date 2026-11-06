@@ -12,8 +12,7 @@ const WRITE_DELAY_MS = 150
  * Going back reopens the address, so the page reads its filters from there. That
  * costs nothing: no stored copy, no request to the server or the database, one short
  * string. These pages hold all their rows in the browser already. `useUrlFilters`
- * does the same for signed-in pages through the router, which asks the server each
- * time; a public page mustn't.
+ * does the same for signed-in pages, which can read the address after they load.
  *
  * Read before paint with no `useSearchParams`, so the page stays in the static HTML.
  * The address is replaced, not pushed: Back leaves the page rather than stepping

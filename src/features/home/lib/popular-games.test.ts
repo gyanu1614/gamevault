@@ -44,6 +44,7 @@ import { getPopularGames } from './popular-games'
 const GAMES = [
   { id: 'g-val', slug: 'valorant', name: 'Valorant' },
   { id: 'g-cs2', slug: 'cs2', name: 'CS2' },
+  { id: 'g-rob', slug: 'roblox', name: 'Roblox' },
 ]
 
 describe('getPopularGames category chips', () => {
@@ -68,18 +69,19 @@ describe('getPopularGames category chips', () => {
   })
 
   it('ranks chips by the type column, caps at three, and shortens labels by slug', async () => {
+    const live = (game_id: string, game_category_id: string) => ({ game_id, game_category_id, price: 5 })
     fake = createFakeClient({
       games: GAMES,
-      listings: [],
+      listings: [live('g-val', 'boost'), live('g-val', 'coach'), live('g-val', 'vp'), live('g-val', 'acc'), live('g-cs2', 'items'), live('g-cs2', 'cases')],
       // Already in sort_order, as the query returns them.
       game_categories: [
-        { game_id: 'g-val', slug: 'boosting', name: 'Boosting', type: 'service' },
-        { game_id: 'g-val', slug: 'coaching', name: 'Coaching', type: 'service' },
-        { game_id: 'g-val', slug: 'buy-vp', name: 'VP (Valorant Points)', type: 'currency' },
-        { game_id: 'g-val', slug: 'buy-accounts', name: 'Valorant Accounts', type: 'account' },
-        { game_id: 'g-cs2', slug: 'buy-items', name: 'Skins & Items', type: 'items' },
-        { game_id: 'g-cs2', slug: 'cases', name: 'Cases', type: 'items' },
-        { game_id: 'g-other', slug: 'buy-robux', name: 'Robux', type: 'currency' },
+        { id: 'boost', game_id: 'g-val', slug: 'boosting', name: 'Boosting', type: 'service' },
+        { id: 'coach', game_id: 'g-val', slug: 'coaching', name: 'Coaching', type: 'service' },
+        { id: 'vp', game_id: 'g-val', slug: 'buy-vp', name: 'VP (Valorant Points)', type: 'currency' },
+        { id: 'acc', game_id: 'g-val', slug: 'buy-accounts', name: 'Valorant Accounts', type: 'account' },
+        { id: 'items', game_id: 'g-cs2', slug: 'buy-items', name: 'Skins & Items', type: 'items' },
+        { id: 'cases', game_id: 'g-cs2', slug: 'cases', name: 'Cases', type: 'items' },
+        { id: 'robux', game_id: 'g-other', slug: 'buy-robux', name: 'Robux', type: 'currency' },
       ],
     })
     const cards = await getPopularGames()
@@ -95,5 +97,20 @@ describe('getPopularGames category chips', () => {
       { label: 'Items', href: '/cs2/buy-items' },
       { label: 'Cases', href: '/cs2/cases' },
     ])
+  })
+
+  it('shows only games with live offers, and only the categories that have some', async () => {
+    fake = createFakeClient({
+      games: GAMES,
+      listings: [{ game_id: 'g-val', game_category_id: 'vp', price: 5 }],
+      game_categories: [
+        { id: 'vp', game_id: 'g-val', slug: 'buy-vp', name: 'VP', type: 'currency' },
+        { id: 'acc', game_id: 'g-val', slug: 'buy-accounts', name: 'Accounts', type: 'account' },
+        { id: 'robux', game_id: 'g-rob', slug: 'buy-robux', name: 'Robux', type: 'currency' },
+      ],
+    })
+    const cards = await getPopularGames()
+    expect(cards.map((c) => c.slug)).toEqual(['valorant'])
+    expect(cards[0].categories).toEqual([{ label: 'VP', href: '/valorant/buy-vp' }])
   })
 })

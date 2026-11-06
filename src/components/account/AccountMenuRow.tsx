@@ -1,16 +1,26 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
 import { ListIcon } from '@phosphor-icons/react/dist/csr/List'
+import { cn } from '@/lib/utils'
+
+/**
+ * These pages fill the screen themselves, over the layout's flow, so the row can't sit in
+ * the layout there. Offers and Orders draw it inside; Messages leaves the room to the thread.
+ */
+const FILLS_THE_SCREEN = new Set(['/account/listings', '/account/orders', '/account/messages'])
 
 /**
  * Phones only: opens the account sidebar. The navbar's panel icon does too, but a
  * new seller wouldn't know that small icon holds their pages (owner, 2026-11-06),
  * so the top of every account page says it in words.
  */
-export function AccountMenuRow({ isSeller }: { isSeller: boolean }) {
+export function AccountMenuRow({ isSeller, inPage = false }: { isSeller: boolean; inPage?: boolean }) {
+  const pathname = usePathname()
+  if (!inPage && FILLS_THE_SCREEN.has(pathname)) return null
   return (
-    <div className="px-4 pb-5 sm:px-6 lg:hidden">
+    <div className={cn('lg:hidden', inPage ? 'mb-4 shrink-0' : 'px-4 pb-5 sm:px-6')}>
       <button
         type="button"
         aria-haspopup="menu"

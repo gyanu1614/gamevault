@@ -16,7 +16,8 @@
 
 import Link from '@/components/navigation/AppLink'
 import { useMemo, useState } from 'react'
-import { ChevronRight, Info, ListChecks, Pencil } from 'lucide-react'
+import { ChevronRight, Info, Pencil } from 'lucide-react'
+import { ListChecks } from './_order-icons'
 import { OrderCard } from './_OrderCard'
 import { OrderModal, modalButton } from './_OrderModal'
 
@@ -95,9 +96,7 @@ function BuyerInstructionsRow({
           aria-haspopup="dialog"
           className="flex w-full items-center gap-3 rounded-lg px-5 py-4 text-left transition-colors hover:bg-white/[0.02] max-sm:rounded-none"
         >
-          <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[9px] bg-lime-tint-bg text-lime-text">
-            <ListChecks className="h-[18px] w-[18px]" aria-hidden />
-          </span>
+          <ListChecks className="h-7 w-7 flex-shrink-0 text-text-primary" />
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block text-body-sm font-bold text-text-primary">How To Receive Your Order</span>
             <span className="mt-0.5 block text-[12.5px] text-text-secondary">

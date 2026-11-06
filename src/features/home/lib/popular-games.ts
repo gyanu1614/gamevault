@@ -13,11 +13,11 @@ export interface GameCategoryChip {
 export interface PopularGameCard {
   slug: string
   name: string
-  /** Active, non-test listings. 0 is a real state — the card still renders. */
+  /** Active, non-test listings: at least 1, or the game isn't shown. */
   listingCount: number
-  /** Cheapest active listing, or null when the game has none. */
+  /** Cheapest active listing. */
   fromPrice: number | null
-  /** The categories shown as chips, highest-priority first. */
+  /** The categories with live offers, shown as chips, highest-priority first. */
   categories: GameCategoryChip[]
 }
 
@@ -69,10 +69,9 @@ const SHORT_CHIP_LABEL: Record<string, string> = {
 /**
  * Games for the homepage Popular Games grid.
  *
- * The games table is the source of truth: a game with zero listings must
- * still render (as "Opening soon"), so listings are counted per game and
- * joined on rather than filtered by. Sorted by listing count descending, so
- * the sparse tail sits at the end where the 8-card cut makes it visible.
+ * Only games with something to buy (owner, 2026-11-06: nobody should land on a game with
+ * no offers), and only the categories that have some as its chips. Sorted by listing
+ * count, so the most stocked games come first.
  *
  * Test-seller listings are excluded, matching the SEO indexability rule in
  * the game hub route — a game with only test listings reads as empty here
@@ -100,6 +99,7 @@ const HOMEPAGE_GAMES = [
   'fortnite',
   'grow-a-garden-2',
   'gta-vi',
+  'murder-mystery-2',
   'r6-siege',
   'roblox',
   'steal-a-brainrot',
@@ -129,7 +129,7 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
   // listing mutation revalidates (lib/listings/read-client).
   const { data: listings } = await createHomeListingsReadClient()
     .from('listings')
-    .select('game_id, price, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
+    .select('game_id, game_category_id, price, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
     .eq('status', 'active')
     .eq('seller.is_test', false)
 
@@ -146,21 +146,23 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
   // more accurately per game.
   const { data: categories } = await supabase
     .from('game_categories')
-    .select('game_id, slug, name, type, sort_order')
+    .select('id, game_id, slug, name, type, sort_order')
     .eq('is_enabled', true)
     .order('sort_order', { ascending: true })
 
+  const stocked = new Set((listings ?? []).map((row) => (row as { game_category_id: string }).game_category_id))
   const gameSlugById = new Map(games.map((g) => [g.id, g.slug]))
   const grouped = new Map<string, { label: string; href: string; rank: number }[]>()
 
   for (const row of (categories ?? []) as {
+    id: string
     game_id: string
     slug: string
     name: string
     type: string
   }[]) {
     const gameSlug = gameSlugById.get(row.game_id)
-    if (!gameSlug) continue
+    if (!gameSlug || !stocked.has(row.id)) continue
     const list = grouped.get(row.game_id) ?? []
     list.push({
       label: SHORT_CHIP_LABEL[row.slug] || row.name || row.slug,
@@ -202,6 +204,7 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
         categories: chipsByGame.get(game.id) ?? [],
       }
     })
+    .filter((game) => game.listingCount > 0)
     .sort((a, b) => b.listingCount - a.listingCount)
     .slice(0, limit)
 }

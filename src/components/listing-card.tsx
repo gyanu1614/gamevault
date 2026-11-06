@@ -75,7 +75,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             {listing.game?.emoji && (
               <span className="text-xs">{listing.game.emoji}</span>
             )}
-            <span className="text-[10px] font-medium text-white/80 leading-none">
+            <span className="text-[10px] font-medium text-text-primary leading-none">
               {listing.game?.name}
             </span>
           </div>
@@ -107,7 +107,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
           <div className="absolute bottom-2.5 left-2.5 flex flex-col items-start gap-0.5">
             {hasPriceDrop && (
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-white/50 line-through leading-none">
+                <span className="text-[11px] text-text-tertiary line-through leading-none">
                   ${listing.original_price!.toFixed(2)}
                 </span>
                 <span className="flex items-center gap-0.5 rounded bg-green-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
@@ -126,9 +126,9 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             {listing.delivery_time?.toLowerCase().includes('instant') ? (
               <Zap className="w-3 h-3 text-lime-text" />
             ) : (
-              <Clock className="w-3 h-3 text-white/60" />
+              <Clock className="w-3 h-3 text-text-secondary" />
             )}
-            <span className="text-[10px] text-white/70 leading-none">{listing.delivery_time}</span>
+            <span className="text-[10px] text-text-secondary leading-none">{listing.delivery_time}</span>
           </div>
         </div>
 

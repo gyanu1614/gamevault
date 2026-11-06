@@ -289,7 +289,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                     className={cn(
                       'h-4 w-4 flex-shrink-0 transition-transform duration-200',
                       showChildren && 'rotate-180',
-                      'text-text-tertiary',
+                      'text-text-primary',
                     )}
                   />
                 </button>
@@ -365,7 +365,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                               'rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors',
                               subActive
                                 ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
-                                : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary'
+                                : 'text-text-primary hover:bg-bg-raised-hover'
                             )}
                           >
                             {sub.label}
@@ -454,7 +454,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             setIsMobileOpen(false)
             window.dispatchEvent(new Event('dm:logout'))
           }}
-          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium text-text-primary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
         >
           <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
           <span>Logout</span>

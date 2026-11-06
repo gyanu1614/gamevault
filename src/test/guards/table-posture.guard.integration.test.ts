@@ -121,7 +121,7 @@ const WRITE_ALLOWLIST: Record<string, string> = {
   disputes: 'order parties open a dispute',
   dispute_messages: 'dispute participants reply',
   withdrawal_methods: 'sellers manage their own payout methods',
-  withdrawal_requests: 'sellers request their own withdrawals',
+  withdrawal_requests: 'staff update through the admin policy; a seller writes only through the RPCs (20261106143312)',
   gdpr_requests: 'users file their own GDPR request (no admin-only fields); admins process it (is_admin())',
   inform_disclosures: 'sellers submit their own disclosure (never pre-certified); admins certify (is_admin())',
   fraud_flags: 'admins insert (runFraudScan) and resolve flags (is_admin()); nobody else, no deletes',

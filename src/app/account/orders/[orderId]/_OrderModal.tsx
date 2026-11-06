@@ -10,17 +10,17 @@
  * Dialog already turns it into a bottom sheet on phones.
  */
 
-import type { LucideIcon } from 'lucide-react'
+import type { OrderIcon } from './_order-icons'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
 type Tone = 'lime' | 'warning' | 'red' | 'neutral'
 
 const TILE: Record<Tone, string> = {
-  lime: 'bg-lime-tint-bg text-lime-text',
-  warning: 'bg-warning-bg text-warning',
-  red: 'bg-red-400/[0.12] text-red-400',
-  neutral: 'bg-white/[0.06] text-text-secondary',
+  lime: 'text-lime-text',
+  warning: 'text-warning',
+  red: 'text-red-400',
+  neutral: 'text-text-secondary',
 }
 
 export function OrderModal({
@@ -36,7 +36,7 @@ export function OrderModal({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  icon?: LucideIcon
+  icon?: OrderIcon
   tone?: Tone
   title: string
   description?: React.ReactNode
@@ -55,11 +55,7 @@ export function OrderModal({
       >
         {/* pr-12 keeps the title clear of the dialog's close button. */}
         <div className="flex items-center gap-2.5 border-b border-white/[0.08] bg-white/[0.03] py-3 pl-5 pr-12">
-          {Icon && (
-            <span className={cn('grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px]', TILE[tone])}>
-              <Icon className="h-4 w-4" aria-hidden />
-            </span>
-          )}
+          {Icon && <Icon className={cn('h-6 w-6 flex-shrink-0', TILE[tone])} />}
           <DialogTitle className="text-body-sm font-bold leading-tight text-text-primary">{title}</DialogTitle>
         </div>
         <div className="px-5 py-4">

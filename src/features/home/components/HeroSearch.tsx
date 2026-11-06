@@ -15,7 +15,7 @@
  * /browse?search=…, so Enter with no match (or no JS at all) runs a full
  * marketplace search.
  *
- * The cycling example ("Valorant Accounts", "Robux", …) is an aria-hidden
+ * The cycling example ("Robux", "Adopt Me", …) is an aria-hidden
  * overlay, shown only while the field is empty and unfocused.
  */
 
@@ -31,7 +31,7 @@ import { navCategoriesQuery, type NavCategoryRow } from '@/lib/nav/nav-categorie
 import { GAME_ICONS } from '../lib/game-icons'
 import { pictureUrl } from '@/lib/images/picture-url'
 
-const EXAMPLES = ['Valorant Accounts', 'Robux', 'V-Bucks', 'GTA Accounts', 'CS2 Skins', 'Steal a Brainrot']
+const EXAMPLES = ['Robux', 'V-Bucks', 'Adopt Me', 'Murder Mystery 2', 'Steal a Brainrot']
 
 /** Goods first, services last — the order shoppers look for them. */
 const TYPE_RANK: Record<string, number> = { currency: 0, items: 1, account: 2, top_up: 3, gift_card: 4, service: 5 }
@@ -403,12 +403,12 @@ export function HeroSearch() {
                 type="button"
                 onClick={closeTakeover}
                 aria-label="Close Search"
-                className="grid h-11 w-10 shrink-0 place-items-center text-white/70 active:scale-95"
+                className="grid h-11 w-10 shrink-0 place-items-center text-text-secondary active:scale-95"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="relative flex h-11 flex-1 items-center rounded-md border border-white/[0.12] bg-white/[0.04] focus-within:border-white/[0.24]">
-                <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/45" />
+                <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-text-tertiary" />
                 <input
                   type="search"
                   // The user tapped search on purpose: the keyboard is wanted.
@@ -428,7 +428,7 @@ export function HeroSearch() {
                   }}
                   placeholder="Search games, accounts and items"
                   aria-label="Search games, accounts and items"
-                  className="h-full w-full bg-transparent pl-10 pr-3 text-[16px] text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
+                  className="h-full w-full bg-transparent pl-10 pr-3 text-[16px] text-white outline-none placeholder:text-text-tertiary [&::-webkit-search-cancel-button]:hidden"
                 />
               </div>
             </div>

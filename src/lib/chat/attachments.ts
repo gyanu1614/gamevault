@@ -1,7 +1,7 @@
 /**
  * Order-chat attachments.
  *
- * Files live in the PRIVATE `delivery-evidence` bucket under the order's
+ * Photos, videos and PDFs. Files live in the PRIVATE `delivery-evidence` bucket under the order's
  * own folder, `{orderId}/chat/…`. That bucket's storage policies already
  * limit read + upload to the order's buyer and seller (and admins), so no
  * new bucket or policy is needed. `messages.attachments` stores the object
@@ -15,6 +15,8 @@ import { compressImageForUpload } from '@/lib/images/compress-client'
 
 export const CHAT_ATTACHMENT_BUCKET = 'delivery-evidence'
 export const CHAT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+/** Also the bucket's own limit (20260928174233), so a video can't get past it. */
+export const CHAT_VIDEO_MAX_BYTES = 50 * 1024 * 1024 // 50 MB
 
 const EXT_BY_TYPE: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -22,13 +24,20 @@ const EXT_BY_TYPE: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif',
   'application/pdf': 'pdf',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
 }
 
 export const CHAT_ATTACHMENT_ACCEPT = Object.keys(EXT_BY_TYPE).join(',')
 
 export function validateChatAttachment(file: { type: string; size: number }): string | null {
-  if (!EXT_BY_TYPE[file.type]) return 'Only images (JPG, PNG, WEBP, GIF) and PDFs can be sent.'
-  if (file.size > CHAT_ATTACHMENT_MAX_BYTES) return 'Files must be 10 MB or smaller.'
+  if (!EXT_BY_TYPE[file.type]) return 'Only photos (JPG, PNG, WEBP, GIF), videos (MP4, MOV, WEBM) and PDFs can be sent.'
+  if (file.type.startsWith('video/')) {
+    if (file.size > CHAT_VIDEO_MAX_BYTES) return 'Videos must be 50 MB or smaller.'
+  } else if (file.size > CHAT_ATTACHMENT_MAX_BYTES) {
+    return 'Photos and PDFs must be 10 MB or smaller.'
+  }
   if (file.size === 0) return 'That file is empty.'
   return null
 }
@@ -61,8 +70,13 @@ export function isImageAttachment(value: string): boolean {
   return /\.(jpe?g|png|webp|gif)$/.test(clean) || value.startsWith('blob:')
 }
 
+export function isVideoAttachment(value: string): boolean {
+  return /\.(mp4|mov|webm)$/.test(value.split('?')[0].toLowerCase())
+}
+
 /** Label for a message that is only a file (messages.content can't be empty). */
 export function attachmentOnlyLabel(mimeType: string): string {
+  if (mimeType.startsWith('video/')) return 'Sent a video'
   return mimeType === 'application/pdf' ? 'Sent a PDF' : 'Sent a photo'
 }
 
@@ -78,7 +92,7 @@ export async function uploadChatAttachment(
 ): Promise<string> {
   // Photos are shrunk in the browser first (<=1600 px WebP/JPEG), so a
   // phone photo uploads fast and is stored small; the 10 MB cap then
-  // applies to what is actually stored. PDFs / GIFs pass through.
+  // applies to what is actually stored. PDFs, GIFs and videos pass through.
   const toSend = await compressImageForUpload(file)
   const problem = validateChatAttachment(toSend)
   if (problem) throw new Error(problem)

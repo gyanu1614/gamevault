@@ -7,6 +7,8 @@
  *     open withdrawal, missing payout details, minimum, insufficient available;
  *   · the wait after a payout change (24 h) refuses nothing: the request goes
  *     in with send_after, and staff can't approve it before then;
+ *   · a real payout change cancels a waiting request and returns the money;
+ *   · a session can't write the table, and approve needs money set aside;
  *   · withdrawal_request snapshots every fee field from the SAME quote
  *     (parity: row == quote), posts the hold, notifies once; one open
  *     withdrawal per seller is a DB index, not a TS count;
@@ -398,6 +400,72 @@ describe.skipIf(!hasEnv)('PR 7 Part 3 — withdrawal quote, gate, request, Payon
     expect((await row(r.request_id)).status).toBe('cancelled')
     expect(await matured()).toBe(before)
     await ageDetails(49)
+  })
+
+  it('a real payout change cancels a waiting withdrawal and returns the money; saving the same value does not', async () => {
+    const A = { coin: 'usdt', chain: 'tron', address: `TGuardA${RUN.slice(-8)}` }
+    await setDetails('crypto', A)
+    await fundSeller(6_000, 'change-cancels')
+    await ageDetails(1)
+    const before = await matured()
+    const r = await request(crypto.id, 60)
+    expect(r.requested).toBe(true)
+
+    const same = await setDetails('crypto', A)
+    expect(same).toMatchObject({ changed: false, cancelled_requests: 0 })
+    expect((await row(r.request_id)).status).toBe('pending')
+
+    const changed = await setDetails('crypto', { ...A, address: `TGuardB${RUN.slice(-8)}` })
+    expect(changed).toMatchObject({ changed: true, cancelled_requests: 1 })
+    expect((await row(r.request_id)).status).toBe('cancelled')
+    expect(await matured()).toBe(before)
+    expect(await notifCount(`withdrawal:${r.request_id}:cancelled_details`)).toBe(1)
+    await ageDetails(49)
+  })
+
+  it.skipIf(!TARGET_IS_LOCAL)('a fault after the cancel leaves the old address and the request as they were', async () => {
+    await fundSeller(6_000, 'change-fault')
+    await ageDetails(1)
+    const r = await request(crypto.id, 60)
+    expect(r.requested).toBe(true)
+    const { data: was } = await fx!.svc.from('seller_payout_details').select('crypto_address_hash').eq('seller_id', fx!.seller.id).single()
+    const a = encArgs('crypto', { coin: 'usdt', chain: 'tron', address: `TGuardC${RUN.slice(-8)}` }, fx!.seller.id)
+    const err = withFault('seller_payout_details_set:after_cancel',
+      `SELECT public.seller_payout_details_set('${fx!.seller.id}'::uuid, 'crypto', 'usdt', 'tron', '${a.p_address_enc}', '${a.p_address_hash}', NULL, NULL)`)
+    expect(err).toMatch(/injected fault/)
+    expect((await row(r.request_id)).status).toBe('pending')
+    const { data: now } = await fx!.svc.from('seller_payout_details').select('crypto_address_hash').eq('seller_id', fx!.seller.id).single()
+    expect((now as any).crypto_address_hash).toBe((was as any).crypto_address_hash)
+    await rpc('withdrawal_cancel', { p_request_id: r.request_id, p_user_id: fx!.seller.id })
+    await ageDetails(49)
+  })
+
+  it('a signed-in user cannot write a withdrawal row, not even their own', async () => {
+    await fundSeller(6_000, 'no-direct')
+    const r = await request(crypto.id, 60)
+    expect(r.requested).toBe(true)
+    const client = fx!.seller.client
+    const inserted = await client.from('withdrawal_requests').insert({
+      user_id: fx!.seller.id, amount: 500, method_id: payoneer.id, method_name: 'payoneer', fee_amount: 0, net_amount: 500, status: 'approved',
+      payment_details: { wallet_address: 'attacker' },
+    } as any)
+    expect(inserted.error?.code).toBe('42501')
+    const updated = await client.from('withdrawal_requests').update({ status: 'cancelled' } as any).eq('id', r.request_id).select('id')
+    expect(updated.data ?? []).toEqual([])
+    const { data: own } = await client.from('withdrawal_requests').select('id, status').eq('id', r.request_id).single()
+    expect(own).toMatchObject({ id: r.request_id, status: 'pending' })
+    await rpc('withdrawal_cancel', { p_request_id: r.request_id, p_user_id: fx!.seller.id })
+  })
+
+  it('staff cannot approve a request with no money set aside', async () => {
+    const { data, error } = await fx!.svc.from('withdrawal_requests').insert({
+      user_id: fx!.buyer.id, amount: 50, method_id: crypto.id, method_name: 'usdt_trc20', fee_amount: 0, net_amount: 50, payment_details: {}, status: 'pending',
+    } as any).select('id').single()
+    if (error) throw new Error(error.message)
+    createdRequestIds.push((data as any).id)
+    const a = await rpc('withdrawal_approve', { p_request_id: (data as any).id, p_admin_id: fx!.admin.id, p_notes: null })
+    expect(a).toMatchObject({ changed: false, reason: 'no_hold' })
+    expect((await row((data as any).id)).status).toBe('pending')
   })
 
   it('risk snapshot for the admin queue', async () => {

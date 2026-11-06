@@ -30,7 +30,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { forgetPop, holdScroll, notePop, noteSiteMove, recallScroll, rememberScroll, wasHistoryMove } from '@/lib/navigation/scroll-memory'
+import { forgetPop, holdScroll, holdTop, notePop, noteSiteMove, recallScroll, rememberScroll, wasHistoryMove } from '@/lib/navigation/scroll-memory'
 import { startUnlessCancelled } from '@/lib/navigation/start-unless-cancelled'
 
 // V14u — Bumped from 120ms → 350ms. Cached App Router navs commonly land
@@ -240,9 +240,7 @@ export default function RouteProgress() {
         } else if (saved !== null) {
           holdScroll(saved)
         } else {
-          window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
-          document.documentElement.scrollTop = 0
-          document.body.scrollTop = 0
+          holdTop()
         }
       } catch {
         /* noop */

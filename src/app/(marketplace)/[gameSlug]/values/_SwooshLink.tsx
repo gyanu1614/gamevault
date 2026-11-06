@@ -132,7 +132,7 @@ export function SwooshLink({
                       DropMarket
                       {to === 'values' && (
                         <>
-                          <span className="mx-2.5 font-normal text-white/25">|</span>
+                          <span className="mx-2.5 font-normal text-text-disabled">|</span>
                           <span className="text-lime-text">Values</span>
                         </>
                       )}

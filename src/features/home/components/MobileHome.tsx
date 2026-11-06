@@ -292,7 +292,7 @@ function MobileHeroSearch() {
             aria-hidden
             className="grid h-9 w-9 shrink-0 place-items-center"
           >
-            <Search className="h-[19px] w-[19px] text-white/45" />
+            <Search className="h-[19px] w-[19px] text-text-tertiary" />
           </span>
           <input
             type="search"
@@ -303,7 +303,7 @@ function MobileHeroSearch() {
             placeholder="Search Games, Currency, Items…"
             aria-label="Search The Marketplace"
             aria-autocomplete="list"
-            className="h-full w-full bg-transparent pl-1 pr-4 text-[15px] font-medium tracking-[-0.01em] text-white outline-none placeholder:font-medium placeholder:text-white/40 [&::-webkit-search-cancel-button]:hidden"
+            className="h-full w-full bg-transparent pl-1 pr-4 text-[15px] font-medium tracking-[-0.01em] text-white outline-none placeholder:font-medium placeholder:text-text-tertiary [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
       </form>
@@ -319,8 +319,8 @@ function MobileHeroSearch() {
         >
           <div className="flex max-h-[min(520px,calc(100dvh-190px))] flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-4">
-              <span className="font-mono text-[11px] font-bold tracking-[0.18em] text-white/65">GAMES</span>
-              <span className="text-[14px] font-medium tabular-nums text-white/55">{gameGroups.length || '—'}</span>
+              <span className="font-mono text-[11px] font-bold tracking-[0.18em] text-text-secondary">GAMES</span>
+              <span className="text-[14px] font-medium tabular-nums text-text-tertiary">{gameGroups.length || '—'}</span>
             </div>
             <div
               className="overflow-y-auto px-2 pb-3 [scrollbar-width:thin]"
@@ -350,7 +350,7 @@ function MobileHeroSearch() {
                                     key={category.slug}
                                     href={`/${entry.game.slug}/${category.slug}`}
                                     onClick={() => { setQ(''); setFocused(false) }}
-                                    className={`inline-flex min-h-6 shrink-0 items-center whitespace-nowrap rounded-[9px] border border-white/[0.09] bg-white/[0.115] px-1.5 py-1 text-[10.5px] font-medium leading-none text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${PRESSED}`}
+                                    className={`inline-flex min-h-6 shrink-0 items-center whitespace-nowrap rounded-[9px] border border-white/[0.09] bg-white/[0.115] px-1.5 py-1 text-[10.5px] font-medium leading-none text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${PRESSED}`}
                                   >
                                     <span className="truncate">{compactSearchCategoryLabel(category.label)}</span>
                                   </Link>
@@ -369,8 +369,8 @@ function MobileHeroSearch() {
                   onClick={submit}
                   className={`flex min-h-[72px] w-full items-center gap-3 rounded-[14px] px-3 text-left ${PRESSED}`}
                 >
-                  <Search aria-hidden className="h-5 w-5 shrink-0 text-white/45" />
-                  <span className="truncate text-[14px] text-white/65">
+                  <Search aria-hidden className="h-5 w-5 shrink-0 text-text-tertiary" />
+                  <span className="truncate text-[14px] text-text-secondary">
                     Search the marketplace for “<span className="font-semibold text-white">{trimmed}</span>”
                   </span>
                 </button>
@@ -390,7 +390,7 @@ function MobileSearchGameLogo({ game }: { game: NonNullable<NavCatRow['game']> }
 
   if (!src) {
     return (
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[11px] bg-white/[0.10] text-sm font-bold text-white/60 ring-1 ring-white/[0.08]">
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[11px] bg-white/[0.10] text-sm font-bold text-text-secondary ring-1 ring-white/[0.08]">
         {(game.emoji || game.name.slice(0, 2)).toUpperCase()}
       </span>
     )
@@ -499,7 +499,7 @@ export function MobileHero() {
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
         </span>
-        <span className="text-[11.5px] font-semibold tracking-[-0.01em] text-white/75">
+        <span className="text-[11.5px] font-semibold tracking-[-0.01em] text-text-primary">
           SafeDrop Protection on Every Order
         </span>
       </motion.div>
@@ -518,7 +518,7 @@ export function MobileHero() {
           to Level Up.
         </span>
       </motion.h1>
-      <p className="mx-auto mt-3 max-w-[30ch] text-[15px] font-medium leading-snug text-white/65 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
+      <p className="mx-auto mt-3 max-w-[30ch] text-[15px] font-medium leading-snug text-text-secondary [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
         Buy accounts, currency and items. Every order covered by SafeDrop
         Protection.
       </p>
@@ -547,7 +547,7 @@ export function MobileHero() {
               iconSize={26}
               className="transition-colors group-hover:border-white/[0.2] group-hover:bg-white/[0.09]"
             />
-            <span className="w-full truncate text-center text-[11.5px] font-semibold leading-none tracking-[-0.01em] text-white/70 transition-colors group-hover:text-white">
+            <span className="w-full truncate text-center text-[11.5px] font-semibold leading-none tracking-[-0.01em] text-text-secondary transition-colors group-hover:text-white">
               {label}
             </span>
           </button>

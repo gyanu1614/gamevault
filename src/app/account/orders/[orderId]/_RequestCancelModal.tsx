@@ -8,7 +8,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Ban, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { Ban } from './_order-icons'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createCancellationRequest } from '@/lib/actions/order-cancellation'

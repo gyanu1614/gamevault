@@ -123,7 +123,7 @@ export async function FooterGameLinks() {
                   loading="lazy"
                   className="h-[22px] w-[22px] shrink-0 rounded-md bg-white/[0.06] object-cover"
                 />
-                <span className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-white/80">
+                <span className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-text-primary">
                   {g.name}
                 </span>
               </Link>
