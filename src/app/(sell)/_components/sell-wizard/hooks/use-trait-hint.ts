@@ -29,8 +29,10 @@ export function useTraitHint(input: {
   title: string
   values: Record<string, unknown>
   onFieldChange: (id: string, value: unknown) => void
+  /** False while the Trait field isn't asked. */
+  enabled?: boolean
 }): FieldHint | null {
-  const { gameSlug, template, title, values, onFieldChange } = input
+  const { gameSlug, template, title, values, onFieldChange, enabled = true } = input
 
   const { trait, pet, choices } = useMemo(() => {
     const attrs = gameSlug === 'adopt-me' ? template?.attributes ?? [] : []
@@ -52,7 +54,7 @@ export function useTraitHint(input: {
   const picked = typeof rawPick === 'string' && rawPick ? rawPick : null
   const petValue = pet ? values[pet.id] : undefined
   const itemName = pet?.options?.find((o) => o.value === petValue)?.label
-  const traitShown = trait ? isVisible(trait, values) : false
+  const traitShown = enabled && trait ? isVisible(trait, values) : false
 
   const hint = useMemo(
     () => (trait && traitShown ? traitHint({ title: settledTitle, itemName, picked, choices }) : null),

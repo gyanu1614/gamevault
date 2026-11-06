@@ -331,6 +331,19 @@ describe('a pick the title contradicts: the title decides', () => {
     expect(matchListingToValueItem({ title: 'Embersickle - Murder Mystery 2', templateData: picked }, MM2)?.itemSlug).toBe('embersickle')
   })
 
+  it('another item named elsewhere in the title never wins', () => {
+    const am = buildValueCatalog('adopt-me', {
+      items: [
+        { slug: 'parrot', name: 'Parrot' },
+        { slug: 'bat-dragon', name: 'Bat Dragon' },
+        { slug: 'frost-dragon', name: 'Frost Dragon' },
+        { slug: 'fly-potion', name: 'Fly Potion', kind: 'potion' as const },
+      ],
+    })!.catalog
+    expect(matchListingToValueItem({ title: 'Cute Parrot - Fly Potion', templateData: { 'pet-name': 'parrot' } }, am)).toBeNull()
+    expect(matchListingToValueItem({ title: 'Fairy Bat Dragon | Frost Dragon', templateData: { 'pet-name': 'bat-dragon' } }, am)).toBeNull()
+  })
+
   it('a title that names nothing keeps the pick', () => {
     expect(matchListingToValueItem({ title: 'Godly knife, fast delivery', templateData: picked }, MM2)?.itemSlug).toBe('embersickle')
   })

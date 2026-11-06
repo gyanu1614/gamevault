@@ -3,11 +3,13 @@ import type { Attribute } from '@/lib/actions/new-schema'
 import {
   buildItemRows,
   fieldsAfterPick,
+  initialAutoTitle,
   initialItemEntry,
   itemChainIds,
   itemSearchGame,
   itemTitle,
   nextTitle,
+  pickHasNoTrait,
   pickedRow,
   valuesForPick,
   type ItemSearchGame,
@@ -184,5 +186,35 @@ describe('initialItemEntry', () => {
   })
   it('a new listing opens on the search', () => {
     expect(initialItemEntry(null, chain, {})).toBe('search')
+  })
+})
+
+describe('an existing listing’s title', () => {
+  const sunrise = row(MM2, MM2_ATTRS, 'sunrise')
+
+  it('one a pick would fill follows the item', () => {
+    const auto = initialAutoTitle('Sunrise - Murder Mystery 2', sunrise, 'Murder Mystery 2')
+    expect(auto).toBe('Sunrise - Murder Mystery 2')
+    expect(nextTitle('Sunrise - Murder Mystery 2', auto, 'Embersickle - Murder Mystery 2')).toBe('Embersickle - Murder Mystery 2')
+  })
+
+  it('one the seller wrote stays', () => {
+    const auto = initialAutoTitle('Sunrise, Mint Condition', sunrise, 'Murder Mystery 2')
+    expect(auto).toBe('')
+    expect(nextTitle('Sunrise, Mint Condition', auto, 'Embersickle - Murder Mystery 2')).toBe('Sunrise, Mint Condition')
+  })
+
+  it('no item: nothing to follow', () => {
+    expect(initialAutoTitle('Sunrise - Murder Mystery 2', null, 'Murder Mystery 2')).toBe('')
+  })
+})
+
+describe('pickHasNoTrait', () => {
+  it('an egg has none; a pet does', () => {
+    expect(pickHasNoTrait(AM, AM_ATTRS, row(AM, AM_ATTRS, 'royal-egg'))).toBe(true)
+    expect(pickHasNoTrait(AM, AM_ATTRS, row(AM, AM_ATTRS, 'parrot'))).toBe(false)
+  })
+  it('a game without traits never says so', () => {
+    expect(pickHasNoTrait(MM2, MM2_ATTRS, row(MM2, MM2_ATTRS, 'sunrise'))).toBe(false)
   })
 })

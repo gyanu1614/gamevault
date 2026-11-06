@@ -720,7 +720,8 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
     const link = await linkListingsToValueItems(getAdminSupabase(), [createdId])
     // Live with no item page: buyers only find it under More Listings, so say so.
-    const notLinked = finalStatus === 'active' && link.unmatched.length > 0
+    // Item listings only: an account or currency offer never has an item page.
+    const notLinked = finalStatus === 'active' && gameCategory.type === 'items' && link.unmatched.length > 0
     if (notLinked) reportNotLinked(link.unmatched)
 
     revalidatePath('/account/listings')
@@ -1205,7 +1206,8 @@ export async function bulkPublishListings(
     // Bundle 2 — link this seller's new rows (never blocks; see value-listings/link).
     if (ok > 0) {
       const link = await linkListingsToValueItems(listingsWriter, { sellerId: user.id })
-      if (status === 'active') reportNotLinked(link.unmatched)
+      // This batch's item listings: the link step also picks up the seller's older rows.
+      if (status === 'active' && gameCategory.type === 'items') reportNotLinked(link.unmatched.filter((u) => createdIds.includes(u.id)))
     }
 
     revalidatePath('/account/listings')

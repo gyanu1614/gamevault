@@ -137,11 +137,17 @@ export function pickedRow(rows: readonly ItemRow[], attributes: readonly Attribu
   return null
 }
 
+/** Eggs and potions have no trait, so a picked one isn't asked for it. */
+export function pickHasNoTrait(game: ItemSearchGame, attributes: readonly Attribute[], row: ItemRow): boolean {
+  const list = attributes.find((a) => a.id === row.attributeId)
+  return game.noTraitLists?.includes(list?.slug ?? '') ?? false
+}
+
 /** What's still asked under a picked item: the trait, the mutation. */
 export function fieldsAfterPick(game: ItemSearchGame, attributes: readonly Attribute[], row: ItemRow, values: Record<string, unknown>): Attribute[] {
   const byId = byIdOf(attributes)
   const chain = itemChainIds(game, attributes)
-  const noTrait = game.noTraitLists?.includes(byId.get(row.attributeId)?.slug ?? '') ?? false
+  const noTrait = pickHasNoTrait(game, attributes, row)
   return attributes
     .filter((a) => !chain.has(a.id) && !game.hidden.includes(a.slug) && isVisible(a, values, byId) && !(noTrait && a.slug === game.traitField))
     .sort((x, y) => x.sort_order - y.sort_order)
@@ -152,6 +158,15 @@ export const itemTitle = (name: string, gameName: string) => (name.trim() ? `${n
 /** A title the seller wrote stays. One we filled follows the item. */
 export function nextTitle(current: string, lastAuto: string, auto: string): string {
   return !current.trim() || current === lastAuto ? auto : current
+}
+
+/**
+ * The title an existing listing opens with counts as ours if it's exactly what a
+ * pick would fill, so changing the item changes it too. A duplicate of "Sunrise -
+ * Murder Mystery 2" re-picked as Embersickle mustn't keep selling under Sunrise.
+ */
+export function initialAutoTitle(title: string, row: ItemRow | null, gameName: string): string {
+  return row && title === itemTitle(row.label, gameName) ? title : ''
 }
 
 /**

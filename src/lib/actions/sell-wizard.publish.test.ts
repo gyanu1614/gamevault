@@ -278,6 +278,21 @@ describe('a live listing with no item page', () => {
     h.unmatched = []
   })
 
+  it('an account or currency offer never has an item page, so it says nothing', async () => {
+    h.reportNotLinked.mockClear()
+    h.unmatched = [orphan]
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-accounts' }, error: null }],
+      game_categories: [{ data: { id: 'pair-a', slug: 'buy-accounts', name: 'Accounts', type: 'account', legacy_category_id: 'cat-a' }, error: null }],
+    })
+    h.admin = mockClient({ listings: [{ data: { id: 'new-1', slug: 'acct' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'accounts' })
+    expect(res).toMatchObject({ success: true, data: { notLinked: false } })
+    expect(h.reportNotLinked).not.toHaveBeenCalled()
+    h.unmatched = []
+  })
+
   it('a draft is not news', async () => {
     h.reportNotLinked.mockClear()
     h.unmatched = [orphan]
@@ -301,10 +316,13 @@ describe('a live listing with no item page', () => {
   it('bulk reports them too', async () => {
     h.reportNotLinked.mockClear()
     h.unmatched = [orphan]
+    const older = { ...orphan, id: 'older-listing', title: 'From last week' }
+    h.unmatched = [{ ...orphan, id: 'b1' }, older]
     h.session = session()
     h.admin = mockClient({ listings: [{ data: { id: 'b1', slug: 'a' }, error: null }] })
     await bulkPublishListings('game-1', 'items', [{ line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any])
-    expect(h.reportNotLinked).toHaveBeenCalledWith([orphan])
+    // This batch only: the link step also reads the seller's older rows.
+    expect(h.reportNotLinked).toHaveBeenCalledWith([{ ...orphan, id: 'b1' }])
     h.unmatched = []
   })
 })

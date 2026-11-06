@@ -202,16 +202,21 @@ export function matchListingToValueItem(
   const tokens = titleTokens(listing.title ?? '')
 
   // 1. Identity: the template field, unless the title names the same item
-  // only as part of a longer, different name. Then the title decides: the
+  // only as part of a longer, different name. Then that longer name decides: the
   // seller picked the nearest item for "Chroma Embersickle" (we list it) or
-  // "Fairy Bat Dragon" (we don't, so it links to nothing).
+  // "Fairy Bat Dragon" (we don't, so it links to nothing). Another item named
+  // elsewhere in the title never wins ("Cute Parrot - Fly Potion" is no Fly Potion).
   let item: ValueCatalog['items'][number] | undefined
+  let contradicted: PreparedCatalog['items'][number] | undefined
   for (const key of catalog.identityKeys ?? []) {
     const raw = templateString(listing.templateData, key)
     if (!raw) continue
     const hit = p.bySlug.get(slugifyValue(raw))
     if (!hit) continue
-    if (nameOccurrence(tokens, hit.words, p) === 'foreign') break
+    if (nameOccurrence(tokens, hit.words, p) === 'foreign') {
+      contradicted = hit
+      break
+    }
     item = hit.item
     break
   }
@@ -220,6 +225,7 @@ export function matchListingToValueItem(
     let side: PreparedCatalog['items'][number] | undefined
     for (const candidate of p.items) {
       if (!title.includes(pad(candidate.n))) continue
+      if (contradicted && !pad(candidate.n).includes(pad(contradicted.n))) continue
       if (nameOccurrence(tokens, candidate.words, p) !== 'whole') continue
       // Longest first, so a main item's name inside the side item's own ("Dog Egg") is still that side item.
       if (side && pad(side.n).includes(pad(candidate.n))) continue

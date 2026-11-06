@@ -10,7 +10,7 @@ describe('notLinkedMessage', () => {
 
   it('names one listing and its game', () => {
     expect(notLinkedMessage([row('Frost Wand 2027 - Murder Mystery 2')])).toBe(
-      `📝 A new listing has no item page. Add the item if it's real (Admin → Games → Values):\n• "Frost Wand 2027 - Murder Mystery 2" (murder-mystery-2)`,
+      `📝 A new listing has no item page. Add the item if it's real (Admin → Games → Values):\n• \`Frost Wand 2027 - Murder Mystery 2\` (murder-mystery-2)`,
     )
   })
 
@@ -23,6 +23,11 @@ describe('notLinkedMessage', () => {
   })
 
   it('keeps a title on one line', () => {
-    expect(notLinkedMessage([row('Line one\n\nLine   two')])).toContain('"Line one Line two"')
+    expect(notLinkedMessage([row('Line one\n\nLine   two')])).toContain('`Line one Line two`')
+  })
+
+  it('a title can’t break out of its code span to become a link', () => {
+    const text = notLinkedMessage([row('`[Verify](https://evil.example)`')])!
+    expect(text).toContain("`'[Verify](https://evil.example)'`")
   })
 })

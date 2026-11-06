@@ -34,12 +34,14 @@ import { buildChildIndex, collectDescendantIds } from './sell-wizard/attribute-t
 import { EMPTY_OFFER_FORM, hasDetailsInput, offerFormFromListing } from './sell-wizard/offer-form'
 import {
   buildItemRows,
+  initialAutoTitle,
   initialItemEntry,
   itemChainIds,
   itemListIds,
   itemSearchGame,
   itemTitle,
   nextTitle,
+  pickHasNoTrait,
   pickedRow,
   valuesForPick,
   withoutIds,
@@ -95,7 +97,11 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     if (!opening || !prefill.template) return opened
     const attrs = prefill.template.attributes
     const row = pickedRow(buildItemRows(opening, attrs), attrs, opened.fieldValues)
-    return { ...opened, itemEntry: initialItemEntry(row, itemChainIds(opening, attrs), opened.fieldValues) }
+    return {
+      ...opened,
+      itemEntry: initialItemEntry(row, itemChainIds(opening, attrs), opened.fieldValues),
+      autoTitle: initialAutoTitle(opened.title, row, prefill.game?.game_name ?? ''),
+    }
   })
   const { step, setStep, direction } = useWizardSteps({
     initialStep: prefillCategory || startCategory ? 3 : 1,
@@ -171,15 +177,13 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
   const manualItem = usesSearch && form.itemEntry === 'manual'
   const picked = useMemo(() => (usesSearch ? pickedRow(itemRows, attributes, form.fieldValues) : null), [usesSearch, itemRows, attributes, form.fieldValues])
   const listIds = useMemo(() => (searchGame ? itemListIds(searchGame, attributes) : new Set<string>()), [searchGame, attributes])
-  const manualHiddenIds = useMemo(() => {
-    const hidden = new Set(listIds)
-    for (const a of attributes) if (searchGame?.hidden.includes(a.slug)) hidden.add(a.id)
-    return hidden
-  }, [listIds, attributes, searchGame])
+  const retiredIds = useMemo(() => new Set(attributes.filter((a) => searchGame?.hidden.includes(a.slug)).map((a) => a.id)), [attributes, searchGame])
+  const manualHiddenIds = useMemo(() => new Set([...listIds, ...retiredIds]), [listIds, retiredIds])
 
+  // Never require what isn't on screen: a retired field, and on the manual path the lists.
   const attributesFilled = useMemo(
-    () => requiredAttributesFilled(template, form.fieldValues, topLevel, childrenOf, manualItem ? manualHiddenIds : undefined),
-    [template, form.fieldValues, topLevel, childrenOf, manualItem, manualHiddenIds],
+    () => requiredAttributesFilled(template, form.fieldValues, topLevel, childrenOf, !usesSearch ? undefined : manualItem ? manualHiddenIds : retiredIds),
+    [template, form.fieldValues, topLevel, childrenOf, usesSearch, manualItem, manualHiddenIds, retiredIds],
   )
   const deliveryMethods = useMemo(
     () => (category?.slug === 'currency' ? activeDeliveryMethods(currencyConfig) : []),
@@ -263,7 +267,15 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
   }, [searchGame, attributes, setForm])
 
   // Adopt Me: the title's variant pre-selects or flags the Trait pick.
-  const traitHint = useTraitHint({ gameSlug: game?.game_slug, template, title: form.title, values: form.fieldValues, onFieldChange })
+  const traitHint = useTraitHint({
+    gameSlug: game?.game_slug,
+    template,
+    title: form.title,
+    values: form.fieldValues,
+    onFieldChange,
+    // "Fly Potion" reads as Fly; a picked egg or potion has no trait to set.
+    enabled: !(searchGame && picked && pickHasNoTrait(searchGame, attributes, picked)),
+  })
 
   /** A new game or category starts the item over; a title the seller wrote stays. */
   const resetItem = () => {
